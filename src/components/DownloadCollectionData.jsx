@@ -31,7 +31,7 @@ export function DownloadCollectionData() {
 
     async function getAssetData(asset, data) {
         try {
-            const metadata = await arc69.fetch(asset.index)
+            const metadata = await arc69.fetch(asset.index);
             const asset_data_csv = {
                 index: asset.index,
                 name: asset.params.name,
@@ -41,8 +41,9 @@ export function DownloadCollectionData() {
                 metadata_external_url: metadata.external_url || "",
                 metadata_mime_type: metadata.mime_type || "",
             };
+
             if (metadata.properties) {
-                metadata.attributes = Object.entries(metadata.properties).map(
+                Object.entries(metadata.properties).map(
                     ([trait_type, value]) => {
                         asset_data_csv[`metadata_${trait_type}`] = value;
                     }
@@ -66,9 +67,7 @@ export function DownloadCollectionData() {
             var line = '';
             for (var index in array[i]) {
                 if (line != '') line += ','
-                // handle commas in data
                 line += '"' + array[i][index] + '"';
-                //line += array[i][index];
             }
             str += line + '\r\n';
         }
@@ -82,17 +81,15 @@ export function DownloadCollectionData() {
         var jsonObject = JSON.stringify(items);
 
         var csv = convertToCSV(jsonObject);
-        var exportedFilenmae = fileTitle + '.csv';
         var blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
         if (navigator.msSaveBlob) {
-            navigator.msSaveBlob(blob, exportedFilenmae);
+            navigator.msSaveBlob(blob, fileTitle);
         } else {
             var link = document.createElement("a");
-            if (link.download !== undefined) { // feature detection
-                // Browsers that support HTML5 download attribute
+            if (link.download !== undefined) {
                 var url = URL.createObjectURL(blob);
                 link.setAttribute("href", url);
-                link.setAttribute("download", exportedFilenmae);
+                link.setAttribute("download", fileTitle);
                 link.style.visibility = 'hidden';
                 document.body.appendChild(link);
                 link.click();
@@ -105,13 +102,10 @@ export function DownloadCollectionData() {
         if (collectionData.length > 0) {
             setLoading(true);
             const data = [];
-            // await Promise.allSettled(
-            //     collectionData.map((asset) => getAssetData(asset, data))
-            // );
-            let count=0;
+            let count = 0;
             for (const asset of collectionData) {
                 getAssetData(asset, data);
-                await new Promise(r => setTimeout(r, 10));
+                await new Promise(r => setTimeout(r, 20));
                 count++;
                 setCounter(count);
             }
@@ -119,7 +113,7 @@ export function DownloadCollectionData() {
             exportCSVFile(
                 headers ? headers : ["index", "name", "unit-name", "url", "metadata"],
                 data,
-                `${creatorWallet}-collection-data`
+                `${creatorWallet}-collection-data.csv`
             );
             setLoading(false);
             setCounter(0);
