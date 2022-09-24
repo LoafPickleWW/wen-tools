@@ -111,7 +111,7 @@ export function DownloadCollectionData() {
             let count=0;
             for (const asset of collectionData) {
                 getAssetData(asset, data);
-                await new Promise(r => setTimeout(r, 25));
+                await new Promise(r => setTimeout(r, 10));
                 count++;
                 setCounter(count);
             }
