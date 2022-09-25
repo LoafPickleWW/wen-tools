@@ -54,7 +54,7 @@ export function DownloadCollectionData() {
                     asset_data_csv[`metadata_${trait_type}`] = value;
                 });
             }
-            data.push(asset_data_csv);
+            return asset_data_csv;
         } catch (err) {
             //console.log(err);
         }
@@ -104,10 +104,10 @@ export function DownloadCollectionData() {
             const data = [];
             let count = 0;
             for (const asset of collectionData) {
-                getAssetData(asset, data);
-                await new Promise(r => setTimeout(r, 20));
+                const asset_data = await getAssetData(asset);
                 count++;
                 setCounter(count);
+                data.push(asset_data);
             }
             const headers = data[0] ? Object.keys(data[0]) : [];
             exportCSVFile(

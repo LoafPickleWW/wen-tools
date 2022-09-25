@@ -1,10 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { BatchCollectionMetadataUpdate } from "../components/BatchMetadataUpdateComponent";
 import { DownloadCollectionData } from "../components/DownloadCollectionData";
 import { SelectToolComponent } from "../components/SelectToolComponent";
 
 export default function Home() {
-    const [selectTool, setSelectTool] = useState("collection_data");
+    const [selectTool, setSelectTool] = useState("collection_data"); // collection_data
 
     return (
         <div className="bg-gray-900 text-white  min-h-screen">
