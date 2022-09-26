@@ -70,7 +70,12 @@ export function DownloadCollectionData(props) {
                 if (line != '') line += ','
                 line += '"' + array[i][index] + '"';
             }
-            str += line + '\r\n';
+            // don't put '\r\n' at the end of the last line
+            if (i != array.length - 1) {
+                str += line + '\r\n';
+            }else {
+                str += line;
+            }
         }
         return str;
     }

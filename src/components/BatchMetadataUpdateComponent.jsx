@@ -15,6 +15,7 @@ export function BatchCollectionMetadataUpdate(props) {
         let headers;
         let data = [];
         for (let i = 0; i < csvData.length; i++) {
+            // check line is blank
             if (i === 0) {
                 headers = csvData[i];
             } else {
@@ -67,6 +68,7 @@ export function BatchCollectionMetadataUpdate(props) {
             const groups = sliceIntoChunks(signedTransactions, 16);
             setTxSendingInProgress(true);
             for (let i = 0; i < groups.length; i++) {
+                toast.info(`Sending transaction ${i + 1} of ${groups.length}`);
                 const { txId } = await algodClient
                     .sendRawTransaction(groups[i].map((txn) => txn.blob))
                     .do();
@@ -134,13 +136,12 @@ export function BatchCollectionMetadataUpdate(props) {
                                 ) : (
                                     <div className="mx-auto flex flex-col">
                                         <div
-                                            className="spinner-border animate-spin inline-block mx-auto mt-4 w-8 h-8 border-4 rounded-full"
+                                            className="spinner-border animate-spin inline-block mx-auto w-8 h-8 border-4 rounded-full"
                                             role="status"
                                         ></div>
                                         Please wait... Transactions are sending to the network.
                                     </div>
                                 )}
-                                <p className='text-xs text-gray-400 max-w-[16rem] '>*MyAlgo Wallet can sign up to 16 transactions at once. So you need to sign multiple times (x/16) if you have more than 16 assets.</p>
                             </>
                         )
                     }
