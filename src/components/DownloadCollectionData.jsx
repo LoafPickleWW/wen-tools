@@ -158,15 +158,6 @@ export function DownloadCollectionData() {
                             <p className="text-center text-sm text-slate-300">
                                 {counter}/{collectionData.length}
                             </p>
-                            <button
-                                className="bg-red-500 hover:bg-red-700 text-white text-base font-semibold rounded py-2 w-fit px-2 mx-auto mt-1 hover:scale-95 duration-700"
-                                onClick={() => {
-                                    window.location.reload();
-                                }
-                                }
-                            >
-                                Cancel
-                            </button>
                         </div>
                     ) : (
                         <button

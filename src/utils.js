@@ -1,46 +1,74 @@
 import {
     Algodv2,
-    algosToMicroalgos,
-    makeAssetTransferTxnWithSuggestedParamsFromObject,
-    makePaymentTxnWithSuggestedParamsFromObject,
     computeGroupID,
+    makeAssetConfigTxnWithSuggestedParamsFromObject,
+    makePaymentTxnWithSuggestedParamsFromObject,
+    algosToMicroalgos
 } from "algosdk";
-import axios from "axios";
+import MyAlgoConnect from "@randlabs/myalgo-connect";
 
 
-const DONATE_WALLET_1 = "BYKWLR65FS6IBLJO7SKBGBJ4C5T257LBL55OUY6363QBWX24B5QKT6DMEA";
+const DONATE_WALLET_1 = "O2ZPSV6NJC32ZXQ7PZ5ID6PXRKAWQE2XWFZK5NK3UFULPZT6OKIOROEAPU";
 const DONATE_WALLET_2 = "BYKWLR65FS6IBLJO7SKBGBJ4C5T257LBL55OUY6363QBWX24B5QKT6DMEA";
 
-const algodClient = new Algodv2("", "https://node.testnet.algoexplorerapi.io", {
+const algodClient = new Algodv2("", "https://node.algoexplorerapi.io", {
     "User-Agent": "evil-tools",
 });
 
-export async function createGameTransaction(wallet, amount) {
+export async function createAssetConfigArray(data_for_txns) {
     const params = await algodClient.getTransactionParams().do();
+    let txnsArray = [];
+    const wallet = localStorage.getItem("wallet");
+    for (let i = 0; i < data_for_txns.length; i++) {
+        let tx = makeAssetConfigTxnWithSuggestedParamsFromObject({
+            from: wallet,
+            assetIndex: data_for_txns[i].asset_id,
+            note: new TextEncoder().encode(JSON.stringify(data_for_txns[i].note)),
+            manager: wallet,
+            reserve: wallet,
+            freeze: undefined,
+            clawback: undefined,
+            suggestedParams: params,
+            strictEmptyAddressChecking: false
+        });
+        txnsArray.push(tx);
+    }
+    const groupID = computeGroupID(txnsArray);
+    for (let i = 0; i < txnsArray.length; i++) {
+        txnsArray[i].group = groupID;
+    }
+    const myAlgoConnect = new MyAlgoConnect();
+    const signedTxns = await myAlgoConnect.signTransaction(txnsArray.map(txn => txn.toByte()));
+    return signedTxns;
+}
 
-    // const token_transaction_user =
-    //     makeAssetTransferTxnWithSuggestedParamsFromObject({
-    //         from: wallet,
-    //         to: linxPoolWallet,
-    //         amount: parseInt(amount),
-    //         assetIndex: linxTokenAssetId,
-    //         suggestedParams: params,
-    //     });
+export async function createDonationTransaction(amount) {
+    const params = await algodClient.getTransactionParams().do();
+    const wallet = localStorage.getItem("wallet");
+    const tx = makePaymentTxnWithSuggestedParamsFromObject({
+        from: wallet,
+        to: DONATE_WALLET_1,
+        amount: algosToMicroalgos(amount / 2),
+        suggestedParams: params,
+        note: new TextEncoder().encode("Evil Tools Donation"),
+    });
 
-    // const algo_tx_user = makePaymentTxnWithSuggestedParamsFromObject({
-    //     from: wallet,
-    //     to: linxPoolWallet,
-    //     amount: algoFeeForTX,
-    //     suggestedParams: params,
-    // });
+    const tx2 = makePaymentTxnWithSuggestedParamsFromObject({
+        from: wallet,
+        to: DONATE_WALLET_2,
+        amount: algosToMicroalgos(amount / 2),
+        suggestedParams: params,
+        note: new TextEncoder().encode("Evil Tools Donation"),
+    });
 
-    // let txnsArray = [token_transaction_user, algo_tx_user];
-    // const groupID = computeGroupID(txnsArray);
-    // for (let i = 0; i < 2; i++) {
-    //     txnsArray[i].group = groupID;
-    // }
-
-    //return txnsArray;
+    const txnsArray = [tx, tx2];
+    const groupID = computeGroupID(txnsArray);
+    for (let i = 0; i < txnsArray.length; i++) txnsArray[i].group = groupID;
+    const myAlgoConnect = new MyAlgoConnect();
+    const signedTxns = await myAlgoConnect.signTransaction(
+        txnsArray.map((txn) => txn.toByte())
+    );
+    return signedTxns;
 }
 
 export class Arc69 {
