@@ -79,7 +79,17 @@ export default function Home() {
                 <br />
                 You can reload the page if you want to stop/restart the process!
             </p>
-            <div className="flex flex-col mx-auto mt-8 items-center gap-1 pt-2 pb-3 rounded-2xl border-pink-500 border-2 w-[16rem]">
+            <p className="text-center text-lg text-pink-200">
+                <a
+                    className="hover:text-pink-400 transition"
+                    href="https://loafpickle.medium.com/evil-tools-arc69-made-easy-c7913885cfd2"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                >
+                    GUIDE & FAQ
+                </a>
+            </p>
+            <div className="flex flex-col mx-auto mt-4 items-center gap-1 pt-2 pb-3 rounded-2xl border-pink-500 border-2 w-[16rem]">
                 <p className="text-center text-lg">Donate</p>
                 <input className="border-pink-300 border-2 rounded-xl text-pink-700 text-center font-semibold transition max-w-[8rem] placeholder:text-center placeholder:text-pink-800/50"
                     placeholder="ALGO amount"
