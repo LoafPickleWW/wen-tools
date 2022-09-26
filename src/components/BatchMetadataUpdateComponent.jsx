@@ -5,7 +5,7 @@ import algosdk from "algosdk";
 import { toast } from "react-toastify";
 import { createAssetConfigArray } from '../utils';
 
-export function BatchCollectionMetadataUpdate() {
+export function BatchCollectionMetadataUpdate(props) {
     const [csvData, setCsvData] = useState(null);
     const [isTransactionsFinished, setIsTransactionsFinished] = useState(false);
 
@@ -69,15 +69,16 @@ export function BatchCollectionMetadataUpdate() {
             toast.info("Please sign the transaction(s)!");
             const signedTxns = sliceIntoChunks(data_for_txns, 16);
             for (let i = 0; i < signedTxns.length; i++) {
-                const group = await createAssetConfigArray(signedTxns[i]);
-                const algodClient = new algosdk.Algodv2("", "https://node.algoexplorerapi.io", {
+                const nodeURL = props.selectNetwork == "mainnet" ? "https://node.algoexplorerapi.io/" : "https://node.testnet.algoexplorerapi.io/";
+                const group = await createAssetConfigArray(signedTxns[i], nodeURL);
+                const algodClient = new algosdk.Algodv2("", nodeURL, {
                     "User-Agent": "evil-tools",
                 });
                 toast.info("Sending transaction...", { autoClose: 4000 });
                 const { txId } = await algodClient
                     .sendRawTransaction(group.map((txn) => txn.blob))
                     .do();
-                await algosdk.waitForConfirmation(algodClient, txId, 3);
+                await algosdk.waitForConfirmation(algodClient, txId, 2);
                 toast.success(`Group ${i + 1} sent!`);
             }
             toast.success("All transactions sent!");
