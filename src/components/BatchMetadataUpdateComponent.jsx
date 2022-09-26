@@ -3,21 +3,13 @@ import Papa from 'papaparse';
 import ConnectButton from './ConnectButton';
 import algosdk from "algosdk";
 import { toast } from "react-toastify";
-import { createAssetConfigArray } from '../utils';
+import { createAssetConfigArray, sliceIntoChunks } from '../utils';
 
-export function BatchCollectionMetadataUpdate() {
+export function BatchCollectionMetadataUpdate(props) {
     const [csvData, setCsvData] = useState(null);
     const [isTransactionsFinished, setIsTransactionsFinished] = useState(false);
+    const [txSendingInProgress, setTxSendingInProgress] = useState(false);
 
-
-    function sliceIntoChunks(arr, chunkSize) {
-        const res = [];
-        for (let i = 0; i < arr.length; i += chunkSize) {
-            const chunk = arr.slice(i, i + chunkSize);
-            res.push(chunk);
-        }
-        return res;
-    }
 
     const handleFileData = async () => {
         let headers;
@@ -66,22 +58,23 @@ export function BatchCollectionMetadataUpdate() {
             return;
         }
         try {
-            toast.info("Please sign the transaction(s)!");
-            const signedTxns = sliceIntoChunks(data_for_txns, 16);
-            for (let i = 0; i < signedTxns.length; i++) {
-                const group = await createAssetConfigArray(signedTxns[i]);
-                const algodClient = new algosdk.Algodv2("", "https://node.algoexplorerapi.io", {
-                    "User-Agent": "evil-tools",
-                });
-                toast.info("Sending transaction...", { autoClose: 4000 });
+            toast.info("Please sign the transactions!");
+            const nodeURL = props.selectNetwork == "mainnet" ? "https://node.algoexplorerapi.io/" : "https://node.testnet.algoexplorerapi.io/";
+            const algodClient = new algosdk.Algodv2("", nodeURL, {
+                "User-Agent": "evil-tools",
+            });
+            const signedTransactions = await createAssetConfigArray(data_for_txns, nodeURL);
+            const groups = sliceIntoChunks(signedTransactions, 16);
+            setTxSendingInProgress(true);
+            for (let i = 0; i < groups.length; i++) {
                 const { txId } = await algodClient
-                    .sendRawTransaction(group.map((txn) => txn.blob))
+                    .sendRawTransaction(groups[i].map((txn) => txn.blob))
                     .do();
                 await algosdk.waitForConfirmation(algodClient, txId, 3);
-                toast.success(`Group ${i + 1} sent!`);
+                toast.success(`Transaction ${i + 1} of ${groups.length} confirmed!`);
             }
-            toast.success("All transactions sent!");
             setIsTransactionsFinished(true);
+            setTxSendingInProgress(false);
         } catch (error) {
             console.log(error);
         }
@@ -130,13 +123,23 @@ export function BatchCollectionMetadataUpdate() {
                                 <p className="mb-1 text-sm font-bold">File uploaded</p>
                                 <p className="text-sm text-gray-400">{csvData.length - 1} assets found!</p>
                                 <p>3- Sign Your Transactions</p>
-                                <button
-                                    id="approve-send"
-                                    className="mb-2 bg-green-500 hover:bg-green-700 text-black text-base font-semibold rounded py-2 w-fit px-2 mx-auto mt-1 hover:scale-95 duration-700"
-                                    onClick={handleFileData}
-                                >
-                                    Approve & Send
-                                </button>
+                                {!txSendingInProgress ? (
+                                    <button
+                                        id="approve-send"
+                                        className="mb-2 bg-green-500 hover:bg-green-700 text-black text-base font-semibold rounded py-2 w-fit px-2 mx-auto mt-1 hover:scale-95 duration-700"
+                                        onClick={handleFileData}
+                                    >
+                                        Approve & Send
+                                    </button>
+                                ) : (
+                                    <div className="mx-auto flex flex-col">
+                                        <div
+                                            className="spinner-border animate-spin inline-block mx-auto mt-4 w-8 h-8 border-4 rounded-full"
+                                            role="status"
+                                        ></div>
+                                        Please wait... Transactions are sending to the network.
+                                    </div>
+                                )}
                                 <p className='text-xs text-gray-400 max-w-[16rem] '>*MyAlgo Wallet can sign up to 16 transactions at once. So you need to sign multiple times (x/16) if you have more than 16 assets.</p>
                             </>
                         )
