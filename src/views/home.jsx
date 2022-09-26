@@ -159,7 +159,7 @@ function SelectNetworkComponent(selectNetwork, setSelectNetwork) {
                     htmlFor="testnet-select"
                     className="truncate text-sm font-medium text-slate-200"
                 >
-                    Tesnet
+                    Testnet
                 </label>
             </div>
         </div>
