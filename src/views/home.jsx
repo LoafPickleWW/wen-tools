@@ -5,11 +5,9 @@ import { SelectToolComponent } from "../components/SelectToolComponent";
 import { toast } from "react-toastify";
 import { createDonationTransaction } from "../utils";
 import algosdk from "algosdk";
-import MyAlgoConnect from "@randlabs/myalgo-connect";
 
 export default function Home() {
-    const [selectTool, setSelectTool] = useState("collection_data"); // collection_data
-    const [selectNetwork, setSelectNetwork] = useState("mainnet"); // mainnet
+    const [selectTool, setSelectTool] = useState("batch_update"); // collection_data
     const [donationAmount, setDonationAmount] = useState(1);
 
 
@@ -19,16 +17,7 @@ export default function Home() {
             return
         } else if (localStorage.getItem("wallet") === null) {
             toast.info("Please connect your wallet first");
-            try {
-                const myAlgoConnect = new MyAlgoConnect();
-                const wallet = await myAlgoConnect.connect({
-                    shouldSelectOneAccount: true,
-                });
-                localStorage.setItem("wallet", wallet[0].address);
-                window.location.reload();
-            } catch (e) {
-                toast.error("Ooops! Something went wrong! Did you allow pop-ups?");
-            }
+            return
         }
         else {
             try {
@@ -40,7 +29,7 @@ export default function Home() {
                 const { txId } = await algodClient
                     .sendRawTransaction(group.map((txn) => txn.blob))
                     .do();
-                await algosdk.waitForConfirmation(algodClient, txId, 2);
+                await algosdk.waitForConfirmation(algodClient, txId, 3);
                 toast.success("Thank you for your donation!");
             } catch (error) {
                 toast.error("Error sending donation!");
@@ -67,11 +56,10 @@ export default function Home() {
                         setSelectTool={setSelectTool}
                     />
                 </fieldset>
-                {SelectNetworkComponent(selectNetwork, setSelectNetwork)}
                 {selectTool === "collection_data" ? (
-                    <DownloadCollectionData selectNetwork={selectNetwork} />
+                    <DownloadCollectionData />
                 ) : (
-                    <BatchCollectionMetadataUpdate selectNetwork={selectNetwork} />
+                    <BatchCollectionMetadataUpdate />
                 )}
             </main>
             <p className="text-center text-xs text-slate-400 py-2">
@@ -127,43 +115,3 @@ export default function Home() {
         </div>
     );
 }
-function SelectNetworkComponent(selectNetwork, setSelectNetwork) {
-    return <fieldset className=" bg-rose-500/50 px-4 py-2 rounded-lg">
-
-        <p className="text-sm font-medium text-center text-orange-300">
-            Select Network
-        </p>
-        <div className="flex flex-row gap-x-2">
-            <div className="inline-flex items-center space-x-1">
-                <input
-                    id="mainnet-select"
-                    type="radio"
-                    checked={selectNetwork === "mainnet"}
-                    onChange={() => setSelectNetwork("mainnet")}
-                    className="rounded-full border-gray-300 text-rose-600 transition focus:ring-rose-600 disabled:cursor-not-allowed disabled:bg-gray-200 disabled:opacity-75" />
-                <label
-                    htmlFor="mainnet-select"
-                    className="truncate text-sm font-medium text-slate-200"
-                >
-                    Mainnet
-                </label>
-            </div>
-            <div className="inline-flex items-center space-x-1">
-                <input
-                    id="testnet-select"
-                    type="radio"
-                    checked={selectNetwork === "testnet"}
-                    onChange={() => setSelectNetwork("testnet")}
-                    className="rounded-full border-gray-300 text-rose-600 transition focus:ring-rose-600 disabled:cursor-not-allowed disabled:bg-gray-200 disabled:opacity-75" />
-                <label
-                    htmlFor="testnet-select"
-                    className="truncate text-sm font-medium text-slate-200"
-                >
-                    Tesnet
-                </label>
-            </div>
-        </div>
-
-    </fieldset>;
-}
-

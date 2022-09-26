@@ -3,7 +3,7 @@ import { toast } from "react-toastify";
 import axios from "axios";
 import { Arc69 } from "../utils";
 
-export function DownloadCollectionData(props) {
+export function DownloadCollectionData() {
     const [creatorWallet, setCreatorWallet] = useState("");
     const [collectionData, setCollectionData] = useState([]);
     const [loading, setLoading] = useState(false);
@@ -18,8 +18,7 @@ export function DownloadCollectionData(props) {
                 return;
             }
             try {
-                const host = props.selectNetwork == "mainnet" ? "https://mainnet-idx.algonode.cloud" : "https://testnet-idx.algonode.cloud";
-                const url = `${host}/v2/accounts/${creatorWallet}?exclude=assets,apps-local-state,created-apps,none`;
+                const url = `https://mainnet-idx.algonode.cloud/v2/accounts/${creatorWallet}?exclude=assets,apps-local-state,created-apps,none`;
                 const response = await axios.get(url);
                 setCollectionData(response.data.account["created-assets"]);
             } catch (error) {
@@ -30,9 +29,9 @@ export function DownloadCollectionData(props) {
         }
     };
 
-    async function getAssetData(asset) {
+    async function getAssetData(asset, data) {
         try {
-            const metadata = await arc69.fetch(asset.index, props.selectNetwork);
+            const metadata = await arc69.fetch(asset.index);
             const asset_data_csv = {
                 index: asset.index,
                 name: asset.params.name,
@@ -110,7 +109,7 @@ export function DownloadCollectionData(props) {
                 setCounter(count);
                 data.push(asset_data);
             }
-            const headers = data[parseInt(data.length/2)] ? Object.keys(data[parseInt(data.length/2)]) : [];
+            const headers = data[0] ? Object.keys(data[0]) : [];
             exportCSVFile(
                 headers ? headers : ["index", "name", "unit-name", "url", "metadata"],
                 data,
