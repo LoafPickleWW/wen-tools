@@ -5,7 +5,7 @@ import "react-toastify/dist/ReactToastify.min.css";
 
 function App() {
   return (
-    <div>
+    <div className="bg-gray-900">
       <ToastContainer
         pauseOnFocusLoss={false}
         closeOnClick
