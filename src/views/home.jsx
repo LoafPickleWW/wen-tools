@@ -5,7 +5,6 @@ import { SelectToolComponent } from "../components/SelectToolComponent";
 import { toast } from "react-toastify";
 import { createDonationTransaction } from "../utils";
 import algosdk from "algosdk";
-import ConnectButton from "../components/ConnectButton";
 
 export default function Home() {
     const [selectTool, setSelectTool] = useState("batch_update"); // collection_data
@@ -39,12 +38,16 @@ export default function Home() {
     }
 
     return (
-        <div className="bg-gray-900 text-white justify-center min-h-screen overflow-y-auto">
-            <header className="flex justify-center items-center p-4">
-                <h1 className="text-2xl font-bold">
+        <div className="bg-gray-900 pt-5 pb-24 xl:pb-20 flex justify-center flex-col text-white">
+            <header className="flex justify-center flex-col mx-auto">
+                <a className="text-2xl font-bold hover:text-pink-500 transition"
+                    href="/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                >
                     Evil Tools{" "}
-                    <p className="italic font-thin text-center text-xl">(ARC69)</p>
-                </h1>
+                </a>
+                <p className="italic font-thin text-center text-lg -mt-2 mb-2">(ARC69)</p>
             </header>
             <main className="flex flex-col justify-center items-center bg-gray-800 mx-4 md:mx-64  rounded-lg">
                 <fieldset className="space-y-3 my-4 bg-rose-500/50 px-4 py-2 rounded-lg">
@@ -64,13 +67,15 @@ export default function Home() {
                 <br />
                 You can reload the page if you want to stop/restart the process!
             </p>
-            <div className="flex flex-wrap mx-auto mt-4 items-center flex-col gap-1 pt-2 pb-3 rounded-2xl border-pink-500 border-2 max-w-[16rem]">
+            <div className="flex flex-col mx-auto mt-8 items-center gap-1 pt-2 pb-3 rounded-2xl border-pink-500 border-2 w-[16rem]">
                 <p className="text-center text-lg">Donate</p>
                 <input className="border-pink-300 border-2 rounded-xl text-pink-700 text-center font-semibold transition max-w-[8rem] placeholder:text-center placeholder:text-pink-800/50"
                     placeholder="ALGO amount"
                     type="number"
+                    value={donationAmount}
                     min={1}
                     onChange={(e) => setDonationAmount(parseInt(e.target.value))}
+                    inputMode="numeric"
                 />
                 <button
                     className="bg-rose-500/50 px-6 py-1 mt-1 rounded-lg hover:bg-rose-800/50 transition"

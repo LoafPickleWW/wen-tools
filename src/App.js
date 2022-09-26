@@ -5,7 +5,7 @@ import "react-toastify/dist/ReactToastify.min.css";
 
 function App() {
   return (
-    <div className="bg-gray-900">
+    <div className="bg-gray-900 flex flex-col min-h-screen font-roboto">
       <ToastContainer
         pauseOnFocusLoss={false}
         closeOnClick
