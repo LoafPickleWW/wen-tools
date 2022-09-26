@@ -5,6 +5,7 @@ import { SelectToolComponent } from "../components/SelectToolComponent";
 import { toast } from "react-toastify";
 import { createDonationTransaction } from "../utils";
 import algosdk from "algosdk";
+import ConnectButton from "../components/ConnectButton";
 
 export default function Home() {
     const [selectTool, setSelectTool] = useState("batch_update"); // collection_data
