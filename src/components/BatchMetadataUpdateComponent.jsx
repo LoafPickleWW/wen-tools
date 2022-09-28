@@ -15,7 +15,7 @@ export function BatchCollectionMetadataUpdate(props) {
         let headers;
         let data = [];
         for (let i = 0; i < csvData.length; i++) {
-            // check line is blank
+            if (csvData[i].length == 1) continue;
             if (i === 0) {
                 headers = csvData[i];
             } else {
