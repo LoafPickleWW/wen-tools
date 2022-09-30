@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { BatchCollectionMetadataUpdate } from "../components/BatchMetadataUpdateComponent";
 import { DownloadCollectionData } from "../components/DownloadCollectionData";
+import { CollectionSnapshot } from "../components/CollectionSnapshotComponent";
 import { SelectToolComponent } from "../components/SelectToolComponent";
 import { toast } from "react-toastify";
 import { createDonationTransaction } from "../utils";
@@ -8,8 +9,8 @@ import algosdk from "algosdk";
 import MyAlgoConnect from "@randlabs/myalgo-connect";
 
 export default function Home() {
-    const [selectTool, setSelectTool] = useState("collection_data"); // collection_data
-    const [selectNetwork, setSelectNetwork] = useState("mainnet"); // mainnet
+    const [selectTool, setSelectTool] = useState("collection_data");
+    const [selectNetwork, setSelectNetwork] = useState("mainnet");
     const [donationAmount, setDonationAmount] = useState(1);
 
 
@@ -68,11 +69,10 @@ export default function Home() {
                     />
                 </fieldset>
                 {SelectNetworkComponent(selectNetwork, setSelectNetwork)}
-                {selectTool === "collection_data" ? (
-                    <DownloadCollectionData selectNetwork={selectNetwork} />
-                ) : (
-                    <BatchCollectionMetadataUpdate selectNetwork={selectNetwork} />
-                )}
+                {selectTool === "collection_data" && <DownloadCollectionData selectNetwork={selectNetwork} />}
+                {selectTool === "batch_update" && <BatchCollectionMetadataUpdate selectNetwork={selectNetwork} />}
+                {selectTool === "collection_snapshot" && <CollectionSnapshot selectNetwork={selectNetwork} />}
+                
             </main>
             <p className="text-center text-xs text-slate-400 py-2">
                 ⚠️If you reload or close this page, you will lose your progress⚠️

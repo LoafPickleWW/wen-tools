@@ -31,6 +31,7 @@ export function BatchCollectionMetadataUpdate(props) {
             }
         }
         let data_for_txns = data;
+        console.log(data_for_txns);
         data_for_txns.forEach((item) => {
             let asset_note = {
                 properties: {
@@ -77,6 +78,8 @@ export function BatchCollectionMetadataUpdate(props) {
             }
             setIsTransactionsFinished(true);
             setTxSendingInProgress(false);
+            toast.success("All transactions confirmed!");
+            toast.info("You can support by donating :)");
         } catch (error) {
             console.log(error);
         }

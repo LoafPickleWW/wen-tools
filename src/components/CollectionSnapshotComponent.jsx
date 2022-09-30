@@ -1,15 +1,13 @@
 import { useState } from "react"
 import { toast } from "react-toastify";
 import axios from "axios";
-import { Arc69 } from "../utils";
 
-export function DownloadCollectionData(props) {
+export function CollectionSnapshot(props) {
     const [creatorWallet, setCreatorWallet] = useState("");
     const [collectionData, setCollectionData] = useState([]);
     const [loading, setLoading] = useState(false);
     const [counter, setCounter] = useState(0);
 
-    const arc69 = new Arc69();
 
     async function getCollectionData() {
         if (creatorWallet) {
@@ -21,7 +19,7 @@ export function DownloadCollectionData(props) {
                 const host = props.selectNetwork == "mainnet" ? "https://mainnet-idx.algonode.cloud" : "https://testnet-idx.algonode.cloud";
                 const url = `${host}/v2/accounts/${creatorWallet}?exclude=assets,apps-local-state,created-apps,none`;
                 const response = await axios.get(url);
-                setCollectionData(response.data.account["created-assets"]);
+                setCollectionData(response.data.account["created-assets"].map((asset) => asset.index).flat());
             } catch (error) {
                 toast.error("Error getting collection data! Please try again.");
             }
@@ -30,63 +28,43 @@ export function DownloadCollectionData(props) {
         }
     };
 
-    async function getAssetData(asset) {
+    async function getAssetOwner(asset_id) {
         try {
-            const metadata = await arc69.fetch(asset.index, props.selectNetwork);
-            const asset_data_csv = {
-                index: asset.index,
-                name: asset.params.name,
-                "unit-name": asset.params["unit-name"],
-                url: asset.params.url,
-                metadata_description: metadata.description || "",
-                metadata_external_url: metadata.external_url || "",
-                metadata_mime_type: metadata.mime_type || "",
-            };
-
-            if (metadata.properties) {
-                Object.entries(metadata.properties).map(
-                    ([trait_type, value]) => {
-                        asset_data_csv[`metadata_${trait_type}`] = value;
-                    }
-                );
-            }
-            if (metadata.attributes) {
-                metadata.attributes.map(({ trait_type, value }) => {
-                    asset_data_csv[`metadata_${trait_type}`] = value;
-                });
-            }
-            return asset_data_csv;
+            const host1 = props.selectNetwork == "mainnet" ? "https://mainnet-idx.algonode.cloud" : "https://testnet-idx.algonode.cloud";
+            const host2 = props.selectNetwork == "mainnet" ? "https://algoindexer.algoexplorerapi.io" : "https://algoindexer.testnet.algoexplorerapi.io";
+            const host = Math.round(Math.random()) == 1 ? host1 : host2;
+            const url = `${host}/v2/assets/${asset_id}/balances?include-all=false&currency-greater-than=0`;
+            const response = await axios.get(url);
+            return response.data.balances[0].address;
         } catch (err) {
             //console.log(err);
         }
     }
 
-    function convertToCSV(objArray) {
+    function convertToCSV(headers, objArray) {
         var array = typeof objArray != 'object' ? JSON.parse(objArray) : objArray;
         var str = '';
-        for (var i = 0; i < array.length; i++) {
-            var line = '';
-            for (var index in array[i]) {
-                if (line != '') line += ','
-                line += '"' + array[i][index] + '"';
-            }
-            // don't put '\r\n' at the end of the last line
-            if (i != array.length - 1) {
-                str += line + '\r\n';
-            }else {
-                str += line;
-            }
+        var row = '';
+
+        for (var index in headers) {
+            row += headers[index] + ',';
         }
+        str += row + '\r';
+
+        Object.entries(array).forEach(([key, value]) => {
+            var line = '';
+            line += key + ',';
+            const asset_list = "[" + value.map((asset) => asset).join(",");
+            line += '"' + asset_list + "]" + '",';
+            line += value.length + ',';
+            str += line + '\r\n';
+        });
         return str;
     }
 
     function exportCSVFile(headers, items, fileTitle) {
-        if (headers) {
-            items.unshift(headers);
-        }
-        var jsonObject = JSON.stringify(items);
-
-        var csv = convertToCSV(jsonObject);
+        var csv = convertToCSV(headers, items);
+        console.log(csv);
         var blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
         if (navigator.msSaveBlob) {
             navigator.msSaveBlob(blob, fileTitle);
@@ -107,19 +85,22 @@ export function DownloadCollectionData(props) {
     async function downloadCollectionDataAsCSV() {
         if (collectionData.length > 0) {
             setLoading(true);
-            const data = [];
+            const data = {}
             let count = 0;
-            for (const asset of collectionData) {
-                const asset_data = await getAssetData(asset);
+            for (const asset_id of collectionData) {
+                const asset_owner = await getAssetOwner(asset_id);
                 count++;
                 setCounter(count);
-                data.push(asset_data);
+                if (data[asset_owner]) {
+                    data[asset_owner].push(asset_id);
+                } else {
+                    data[asset_owner] = [asset_id];
+                }
             }
-            const headers = data[parseInt(data.length/2)] ? Object.keys(data[parseInt(data.length/2)]) : [];
             exportCSVFile(
-                headers ? headers : ["index", "name", "unit-name", "url", "metadata"],
+                ["wallet", "assets", "assets_count"],
                 data,
-                `${creatorWallet}-collection-data.csv`
+                `${creatorWallet}-collection-snapshot.csv`
             );
             setLoading(false);
             setCounter(0);
@@ -172,7 +153,7 @@ export function DownloadCollectionData(props) {
                             onClick={downloadCollectionDataAsCSV}
                             className="mb-2 bg-green-500 hover:bg-green-700 text-black text-base font-semibold rounded py-2 w-fit px-2 mx-auto mt-1 hover:scale-95 duration-700"
                         >
-                            Download Collection Data
+                            Download Holders Data
                         </button>
                     )}
                 </>
