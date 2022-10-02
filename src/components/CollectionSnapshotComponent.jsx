@@ -57,7 +57,7 @@ export function CollectionSnapshot(props) {
             line += value.nfd + ',';
             const asset_list = "[" + value.assets.map((asset) => asset).join(",");
             line += '"' + asset_list + "]" + '",';
-            line += asset_list.length + ',';
+            line += value.assets.length + ',';
             str += line + '\r\n';
         });
 
@@ -66,7 +66,6 @@ export function CollectionSnapshot(props) {
 
     function exportCSVFile(headers, items, fileTitle) {
         var csv = convertToCSV(headers, items);
-        console.log(csv);
         var blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
         if (navigator.msSaveBlob) {
             navigator.msSaveBlob(blob, fileTitle);
@@ -100,9 +99,9 @@ export function CollectionSnapshot(props) {
                         nfd: await getNfdDomain(asset_owner),
                         assets: [asset_id],
                     }
-                    console.log(data[asset_owner]);
                 }
             }
+            console.log(data);
             exportCSVFile(
                 ["wallet", "nfdomain", "assets", "assets_count"],
                 data,
