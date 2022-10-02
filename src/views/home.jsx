@@ -72,7 +72,6 @@ export default function Home() {
                 {selectTool === "collection_data" && <DownloadCollectionData selectNetwork={selectNetwork} />}
                 {selectTool === "batch_update" && <BatchCollectionMetadataUpdate selectNetwork={selectNetwork} />}
                 {selectTool === "collection_snapshot" && <CollectionSnapshot selectNetwork={selectNetwork} />}
-
             </main>
             <p className="text-center text-xs text-slate-400 py-2">
                 ⚠️If you reload or close this page, you will lose your progress⚠️

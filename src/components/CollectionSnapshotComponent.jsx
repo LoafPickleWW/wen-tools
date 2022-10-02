@@ -9,7 +9,6 @@ export function CollectionSnapshot(props) {
     const [loading, setLoading] = useState(false);
     const [counter, setCounter] = useState(0);
 
-
     async function getCollectionData() {
         if (creatorWallet) {
             if (creatorWallet.length != 58) {
@@ -42,7 +41,7 @@ export function CollectionSnapshot(props) {
         }
     }
 
-    async function convertToCSV(headers, objArray) {
+    function convertToCSV(headers, objArray) {
         var array = typeof objArray != 'object' ? JSON.parse(objArray) : objArray;
         var str = '';
         var row = '';
@@ -52,30 +51,21 @@ export function CollectionSnapshot(props) {
         }
         str += row + '\r';
 
-        // Object.entries(array).forEach(([key, value]) => {
-        //     var line = '';
-        //     line += key + ',';
-        //     const asset_list = "[" + value.map((asset) => asset).join(",");
-        //     line += '"' + asset_list + "]" + '",';
-        //     line += value.length + ',';
-        //     str += line + '\r\n';
-        // });
-
-        for (const [key, value] of Object.entries(array)) {
+        Object.entries(array).forEach(([key, value]) => {
             var line = '';
             line += key + ',';
-            line += await getNfdDomain(key) + ',';
-            const asset_list = "[" + value.map((asset) => asset).join(",");
+            line += value.nfd + ',';
+            const asset_list = "[" + value.assets.map((asset) => asset).join(",");
             line += '"' + asset_list + "]" + '",';
-            line += value.length + ',';
+            line += asset_list.length + ',';
             str += line + '\r\n';
-            await new Promise(r => setTimeout(r, 5));
-        }
+        });
+
         return str;
     }
 
-    async function exportCSVFile(headers, items, fileTitle) {
-        var csv = await convertToCSV(headers, items);
+    function exportCSVFile(headers, items, fileTitle) {
+        var csv = convertToCSV(headers, items);
         console.log(csv);
         var blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
         if (navigator.msSaveBlob) {
@@ -97,19 +87,23 @@ export function CollectionSnapshot(props) {
     async function downloadCollectionDataAsCSV() {
         if (collectionData.length > 0) {
             setLoading(true);
-            const data = {}
+            const data = [];
             let count = 0;
             for (const asset_id of collectionData) {
                 const asset_owner = await getAssetOwner(asset_id);
                 count++;
                 setCounter(count);
                 if (data[asset_owner]) {
-                    data[asset_owner].push(asset_id);
+                    data[asset_owner].assets.push(asset_id);
                 } else {
-                    data[asset_owner] = [asset_id];
+                    data[asset_owner] = {
+                        nfd: await getNfdDomain(asset_owner),
+                        assets: [asset_id],
+                    }
+                    console.log(data[asset_owner]);
                 }
             }
-            await exportCSVFile(
+            exportCSVFile(
                 ["wallet", "nfdomain", "assets", "assets_count"],
                 data,
                 `${creatorWallet}-collection-snapshot.csv`
