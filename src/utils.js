@@ -99,12 +99,12 @@ export class Arc69 {
         let url;
         if (selectNetwork === "mainnet") {
             url = Math.round(Math.random()) == 1 ? `${this.algoExplorerApiBaseUrl}/v2/transactions?asset-id=${assetId}&tx-type=acfg`
-            : `${this.algonodeExplorerApiBaseUrl}/v2/assets/${assetId}/transactions?tx-type=acfg`;
-        }else{
+                : `${this.algonodeExplorerApiBaseUrl}/v2/assets/${assetId}/transactions?tx-type=acfg`;
+        } else {
             url = Math.round(Math.random()) == 1 ? `${this.algoExplorerTestnetApiBaseUrl}/v2/transactions?asset-id=${assetId}&tx-type=acfg`
-            : `${this.algonodeTestnetExplorerApiBaseUrl}/v2/assets/${assetId}/transactions?tx-type=acfg`;
+                : `${this.algonodeTestnetExplorerApiBaseUrl}/v2/assets/${assetId}/transactions?tx-type=acfg`;
         }
-        
+
         let transactions;
 
         try {
@@ -132,5 +132,23 @@ export class Arc69 {
             }
         }
         return null;
+    }
+}
+
+export async function getNfdDomain(wallet) {
+    const nfdDomain = await fetch(
+        "https://api.nf.domains/nfd/address?address=" +
+        wallet +
+        "&limit=1&view=tiny"
+    );
+    if (nfdDomain.status == 200) {
+        const data = await nfdDomain.json();
+        if (data.length > 0) {
+            return data[0].name;
+        } else {
+            return "";
+        }
+    } else {
+        return "";
     }
 }

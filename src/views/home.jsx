@@ -72,7 +72,7 @@ export default function Home() {
                 {selectTool === "collection_data" && <DownloadCollectionData selectNetwork={selectNetwork} />}
                 {selectTool === "batch_update" && <BatchCollectionMetadataUpdate selectNetwork={selectNetwork} />}
                 {selectTool === "collection_snapshot" && <CollectionSnapshot selectNetwork={selectNetwork} />}
-                
+
             </main>
             <p className="text-center text-xs text-slate-400 py-2">
                 ⚠️If you reload or close this page, you will lose your progress⚠️
@@ -106,6 +106,15 @@ export default function Home() {
                     Send
                 </button>
             </div>
+            <p className="font-bold text-slate-300 text-xs mt-1 text-center">
+                supported by {" "}
+                <a
+                    className="text-green-300 hover:text-green-500 transition"
+                    href="https://www.algoverify.me" target="_blank" rel="noopener noreferrer"
+                >
+                    AlgoVerify
+                </a>
+            </p>
             <footer className="py-4 px-4 sm:px-6 bg-gray-800 text-white w-full bottom-0 fixed">
                 <div className="mx-auto">
                     <div className="flex justify-between items-center">

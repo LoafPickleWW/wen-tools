@@ -1,6 +1,7 @@
 import { useState } from "react"
 import { toast } from "react-toastify";
 import axios from "axios";
+import { getNfdDomain } from "../utils";
 
 export function CollectionSnapshot(props) {
     const [creatorWallet, setCreatorWallet] = useState("");
@@ -41,7 +42,7 @@ export function CollectionSnapshot(props) {
         }
     }
 
-    function convertToCSV(headers, objArray) {
+    async function convertToCSV(headers, objArray) {
         var array = typeof objArray != 'object' ? JSON.parse(objArray) : objArray;
         var str = '';
         var row = '';
@@ -51,19 +52,30 @@ export function CollectionSnapshot(props) {
         }
         str += row + '\r';
 
-        Object.entries(array).forEach(([key, value]) => {
+        // Object.entries(array).forEach(([key, value]) => {
+        //     var line = '';
+        //     line += key + ',';
+        //     const asset_list = "[" + value.map((asset) => asset).join(",");
+        //     line += '"' + asset_list + "]" + '",';
+        //     line += value.length + ',';
+        //     str += line + '\r\n';
+        // });
+
+        for (const [key, value] of Object.entries(array)) {
             var line = '';
             line += key + ',';
+            line += await getNfdDomain(key) + ',';
             const asset_list = "[" + value.map((asset) => asset).join(",");
             line += '"' + asset_list + "]" + '",';
             line += value.length + ',';
             str += line + '\r\n';
-        });
+            await new Promise(r => setTimeout(r, 5));
+        }
         return str;
     }
 
-    function exportCSVFile(headers, items, fileTitle) {
-        var csv = convertToCSV(headers, items);
+    async function exportCSVFile(headers, items, fileTitle) {
+        var csv = await convertToCSV(headers, items);
         console.log(csv);
         var blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
         if (navigator.msSaveBlob) {
@@ -97,8 +109,8 @@ export function CollectionSnapshot(props) {
                     data[asset_owner] = [asset_id];
                 }
             }
-            exportCSVFile(
-                ["wallet", "assets", "assets_count"],
+            await exportCSVFile(
+                ["wallet", "nfdomain", "assets", "assets_count"],
                 data,
                 `${creatorWallet}-collection-snapshot.csv`
             );
