@@ -128,10 +128,10 @@ export default function Home() {
                                 Stupid Horses
                             </a>
                         </span>
-                        <span className="text-xxs">
+                        <span className="text-xs">
                             developed by{" "}
                             <a
-                                className="font-semibold transition text-xxs hover:text-pink-600"
+                                className="font-semibold transition text-xs hover:text-pink-600"
                                 href="https://twitter.com/cryptolews"
                                 target="_blank"
                                 rel="noopener noreferrer"
