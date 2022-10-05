@@ -5,7 +5,7 @@ import algosdk from "algosdk";
 import MyAlgoConnect from "@randlabs/myalgo-connect";
 import { Footer } from "../components/footer";
 import { Header } from "../components/header";
-import { Web3Storage, filesFromPath } from 'web3.storage/dist/bundle.esm.min.js';
+import { Web3Storage } from 'web3.storage';
 
 
 export function UploadCollectionToIPFS() {
