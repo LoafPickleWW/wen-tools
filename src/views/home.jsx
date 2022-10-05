@@ -1,12 +1,14 @@
 import { useState } from "react";
-import { BatchCollectionMetadataUpdate } from "../components/BatchMetadataUpdateComponent";
-import { DownloadCollectionData } from "../components/DownloadCollectionData";
-import { CollectionSnapshot } from "../components/CollectionSnapshotComponent";
+import { BatchCollectionMetadataUpdate } from "../pages/BatchMetadataUpdateComponent";
+import { DownloadCollectionData } from "../pages/DownloadCollectionData";
+import { CollectionSnapshot } from "../pages/CollectionSnapshotComponent";
 import { SelectToolComponent } from "../components/SelectToolComponent";
 import { toast } from "react-toastify";
 import { createDonationTransaction } from "../utils";
 import algosdk from "algosdk";
 import MyAlgoConnect from "@randlabs/myalgo-connect";
+import { Footer } from "../components/footer";
+import { Header } from "../components/header";
 
 export default function Home() {
     const [selectTool, setSelectTool] = useState("collection_data");
@@ -51,16 +53,7 @@ export default function Home() {
 
     return (
         <div className="bg-gray-900 pt-5 pb-24 xl:pb-20 flex justify-center flex-col text-white">
-            <header className="flex justify-center flex-col mx-auto">
-                <a className="text-2xl font-bold hover:text-pink-500 transition"
-                    href="/"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                >
-                    Evil Tools{" "}
-                </a>
-                <p className="italic font-thin text-center text-lg -mt-2 mb-2">(ARC69)</p>
-            </header>
+            <Header />
             <main className="flex flex-col justify-center items-center bg-gray-800 mx-4 md:mx-64  rounded-lg">
                 <fieldset className="space-y-3 my-4 bg-rose-500/50 px-4 py-2 rounded-lg">
                     <SelectToolComponent
@@ -70,8 +63,8 @@ export default function Home() {
                 </fieldset>
                 {SelectNetworkComponent(selectNetwork, setSelectNetwork)}
                 {selectTool === "collection_data" && <DownloadCollectionData selectNetwork={selectNetwork} />}
-                {selectTool === "batch_update" && <BatchCollectionMetadataUpdate selectNetwork={selectNetwork} />}
                 {selectTool === "collection_snapshot" && <CollectionSnapshot selectNetwork={selectNetwork} />}
+                {selectTool === "batch_update" && <BatchCollectionMetadataUpdate selectNetwork={selectNetwork} />}
             </main>
             <p className="text-center text-xs text-slate-400 py-2">
                 ⚠️If you reload or close this page, you will lose your progress⚠️
@@ -114,37 +107,11 @@ export default function Home() {
                     AlgoVerify
                 </a>
             </p>
-            <footer className="py-4 px-4 sm:px-6 bg-gray-800 text-white w-full bottom-0 fixed">
-                <div className="mx-auto">
-                    <div className="flex justify-between items-center">
-                        <span>
-                            powered by&nbsp;
-                            <a
-                                className="font-semibold transition text-sm hover:text-pink-600"
-                                href="https://twitter.com/Thurstobertay"
-                                target="_blank"
-                                rel="noopener noreferrer"
-                            >
-                                Stupid Horses
-                            </a>
-                        </span>
-                        <span className="text-xs">
-                            developed by{" "}
-                            <a
-                                className="font-semibold transition text-xs hover:text-pink-600"
-                                href="https://twitter.com/cryptolews"
-                                target="_blank"
-                                rel="noopener noreferrer"
-                            >
-                                bykewel
-                            </a>
-                        </span>
-                    </div>
-                </div>
-            </footer>
+            <Footer />
         </div>
     );
 }
+
 function SelectNetworkComponent(selectNetwork, setSelectNetwork) {
     return <fieldset className=" bg-rose-500/50 px-4 py-2 rounded-lg">
 

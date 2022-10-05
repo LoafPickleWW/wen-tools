@@ -2,6 +2,7 @@ import { Route, Routes, BrowserRouter as Router } from "react-router-dom";
 import Home from "./views/home";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.min.css";
+import { UploadCollectionToIPFS } from "./pages/UploadCollectionToIPFS";
 
 function App() {
   return (
@@ -21,6 +22,7 @@ function App() {
       <Router>
         <Routes>
           <Route path="/" element={<Home />} />
+          <Route path="/ipfs-upload" element={<UploadCollectionToIPFS />} />
           <Route path="*" element={<Home />} />
         </Routes>
       </Router>
