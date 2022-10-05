@@ -11,7 +11,8 @@
     "react-papaparse": "^4.1.0",
     "react-router-dom": "^6.4.1",
     "react-scripts": "5.0.1",
-    "react-toastify": "^9.0.7"
+    "react-toastify": "^9.0.7",
+    "web3.storage": "^4.4.0"
   },
   "scripts": {
     "start": "react-app-rewired start",

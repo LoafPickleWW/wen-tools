@@ -5,7 +5,7 @@ import algosdk from "algosdk";
 import MyAlgoConnect from "@randlabs/myalgo-connect";
 import { Footer } from "../components/footer";
 import { Header } from "../components/header";
-import { Web3Storage } from 'web3.storage';
+import { Web3Storage } from 'web3.storage/dist/bundle.esm.min.js';
 
 
 export function UploadCollectionToIPFS() {
@@ -112,7 +112,6 @@ export function UploadCollectionToIPFS() {
                         type="file"
                         onChange={(e) => {
                             setSelectedFiles(e.target.files);
-                            console.log(e);
                         }}
                     />
                 </label>
