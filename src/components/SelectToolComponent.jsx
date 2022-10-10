@@ -50,6 +50,7 @@ export function SelectToolComponent({ selectTool, setSelectTool }) {
                         Batch Collection Metadata Update
                     </label>
                 </div>
+                <a href="/ipfs-upload" className="truncate text-sm font-medium text-slate-300 hover:text-slate-400 transition text-center">IPFS Collection Upload</a>
             </div>
         </>
     )
