@@ -42,7 +42,6 @@ export function DownloadCollectionData(props) {
                 metadata_external_url: metadata.external_url || "",
                 metadata_mime_type: metadata.mime_type || "",
             };
-
             if (metadata.properties) {
                 Object.entries(metadata.properties).map(
                     ([trait_type, value]) => {
@@ -73,7 +72,7 @@ export function DownloadCollectionData(props) {
             // don't put '\r\n' at the end of the last line
             if (i != array.length - 1) {
                 str += line + '\r\n';
-            }else {
+            } else {
                 str += line;
             }
         }
@@ -115,7 +114,7 @@ export function DownloadCollectionData(props) {
                 setCounter(count);
                 data.push(asset_data);
             }
-            const headers = data[parseInt(data.length/2)] ? Object.keys(data[parseInt(data.length/2)]) : [];
+            const headers = Object.keys(data.reduce((a, b) => Object.keys(b).length > Object.keys(a).length ? b : a));
             exportCSVFile(
                 headers ? headers : ["index", "name", "unit-name", "url", "metadata"],
                 data,

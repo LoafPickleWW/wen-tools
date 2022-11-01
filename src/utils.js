@@ -127,10 +127,14 @@ export class Arc69 {
                 }
             }
             catch (err) {
-                //console.log(err);
+
             }
         }
-        return null;
+        return {
+            metadata_description: "",
+            metadata_external_url: "",
+            metadata_mime_type: "",
+        }
     }
 }
 
