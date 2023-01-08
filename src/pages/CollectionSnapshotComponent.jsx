@@ -101,7 +101,6 @@ export function CollectionSnapshot(props) {
                     }
                 }
             }
-            console.log(data);
             exportCSVFile(
                 ["wallet", "nfdomain", "assets", "assets_count"],
                 data,
@@ -131,7 +130,7 @@ export function CollectionSnapshot(props) {
                 className="mb-2 bg-rose-500 hover:bg-rose-700 text-white text-base font-semibold rounded py-2 w-fit px-2 mx-auto mt-1 hover:scale-95 duration-700"
                 onClick={getCollectionData}
             >
-                Get Collection Data
+                Get Holders Data
             </button>
             {collectionData.length > 0 && (
                 <>

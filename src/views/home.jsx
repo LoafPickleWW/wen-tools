@@ -3,6 +3,7 @@ import { BatchCollectionMetadataUpdate } from "../pages/BatchMetadataUpdateCompo
 import { DownloadCollectionData } from "../pages/DownloadCollectionData";
 import { CollectionSnapshot } from "../pages/CollectionSnapshotComponent";
 import { SelectToolComponent } from "../components/SelectToolComponent";
+import { AirdropTool } from "../pages/AirdropTool";
 import { toast } from "react-toastify";
 import { createDonationTransaction } from "../utils";
 import algosdk from "algosdk";
@@ -65,6 +66,7 @@ export default function Home() {
                 {selectTool === "collection_data" && <DownloadCollectionData selectNetwork={selectNetwork} />}
                 {selectTool === "collection_snapshot" && <CollectionSnapshot selectNetwork={selectNetwork} />}
                 {selectTool === "batch_update" && <BatchCollectionMetadataUpdate selectNetwork={selectNetwork} />}
+                {selectTool === "airdrop_tool" && <AirdropTool selectNetwork={selectNetwork} />}
             </main>
             <p className="text-center text-xs text-slate-400 py-2">
                 ⚠️If you reload or close this page, you will lose your progress⚠️

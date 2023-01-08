@@ -3,14 +3,26 @@ import Papa from 'papaparse';
 import ConnectButton from '../components/ConnectButton';
 import algosdk from "algosdk";
 import { toast } from "react-toastify";
-import { createAssetConfigArray, sliceIntoChunks } from '../utils';
+import { createAirdropTransactions, createAssetConfigArray, sliceIntoChunks } from '../utils';
 
-export function BatchCollectionMetadataUpdate(props) {
+export function AirdropTool(props) {
     const [csvData, setCsvData] = useState(null);
     const [isTransactionsFinished, setIsTransactionsFinished] = useState(false);
     const [txSendingInProgress, setTxSendingInProgress] = useState(false);
 
-
+    async function getAssetDecimals(assetId) {
+        try {
+            const nodeURL = props.selectNetwork == "mainnet" ? "https://node.algoexplorerapi.io/" : "https://node.testnet.algoexplorerapi.io/";
+            const algodClient = new algosdk.Algodv2("", nodeURL, {
+                "User-Agent": "evil-tools",
+            });
+            const assetInfo = await algodClient.getAssetByID(assetId).do();
+            return assetInfo.params.decimals;
+        } catch (error) {
+            toast.error("Something went wrong! Please check your file and network type.");
+        }
+    }
+    
     const handleFileData = async () => {
         let headers;
         let data = [];
@@ -21,64 +33,53 @@ export function BatchCollectionMetadataUpdate(props) {
             } else {
                 let obj = {};
                 for (let j = 0; j < headers.length; j++) {
-                    if (headers[j].startsWith('metadata_')) {
-                        obj[headers[j].replace('metadata_', '')] = csvData[i][j];
-                    } else {
-                        obj[headers[j]] = csvData[i][j];
-                    }
+                    obj[headers[j]] = csvData[i][j];
                 }
                 data.push(obj);
             }
         }
-        let data_for_txns = data;
-        data_for_txns.forEach((item) => {
-            let asset_note = {
-                properties: {
-                },
-            };
-            Object.keys(item).forEach((key) => {
-                if (key != "index" && key != "description" && key != "mime_type" && key != "standard" && key != "external_url") {
-                    asset_note.properties[key] = item[key];
-                    delete item[key];
-                }
-                if (key == "external_url" || key == "standard" || key == "description" || key == "mime_type") {
-                    asset_note[key] = item[key];
-                    delete item[key];
-                }
-            });
-            item.asset_id = parseInt(item.index);
-            delete item.index;
-            item.note = asset_note;
-            if (!item.note.standard) {
-                item.note.standard = "arc69";
+        let assetIds = {};
+        for (let i = 0; i < data.length; i++) {
+            if (data[i].asset_id) {
+                assetIds[data[i].asset_id] = true;
             }
-        });
-
+        }
+        assetIds = Object.keys(assetIds);
+        let assetDecimals = {};
+        for (let i = 0; i < assetIds.length; i++) {
+            if (assetIds[i] == 1) continue;
+            assetDecimals[assetIds[i]] = await getAssetDecimals(assetIds[i]);
+        }
         if (localStorage.getItem("wallet") === null || localStorage.getItem("wallet") === undefined) {
             toast.error("Wallet not found!");
             return;
         }
         try {
-            toast.info("Please sign the transactions!");
             const nodeURL = props.selectNetwork == "mainnet" ? "https://node.algoexplorerapi.io/" : "https://node.testnet.algoexplorerapi.io/";
             const algodClient = new algosdk.Algodv2("", nodeURL, {
                 "User-Agent": "evil-tools",
             });
-            const signedTransactions = await createAssetConfigArray(data_for_txns, nodeURL);
-            const groups = sliceIntoChunks(signedTransactions, 16);
-            setTxSendingInProgress(true);
-            for (let i = 0; i < groups.length; i++) {
-                toast.info(`Sending transaction ${i + 1} of ${groups.length}`);
-                const { txId } = await algodClient
-                    .sendRawTransaction(groups[i].map((txn) => txn.blob))
-                    .do();
-                await algosdk.waitForConfirmation(algodClient, txId, 3);
-                toast.success(`Transaction ${i + 1} of ${groups.length} confirmed!`);
+            try {
+                toast.info("Please sign the transactions!");
+                const signedTransactions = await createAirdropTransactions(data,nodeURL,assetDecimals);
+                const groups = sliceIntoChunks(signedTransactions, 16);
+                setTxSendingInProgress(true);
+                for (let i = 0; i < groups.length; i++) {
+                    toast.info(`Sending transaction ${i + 1} of ${groups.length}`);
+                    const { txId } = await algodClient
+                        .sendRawTransaction(groups[i].map((txn) => txn.blob))
+                        .do();
+                    await algosdk.waitForConfirmation(algodClient, txId, 3);
+                    toast.success(`Transaction ${i + 1} of ${groups.length} confirmed!`);
+                }
+                setIsTransactionsFinished(true);
+                setTxSendingInProgress(false);
+                toast.success("All transactions confirmed!");
+                toast.info("You can support by donating :)");
+            } catch (error) {
+                toast.error("Something went wrong! Please check your file!");
+                return;
             }
-            setIsTransactionsFinished(true);
-            setTxSendingInProgress(false);
-            toast.success("All transactions confirmed!");
-            toast.info("You can support by donating :)");
         } catch (error) {
             console.log(error);
         }
@@ -86,7 +87,7 @@ export function BatchCollectionMetadataUpdate(props) {
 
     return (
         <div className='mb-4 text-center flex flex-col items-center max-w-[40rem] gap-y-2'>
-            <p>1- Connect Creator Wallet</p>
+            <p>1- Connect Sender Wallet</p>
             <ConnectButton />
             <p>2- Upload CSV file</p>
             {csvData == null ? (
@@ -107,6 +108,7 @@ export function BatchCollectionMetadataUpdate(props) {
                                 complete: function (results) {
                                     setCsvData(results.data);
                                 },
+                                skipEmptyLines: true,
                             });
                         }}
                     />
@@ -125,7 +127,7 @@ export function BatchCollectionMetadataUpdate(props) {
                         ) : (
                             <>
                                 <p className="mb-1 text-sm font-bold">File uploaded</p>
-                                <p className="text-sm text-gray-400">{csvData.length - 1} assets found!</p>
+                                <p className="text-sm text-gray-400">{csvData.length - 1} transactions found!</p>
                                 <p>3- Sign Your Transactions</p>
                                 {!txSendingInProgress ? (
                                     <button

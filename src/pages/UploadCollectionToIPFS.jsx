@@ -70,7 +70,7 @@ export function UploadCollectionToIPFS() {
             toast.success("Your cid copied to clipboard!");
             setSelectedFiles([]);
         } catch (error) {
-            console.log(error)
+            //console.log(error)
             toast.error("Error uploading files!");
         }
         setLoading(false);
