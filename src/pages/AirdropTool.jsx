@@ -65,12 +65,16 @@ export function AirdropTool(props) {
                 const groups = sliceIntoChunks(signedTransactions, 16);
                 setTxSendingInProgress(true);
                 for (let i = 0; i < groups.length; i++) {
-                    toast.info(`Sending transaction ${i + 1} of ${groups.length}`);
-                    const { txId } = await algodClient
-                        .sendRawTransaction(groups[i].map((txn) => txn.blob))
-                        .do();
-                    await algosdk.waitForConfirmation(algodClient, txId, 3);
-                    toast.success(`Transaction ${i + 1} of ${groups.length} confirmed!`);
+                    try {
+                        toast.info(`Sending transaction ${i + 1} of ${groups.length}`);
+                        const { txId } = await algodClient
+                            .sendRawTransaction(groups[i].map((txn) => txn.blob))
+                            .do();
+                        await algosdk.waitForConfirmation(algodClient, txId, 3);
+                        toast.success(`Transaction ${i + 1} of ${groups.length} confirmed!`);
+                    } catch (error) {
+                        toast.error(`Transaction ${i + 1} of ${groups.length} failed!`);
+                    }
                 }
                 setIsTransactionsFinished(true);
                 setTxSendingInProgress(false);
