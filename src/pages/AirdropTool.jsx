@@ -91,6 +91,16 @@ export function AirdropTool(props) {
 
     return (
         <div className='mb-4 text-center flex flex-col items-center max-w-[40rem] gap-y-2'>
+            <p className="text-center text-lg text-pink-200 mt-2">
+                <a
+                    className="hover:text-pink-400 transition"
+                    href="https://loafpickle.medium.com/evil-tools-custom-mass-airdrop-3d5902dd1c94"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                >
+                    INSTRUCTIONS<br/> (Click here)
+                </a>
+            </p>
             <p>1- Connect Sender Wallet</p>
             <ConnectButton />
             <p>2- Upload CSV file</p>
