@@ -95,16 +95,10 @@ export async function createAirdropTransactions(
     }
     txnsArray.push(tx);
   }
-  const groups = sliceIntoChunks(txnsArray, 16);
-  for (let i = 0; i < groups.length; i++) {
-    const groupID = computeGroupID(groups[i]);
-    for (let j = 0; j < groups[i].length; j++) {
-      groups[i][j].group = groupID;
-    }
-  }
+
   const myAlgoConnect = new MyAlgoConnect();
   const signedTxns = await myAlgoConnect.signTransaction(
-    groups.flat().map((txn) => txn.toByte())
+    txnsArray.map((txn) => txn.toByte())
   );
   return signedTxns;
 }

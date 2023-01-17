@@ -62,18 +62,17 @@ export function AirdropTool(props) {
             try {
                 toast.info("Please sign the transactions!");
                 const signedTransactions = await createAirdropTransactions(data,nodeURL,assetDecimals);
-                const groups = sliceIntoChunks(signedTransactions, 16);
                 setTxSendingInProgress(true);
-                for (let i = 0; i < groups.length; i++) {
+                for (let i = 0; i < signedTransactions.length; i++) {
                     try {
-                        toast.info(`Sending transaction ${i + 1} of ${groups.length}`);
-                        const { txId } = await algodClient
-                            .sendRawTransaction(groups[i].map((txn) => txn.blob))
-                            .do();
+                        //toast.info(`Sending transaction ${i + 1} of ${signedTransactions.length}`);
+                        const { txId } = await algodClient.sendRawTransaction(signedTransactions[i].blob).do();
                         await algosdk.waitForConfirmation(algodClient, txId, 3);
-                        toast.success(`Transaction ${i + 1} of ${groups.length} confirmed!`);
+                        toast.success(`Transaction ${i + 1} of ${signedTransactions.length} confirmed!`, {
+                            autoClose: 1000,
+                        });
                     } catch (error) {
-                        toast.error(`Transaction ${i + 1} of ${groups.length} failed!`);
+                        toast.error(`Transaction ${i + 1} of ${signedTransactions.length} failed!`);
                     }
                 }
                 setIsTransactionsFinished(true);
