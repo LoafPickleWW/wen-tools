@@ -14,12 +14,12 @@ import { Header } from "../components/header";
 export default function Home() {
     const [selectTool, setSelectTool] = useState("collection_data");
     const [selectNetwork, setSelectNetwork] = useState("mainnet");
-    const [donationAmount, setDonationAmount] = useState(1);
+    const [donationAmount, setDonationAmount] = useState(5);
 
 
     const sendDonation = async () => {
         if (donationAmount < 1) {
-            toast.info("Please enter a donation amount greater than 0");
+            toast.info("Please enter a donation amount greater than 0!");
             return
         } else if (localStorage.getItem("wallet") === null) {
             toast.info("Please connect your wallet first");
