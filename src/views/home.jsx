@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { BatchCollectionMetadataUpdate } from "../pages/BatchMetadataUpdateComponent";
 import { DownloadCollectionData } from "../pages/DownloadCollectionData";
 import { CollectionSnapshot } from "../pages/CollectionSnapshotComponent";
@@ -16,10 +16,23 @@ export default function Home() {
     const [selectNetwork, setSelectNetwork] = useState("mainnet");
     const [donationAmount, setDonationAmount] = useState(5);
 
+    const updateNetworkType = (networkType) => {
+        localStorage.setItem("networkType", networkType);
+        setSelectNetwork(networkType);
+    };
+
+    useEffect(() => {
+        if (localStorage.getItem("networkType") !== null) {
+            updateNetworkType(localStorage.getItem("networkType"));
+        } else {
+            updateNetworkType("mainnet");
+        }
+    }, []);
+
 
     const sendDonation = async () => {
         if (donationAmount < 1) {
-            toast.info("Please enter a donation amount greater than 0!");
+            toast.info("Please enter a donation amount greater than 0");
             return
         } else if (localStorage.getItem("wallet") === null) {
             toast.info("Please connect your wallet first");
@@ -62,7 +75,7 @@ export default function Home() {
                         setSelectTool={setSelectTool}
                     />
                 </fieldset>
-                {SelectNetworkComponent(selectNetwork, setSelectNetwork)}
+                {SelectNetworkComponent(selectNetwork, updateNetworkType)}
                 {selectTool === "collection_data" && <DownloadCollectionData selectNetwork={selectNetwork} />}
                 {selectTool === "collection_snapshot" && <CollectionSnapshot selectNetwork={selectNetwork} />}
                 {selectTool === "batch_update" && <BatchCollectionMetadataUpdate selectNetwork={selectNetwork} />}
@@ -114,7 +127,7 @@ export default function Home() {
     );
 }
 
-function SelectNetworkComponent(selectNetwork, setSelectNetwork) {
+function SelectNetworkComponent(selectNetwork, updateNetworkType) {
     return <fieldset className=" bg-rose-500/50 px-4 py-2 rounded-lg">
 
         <p className="text-sm font-medium text-center text-orange-300">
@@ -126,7 +139,7 @@ function SelectNetworkComponent(selectNetwork, setSelectNetwork) {
                     id="mainnet-select"
                     type="radio"
                     checked={selectNetwork === "mainnet"}
-                    onChange={() => setSelectNetwork("mainnet")}
+                    onChange={() => updateNetworkType("mainnet")}
                     className="rounded-full border-gray-300 text-rose-600 transition focus:ring-rose-600 disabled:cursor-not-allowed disabled:bg-gray-200 disabled:opacity-75" />
                 <label
                     htmlFor="mainnet-select"
@@ -140,7 +153,7 @@ function SelectNetworkComponent(selectNetwork, setSelectNetwork) {
                     id="testnet-select"
                     type="radio"
                     checked={selectNetwork === "testnet"}
-                    onChange={() => setSelectNetwork("testnet")}
+                    onChange={() => updateNetworkType("testnet")}
                     className="rounded-full border-gray-300 text-rose-600 transition focus:ring-rose-600 disabled:cursor-not-allowed disabled:bg-gray-200 disabled:opacity-75" />
                 <label
                     htmlFor="testnet-select"
