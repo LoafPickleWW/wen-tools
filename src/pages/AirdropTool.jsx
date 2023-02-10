@@ -100,6 +100,11 @@ export function AirdropTool(props) {
                     INSTRUCTIONS<br/> (Click here)
                 </a>
             </p>
+            <p className="text-center text-lg text-red-400 mt-2">WARNING</p>
+            <p className="text-center text-sm text-slate-200 -mt-2">
+                Airdrop tool is limited to 1000 transactions per airdrop sheet because
+                of MyAlgo constraints.
+            </p>
             <p>1- Connect Sender Wallet</p>
             <ConnectButton />
             <p>2- Upload CSV file</p>
