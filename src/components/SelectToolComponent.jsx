@@ -54,6 +54,21 @@ export function SelectToolComponent({ selectTool, setSelectTool }) {
         </div>
         <div className="inline-flex items-center space-x-1">
           <input
+            id="batch_mint"
+            type="radio"
+            checked={selectTool === "batch_mint"}
+            onChange={() => setSelectTool("batch_mint")}
+            className="rounded-full border-gray-300 text-rose-600 transition focus:ring-rose-600 disabled:cursor-not-allowed disabled:bg-gray-200 disabled:opacity-75"
+          />
+          <label
+            htmlFor="batch_mint"
+            className="truncate text-sm font-medium text-slate-200"
+          >
+            Batch Collection Mint
+          </label>
+        </div>
+        <div className="inline-flex items-center space-x-1">
+          <input
             id="airdrop_tool"
             type="radio"
             checked={selectTool === "airdrop_tool"}

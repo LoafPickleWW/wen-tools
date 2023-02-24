@@ -80,7 +80,8 @@ export function BatchCollectionMetadataUpdate(props) {
             toast.success("All transactions confirmed!");
             toast.info("You can support by donating :)");
         } catch (error) {
-            console.log(error);
+            toast.error(error.message);
+            setTxSendingInProgress(false);
         }
     };
 

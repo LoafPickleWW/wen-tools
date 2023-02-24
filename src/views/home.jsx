@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { BatchCollectionMetadataUpdate } from "../pages/BatchMetadataUpdateComponent";
 import { DownloadCollectionData } from "../pages/DownloadCollectionData";
 import { CollectionSnapshot } from "../pages/CollectionSnapshotComponent";
+import {BatchCollectionMint} from "../pages/BatchCollectionMint";
 import { SelectToolComponent } from "../components/SelectToolComponent";
 import { AirdropTool } from "../pages/AirdropTool";
 import { toast } from "react-toastify";
@@ -79,6 +80,7 @@ export default function Home() {
                 {selectTool === "collection_data" && <DownloadCollectionData selectNetwork={selectNetwork} />}
                 {selectTool === "collection_snapshot" && <CollectionSnapshot selectNetwork={selectNetwork} />}
                 {selectTool === "batch_update" && <BatchCollectionMetadataUpdate selectNetwork={selectNetwork} />}
+                {selectTool === "batch_mint" && <BatchCollectionMint selectNetwork={selectNetwork} />}
                 {selectTool === "airdrop_tool" && <AirdropTool selectNetwork={selectNetwork} />}
             </main>
             <p className="text-center text-xs text-slate-400 py-2">

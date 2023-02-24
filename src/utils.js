@@ -5,6 +5,7 @@ import {
   makePaymentTxnWithSuggestedParamsFromObject,
   algosToMicroalgos,
   makeAssetTransferTxnWithSuggestedParamsFromObject,
+  makeAssetCreateTxnWithSuggestedParamsFromObject,
 } from "algosdk";
 import MyAlgoConnect from "@randlabs/myalgo-connect";
 
@@ -12,6 +13,10 @@ const DONATE_WALLET_1 =
   "O2ZPSV6NJC32ZXQ7PZ5ID6PXRKAWQE2XWFZK5NK3UFULPZT6OKIOROEAPU";
 const DONATE_WALLET_2 =
   "BYKWLR65FS6IBLJO7SKBGBJ4C5T257LBL55OUY6363QBWX24B5QKT6DMEA";
+
+const MINT_FEE_WALLET =
+  "RBZ4GUE7FFDZWCN532FFR5AIYJ6K4V2GKJS5B42JPSWOAVWUT4OHWG57YQ";
+const MINT_FEE_PER_ASA = 0.1;
 
 export function sliceIntoChunks(arr, chunkSize) {
   const res = [];
@@ -57,6 +62,59 @@ export async function createAssetConfigArray(data_for_txns, nodeURL) {
   return signedTxns;
 }
 
+export async function createAssetMintArray(data_for_txns, nodeURL) {
+  const algodClient = new Algodv2("", nodeURL, {
+    "User-Agent": "evil-tools",
+  });
+  const params = await algodClient.getTransactionParams().do();
+  let txnsArray = [];
+  const wallet = localStorage.getItem("wallet");
+  try {
+    for (let i = 0; i < data_for_txns.length; i++) {
+      const note = new TextEncoder().encode(
+        JSON.stringify(data_for_txns[i].asset_note)
+      );
+      let asset_create_tx = makeAssetCreateTxnWithSuggestedParamsFromObject({
+        from: wallet,
+        manager: wallet,
+        assetName: data_for_txns[i].asset_name,
+        unitName: data_for_txns[i].unit_name,
+        total: parseInt(data_for_txns[i].total_supply),
+        decimals: parseInt(data_for_txns[i].decimals),
+        reserve: wallet,
+        freeze: data_for_txns[i].has_freeze === "Y" ? wallet : undefined,
+        assetURL: data_for_txns[i].asset_url,
+        suggestedParams: params,
+        note: note,
+        clawback: data_for_txns[i].has_clawback === "Y" ? wallet : undefined,
+        strictEmptyAddressChecking: false,
+      });
+
+      let fee_tx = makePaymentTxnWithSuggestedParamsFromObject({
+        from: wallet,
+        to: MINT_FEE_WALLET,
+        amount: algosToMicroalgos(MINT_FEE_PER_ASA),
+        suggestedParams: params,
+        note: new TextEncoder().encode(
+          "via Evil Tools | " + Math.random().toString(36).substring(2)
+        ),
+      });
+      const groupID = computeGroupID([asset_create_tx, fee_tx]);
+      asset_create_tx.group = groupID;
+      fee_tx.group = groupID;
+      txnsArray.push([asset_create_tx, fee_tx]);
+    }
+    const myAlgoConnect = new MyAlgoConnect();
+    const signedTxns = await myAlgoConnect.signTransaction(
+      txnsArray.flat().map((txn) => txn.toByte())
+    );
+    return signedTxns;
+  } catch (error) {
+    console.log(error);
+    throw error;
+  }
+}
+
 export async function createAirdropTransactions(
   data_for_txns,
   nodeURL,
@@ -70,7 +128,7 @@ export async function createAirdropTransactions(
   const wallet = localStorage.getItem("wallet");
   for (let i = 0; i < data_for_txns.length; i++) {
     var tx;
-    if (data_for_txns[i].asset_id == 1) {
+    if (data_for_txns[i].asset_id === 1) {
       tx = makePaymentTxnWithSuggestedParamsFromObject({
         from: wallet,
         to: data_for_txns[i].receiver,
