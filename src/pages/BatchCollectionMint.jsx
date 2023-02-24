@@ -151,7 +151,7 @@ export function BatchCollectionMint(props) {
       <p className="text-center text-lg text-red-200 hover:underline">
         <a
           className="hover:text-pink-400 transition"
-          href="https://loafpickle.medium.com/evil-tools-custom-mass-airdrop-3d5902dd1c94"
+          href="https://loafpickle.medium.com/evil-tools-mass-mint-tool-d06b8fc054b1"
           target="_blank"
           rel="noopener noreferrer"
         >
