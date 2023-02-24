@@ -168,7 +168,7 @@ export function BatchCollectionMint(props) {
             <p className="mb-1 text-sm text-gray-400 font-bold">
               Click to upload file
             </p>
-            <p className="text-xs text-gray-400">(CSV,XLS,XLSX)</p>
+            <p className="text-xs text-gray-400">(CSV)</p>
             <p className="text-xs text-gray-300">
               To be sure there is no empty row at the end of the file
             </p>
@@ -177,7 +177,7 @@ export function BatchCollectionMint(props) {
             className="hidden"
             id="dropzone-file"
             type="file"
-            accept=".csv,.xlsx,.xls"
+            accept=".csv"
             onChange={(e) => {
               const file = e.target.files[0];
               Papa.parse(file, {
