@@ -8,6 +8,9 @@ import {
   makeAssetCreateTxnWithSuggestedParamsFromObject,
 } from "algosdk";
 import MyAlgoConnect from "@randlabs/myalgo-connect";
+import { PeraWalletConnect } from "@perawallet/connect";
+
+const peraWallet = new PeraWalletConnect({ shouldShowSignTxnToast: true });
 
 const DONATE_WALLET_1 =
   "O2ZPSV6NJC32ZXQ7PZ5ID6PXRKAWQE2XWFZK5NK3UFULPZT6OKIOROEAPU";
@@ -25,6 +28,49 @@ export function sliceIntoChunks(arr, chunkSize) {
     res.push(chunk);
   }
   return res;
+}
+
+async function signGroupTransactions(groups, wallet, isMultipleGroup = false) {
+  let signedTxns;
+  let txnsToValidate;
+  try {
+    if (localStorage.getItem("PeraWallet.Wallet") != null) {
+      await peraWallet.reconnectSession();
+      let multipleTxnGroups;
+      if (isMultipleGroup) {
+        multipleTxnGroups = groups.map((group) => {
+          return group.map((txn) => {
+            return { txn: txn, signers: [wallet] };
+          });
+        });
+      } else {
+        multipleTxnGroups = groups.map((txn) => {
+          return { txn: txn, signers: [wallet] };
+        });
+      }
+      if (multipleTxnGroups.length === 0) {
+        throw new Error("Transaction signing failed!");
+      }
+      if (isMultipleGroup) {
+        signedTxns = await peraWallet.signTransaction(multipleTxnGroups);
+      } else {
+        signedTxns = await peraWallet.signTransaction([multipleTxnGroups]);
+      }
+      txnsToValidate = signedTxns.flat();
+    } else {
+      const myAlgoConnect = new MyAlgoConnect();
+      signedTxns = await myAlgoConnect.signTransaction(
+        groups.flat().map((txn) => txn.toByte())
+      );
+      txnsToValidate = signedTxns.flat().map((txn) => txn.blob);
+    }
+    if (txnsToValidate == null) {
+      throw new Error("Transaction signing failed");
+    }
+    return txnsToValidate;
+  } catch (error) {
+    console.log(error);
+  }
 }
 
 export async function createAssetConfigArray(data_for_txns, nodeURL) {
@@ -55,11 +101,12 @@ export async function createAssetConfigArray(data_for_txns, nodeURL) {
       groups[i][j].group = groupID;
     }
   }
-  const myAlgoConnect = new MyAlgoConnect();
-  const signedTxns = await myAlgoConnect.signTransaction(
-    groups.flat().map((txn) => txn.toByte())
-  );
-  return signedTxns;
+  try {
+    const txnsToValidate = await signGroupTransactions(groups, wallet, true);
+    return txnsToValidate;
+  } catch (error) {
+    console.log(error);
+  }
 }
 
 export async function createAssetMintArray(data_for_txns, nodeURL) {
@@ -69,11 +116,12 @@ export async function createAssetMintArray(data_for_txns, nodeURL) {
   const params = await algodClient.getTransactionParams().do();
   let txnsArray = [];
   const wallet = localStorage.getItem("wallet");
-  try {
-    for (let i = 0; i < data_for_txns.length; i++) {
+  for (let i = 0; i < data_for_txns.length; i++) {
+    try {
       const note = new TextEncoder().encode(
         JSON.stringify(data_for_txns[i].asset_note)
       );
+
       let asset_create_tx = makeAssetCreateTxnWithSuggestedParamsFromObject({
         from: wallet,
         manager: wallet,
@@ -103,16 +151,10 @@ export async function createAssetMintArray(data_for_txns, nodeURL) {
       asset_create_tx.group = groupID;
       fee_tx.group = groupID;
       txnsArray.push([asset_create_tx, fee_tx]);
-    }
-    const myAlgoConnect = new MyAlgoConnect();
-    const signedTxns = await myAlgoConnect.signTransaction(
-      txnsArray.flat().map((txn) => txn.toByte())
-    );
-    return signedTxns;
-  } catch (error) {
-    console.log(error);
-    throw error;
+    } catch (error) {}
   }
+  const txnsToValidate = await signGroupTransactions(txnsArray, wallet,true);
+  return txnsToValidate;
 }
 
 export async function createAirdropTransactions(
@@ -128,11 +170,11 @@ export async function createAirdropTransactions(
   const wallet = localStorage.getItem("wallet");
   for (let i = 0; i < data_for_txns.length; i++) {
     var tx;
-    if (data_for_txns[i].asset_id === 1) {
+    if (data_for_txns[i].asset_id == 1) {
       tx = makePaymentTxnWithSuggestedParamsFromObject({
         from: wallet,
         to: data_for_txns[i].receiver,
-        amount: algosToMicroalgos(data_for_txns[i].amount),
+        amount: algosToMicroalgos(data_for_txns[i].amount * 1),
         suggestedParams: params,
         note: new TextEncoder().encode(
           "via Evil Tools | " + Math.random().toString(36).substring(2)
@@ -153,12 +195,8 @@ export async function createAirdropTransactions(
     }
     txnsArray.push(tx);
   }
-
-  const myAlgoConnect = new MyAlgoConnect();
-  const signedTxns = await myAlgoConnect.signTransaction(
-    txnsArray.map((txn) => txn.toByte())
-  );
-  return signedTxns;
+  const txnsToValidate = await signGroupTransactions(txnsArray, wallet);
+  return txnsToValidate;
 }
 
 export async function createDonationTransaction(amount) {
@@ -186,11 +224,31 @@ export async function createDonationTransaction(amount) {
   const txnsArray = [tx, tx2];
   const groupID = computeGroupID(txnsArray);
   for (let i = 0; i < txnsArray.length; i++) txnsArray[i].group = groupID;
-  const myAlgoConnect = new MyAlgoConnect();
-  const signedTxns = await myAlgoConnect.signTransaction(
-    txnsArray.map((txn) => txn.toByte())
-  );
-  return signedTxns;
+  let signedTxns;
+  let txnsToValidate;
+  try {
+    if (localStorage.getItem("PeraWallet.Wallet") != null) {
+      await peraWallet.reconnectSession();
+      const multipleTxnGroups = [
+        { txn: txnsArray[0], signers: [wallet] },
+        { txn: txnsArray[1], signers: [wallet] },
+      ];
+      signedTxns = await peraWallet.signTransaction([multipleTxnGroups]);
+      txnsToValidate = signedTxns.flat();
+    } else {
+      const myAlgoConnect = new MyAlgoConnect();
+      signedTxns = await myAlgoConnect.signTransaction(
+        txnsArray.map((txn) => txn.toByte())
+      );
+      txnsToValidate = signedTxns.flat().map((txn) => txn.blob);
+    }
+    if (txnsToValidate.length === 0) {
+      throw new Error("Transaction signing failed");
+    }
+    return txnsToValidate;
+  } catch (error) {
+    console.log(error);
+  }
 }
 
 export class Arc69 {

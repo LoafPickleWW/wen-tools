@@ -3,9 +3,7 @@ import Papa from "papaparse";
 import ConnectButton from "../components/ConnectButton";
 import algosdk from "algosdk";
 import { toast } from "react-toastify";
-import {
-  createAirdropTransactions,
-} from "../utils";
+import { createAirdropTransactions } from "../utils";
 
 export function AirdropTool(props) {
   const [csvData, setCsvData] = useState(null);
@@ -64,6 +62,7 @@ export function AirdropTool(props) {
       toast.error("Wallet not found!");
       return;
     }
+
     try {
       const nodeURL =
         props.selectNetwork == "mainnet"
@@ -82,9 +81,8 @@ export function AirdropTool(props) {
         setTxSendingInProgress(true);
         for (let i = 0; i < signedTransactions.length; i++) {
           try {
-            //toast.info(`Sending transaction ${i + 1} of ${signedTransactions.length}`);
             const { txId } = await algodClient
-              .sendRawTransaction(signedTransactions[i].blob)
+              .sendRawTransaction(signedTransactions[i])
               .do();
             await algosdk.waitForConfirmation(algodClient, txId, 3);
             toast.success(
@@ -104,6 +102,7 @@ export function AirdropTool(props) {
         toast.success("All transactions confirmed!");
         toast.info("You can support by donating :)");
       } catch (error) {
+        setTxSendingInProgress(false);
         toast.error("Something went wrong! Please check your file!");
         return;
       }
@@ -128,8 +127,10 @@ export function AirdropTool(props) {
       </p>
       <p className="text-center text-lg text-red-400 mt-2">WARNING</p>
       <p className="text-center text-sm text-slate-200 -mt-2">
-        Airdrop tool is limited to 1000 transactions per airdrop sheet because
-        of MyAlgo constraints.
+        {/* * Airdrop tool is limited to 1000 transactions per airdrop sheet because
+        of MyAlgo constraints. */}
+        *Airdrop tool is limited to 128 transactions per airdrop sheet because
+        of Pera constraints.
       </p>
       <p>1- Connect Sender Wallet</p>
       <ConnectButton />
@@ -157,7 +158,10 @@ export function AirdropTool(props) {
               const file = e.target.files[0];
               Papa.parse(file, {
                 complete: function (results) {
-                  setCsvData(results.data);
+                  const filteredData = results.data.filter(
+                    (row) => row[0].length > 1
+                  );
+                  setCsvData(filteredData);
                 },
                 skipEmptyLines: true,
               });

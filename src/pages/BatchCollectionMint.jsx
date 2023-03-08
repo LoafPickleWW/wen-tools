@@ -127,12 +127,12 @@ export function BatchCollectionMint(props) {
         "User-Agent": "evil-tools",
       });
       for (let i = 0; i < groups.length; i++) {
-        toast.info(`Sending transaction ${i + 1} of ${groups.length}`);
-        const { txId } = await algodClient
-          .sendRawTransaction(groups[i].map((txn) => txn.blob))
-          .do();
+        //toast.info(`Sending group ${i + 1} of ${groups.length}`);
+        const { txId } = await algodClient.sendRawTransaction(groups[i]).do();
         await algosdk.waitForConfirmation(algodClient, txId, 3);
-        toast.success(`Transaction ${i + 1} of ${groups.length} confirmed!`);
+        toast.success(`Transaction ${i + 1} of ${groups.length} confirmed!`, {
+          autoClose: 1000,
+        });
       }
       setIsTransactionsFinished(true);
       setTxSendingInProgress(false);

@@ -41,7 +41,7 @@ export function UploadCollectionToIPFS() {
                 });
                 toast.info("Sending transaction...");
                 const { txId } = await algodClient
-                    .sendRawTransaction(group.map((txn) => txn.blob))
+                    .sendRawTransaction(group)
                     .do();
                 await algosdk.waitForConfirmation(algodClient, txId, 3);
                 toast.success("Thank you for your donation!");
