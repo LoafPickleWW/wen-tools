@@ -4,6 +4,7 @@ import { DownloadCollectionData } from "../pages/DownloadCollectionData";
 import { CollectionSnapshot } from "../pages/CollectionSnapshotComponent";
 import {BatchCollectionMint} from "../pages/BatchCollectionMint";
 import { SelectToolComponent } from "../components/SelectToolComponent";
+import { BatchOptin } from "../pages/BatchOptin";
 import { AirdropTool } from "../pages/AirdropTool";
 import { toast } from "react-toastify";
 import { createDonationTransaction } from "../utils";
@@ -24,11 +25,22 @@ export default function Home() {
         setSelectNetwork(networkType);
     };
 
+    const updateToolType = (toolType) => {
+        localStorage.setItem("selectedTool", toolType);
+        setSelectTool(toolType);
+    };
+
     useEffect(() => {
         if (localStorage.getItem("networkType") !== null) {
             updateNetworkType(localStorage.getItem("networkType"));
         } else {
             updateNetworkType("mainnet");
+        }
+
+        if (localStorage.getItem("selectedTool") !== null) {
+            updateToolType(localStorage.getItem("selectedTool"));
+        } else {
+            updateToolType("collection_data");
         }
     }, []);
 
@@ -79,7 +91,7 @@ export default function Home() {
                 <fieldset className="space-y-3 my-4 bg-rose-500/50 px-4 py-2 rounded-lg">
                     <SelectToolComponent
                         selectTool={selectTool}
-                        setSelectTool={setSelectTool}
+                        setSelectTool={updateToolType}
                     />
                 </fieldset>
                 {SelectNetworkComponent(selectNetwork, updateNetworkType)}
@@ -88,6 +100,7 @@ export default function Home() {
                 {selectTool === "batch_update" && <BatchCollectionMetadataUpdate selectNetwork={selectNetwork} />}
                 {selectTool === "batch_mint" && <BatchCollectionMint selectNetwork={selectNetwork} />}
                 {selectTool === "airdrop_tool" && <AirdropTool selectNetwork={selectNetwork} />}
+                {selectTool === "batch_optin" && <BatchOptin selectNetwork={selectNetwork} />}
             </main>
             <p className="text-center text-xs text-slate-400 py-2">
                 ⚠️If you reload or close this page, you will lose your progress⚠️

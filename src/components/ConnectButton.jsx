@@ -10,7 +10,7 @@ export default function ConnectButton() {
   const [showConnects, setShowConnects] = useState(false);
 
   const shortenWallet = (wallet) => {
-    return wallet.substring(0, 5) + "..." + wallet.substring(53, 58);
+    return wallet.substring(0, 4) + "..." + wallet.substring(54, 58);
   };
 
   useEffect(() => {

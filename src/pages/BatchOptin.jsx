@@ -3,57 +3,26 @@ import Papa from "papaparse";
 import ConnectButton from "../components/ConnectButton";
 import algosdk from "algosdk";
 import { toast } from "react-toastify";
-import { createAirdropTransactions } from "../utils";
+import { createAssetOptInTransactions } from "../utils";
 
-export function AirdropTool(props) {
+export function BatchOptin(props) {
   const [csvData, setCsvData] = useState(null);
   const [isTransactionsFinished, setIsTransactionsFinished] = useState(false);
   const [txSendingInProgress, setTxSendingInProgress] = useState(false);
 
-  async function getAssetDecimals(assetId) {
-    try {
-      const nodeURL =
-        props.selectNetwork == "mainnet"
-          ? "https://node.algoexplorerapi.io/"
-          : "https://node.testnet.algoexplorerapi.io/";
-      const algodClient = new algosdk.Algodv2("", nodeURL, {
-        "User-Agent": "evil-tools",
-      });
-      const assetInfo = await algodClient.getAssetByID(assetId).do();
-      return assetInfo.params.decimals;
-    } catch (error) {
-      toast.error(
-        "Something went wrong! Please check your file and network type."
-      );
-    }
-  }
-
   const handleFileData = async () => {
     let headers;
-    let data = [];
+    let assets = [];
     for (let i = 0; i < csvData.length; i++) {
-      if (csvData[i].length == 1) continue;
-      if (i === 0) {
-        headers = csvData[i];
+      if (i !== 0) {
+        assets.push(parseInt(csvData[i][0]));
       } else {
-        let obj = {};
-        for (let j = 0; j < headers.length; j++) {
-          obj[headers[j]] = csvData[i][j];
-        }
-        data.push(obj);
+        headers = csvData[i];
       }
     }
-    let assetIds = {};
-    for (let i = 0; i < data.length; i++) {
-      if (data[i].asset_id) {
-        assetIds[data[i].asset_id] = true;
-      }
-    }
-    assetIds = Object.keys(assetIds);
-    let assetDecimals = {};
-    for (let i = 0; i < assetIds.length; i++) {
-      if (assetIds[i] == 1) continue;
-      assetDecimals[assetIds[i]] = await getAssetDecimals(assetIds[i]);
+    if (assets.length === 0) {
+      toast.error("No assets found in the file!");
+      return;
     }
     if (
       localStorage.getItem("wallet") === null ||
@@ -71,12 +40,12 @@ export function AirdropTool(props) {
       const algodClient = new algosdk.Algodv2("", nodeURL, {
         "User-Agent": "evil-tools",
       });
+
       try {
         toast.info("Please sign the transactions!");
-        const signedTransactions = await createAirdropTransactions(
-          data,
-          nodeURL,
-          assetDecimals
+        const signedTransactions = await createAssetOptInTransactions(
+          assets,
+          nodeURL
         );
         setTxSendingInProgress(true);
         for (let i = 0; i < signedTransactions.length; i++) {
@@ -86,17 +55,14 @@ export function AirdropTool(props) {
               .do();
             await algosdk.waitForConfirmation(algodClient, txId, 3);
             toast.success(
-              `Group ${i + 1} of ${signedTransactions.length} confirmed!`,
+              `Transaction ${i + 1} of ${signedTransactions.length} confirmed!`,
               {
                 autoClose: 1000,
               }
             );
           } catch (error) {
             toast.error(
-              `Group ${i + 1} of ${signedTransactions.length} failed!`,
-              {
-                autoClose: 1000,
-              }
+              `Transaction ${i + 1} of ${signedTransactions.length} failed!`
             );
           }
         }
@@ -117,17 +83,6 @@ export function AirdropTool(props) {
 
   return (
     <div className="mb-4 text-center flex flex-col items-center max-w-[40rem] gap-y-2">
-      <p className="text-center text-lg text-pink-200 mt-2">
-        <a
-          className="hover:text-pink-400 transition"
-          href="https://loafpickle.medium.com/evil-tools-custom-mass-airdrop-3d5902dd1c94"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          INSTRUCTIONS
-          <br /> (Click here)
-        </a>
-      </p>
       <p>1- Connect Sender Wallet</p>
       <ConnectButton />
       <p>2- Upload CSV file</p>
@@ -180,7 +135,7 @@ export function AirdropTool(props) {
             <>
               <p className="mb-1 text-sm font-bold">File uploaded</p>
               <p className="text-sm text-gray-400">
-                {csvData.length - 1} transactions found!
+                {csvData.length - 1} assets found!
               </p>
               <p>3- Sign Your Transactions</p>
               {!txSendingInProgress ? (

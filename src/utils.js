@@ -105,7 +105,7 @@ export async function createAssetConfigArray(data_for_txns, nodeURL) {
     const txnsToValidate = await signGroupTransactions(groups, wallet, true);
     return txnsToValidate;
   } catch (error) {
-    console.log(error);
+    throw new Error("Transaction signing failed");
   }
 }
 
@@ -121,7 +121,6 @@ export async function createAssetMintArray(data_for_txns, nodeURL) {
       const note = new TextEncoder().encode(
         JSON.stringify(data_for_txns[i].asset_note)
       );
-
       let asset_create_tx = makeAssetCreateTxnWithSuggestedParamsFromObject({
         from: wallet,
         manager: wallet,
@@ -153,7 +152,7 @@ export async function createAssetMintArray(data_for_txns, nodeURL) {
       txnsArray.push([asset_create_tx, fee_tx]);
     } catch (error) {}
   }
-  const txnsToValidate = await signGroupTransactions(txnsArray, wallet,true);
+  const txnsToValidate = await signGroupTransactions(txnsArray, wallet, true);
   return txnsToValidate;
 }
 
@@ -248,6 +247,40 @@ export async function createDonationTransaction(amount) {
     return txnsToValidate;
   } catch (error) {
     console.log(error);
+  }
+}
+
+export async function createAssetOptInTransactions(assets, nodeURL) {
+  const algodClient = new Algodv2("", nodeURL, {
+    "User-Agent": "evil-tools",
+  });
+  const params = await algodClient.getTransactionParams().do();
+  let txnsArray = [];
+  const wallet = localStorage.getItem("wallet");
+  for (let i = 0; i < assets.length; i++) {
+    const tx = makeAssetTransferTxnWithSuggestedParamsFromObject({
+      from: wallet,
+      to: wallet,
+      amount: 0,
+      assetIndex: parseInt(assets[i]),
+      suggestedParams: params,
+      note: new TextEncoder().encode("via Evil Tools"),
+    });
+    txnsArray.push(tx);
+  }
+  const groups = sliceIntoChunks(txnsArray, 16);
+  for (let i = 0; i < groups.length; i++) {
+    const groupID = computeGroupID(groups[i]);
+    for (let j = 0; j < groups[i].length; j++) {
+      groups[i][j].group = groupID;
+    }
+  }
+  try {
+    const txnsToValidate = await signGroupTransactions(groups, wallet, true);
+    console.log(txnsToValidate);
+    return sliceIntoChunks(txnsToValidate, 16);
+  } catch (error) {
+    throw new Error("Transaction signing failed");
   }
 }
 
