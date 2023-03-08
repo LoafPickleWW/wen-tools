@@ -2,11 +2,13 @@ import { useState } from "react";
 import { toast } from "react-toastify";
 import { createDonationTransaction } from "../utils";
 import algosdk from "algosdk";
-import MyAlgoConnect from "@randlabs/myalgo-connect";
+//import MyAlgoConnect from "@randlabs/myalgo-connect";
 import { Footer } from "../components/footer";
 import { Header } from "../components/header";
 import { Web3Storage } from 'web3.storage/dist/bundle.esm.min.js';
+import { PeraWalletConnect } from "@perawallet/connect";
 
+const peraWallet = new PeraWalletConnect({ shouldShowSignTxnToast: true });
 
 export function UploadCollectionToIPFS() {
     const [token, setToken] = useState("");
@@ -16,6 +18,7 @@ export function UploadCollectionToIPFS() {
     const [loading, setLoading] = useState(false);
 
 
+
     const sendDonation = async () => {
         if (donationAmount < 1) {
             toast.info("Please enter a donation amount greater than 0");
@@ -23,12 +26,16 @@ export function UploadCollectionToIPFS() {
         } else if (localStorage.getItem("wallet") === null) {
             toast.info("Please connect your wallet first");
             try {
-                const myAlgoConnect = new MyAlgoConnect();
-                const wallet = await myAlgoConnect.connect({
-                    shouldSelectOneAccount: true,
-                });
-                localStorage.setItem("wallet", wallet[0].address);
+                const accounts = await peraWallet.connect();
+                localStorage.setItem("wallet", accounts[0]);
+                toast.success("Connected!");
                 window.location.reload();
+                // const myAlgoConnect = new MyAlgoConnect();
+                // const wallet = await myAlgoConnect.connect({
+                //     shouldSelectOneAccount: true,
+                // });
+                // localStorage.setItem("wallet", wallet[0].address);
+                // window.location.reload();
             } catch (e) {
                 toast.error("Ooops! Something went wrong! Did you allow pop-ups?");
             }

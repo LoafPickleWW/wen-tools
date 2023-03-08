@@ -8,9 +8,11 @@ import { AirdropTool } from "../pages/AirdropTool";
 import { toast } from "react-toastify";
 import { createDonationTransaction } from "../utils";
 import algosdk from "algosdk";
-import MyAlgoConnect from "@randlabs/myalgo-connect";
+//import MyAlgoConnect from "@randlabs/myalgo-connect";
 import { Footer } from "../components/footer";
 import { Header } from "../components/header";
+import { PeraWalletConnect } from "@perawallet/connect";
+const peraWallet = new PeraWalletConnect({ shouldShowSignTxnToast: true });
 
 export default function Home() {
     const [selectTool, setSelectTool] = useState("collection_data");
@@ -38,12 +40,16 @@ export default function Home() {
         } else if (localStorage.getItem("wallet") === null) {
             toast.info("Please connect your wallet first");
             try {
-                const myAlgoConnect = new MyAlgoConnect();
-                const wallet = await myAlgoConnect.connect({
-                    shouldSelectOneAccount: true,
-                });
-                localStorage.setItem("wallet", wallet[0].address);
+                const accounts = await peraWallet.connect();
+                localStorage.setItem("wallet", accounts[0]);
+                toast.success("Connected!");
                 window.location.reload();
+                // const myAlgoConnect = new MyAlgoConnect();
+                // const wallet = await myAlgoConnect.connect({
+                //     shouldSelectOneAccount: true,
+                // });
+                // localStorage.setItem("wallet", wallet[0].address);
+                // window.location.reload();
             } catch (e) {
                 toast.error("Ooops! Something went wrong! Did you allow pop-ups?");
             }
