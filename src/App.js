@@ -3,7 +3,7 @@ import Home from "./views/home";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.min.css";
 import { UploadCollectionToIPFS } from "./pages/UploadCollectionToIPFS";
-
+// deploy
 function App() {
   return (
     <div className="bg-gray-900 flex flex-col min-h-screen font-roboto">
