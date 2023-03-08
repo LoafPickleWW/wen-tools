@@ -29,7 +29,7 @@ export function SelectToolComponent({ selectTool, setSelectTool }) {
     },
     {
       id: "batch_optin",
-      label: "Batch Optin",
+      label: "Batch Asset Add",
       description: "Optin assets in bulk",
     },
   ];
