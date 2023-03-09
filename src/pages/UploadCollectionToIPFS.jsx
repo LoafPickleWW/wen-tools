@@ -13,7 +13,7 @@ const peraWallet = new PeraWalletConnect({ shouldShowSignTxnToast: true });
 export function UploadCollectionToIPFS() {
   const [token, setToken] = useState("");
   const [selectedFiles, setSelectedFiles] = useState([]);
-  const [donationAmount, setDonationAmount] = useState(1);
+  const [donationAmount, setDonationAmount] = useState(10);
   const [collectionCid, setCollectionCid] = useState("");
   const [loading, setLoading] = useState(false);
 
