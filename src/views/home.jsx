@@ -18,7 +18,7 @@ const peraWallet = new PeraWalletConnect({ shouldShowSignTxnToast: true });
 export default function Home() {
     const [selectTool, setSelectTool] = useState("collection_data");
     const [selectNetwork, setSelectNetwork] = useState("mainnet");
-    const [donationAmount, setDonationAmount] = useState(5);
+    const [donationAmount, setDonationAmount] = useState(10);
 
     const updateNetworkType = (networkType) => {
         localStorage.setItem("networkType", networkType);
