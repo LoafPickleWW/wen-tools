@@ -83,6 +83,17 @@ export function BatchOptin(props) {
 
   return (
     <div className="mb-4 text-center flex flex-col items-center max-w-[40rem] gap-y-2">
+      <p className="text-center text-lg text-pink-200 mt-2">
+        <a
+          className="hover:text-pink-400 transition"
+          href="https://loafpickle.medium.com/evil-tools-batch-asset-add-f5aa28db2fc7"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          INSTRUCTIONS
+          <br /> (Click here)
+        </a>
+      </p>
       <p>1- Connect Sender Wallet</p>
       <ConnectButton />
       <p>2- Upload CSV file</p>
