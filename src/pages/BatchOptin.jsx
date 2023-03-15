@@ -94,7 +94,7 @@ export function BatchOptin(props) {
           <br /> (Click here)
         </a>
       </p>
-      <p>1- Connect Sender Wallet</p>
+      <p>1- Connect Opt In Wallet</p>
       <ConnectButton />
       <p>2- Upload CSV file</p>
       {csvData == null ? (
