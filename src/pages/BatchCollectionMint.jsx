@@ -6,7 +6,7 @@ import { toast } from "react-toastify";
 import { TOOLS, createAssetMintArray, sliceIntoChunks } from "../utils";
 import SelectNetworkComponent from "../components/SelectNetworkComponent";
 
-export function BatchCollectionMint(props) {
+export function BatchCollectionMint() {
   const [csvData, setCsvData] = useState(null);
   const [isTransactionsFinished, setIsTransactionsFinished] = useState(false);
   const [txSendingInProgress, setTxSendingInProgress] = useState(false);
@@ -115,7 +115,7 @@ export function BatchCollectionMint(props) {
     try {
       toast.info("Please sign the transactions!");
       const nodeURL =
-        localStorage.getItem("networkType") == "mainnet"
+        localStorage.getItem("networkType") === "mainnet"
           ? "https://node.algoexplorerapi.io/"
           : "https://node.testnet.algoexplorerapi.io/";
       const signedTransactions = await createAssetMintArray(

@@ -1,176 +1,199 @@
-import { useState } from "react"
+import { useState } from "react";
 import { toast } from "react-toastify";
 import axios from "axios";
 import { TOOLS, getNfdDomain } from "../utils";
 import SelectNetworkComponent from "../components/SelectNetworkComponent";
 
-export function CollectionSnapshot(props) {
-    const [creatorWallet, setCreatorWallet] = useState("");
-    const [collectionData, setCollectionData] = useState([]);
-    const [loading, setLoading] = useState(false);
-    const [counter, setCounter] = useState(0);
+export function CollectionSnapshot() {
+  const [creatorWallet, setCreatorWallet] = useState("");
+  const [collectionData, setCollectionData] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [counter, setCounter] = useState(0);
 
-    async function getCollectionData() {
-        if (creatorWallet) {
-            if (creatorWallet.length != 58) {
-                toast.error("Invalid wallet address!");
-                return;
-            }
-            try {
-                const host = localStorage.getItem("networkType") == "mainnet" ? "https://mainnet-idx.algonode.cloud" : "https://testnet-idx.algonode.cloud";
-                const url = `${host}/v2/accounts/${creatorWallet}?exclude=assets,apps-local-state,created-apps,none`;
-                const response = await axios.get(url);
-                setCollectionData(response.data.account["created-assets"].map((asset) => asset.index).flat());
-            } catch (error) {
-                toast.error("Error getting collection data! Please try again.");
-            }
-        } else {
-            toast.info("Please enter a wallet address");
-        }
-    };
-
-    async function getAssetOwner(asset_id) {
-        try {
-            const host1 = localStorage.getItem("networkType") == "mainnet" ? "https://mainnet-idx.algonode.cloud" : "https://testnet-idx.algonode.cloud";
-            const host2 = localStorage.getItem("networkType") == "mainnet" ? "https://algoindexer.algoexplorerapi.io" : "https://algoindexer.testnet.algoexplorerapi.io";
-            const host = Math.round(Math.random()) == 1 ? host1 : host2;
-            const url = `${host}/v2/assets/${asset_id}/balances?include-all=false&currency-greater-than=0`;
-            const response = await axios.get(url);
-            return response.data.balances[0].address;
-        } catch (err) {
-            //console.log(err);
-        }
+  async function getCollectionData() {
+    if (creatorWallet) {
+      if (creatorWallet.length != 58) {
+        toast.error("Invalid wallet address!");
+        return;
+      }
+      try {
+        const host =
+          localStorage.getItem("networkType") == "mainnet"
+            ? "https://mainnet-idx.algonode.cloud"
+            : "https://testnet-idx.algonode.cloud";
+        const url = `${host}/v2/accounts/${creatorWallet}?exclude=assets,apps-local-state,created-apps,none`;
+        const response = await axios.get(url);
+        setCollectionData(
+          response.data.account["created-assets"]
+            .map((asset) => asset.index)
+            .flat()
+        );
+      } catch (error) {
+        toast.error("Error getting collection data! Please try again.");
+      }
+    } else {
+      toast.info("Please enter a wallet address");
     }
+  }
 
-    function convertToCSV(headers, objArray) {
-        var array = typeof objArray != 'object' ? JSON.parse(objArray) : objArray;
-        var str = '';
-        var row = '';
-
-        for (var index in headers) {
-            row += headers[index] + ',';
-        }
-        str += row + '\r';
-
-        Object.entries(array).forEach(([key, value]) => {
-            var line = '';
-            line += key + ',';
-            line += value.nfd + ',';
-            const asset_list = "[" + value.assets.map((asset) => asset).join(",");
-            line += '"' + asset_list + "]" + '",';
-            line += value.assets.length + ',';
-            str += line + '\r\n';
-        });
-
-        return str;
+  async function getAssetOwner(asset_id) {
+    try {
+      const host1 =
+        localStorage.getItem("networkType") == "mainnet"
+          ? "https://mainnet-idx.algonode.cloud"
+          : "https://testnet-idx.algonode.cloud";
+      const host2 =
+        localStorage.getItem("networkType") == "mainnet"
+          ? "https://algoindexer.algoexplorerapi.io"
+          : "https://algoindexer.testnet.algoexplorerapi.io";
+      const host = Math.round(Math.random()) == 1 ? host1 : host2;
+      const url = `${host}/v2/assets/${asset_id}/balances?include-all=false&currency-greater-than=0`;
+      const response = await axios.get(url);
+      return response.data.balances[0].address;
+    } catch (err) {
+      //console.log(err);
     }
+  }
 
-    function exportCSVFile(headers, items, fileTitle) {
-        var csv = convertToCSV(headers, items);
-        var blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-        if (navigator.msSaveBlob) {
-            navigator.msSaveBlob(blob, fileTitle);
-        } else {
-            var link = document.createElement("a");
-            if (link.download !== undefined) {
-                var url = URL.createObjectURL(blob);
-                link.setAttribute("href", url);
-                link.setAttribute("download", fileTitle);
-                link.style.visibility = 'hidden';
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-            }
-        }
+  function convertToCSV(headers, objArray) {
+    var array = typeof objArray != "object" ? JSON.parse(objArray) : objArray;
+    var str = "";
+    var row = "";
+
+    for (var index in headers) {
+      row += headers[index] + ",";
     }
+    str += row + "\r";
 
-    async function downloadCollectionDataAsCSV() {
-        if (collectionData.length > 0) {
-            setLoading(true);
-            const data = [];
-            let count = 0;
-            for (const asset_id of collectionData) {
-                const asset_owner = await getAssetOwner(asset_id);
-                count++;
-                setCounter(count);
-                if (data[asset_owner]) {
-                    data[asset_owner].assets.push(asset_id);
-                } else {
-                    data[asset_owner] = {
-                        nfd: await getNfdDomain(asset_owner),
-                        assets: [asset_id],
-                    }
-                }
-            }
-            exportCSVFile(
-                ["wallet", "nfdomain", "assets", "assets_count"],
-                data,
-                `${creatorWallet}-collection-snapshot.csv`
-            );
-            setLoading(false);
-            setCounter(0);
-            toast.success("Collection data downloaded successfully!");
-            toast.info("You can support by donating :)");
+    Object.entries(array).forEach(([key, value]) => {
+      var line = "";
+      line += key + ",";
+      line += value.nfd + ",";
+      const asset_list = "[" + value.assets.map((asset) => asset).join(",");
+      line += '"' + asset_list + "]" + '",';
+      line += value.assets.length + ",";
+      str += line + "\r\n";
+    });
+
+    return str;
+  }
+
+  function exportCSVFile(headers, items, fileTitle) {
+    var csv = convertToCSV(headers, items);
+    var blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    if (navigator.msSaveBlob) {
+      navigator.msSaveBlob(blob, fileTitle);
+    } else {
+      var link = document.createElement("a");
+      if (link.download !== undefined) {
+        var url = URL.createObjectURL(blob);
+        link.setAttribute("href", url);
+        link.setAttribute("download", fileTitle);
+        link.style.visibility = "hidden";
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
+    }
+  }
+
+  async function downloadCollectionDataAsCSV() {
+    if (collectionData.length > 0) {
+      setLoading(true);
+      const data = [];
+      let count = 0;
+      for (const asset_id of collectionData) {
+        const asset_owner = await getAssetOwner(asset_id);
+        count++;
+        setCounter(count);
+        if (data[asset_owner]) {
+          data[asset_owner].assets.push(asset_id);
         } else {
-            toast.info("Please get collection data first!");
+          data[asset_owner] = {
+            nfd: await getNfdDomain(asset_owner),
+            assets: [asset_id],
+          };
         }
-    };
+      }
+      exportCSVFile(
+        ["wallet", "nfdomain", "assets", "assets_count"],
+        data,
+        `${creatorWallet}-collection-snapshot.csv`
+      );
+      setLoading(false);
+      setCounter(0);
+      toast.success("Collection data downloaded successfully!");
+      toast.info("You can support by donating :)");
+    } else {
+      toast.info("Please get collection data first!");
+    }
+  }
 
-    return (
-        <div className="mx-auto text-white mb-4 text-center flex flex-col items-center">
-                  <p className="text-2xl font-bold mt-1">{TOOLS.find((tool) => tool.path ===  window.location.pathname).label}</p>
-
-            <SelectNetworkComponent/>
-            <input
-                type="text"
-                id="creatorWallet"
-                placeholder="Enter Creator Wallet Address"
-                maxLength={58}
-                className="text-center bg-gray-800 text-white border-2 border-gray-700 rounded-lg p-2 my-2 w-64 mx-auto placeholder:text-center placeholder:text-sm"
-                value={creatorWallet}
-                onChange={(e) => setCreatorWallet(e.target.value)}
-            />
+  return (
+    <div className="mx-auto text-white mb-4 text-center flex flex-col items-center">
+      <p className="text-2xl font-bold mt-1">
+        {TOOLS.find((tool) => tool.path === window.location.pathname).label}
+      </p>
+      <SelectNetworkComponent />
+      <input
+        type="text"
+        id="creatorWallet"
+        placeholder="Enter Creator Wallet Address"
+        maxLength={58}
+        className="text-center bg-gray-800 text-white border-2 border-gray-700 rounded-lg p-2 my-2 w-64 mx-auto placeholder:text-center placeholder:text-sm"
+        value={creatorWallet}
+        onChange={(e) => setCreatorWallet(e.target.value)}
+      />
+      <button
+        className="mb-2 bg-red-1000 hover:bg-red-700 text-white text-base font-semibold rounded py-2 w-fit px-2 mx-auto mt-1 hover:scale-95 duration-700"
+        onClick={getCollectionData}
+      >
+        Get Holders Data
+      </button>
+      {collectionData.length > 0 && (
+        <>
+          {creatorWallet.length == 58 && collectionData && (
+            <div className="flex flex-col justify-center items-center">
+              <p className="text-center text-sm text-slate-300">
+                {creatorWallet.substring(0, 4)}...
+                {creatorWallet.substring(
+                  creatorWallet.length - 4,
+                  creatorWallet.length
+                )}{" "}
+                has{" "}
+                <span className="text-slate-100 font-semibold text-base animate-pulse">
+                  {collectionData.length}
+                </span>{" "}
+                created assets
+              </p>
+            </div>
+          )}
+          {loading ? (
+            <div className="mx-auto flex flex-col">
+              <div
+                className="spinner-border animate-spin inline-block mx-auto mt-4 w-8 h-8 border-4 rounded-full"
+                role="status"
+              ></div>
+              Fetching data from blockchain...
+              <p className="text-center text-sm text-slate-300">
+                {counter}/{collectionData.length}
+              </p>
+            </div>
+          ) : (
             <button
-                className="mb-2 bg-red-1000 hover:bg-red-700 text-white text-base font-semibold rounded py-2 w-fit px-2 mx-auto mt-1 hover:scale-95 duration-700"
-                onClick={getCollectionData}
+              onClick={downloadCollectionDataAsCSV}
+              className="mb-2 bg-green-500 hover:bg-green-700 text-black text-base font-semibold rounded py-2 w-fit px-2 mx-auto mt-1 hover:scale-95 duration-700"
             >
-                Get Holders Data
+              Download Holders Data
             </button>
-            {collectionData.length > 0 && (
-                <>
-                    {(creatorWallet.length == 58 && collectionData) && (
-                        <div className="flex flex-col justify-center items-center">
-                            <p className="text-center text-sm text-slate-300">
-                                {creatorWallet.substring(0, 4)}...{creatorWallet.substring(creatorWallet.length - 4, creatorWallet.length)} has <span className="text-slate-100 font-semibold text-base animate-pulse">{collectionData.length}</span> created assets
-                            </p>
-                        </div>
-                    )}
-                    {loading ? (
-                        <div className="mx-auto flex flex-col">
-                            <div
-                                className="spinner-border animate-spin inline-block mx-auto mt-4 w-8 h-8 border-4 rounded-full"
-                                role="status"
-                            ></div>
-                            Fetching data from blockchain...
-                            <p className="text-center text-sm text-slate-300">
-                                {counter}/{collectionData.length}
-                            </p>
-                        </div>
-                    ) : (
-                        <button
-                            onClick={downloadCollectionDataAsCSV}
-                            className="mb-2 bg-green-500 hover:bg-green-700 text-black text-base font-semibold rounded py-2 w-fit px-2 mx-auto mt-1 hover:scale-95 duration-700"
-                        >
-                            Download Holders Data
-                        </button>
-                    )}
-                </>
-            )}
-                  <p className="text-center text-xs text-slate-400 py-2">
+          )}
+        </>
+      )}
+      <p className="text-center text-xs text-slate-400 py-2">
         ⚠️If you reload or close this page, you will lose your progress⚠️
         <br />
         You can reload the page if you want to stop/restart the process!
       </p>
-        </div>
-    )
+    </div>
+  );
 }

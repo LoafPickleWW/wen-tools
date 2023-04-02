@@ -10,7 +10,6 @@ export function UploadCollectionToIPFS() {
   const [collectionCid, setCollectionCid] = useState("");
   const [loading, setLoading] = useState(false);
 
-
   async function uploadFiles() {
     if (token == "") {
       toast.info("Please enter your token key!");
@@ -38,8 +37,9 @@ export function UploadCollectionToIPFS() {
   return (
     <div className="bg-gray-900 pt-5 pb-24 xl:pb-20 flex justify-center flex-col text-white">
       <main className="flex flex-col justify-center items-center bg-gray-800 mx-4 md:mx-64 py-4 rounded-lg">
-      <p className="text-2xl font-bold mt-1">{TOOLS.find((tool) => tool.path ===  window.location.pathname).label}</p>
-
+        <p className="text-2xl font-bold mt-1">
+          {TOOLS.find((tool) => tool.path === window.location.pathname).label}
+        </p>
         <label className=" font-roboto -mb-2 text-xs text-slate-400">
           Enter Web3Storage Token
         </label>
