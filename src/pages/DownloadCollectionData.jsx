@@ -1,7 +1,8 @@
 import { useState } from "react"
 import { toast } from "react-toastify";
 import axios from "axios";
-import { Arc69 } from "../utils";
+import { Arc69, TOOLS } from "../utils";
+import SelectNetworkComponent from "../components/SelectNetworkComponent";
 
 export function DownloadCollectionData(props) {
     const [creatorWallet, setCreatorWallet] = useState("");
@@ -18,7 +19,7 @@ export function DownloadCollectionData(props) {
                 return;
             }
             try {
-                const host = props.selectNetwork == "mainnet" ? "https://mainnet-idx.algonode.cloud" : "https://testnet-idx.algonode.cloud";
+                const host = localStorage.getItem("networkType") == "mainnet" ? "https://mainnet-idx.algonode.cloud" : "https://testnet-idx.algonode.cloud";
                 const url = `${host}/v2/accounts/${creatorWallet}?exclude=assets,apps-local-state,created-apps,none`;
                 const response = await axios.get(url);
                 setCollectionData(response.data.account["created-assets"]);
@@ -32,7 +33,7 @@ export function DownloadCollectionData(props) {
 
     async function getAssetData(asset) {
         try {
-            const metadata = await arc69.fetch(asset.index, props.selectNetwork);
+            const metadata = await arc69.fetch(asset.index, localStorage.getItem("networkType"));
             const asset_data_csv = {
                 index: asset.index,
                 name: asset.params.name,
@@ -130,7 +131,10 @@ export function DownloadCollectionData(props) {
     };
 
     return (
-        <div className="flex flex-col justify-center mb-4">
+        <div className="mx-auto text-white mb-4 text-center flex flex-col items-center">
+                  <p className="text-2xl font-bold mt-1">{TOOLS.find((tool) => tool.path ===  window.location.pathname).label}</p>
+
+            <SelectNetworkComponent/>
             <input
                 type="text"
                 id="creatorWallet"
@@ -176,6 +180,11 @@ export function DownloadCollectionData(props) {
                     )}
                 </>
             )}
+                  <p className="text-center text-xs text-slate-400 py-2">
+        ⚠️If you reload or close this page, you will lose your progress⚠️
+        <br />
+        You can reload the page if you want to stop/restart the process!
+      </p>
         </div>
     )
 }

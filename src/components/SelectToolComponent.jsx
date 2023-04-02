@@ -1,70 +1,27 @@
 import { Link } from "react-router-dom";
+import { TOOLS } from "../utils";
 
-export function SelectToolComponent({ selectTool, setSelectTool }) {
-  const tools = [
-    {
-      id: "collection_data",
-      label: "Download Collection Data (CSV)",
-      description: "Download all the data for a collection in CSV format",
-    },
-    {
-      id: "collection_snapshot",
-      label: "Download Collection Holders (CSV)",
-      description: "Download all the holders for a collection in CSV format",
-    },
-    {
-      id: "batch_update",
-      label: "Batch Collection Metadata Update",
-      description: "Update the metadata for a collection in bulk",
-    },
-    {
-      id: "batch_mint",
-      label: "Batch Collection Mint",
-      description: "Mint a collection in bulk",
-    },
-    {
-      id: "airdrop_tool",
-      label: "Airdrop Tool",
-      description: "Airdrop assets to a list of addresses",
-    },
-    {
-      id: "batch_optin",
-      label: "Batch Asset Add",
-      description: "Optin assets in bulk",
-    },
-  ];
-
+export function SelectToolComponent() {
   return (
     <>
-      <p className="text-sm font-medium text-center text-orange-300">
-        Select Tool
-      </p>
-      <div className="flex flex-col space-y-2">
-        {tools.map((tool) => (
-          <div className="inline-flex items-center space-x-1"
+      {/* <p className="text-3xl md:text-5xl font-medium text-center text-red-1000">
+        Tools
+      </p> */}
+      <div className="container mx-auto grid sm:grid-cols-1 lg:grid-cols-2 xl:grid-cols-4 pt-2 md:pt-4 gap-4">
+        {TOOLS.map((tool) => (
+          <Link
+            to={tool.path}
             key={tool.id}
+            className="block p-4  border rounded-lg shadow bg-gray-800 border-gray-700 hover:bg-gray-700"
           >
-            <input
-              id={tool.id}
-              type="radio"
-              checked={selectTool === tool.id}
-              onChange={() => setSelectTool(tool.id)}
-              className="rounded-full border-gray-300 text-rose-600 transition focus:ring-rose-600 disabled:cursor-not-allowed disabled:bg-gray-200 disabled:opacity-75"
-            />
-            <label
-              htmlFor={tool.id}
-              className="truncate text-sm font-medium text-slate-200"
-            >
+            <h5 className="mb-2 text-2xl font-bold tracking-tight text-gray-900 dark:text-white">
               {tool.label}
-            </label>
-          </div>
+            </h5>
+            <p className="font-normal text-base text-gray-700 dark:text-gray-400">
+              {tool.description}
+            </p>
+          </Link>
         ))}
-        <Link
-          to="/ipfs-upload"
-          className="truncate text-sm font-medium text-slate-300 hover:text-slate-400 transition text-center"
-        >
-          IPFS Collection Upload
-        </Link>
       </div>
     </>
   );

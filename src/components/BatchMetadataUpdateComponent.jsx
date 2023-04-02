@@ -10,7 +10,6 @@ export function BatchCollectionMetadataUpdate(props) {
     const [isTransactionsFinished, setIsTransactionsFinished] = useState(false);
     const [txSendingInProgress, setTxSendingInProgress] = useState(false);
 
-
     const handleFileData = async () => {
         let headers;
         let data = [];
@@ -61,7 +60,7 @@ export function BatchCollectionMetadataUpdate(props) {
         }
         try {
             toast.info("Please sign the transactions!");
-            const nodeURL = props.selectNetwork == "mainnet" ? "https://node.algoexplorerapi.io/" : "https://node.testnet.algoexplorerapi.io/";
+            const nodeURL = localStorage.getItem("networkType") == "mainnet" ? "https://node.algoexplorerapi.io/" : "https://node.testnet.algoexplorerapi.io/";
             const algodClient = new algosdk.Algodv2("", nodeURL, {
                 "User-Agent": "evil-tools",
             });

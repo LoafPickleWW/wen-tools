@@ -1,7 +1,8 @@
 import { useState } from "react"
 import { toast } from "react-toastify";
 import axios from "axios";
-import { getNfdDomain } from "../utils";
+import { TOOLS, getNfdDomain } from "../utils";
+import SelectNetworkComponent from "../components/SelectNetworkComponent";
 
 export function CollectionSnapshot(props) {
     const [creatorWallet, setCreatorWallet] = useState("");
@@ -16,7 +17,7 @@ export function CollectionSnapshot(props) {
                 return;
             }
             try {
-                const host = props.selectNetwork == "mainnet" ? "https://mainnet-idx.algonode.cloud" : "https://testnet-idx.algonode.cloud";
+                const host = localStorage.getItem("networkType") == "mainnet" ? "https://mainnet-idx.algonode.cloud" : "https://testnet-idx.algonode.cloud";
                 const url = `${host}/v2/accounts/${creatorWallet}?exclude=assets,apps-local-state,created-apps,none`;
                 const response = await axios.get(url);
                 setCollectionData(response.data.account["created-assets"].map((asset) => asset.index).flat());
@@ -30,8 +31,8 @@ export function CollectionSnapshot(props) {
 
     async function getAssetOwner(asset_id) {
         try {
-            const host1 = props.selectNetwork == "mainnet" ? "https://mainnet-idx.algonode.cloud" : "https://testnet-idx.algonode.cloud";
-            const host2 = props.selectNetwork == "mainnet" ? "https://algoindexer.algoexplorerapi.io" : "https://algoindexer.testnet.algoexplorerapi.io";
+            const host1 = localStorage.getItem("networkType") == "mainnet" ? "https://mainnet-idx.algonode.cloud" : "https://testnet-idx.algonode.cloud";
+            const host2 = localStorage.getItem("networkType") == "mainnet" ? "https://algoindexer.algoexplorerapi.io" : "https://algoindexer.testnet.algoexplorerapi.io";
             const host = Math.round(Math.random()) == 1 ? host1 : host2;
             const url = `${host}/v2/assets/${asset_id}/balances?include-all=false&currency-greater-than=0`;
             const response = await axios.get(url);
@@ -116,7 +117,10 @@ export function CollectionSnapshot(props) {
     };
 
     return (
-        <div className="flex flex-col justify-center mb-4">
+        <div className="mx-auto text-white mb-4 text-center flex flex-col items-center">
+                  <p className="text-2xl font-bold mt-1">{TOOLS.find((tool) => tool.path ===  window.location.pathname).label}</p>
+
+            <SelectNetworkComponent/>
             <input
                 type="text"
                 id="creatorWallet"
@@ -162,6 +166,11 @@ export function CollectionSnapshot(props) {
                     )}
                 </>
             )}
+                  <p className="text-center text-xs text-slate-400 py-2">
+        ⚠️If you reload or close this page, you will lose your progress⚠️
+        <br />
+        You can reload the page if you want to stop/restart the process!
+      </p>
         </div>
     )
 }

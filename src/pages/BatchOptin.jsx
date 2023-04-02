@@ -3,7 +3,8 @@ import Papa from "papaparse";
 import ConnectButton from "../components/ConnectButton";
 import algosdk from "algosdk";
 import { toast } from "react-toastify";
-import { createAssetOptInTransactions } from "../utils";
+import { TOOLS, createAssetOptInTransactions } from "../utils";
+import SelectNetworkComponent from "../components/SelectNetworkComponent";
 
 export function BatchOptin(props) {
   const [csvData, setCsvData] = useState(null);
@@ -34,7 +35,7 @@ export function BatchOptin(props) {
 
     try {
       const nodeURL =
-        props.selectNetwork == "mainnet"
+        localStorage.getItem("networkType") == "mainnet"
           ? "https://node.algoexplorerapi.io/"
           : "https://node.testnet.algoexplorerapi.io/";
       const algodClient = new algosdk.Algodv2("", nodeURL, {
@@ -82,7 +83,9 @@ export function BatchOptin(props) {
   };
 
   return (
-    <div className="mb-4 text-center flex flex-col items-center max-w-[40rem] gap-y-2">
+    <div className="mb-4 text-center flex flex-col items-center max-w-[40rem] gap-y-2 mx-auto text-white">
+            <p className="text-2xl font-bold mt-1">{TOOLS.find((tool) => tool.path ===  window.location.pathname).label}</p>
+
       <p className="text-center text-lg text-pink-200 mt-2">
         <a
           className="hover:text-pink-400 transition"
@@ -94,6 +97,7 @@ export function BatchOptin(props) {
           <br /> (Click here)
         </a>
       </p>
+      <SelectNetworkComponent/>
       <p>1- Connect Opt In Wallet</p>
       <ConnectButton />
       <p>2- Upload CSV file</p>
@@ -170,6 +174,11 @@ export function BatchOptin(props) {
           )}
         </div>
       )}
+            <p className="text-center text-xs text-slate-400 py-2">
+        ⚠️If you reload or close this page, you will lose your progress⚠️
+        <br />
+        You can reload the page if you want to stop/restart the process!
+      </p>
     </div>
   );
 }
