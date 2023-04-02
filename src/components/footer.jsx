@@ -28,17 +28,14 @@ export const Footer = () => {
               <FaTwitter className="w-6 h-6 text-red-1000 hover:text-red-500 transition" />
             </a>
           </div>
-          <span className="text-xs">
-            developed by{" "}
             <a
               className="font-semibold transition text-xs hover:text-pink-600"
               href="https://twitter.com/cryptolews"
               target="_blank"
               rel="noopener noreferrer"
             >
-              bykewel
+              developer
             </a>
-          </span>
         </div>
       </div>
     </footer>

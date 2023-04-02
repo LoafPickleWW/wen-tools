@@ -131,7 +131,7 @@ export function CollectionSnapshot(props) {
                 onChange={(e) => setCreatorWallet(e.target.value)}
             />
             <button
-                className="mb-2 bg-rose-500 hover:bg-rose-700 text-white text-base font-semibold rounded py-2 w-fit px-2 mx-auto mt-1 hover:scale-95 duration-700"
+                className="mb-2 bg-red-1000 hover:bg-red-700 text-white text-base font-semibold rounded py-2 w-fit px-2 mx-auto mt-1 hover:scale-95 duration-700"
                 onClick={getCollectionData}
             >
                 Get Holders Data

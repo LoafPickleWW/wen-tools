@@ -2,7 +2,6 @@ import { useState } from "react";
 import { toast } from "react-toastify";
 //import MyAlgoConnect from "@randlabs/myalgo-connect";
 import { Web3Storage } from "web3.storage/dist/bundle.esm.min.js";
-import { PeraWalletConnect } from "@perawallet/connect";
 import { TOOLS } from "../utils";
 
 export function UploadCollectionToIPFS() {
