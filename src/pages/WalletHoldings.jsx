@@ -36,23 +36,34 @@ export function WalletHoldings() {
             })
           );
         } else {
-          const created_assets = response.data.account["created-assets"].map(
-            (asset) => {
-              return asset["index"];
-            }
-          );
-          setWalletData(
-            response.data.account["assets"]
-              .filter((asset) => {
-                return !created_assets.includes(asset["asset-id"]);
-              })
-              .map((asset) => {
+          if (response.data.account["created-assets"]) {
+            const created_assets = response.data.account["created-assets"].map(
+              (asset) => {
+                return asset["index"];
+              }
+            );
+            setWalletData(
+              response.data.account["assets"]
+                .filter((asset) => {
+                  return !created_assets.includes(asset["asset-id"]);
+                })
+                .map((asset) => {
+                  return {
+                    asset_id: asset["asset-id"],
+                    amount: asset.amount,
+                  };
+                })
+            );
+          } else {
+            setWalletData(
+              response.data.account["assets"].map((asset) => {
                 return {
                   asset_id: asset["asset-id"],
                   amount: asset.amount,
                 };
               })
-          );
+            );
+          }
         }
       } catch (error) {
         toast.error("Error getting wallet data! Please try again.");
