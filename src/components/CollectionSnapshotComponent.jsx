@@ -16,7 +16,7 @@ export function CollectionSnapshot(props) {
                 return;
             }
             try {
-                const host = props.selectNetwork == "mainnet" ? "https://mainnet-idx.algonode.cloud" : "https://testnet-idx.algonode.cloud";
+                const host = localStorage.getItem("networkType") == "mainnet" ? "https://mainnet-idx.algonode.cloud" : "https://testnet-idx.algonode.cloud";
                 const url = `${host}/v2/accounts/${creatorWallet}?exclude=assets,apps-local-state,created-apps,none`;
                 const response = await axios.get(url);
                 setCollectionData(response.data.account["created-assets"].map((asset) => asset.index).flat());
@@ -30,8 +30,8 @@ export function CollectionSnapshot(props) {
 
     async function getAssetOwner(asset_id) {
         try {
-            const host1 = props.selectNetwork == "mainnet" ? "https://mainnet-idx.algonode.cloud" : "https://testnet-idx.algonode.cloud";
-            const host2 = props.selectNetwork == "mainnet" ? "https://algoindexer.algoexplorerapi.io" : "https://algoindexer.testnet.algoexplorerapi.io";
+            const host1 = localStorage.getItem("networkType") == "mainnet" ? "https://mainnet-idx.algonode.cloud" : "https://testnet-idx.algonode.cloud";
+            const host2 = localStorage.getItem("networkType") == "mainnet" ? "https://algoindexer.algoexplorerapi.io" : "https://algoindexer.testnet.algoexplorerapi.io";
             const host = Math.round(Math.random()) == 1 ? host1 : host2;
             const url = `${host}/v2/assets/${asset_id}/balances?include-all=false&currency-greater-than=0`;
             const response = await axios.get(url);

@@ -18,7 +18,7 @@ export function DownloadCollectionData(props) {
                 return;
             }
             try {
-                const host = props.selectNetwork == "mainnet" ? "https://mainnet-idx.algonode.cloud" : "https://testnet-idx.algonode.cloud";
+                const host = localStorage.getItem("networkType") == "mainnet" ? "https://mainnet-idx.algonode.cloud" : "https://testnet-idx.algonode.cloud";
                 const url = `${host}/v2/accounts/${creatorWallet}?exclude=assets,apps-local-state,created-apps,none`;
                 const response = await axios.get(url);
                 setCollectionData(response.data.account["created-assets"]);
@@ -32,7 +32,7 @@ export function DownloadCollectionData(props) {
 
     async function getAssetData(asset) {
         try {
-            const metadata = await arc69.fetch(asset.index, props.selectNetwork);
+            const metadata = await arc69.fetch(asset.index, localStorage.getItem("networkType"));
             const asset_data_csv = {
                 index: asset.index,
                 name: asset.params.name,

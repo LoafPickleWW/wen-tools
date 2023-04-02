@@ -21,6 +21,52 @@ const MINT_FEE_WALLET =
   "RBZ4GUE7FFDZWCN532FFR5AIYJ6K4V2GKJS5B42JPSWOAVWUT4OHWG57YQ";
 const MINT_FEE_PER_ASA = 0.1;
 
+
+export const TOOLS = [
+  {
+    id: "collection_data",
+    label: "⬇️ Download Collection Data",
+    description: "Download all the data for a collection in CSV format.",
+    path: "/download-collection-data",
+  },
+  {
+    id: "collection_snapshot",
+    label: "🔎 Find Collection Holders",
+    description: "Download all the holders for a collection in CSV format.",
+    path: "/find-collection-holders",
+  },
+  {
+    id: "batch_update",
+    label: "⬆️ Collection Metadata Update",
+    description: "Update the metadata for a collection in bulk.",
+    path: "/batch-metadata-update",
+  },
+  {
+    id: "batch_mint",
+    label: "🖨️ Collection Mint",
+    description: "Mint a collection in bulk.",
+    path: "/batch-collection-mint",
+  },
+  {
+    id: "airdrop_tool",
+    label: "🪂 Asset Send/Airdrop",
+    description: "Airdrop assets/ALGO to a list of addresses.",
+    path: "/airdrop",
+  },
+  {
+    id: "batch_optin",
+    label: "➕ Asset Add",
+    description: "Optin assets in bulk.",
+    path: "/batch-optin",
+  },
+  {
+    id: "ipfs_upload",
+    label: "📁 IPFS Collection Upload",
+    description: "Upload a collection images to IPFS.",
+    path: "/ipfs-upload",
+  },
+];
+
 export function sliceIntoChunks(arr, chunkSize) {
   const res = [];
   for (let i = 0; i < arr.length; i += chunkSize) {

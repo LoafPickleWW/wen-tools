@@ -1,9 +1,10 @@
 import { useState } from "react";
 import Papa from "papaparse";
 import ConnectButton from "../components/ConnectButton";
+import SelectNetworkComponent from "../components/SelectNetworkComponent";
 import algosdk from "algosdk";
 import { toast } from "react-toastify";
-import { createAirdropTransactions } from "../utils";
+import { TOOLS, createAirdropTransactions } from "../utils";
 
 export function AirdropTool(props) {
   const [csvData, setCsvData] = useState(null);
@@ -13,7 +14,7 @@ export function AirdropTool(props) {
   async function getAssetDecimals(assetId) {
     try {
       const nodeURL =
-        props.selectNetwork == "mainnet"
+        localStorage.getItem("networkType") == "mainnet"
           ? "https://node.algoexplorerapi.io/"
           : "https://node.testnet.algoexplorerapi.io/";
       const algodClient = new algosdk.Algodv2("", nodeURL, {
@@ -65,7 +66,7 @@ export function AirdropTool(props) {
 
     try {
       const nodeURL =
-        props.selectNetwork == "mainnet"
+        localStorage.getItem("networkType") == "mainnet"
           ? "https://node.algoexplorerapi.io/"
           : "https://node.testnet.algoexplorerapi.io/";
       const algodClient = new algosdk.Algodv2("", nodeURL, {
@@ -116,7 +117,10 @@ export function AirdropTool(props) {
   };
 
   return (
-    <div className="mb-4 text-center flex flex-col items-center max-w-[40rem] gap-y-2">
+    <div className="mx-auto text-white mb-4 text-center flex flex-col items-center max-w-[40rem] gap-y-2">
+      <p className="text-2xl font-bold mt-1">
+        {TOOLS.find((tool) => tool.path === window.location.pathname).label}
+      </p>
       <p className="text-center text-lg text-pink-200 mt-2">
         <a
           className="hover:text-pink-400 transition"
@@ -128,6 +132,7 @@ export function AirdropTool(props) {
           <br /> (Click here)
         </a>
       </p>
+      <SelectNetworkComponent />
       <p>1- Connect Sender Wallet</p>
       <ConnectButton />
       <p>2- Upload CSV file</p>
@@ -204,6 +209,11 @@ export function AirdropTool(props) {
           )}
         </div>
       )}
+      <p className="text-center text-xs text-slate-400 py-2">
+        ⚠️If you reload or close this page, you will lose your progress⚠️
+        <br />
+        You can reload the page if you want to stop/restart the process!
+      </p>
     </div>
   );
 }
