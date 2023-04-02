@@ -6,7 +6,7 @@ import algosdk from "algosdk";
 import { toast } from "react-toastify";
 import { TOOLS, createAirdropTransactions } from "../utils";
 
-export function AirdropTool(props) {
+export function AirdropTool() {
   const [csvData, setCsvData] = useState(null);
   const [isTransactionsFinished, setIsTransactionsFinished] = useState(false);
   const [txSendingInProgress, setTxSendingInProgress] = useState(false);
@@ -14,7 +14,7 @@ export function AirdropTool(props) {
   async function getAssetDecimals(assetId) {
     try {
       const nodeURL =
-        localStorage.getItem("networkType") == "mainnet"
+        localStorage.getItem("networkType") === "mainnet"
           ? "https://node.algoexplorerapi.io/"
           : "https://node.testnet.algoexplorerapi.io/";
       const algodClient = new algosdk.Algodv2("", nodeURL, {
@@ -33,7 +33,7 @@ export function AirdropTool(props) {
     let headers;
     let data = [];
     for (let i = 0; i < csvData.length; i++) {
-      if (csvData[i].length == 1) continue;
+      if (csvData[i].length === 1) continue;
       if (i === 0) {
         headers = csvData[i];
       } else {
@@ -53,7 +53,7 @@ export function AirdropTool(props) {
     assetIds = Object.keys(assetIds);
     let assetDecimals = {};
     for (let i = 0; i < assetIds.length; i++) {
-      if (assetIds[i] == 1) continue;
+      if (assetIds[i] === 1) continue;
       assetDecimals[assetIds[i]] = await getAssetDecimals(assetIds[i]);
     }
     if (
@@ -66,7 +66,7 @@ export function AirdropTool(props) {
 
     try {
       const nodeURL =
-        localStorage.getItem("networkType") == "mainnet"
+        localStorage.getItem("networkType") === "mainnet"
           ? "https://node.algoexplorerapi.io/"
           : "https://node.testnet.algoexplorerapi.io/";
       const algodClient = new algosdk.Algodv2("", nodeURL, {

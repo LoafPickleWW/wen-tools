@@ -6,7 +6,7 @@ import { toast } from "react-toastify";
 import { TOOLS, createAssetConfigArray, sliceIntoChunks } from "../utils";
 import SelectNetworkComponent from "../components/SelectNetworkComponent";
 
-export function BatchCollectionMetadataUpdate(props) {
+export function BatchCollectionMetadataUpdate() {
   const [csvData, setCsvData] = useState(null);
   const [isTransactionsFinished, setIsTransactionsFinished] = useState(false);
   const [txSendingInProgress, setTxSendingInProgress] = useState(false);

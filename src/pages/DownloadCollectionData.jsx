@@ -4,7 +4,7 @@ import axios from "axios";
 import { Arc69, TOOLS } from "../utils";
 import SelectNetworkComponent from "../components/SelectNetworkComponent";
 
-export function DownloadCollectionData(props) {
+export function DownloadCollectionData() {
   const [creatorWallet, setCreatorWallet] = useState("");
   const [collectionData, setCollectionData] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -143,7 +143,6 @@ export function DownloadCollectionData(props) {
       <p className="text-2xl font-bold mt-1">
         {TOOLS.find((tool) => tool.path === window.location.pathname).label}
       </p>
-
       <SelectNetworkComponent />
       <input
         type="text"

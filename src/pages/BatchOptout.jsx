@@ -3,10 +3,10 @@ import Papa from "papaparse";
 import ConnectButton from "../components/ConnectButton";
 import algosdk from "algosdk";
 import { toast } from "react-toastify";
-import { TOOLS, createAssetOptInTransactions } from "../utils";
+import { TOOLS, createAssetOptoutTransactions } from "../utils";
 import SelectNetworkComponent from "../components/SelectNetworkComponent";
 
-export function BatchOptin() {
+export function BatchOptout() {
   const [csvData, setCsvData] = useState(null);
   const [isTransactionsFinished, setIsTransactionsFinished] = useState(false);
   const [txSendingInProgress, setTxSendingInProgress] = useState(false);
@@ -41,9 +41,10 @@ export function BatchOptin() {
 
       try {
         toast.info("Please sign the transactions!");
-        const signedTransactions = await createAssetOptInTransactions(
+        const signedTransactions = await createAssetOptoutTransactions(
           assets,
-          nodeURL
+          nodeURL,
+          localStorage.getItem("networkType")
         );
         setTxSendingInProgress(true);
         for (let i = 0; i < signedTransactions.length; i++) {
@@ -94,9 +95,15 @@ export function BatchOptin() {
           INSTRUCTIONS
           <br /> (Click here)
         </a>
+        <p className="text-sm mt-1 -mb-1 text-gray-400">
+          ⚠️ ⚠️ ⚠️ ⚠️ <br />
+          You cannot opt-out assets that
+          <br />
+          you created or whose amount is not zero.
+        </p>
       </p>
       <SelectNetworkComponent />
-      <p>1- Connect Opt In Wallet</p>
+      <p>1- Connect Opt-out Wallet</p>
       <ConnectButton />
       <p>2- Upload CSV file</p>
       {csvData == null ? (
@@ -109,9 +116,6 @@ export function BatchOptin() {
               Click to upload file
             </p>
             <p className="text-xs text-gray-400">(CSV)</p>
-            <p className="text-xs text-gray-300">
-              To be sure there is no empty row at the end of the file
-            </p>
           </div>
           <input
             className="hidden"

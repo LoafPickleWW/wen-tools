@@ -7,7 +7,7 @@ export function SelectToolComponent() {
       {/* <p className="text-3xl md:text-5xl font-medium text-center text-red-1000">
         Tools
       </p> */}
-      <div className="container mx-auto grid sm:grid-cols-1 lg:grid-cols-2 xl:grid-cols-4 pt-2 md:pt-4 gap-4">
+      <div className="container mx-auto grid sm:grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 pt-2 md:pt-4 gap-4">
         {TOOLS.map((tool) => (
           <Link
             to={tool.path}

@@ -8,9 +8,11 @@ import { Footer } from "./components/footer";
 import { AirdropTool } from "./pages/AirdropTool";
 import { BatchCollectionMint } from "./pages/BatchCollectionMint";
 import { BatchOptin } from "./pages/BatchOptin";
+import { BatchOptout } from "./pages/BatchOptout";
 import { CollectionSnapshot } from "./pages/CollectionSnapshotComponent";
 import { DownloadCollectionData } from "./pages/DownloadCollectionData";
 import { BatchCollectionMetadataUpdate } from "./pages/BatchMetadataUpdateComponent";
+import { WalletHoldings } from "./pages/WalletHoldings";
 
 function App() {
   return (
@@ -35,9 +37,11 @@ function App() {
           <Route path="/batch-collection-mint" element={<BatchCollectionMint />} />
           <Route path="/batch-metadata-update" element={<BatchCollectionMetadataUpdate />} />
           <Route path="/batch-optin" element={<BatchOptin />} />
+          <Route path="/batch-optout" element={<BatchOptout />} />
           <Route path="/find-collection-holders" element={<CollectionSnapshot />} />
           <Route path="/download-collection-data" element={<DownloadCollectionData />} />
           <Route path="/ipfs-upload" element={<UploadCollectionToIPFS />} />
+          <Route path="/wallet-holdings" element={<WalletHoldings/>} />
           <Route path="*" element={<Home />} />
         </Routes>
         <Footer/>

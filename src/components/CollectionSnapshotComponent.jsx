@@ -101,7 +101,6 @@ export function CollectionSnapshot(props) {
                     }
                 }
             }
-            console.log(data);
             exportCSVFile(
                 ["wallet", "nfdomain", "assets", "assets_count"],
                 data,

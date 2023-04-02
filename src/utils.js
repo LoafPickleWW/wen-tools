@@ -9,6 +9,7 @@ import {
 } from "algosdk";
 import MyAlgoConnect from "@randlabs/myalgo-connect";
 import { PeraWalletConnect } from "@perawallet/connect";
+import axios from "axios";
 
 const peraWallet = new PeraWalletConnect({ shouldShowSignTxnToast: true });
 
@@ -20,7 +21,6 @@ const DONATE_WALLET_2 =
 const MINT_FEE_WALLET =
   "RBZ4GUE7FFDZWCN532FFR5AIYJ6K4V2GKJS5B42JPSWOAVWUT4OHWG57YQ";
 const MINT_FEE_PER_ASA = 0.1;
-
 
 export const TOOLS = [
   {
@@ -47,12 +47,7 @@ export const TOOLS = [
     description: "Mint a collection in bulk.",
     path: "/batch-collection-mint",
   },
-  {
-    id: "airdrop_tool",
-    label: "🪂 Asset Send/Airdrop",
-    description: "Airdrop assets/ALGO to a list of addresses.",
-    path: "/airdrop",
-  },
+
   {
     id: "batch_optin",
     label: "➕ Asset Add",
@@ -60,10 +55,28 @@ export const TOOLS = [
     path: "/batch-optin",
   },
   {
+    id: "batch_optout",
+    label: "➖ Asset Remove",
+    description: "Optout assets in bulk.",
+    path: "/batch-optout",
+  },
+  {
+    id: "airdrop_tool",
+    label: "🪂 Asset Send/Airdrop",
+    description: "Airdrop assets/ALGO to a list of addresses.",
+    path: "/airdrop",
+  },
+  {
     id: "ipfs_upload",
     label: "📁 IPFS Collection Upload",
     description: "Upload a collection images to IPFS.",
     path: "/ipfs-upload",
+  },
+  {
+    id: "wallet_holdings",
+    label: "💼 Wallet Holdings",
+    description: "View the assets data of a wallet in CSV format.",
+    path: "/wallet-holdings",
   },
 ];
 
@@ -115,7 +128,7 @@ async function signGroupTransactions(groups, wallet, isMultipleGroup = false) {
     }
     return txnsToValidate;
   } catch (error) {
-    console.log(error);
+    //console.log(error);
   }
 }
 
@@ -215,7 +228,7 @@ export async function createAirdropTransactions(
   const wallet = localStorage.getItem("wallet");
   for (let i = 0; i < data_for_txns.length; i++) {
     var tx;
-    if (data_for_txns[i].asset_id == 1) {
+    if (data_for_txns[i].asset_id === 1) {
       tx = makePaymentTxnWithSuggestedParamsFromObject({
         from: wallet,
         to: data_for_txns[i].receiver,
@@ -292,7 +305,7 @@ export async function createDonationTransaction(amount) {
     }
     return txnsToValidate;
   } catch (error) {
-    console.log(error);
+    //console.log(error);
   }
 }
 
@@ -323,7 +336,68 @@ export async function createAssetOptInTransactions(assets, nodeURL) {
   }
   try {
     const txnsToValidate = await signGroupTransactions(groups, wallet, true);
-    console.log(txnsToValidate);
+    return sliceIntoChunks(txnsToValidate, 16);
+  } catch (error) {
+    throw new Error("Transaction signing failed");
+  }
+}
+
+async function getAssetCreatorWallet(assetId, selectNetwork) {
+  try {
+    var url;
+    if (selectNetwork === "mainnet") {
+      url =
+        Math.round(Math.random()) === 1
+          ? `https://node.algoexplorerapi.io/v2/assets/${assetId}`
+          : `https://mainnet-api.algonode.cloud/v2/assets/${assetId}`;
+    } else {
+      url =
+        Math.round(Math.random()) === 1
+          ? `https://node.testnet.algoexplorerapi.io/v2/assets/${assetId}`
+          : `https://testnet-api.algonode.cloud/v2/assets/${assetId}`;
+    }
+    const response = await axios.get(url);
+    return response.data.params.creator;
+  } catch (err) {
+    return "";
+  }
+}
+
+export async function createAssetOptoutTransactions(
+  assets,
+  nodeURL,
+  networkType
+) {
+  const algodClient = new Algodv2("", nodeURL, {
+    "User-Agent": "evil-tools",
+  });
+  const params = await algodClient.getTransactionParams().do();
+  let txnsArray = [];
+  const wallet = localStorage.getItem("wallet");
+  for (let i = 0; i < assets.length; i++) {
+    const creatorAddress = await getAssetCreatorWallet(assets[i], networkType);
+    if (creatorAddress !== "") {
+      const tx = makeAssetTransferTxnWithSuggestedParamsFromObject({
+        from: wallet,
+        to: creatorAddress,
+        amount: 0,
+        assetIndex: parseInt(assets[i]),
+        suggestedParams: params,
+        closeRemainderTo: creatorAddress,
+        note: new TextEncoder().encode("via Evil Tools"),
+      });
+      txnsArray.push(tx);
+    }
+  }
+  const groups = sliceIntoChunks(txnsArray, 16);
+  for (let i = 0; i < groups.length; i++) {
+    const groupID = computeGroupID(groups[i]);
+    for (let j = 0; j < groups[i].length; j++) {
+      groups[i][j].group = groupID;
+    }
+  }
+  try {
+    const txnsToValidate = await signGroupTransactions(groups, wallet, true);
     return sliceIntoChunks(txnsToValidate, 16);
   } catch (error) {
     throw new Error("Transaction signing failed");
@@ -344,12 +418,12 @@ export class Arc69 {
     let url;
     if (selectNetwork === "mainnet") {
       url =
-        Math.round(Math.random()) == 1
+        Math.round(Math.random()) === 1
           ? `${this.algoExplorerApiBaseUrl}/v2/transactions?asset-id=${assetId}&tx-type=acfg`
           : `${this.algonodeExplorerApiBaseUrl}/v2/assets/${assetId}/transactions?tx-type=acfg`;
     } else {
       url =
-        Math.round(Math.random()) == 1
+        Math.round(Math.random()) === 1
           ? `${this.algoExplorerTestnetApiBaseUrl}/v2/transactions?asset-id=${assetId}&tx-type=acfg`
           : `${this.algonodeTestnetExplorerApiBaseUrl}/v2/assets/${assetId}/transactions?tx-type=acfg`;
     }
@@ -390,7 +464,7 @@ export async function getNfdDomain(wallet) {
       wallet +
       "&limit=1&view=tiny"
   );
-  if (nfdDomain.status == 200) {
+  if (nfdDomain.status === 200) {
     const data = await nfdDomain.json();
     if (data.length > 0) {
       return data[0].name;
