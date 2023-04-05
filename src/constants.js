@@ -70,15 +70,21 @@ export const TOOLS = [
     path: "/airdrop",
   },
   {
-    id: "ipfs_upload",
-    label: "📁 IPFS Collection Upload",
-    description: "Upload a collection images to IPFS.",
-    path: "/ipfs-upload",
-  },
-  {
     id: "wallet_holdings",
     label: "💼 Wallet Holdings",
     description: "View the assets data of a wallet in CSV format.",
     path: "/wallet-holdings",
+  },
+  {
+    id: "multimint_asset_holders",
+    label: "🌌 Multimint Asset Holders",
+    description: "View the holders of a multimint asset list in CSV format.",
+    path: "/multimint-asset-holders",
+  },
+  {
+    id: "ipfs_upload",
+    label: "📁 IPFS Collection Upload",
+    description: "Upload a collection images to IPFS.",
+    path: "/ipfs-upload",
   },
 ];
