@@ -209,7 +209,7 @@ export async function createAirdropTransactions(
   let txnsArray = [];
   const wallet = localStorage.getItem("wallet");
   for (let i = 0; i < data_for_txns.length; i++) {
-    var tx;
+    let tx;
     if (data_for_txns[i].asset_id === 1) {
       tx = makePaymentTxnWithSuggestedParamsFromObject({
         from: wallet,
@@ -377,20 +377,20 @@ export async function createAssetOptoutTransactions(
 
 export class Arc69 {
   async fetch(assetId, selectNetwork) {
-    var url;
+    let url;
     if (selectNetwork === "mainnet") {
       url = `${MAINNET_ALGONODE_INDEXER}/v2/assets/${assetId}/transactions?tx-type=acfg`;
-        // Math.round(Math.random()) === 1
-        //   ? `${MAINNET_ALGOEXPLORER_INDEXER}/v2/transactions?asset-id=${assetId}&tx-type=acfg`
-        //   : `${MAINNET_ALGONODE_INDEXER}/v2/assets/${assetId}/transactions?tx-type=acfg`;
+      // Math.round(Math.random()) === 1
+      //   ? `${MAINNET_ALGOEXPLORER_INDEXER}/v2/transactions?asset-id=${assetId}&tx-type=acfg`
+      //   : `${MAINNET_ALGONODE_INDEXER}/v2/assets/${assetId}/transactions?tx-type=acfg`;
     } else {
       url = `${TESTNET_ALGONODE_INDEXER}/v2/assets/${assetId}/transactions?tx-type=acfg`;
-        // Math.round(Math.random()) === 1
-        //   ? `${TESTNET_ALGOEXPLORER_INDEXER}/v2/transactions?asset-id=${assetId}&tx-type=acfg`
-        //   : `${TESTNET_ALGONODE_INDEXER}/v2/assets/${assetId}/transactions?tx-type=acfg`;
+      // Math.round(Math.random()) === 1
+      //   ? `${TESTNET_ALGOEXPLORER_INDEXER}/v2/transactions?asset-id=${assetId}&tx-type=acfg`
+      //   : `${TESTNET_ALGONODE_INDEXER}/v2/assets/${assetId}/transactions?tx-type=acfg`;
     }
 
-    var transactions;
+    let transactions;
 
     try {
       transactions = (await fetch(url).then((res) => res.json())).transactions;

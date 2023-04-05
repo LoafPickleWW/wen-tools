@@ -13,6 +13,7 @@ import { CollectionSnapshot } from "./pages/CollectionSnapshotComponent";
 import { DownloadCollectionData } from "./pages/DownloadCollectionData";
 import { BatchCollectionMetadataUpdate } from "./pages/BatchMetadataUpdateComponent";
 import { WalletHoldings } from "./pages/WalletHoldings";
+import { MultimintAssetHolders } from "./pages/MultimintAssetHolders";
 
 function App() {
   return (
@@ -54,6 +55,10 @@ function App() {
           />
           <Route path="/ipfs-upload" element={<UploadCollectionToIPFS />} />
           <Route path="/wallet-holdings" element={<WalletHoldings />} />
+          <Route
+            path="/multimint-asset-holders"
+            element={<MultimintAssetHolders />}
+          />
           <Route path="*" element={<Home />} />
         </Routes>
         <Footer />

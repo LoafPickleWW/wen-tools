@@ -3,7 +3,7 @@ import { TOOLS } from "../constants";
 
 export function SelectToolComponent() {
   return (
-    <div className="container mx-auto grid sm:grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 pt-2 md:pt-4 gap-4">
+    <div className="container mx-auto grid lg:grid-cols-3 xl:grid-cols-5 pt-2 md:pt-4 gap-4">
       {TOOLS.map((tool) => (
         <Link
           to={tool.path}

@@ -49,7 +49,7 @@ export default function Home() {
 
   return (
     <div className="bg-gray-900 pt-5 pb-24 xl:pb-20 flex justify-center flex-col text-white">
-      <main className="flex flex-col justify-center items-center  mx-4 md:mx-64  rounded-lg">
+      <main className="flex flex-col justify-center items-center  mx-4 md:mx-40  rounded-lg">
         <SelectToolComponent />
       </main>
       <div className="flex flex-col mx-auto mt-4 items-center gap-1 pt-2 pb-3 rounded-2xl border-special-red border-2 w-[16rem]">

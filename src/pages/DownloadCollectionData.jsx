@@ -67,11 +67,11 @@ export function DownloadCollectionData() {
   }
 
   function convertToCSV(objArray) {
-    var array = typeof objArray != "object" ? JSON.parse(objArray) : objArray;
-    var str = "";
-    for (var i = 0; i < array.length; i++) {
-      var line = "";
-      for (var index in array[i]) {
+    let array = typeof objArray != "object" ? JSON.parse(objArray) : objArray;
+    let str = "";
+    for (let i = 0; i < array.length; i++) {
+      let line = "";
+      for (let index in array[i]) {
         if (line != "") line += ",";
         line += '"' + array[i][index] + '"';
       }
@@ -89,16 +89,16 @@ export function DownloadCollectionData() {
     if (headers) {
       items.unshift(headers);
     }
-    var jsonObject = JSON.stringify(items);
+    let jsonObject = JSON.stringify(items);
 
-    var csv = convertToCSV(jsonObject);
-    var blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    let csv = convertToCSV(jsonObject);
+    let blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
     if (navigator.msSaveBlob) {
       navigator.msSaveBlob(blob, fileTitle);
     } else {
-      var link = document.createElement("a");
+      let link = document.createElement("a");
       if (link.download !== undefined) {
-        var url = URL.createObjectURL(blob);
+        let url = URL.createObjectURL(blob);
         link.setAttribute("href", url);
         link.setAttribute("download", fileTitle);
         link.style.visibility = "hidden";

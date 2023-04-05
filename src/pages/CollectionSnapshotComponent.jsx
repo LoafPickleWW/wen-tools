@@ -18,7 +18,7 @@ export function CollectionSnapshot() {
 
   async function getCollectionData() {
     if (creatorWallet) {
-      var creatorWallets = creatorWallet.split(",").map((item) => item.trim());
+      let creatorWallets = creatorWallet.split(",").map((item) => item.trim()).filter((item) => item !== "");
       for (let i = 0; i < creatorWallets.length; i++) {
         if (creatorWallets[i].length !== 58) {
           toast.error("You have entered an invalid wallet address!");
@@ -30,7 +30,7 @@ export function CollectionSnapshot() {
         localStorage.getItem("networkType") === "mainnet"
           ? MAINNET_ALGONODE_INDEXER
           : TESTNET_ALGONODE_INDEXER;
-      var createdAssets = [];
+      let createdAssets = [];
       for (let i = 0; i < creatorWallets.length; i++) {
         try {
           const url = `${host}/v2/accounts/${creatorWallets[i]}?exclude=assets,apps-local-state,created-apps,none`;
@@ -80,17 +80,17 @@ export function CollectionSnapshot() {
   }
 
   function convertToCSV(headers, objArray) {
-    var array = typeof objArray != "object" ? JSON.parse(objArray) : objArray;
-    var str = "";
-    var row = "";
+    let array = typeof objArray != "object" ? JSON.parse(objArray) : objArray;
+    let str = "";
+    let row = "";
 
-    for (var index in headers) {
+    for (let index in headers) {
       row += headers[index] + ",";
     }
     str += row + "\r";
 
     Object.entries(array).forEach(([key, value]) => {
-      var line = "";
+      let line = "";
       line += key + ",";
       line += value.nfd + ",";
       const asset_list = "[" + value.assets.map((asset) => asset).join(",");
@@ -103,14 +103,14 @@ export function CollectionSnapshot() {
   }
 
   function exportCSVFile(headers, items, fileTitle) {
-    var csv = convertToCSV(headers, items);
-    var blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    let csv = convertToCSV(headers, items);
+    let blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
     if (navigator.msSaveBlob) {
       navigator.msSaveBlob(blob, fileTitle);
     } else {
-      var link = document.createElement("a");
+      let link = document.createElement("a");
       if (link.download !== undefined) {
-        var url = URL.createObjectURL(blob);
+        let url = URL.createObjectURL(blob);
         link.setAttribute("href", url);
         link.setAttribute("download", fileTitle);
         link.style.visibility = "hidden";
@@ -177,7 +177,7 @@ export function CollectionSnapshot() {
         onChange={(e) => setUnitNamePrefix(e.target.value)}
       />
       <p className="text-center text-xs mb-2 text-slate-300">
-        Separate multiple wallet addresses and prefixes with commas.
+        Separate multiple wallet addresses and prefixes with commas.<br/>Just works with 1/1 ASAs.
       </p>
       <button
         className="mb-2 bg-red-1000 hover:bg-red-700 text-white text-base font-semibold rounded py-2 w-fit px-2 mx-auto mt-1 hover:scale-95 duration-700"
