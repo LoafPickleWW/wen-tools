@@ -379,15 +379,15 @@ export class Arc69 {
   async fetch(assetId, selectNetwork) {
     var url;
     if (selectNetwork === "mainnet") {
-      url =
-        Math.round(Math.random()) === 1
-          ? `${MAINNET_ALGOEXPLORER_INDEXER}/v2/transactions?asset-id=${assetId}&tx-type=acfg`
-          : `${MAINNET_ALGONODE_INDEXER}/v2/assets/${assetId}/transactions?tx-type=acfg`;
+      url = `${MAINNET_ALGONODE_INDEXER}/v2/assets/${assetId}/transactions?tx-type=acfg`;
+        // Math.round(Math.random()) === 1
+        //   ? `${MAINNET_ALGOEXPLORER_INDEXER}/v2/transactions?asset-id=${assetId}&tx-type=acfg`
+        //   : `${MAINNET_ALGONODE_INDEXER}/v2/assets/${assetId}/transactions?tx-type=acfg`;
     } else {
-      url =
-        Math.round(Math.random()) === 1
-          ? `${TESTNET_ALGOEXPLORER_INDEXER}/v2/transactions?asset-id=${assetId}&tx-type=acfg`
-          : `${TESTNET_ALGONODE_INDEXER}/v2/assets/${assetId}/transactions?tx-type=acfg`;
+      url = `${TESTNET_ALGONODE_INDEXER}/v2/assets/${assetId}/transactions?tx-type=acfg`;
+        // Math.round(Math.random()) === 1
+        //   ? `${TESTNET_ALGOEXPLORER_INDEXER}/v2/transactions?asset-id=${assetId}&tx-type=acfg`
+        //   : `${TESTNET_ALGONODE_INDEXER}/v2/assets/${assetId}/transactions?tx-type=acfg`;
     }
 
     var transactions;
