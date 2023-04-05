@@ -2,7 +2,8 @@ import { useState } from "react";
 import { toast } from "react-toastify";
 //import MyAlgoConnect from "@randlabs/myalgo-connect";
 import { Web3Storage } from "web3.storage/dist/bundle.esm.min.js";
-import { TOOLS } from "../utils";
+import { TOOLS } from "../constants";
+
 
 export function UploadCollectionToIPFS() {
   const [token, setToken] = useState("");
@@ -15,7 +16,7 @@ export function UploadCollectionToIPFS() {
       toast.info("Please enter your token key!");
       return;
     }
-    if (selectedFiles.length == 0) {
+    if (selectedFiles.length === 0) {
       toast.info("Please select a file first!");
       return;
     }

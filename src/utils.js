@@ -10,75 +10,21 @@ import {
 import MyAlgoConnect from "@randlabs/myalgo-connect";
 import { PeraWalletConnect } from "@perawallet/connect";
 import axios from "axios";
-
+import {
+  DONATE_WALLET_1,
+  DONATE_WALLET_2,
+  MINT_FEE_PER_ASA,
+  MINT_FEE_WALLET,
+  MAINNET_ALGOEXPLORER_NODE,
+  MAINNET_ALGONODE_NODE,
+  TESTNET_ALGOEXPLORER_NODE,
+  TESTNET_ALGONODE_NODE,
+  MAINNET_ALGOEXPLORER_INDEXER,
+  MAINNET_ALGONODE_INDEXER,
+  TESTNET_ALGOEXPLORER_INDEXER,
+  TESTNET_ALGONODE_INDEXER,
+} from "./constants";
 const peraWallet = new PeraWalletConnect({ shouldShowSignTxnToast: true });
-
-const DONATE_WALLET_1 =
-  "O2ZPSV6NJC32ZXQ7PZ5ID6PXRKAWQE2XWFZK5NK3UFULPZT6OKIOROEAPU";
-const DONATE_WALLET_2 =
-  "VYPDFMVRXCI2Z4FPC2GHB4QC6PSCTEDAS4EU7GE3W4B3MRHXNZO6BB2RZA";
-
-const MINT_FEE_WALLET =
-  "RBZ4GUE7FFDZWCN532FFR5AIYJ6K4V2GKJS5B42JPSWOAVWUT4OHWG57YQ";
-const MINT_FEE_PER_ASA = 0.1;
-
-export const TOOLS = [
-  {
-    id: "collection_data",
-    label: "⬇️ Download Collection Data",
-    description: "Download all the data for a collection in CSV format.",
-    path: "/download-collection-data",
-  },
-  {
-    id: "collection_snapshot",
-    label: "🔎 Find Collection Holders",
-    description: "Download all the holders for a collection in CSV format.",
-    path: "/find-collection-holders",
-  },
-  {
-    id: "batch_update",
-    label: "⬆️ Collection Metadata Update",
-    description: "Update the metadata for a collection in bulk.",
-    path: "/batch-metadata-update",
-  },
-  {
-    id: "batch_mint",
-    label: "🖨️ Collection Mint",
-    description: "Mint a collection in bulk.",
-    path: "/batch-collection-mint",
-  },
-
-  {
-    id: "batch_optin",
-    label: "➕ Asset Add",
-    description: "Optin assets in bulk.",
-    path: "/batch-optin",
-  },
-  {
-    id: "batch_optout",
-    label: "➖ Asset Remove",
-    description: "Optout assets in bulk.",
-    path: "/batch-optout",
-  },
-  {
-    id: "airdrop_tool",
-    label: "🪂 Asset Send/Airdrop",
-    description: "Airdrop assets/ALGO to a list of addresses.",
-    path: "/airdrop",
-  },
-  {
-    id: "ipfs_upload",
-    label: "📁 IPFS Collection Upload",
-    description: "Upload a collection images to IPFS.",
-    path: "/ipfs-upload",
-  },
-  {
-    id: "wallet_holdings",
-    label: "💼 Wallet Holdings",
-    description: "View the assets data of a wallet in CSV format.",
-    path: "/wallet-holdings",
-  },
-];
 
 export function sliceIntoChunks(arr, chunkSize) {
   const res = [];
@@ -87,6 +33,42 @@ export function sliceIntoChunks(arr, chunkSize) {
     res.push(chunk);
   }
   return res;
+}
+
+export function getNodeURL() {
+  const networkType = localStorage.getItem("networkType");
+  const randomNumber = Math.round(Math.random());
+  if (networkType === "mainnet") {
+    if (randomNumber === 0) {
+      return MAINNET_ALGONODE_NODE;
+    } else {
+      return MAINNET_ALGOEXPLORER_NODE;
+    }
+  } else {
+    if (randomNumber === 0) {
+      return TESTNET_ALGONODE_NODE;
+    } else {
+      return TESTNET_ALGOEXPLORER_NODE;
+    }
+  }
+}
+
+export function getIndexerURL() {
+  const networkType = localStorage.getItem("networkType");
+  const randomNumber = Math.round(Math.random());
+  if (networkType === "mainnet") {
+    if (randomNumber === 0) {
+      return MAINNET_ALGONODE_INDEXER;
+    } else {
+      return MAINNET_ALGOEXPLORER_INDEXER;
+    }
+  } else {
+    if (randomNumber === 0) {
+      return TESTNET_ALGONODE_INDEXER;
+    } else {
+      return TESTNET_ALGOEXPLORER_INDEXER;
+    }
+  }
 }
 
 async function signGroupTransactions(groups, wallet, isMultipleGroup = false) {
@@ -258,7 +240,7 @@ export async function createAirdropTransactions(
 }
 
 export async function createDonationTransaction(amount) {
-  const algodClient = new Algodv2("", "https://node.algoexplorerapi.io", {
+  const algodClient = new Algodv2("", MAINNET_ALGOEXPLORER_NODE, {
     "User-Agent": "evil-tools",
   });
   const params = await algodClient.getTransactionParams().do();
@@ -344,18 +326,7 @@ export async function createAssetOptInTransactions(assets, nodeURL) {
 
 async function getAssetCreatorWallet(assetId, selectNetwork) {
   try {
-    var url;
-    if (selectNetwork === "mainnet") {
-      url =
-        Math.round(Math.random()) === 1
-          ? `https://node.algoexplorerapi.io/v2/assets/${assetId}`
-          : `https://mainnet-api.algonode.cloud/v2/assets/${assetId}`;
-    } else {
-      url =
-        Math.round(Math.random()) === 1
-          ? `https://node.testnet.algoexplorerapi.io/v2/assets/${assetId}`
-          : `https://testnet-api.algonode.cloud/v2/assets/${assetId}`;
-    }
+    const url = getNodeURL(selectNetwork) + `/v2/assets/${assetId}`;
     const response = await axios.get(url);
     return response.data.params.creator;
   } catch (err) {
@@ -405,30 +376,21 @@ export async function createAssetOptoutTransactions(
 }
 
 export class Arc69 {
-  constructor() {
-    this.algoExplorerApiBaseUrl = "https://algoindexer.algoexplorerapi.io";
-    this.algonodeExplorerApiBaseUrl = "https://mainnet-idx.algonode.cloud";
-    this.algoExplorerTestnetApiBaseUrl =
-      "https://algoindexer.testnet.algoexplorerapi.io";
-    this.algonodeTestnetExplorerApiBaseUrl =
-      "https://testnet-idx.algonode.cloud";
-  }
-
   async fetch(assetId, selectNetwork) {
-    let url;
+    var url;
     if (selectNetwork === "mainnet") {
-      url =
-        Math.round(Math.random()) === 1
-          ? `${this.algoExplorerApiBaseUrl}/v2/transactions?asset-id=${assetId}&tx-type=acfg`
-          : `${this.algonodeExplorerApiBaseUrl}/v2/assets/${assetId}/transactions?tx-type=acfg`;
+      url = `${MAINNET_ALGONODE_INDEXER}/v2/assets/${assetId}/transactions?tx-type=acfg`;
+        // Math.round(Math.random()) === 1
+        //   ? `${MAINNET_ALGOEXPLORER_INDEXER}/v2/transactions?asset-id=${assetId}&tx-type=acfg`
+        //   : `${MAINNET_ALGONODE_INDEXER}/v2/assets/${assetId}/transactions?tx-type=acfg`;
     } else {
-      url =
-        Math.round(Math.random()) === 1
-          ? `${this.algoExplorerTestnetApiBaseUrl}/v2/transactions?asset-id=${assetId}&tx-type=acfg`
-          : `${this.algonodeTestnetExplorerApiBaseUrl}/v2/assets/${assetId}/transactions?tx-type=acfg`;
+      url = `${TESTNET_ALGONODE_INDEXER}/v2/assets/${assetId}/transactions?tx-type=acfg`;
+        // Math.round(Math.random()) === 1
+        //   ? `${TESTNET_ALGOEXPLORER_INDEXER}/v2/transactions?asset-id=${assetId}&tx-type=acfg`
+        //   : `${TESTNET_ALGONODE_INDEXER}/v2/assets/${assetId}/transactions?tx-type=acfg`;
     }
 
-    let transactions;
+    var transactions;
 
     try {
       transactions = (await fetch(url).then((res) => res.json())).transactions;

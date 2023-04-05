@@ -5,6 +5,7 @@ import { createDonationTransaction } from "../utils";
 import algosdk from "algosdk";
 //import MyAlgoConnect from "@randlabs/myalgo-connect";
 import { PeraWalletConnect } from "@perawallet/connect";
+import { MAINNET_ALGOEXPLORER_NODE } from "../constants";
 const peraWallet = new PeraWalletConnect({ shouldShowSignTxnToast: true });
 
 export default function Home() {
@@ -33,13 +34,9 @@ export default function Home() {
     } else {
       try {
         const group = await createDonationTransaction(donationAmount);
-        const algodClient = new algosdk.Algodv2(
-          "",
-          "https://node.algoexplorerapi.io",
-          {
-            "User-Agent": "evil-tools",
-          }
-        );
+        const algodClient = new algosdk.Algodv2("", MAINNET_ALGOEXPLORER_NODE, {
+          "User-Agent": "evil-tools",
+        });
         toast.info("Sending transaction...");
         const { txId } = await algodClient.sendRawTransaction(group).do();
         await algosdk.waitForConfirmation(algodClient, txId, 3);

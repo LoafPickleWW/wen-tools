@@ -3,8 +3,9 @@ import Papa from "papaparse";
 import ConnectButton from "../components/ConnectButton";
 import algosdk from "algosdk";
 import { toast } from "react-toastify";
-import { TOOLS, createAssetOptoutTransactions } from "../utils";
+import { createAssetOptoutTransactions, getNodeURL } from "../utils";
 import SelectNetworkComponent from "../components/SelectNetworkComponent";
+import { TOOLS } from "../constants";
 
 export function BatchOptout() {
   const [csvData, setCsvData] = useState(null);
@@ -31,10 +32,7 @@ export function BatchOptout() {
     }
 
     try {
-      const nodeURL =
-        localStorage.getItem("networkType") === "mainnet"
-          ? "https://node.algoexplorerapi.io/"
-          : "https://node.testnet.algoexplorerapi.io/";
+      const nodeURL = getNodeURL();
       const algodClient = new algosdk.Algodv2("", nodeURL, {
         "User-Agent": "evil-tools",
       });

@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { toast } from "react-toastify";
 import axios from "axios";
-import { Arc69, TOOLS } from "../utils";
+import { Arc69 } from "../utils";
 import SelectNetworkComponent from "../components/SelectNetworkComponent";
+import { TOOLS, MAINNET_ALGONODE_INDEXER, TESTNET_ALGONODE_INDEXER } from "../constants";
 
 export function DownloadCollectionData() {
   const [creatorWallet, setCreatorWallet] = useState("");
@@ -14,15 +15,15 @@ export function DownloadCollectionData() {
 
   async function getCollectionData() {
     if (creatorWallet) {
-      if (creatorWallet.length != 58) {
+      if (creatorWallet.length !== 58) {
         toast.error("Invalid wallet address!");
         return;
       }
       try {
         const host =
-          localStorage.getItem("networkType") == "mainnet"
-            ? "https://mainnet-idx.algonode.cloud"
-            : "https://testnet-idx.algonode.cloud";
+          localStorage.getItem("networkType") === "mainnet"
+            ? MAINNET_ALGONODE_INDEXER
+            : TESTNET_ALGONODE_INDEXER;
         const url = `${host}/v2/accounts/${creatorWallet}?exclude=assets,apps-local-state,created-apps,none`;
         const response = await axios.get(url);
         setCollectionData(response.data.account["created-assets"]);

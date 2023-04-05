@@ -4,7 +4,8 @@ import ConnectButton from "../components/ConnectButton";
 import SelectNetworkComponent from "../components/SelectNetworkComponent";
 import algosdk from "algosdk";
 import { toast } from "react-toastify";
-import { TOOLS, createAirdropTransactions } from "../utils";
+import { createAirdropTransactions, getNodeURL } from "../utils";
+import { TOOLS } from "../constants";
 
 export function AirdropTool() {
   const [csvData, setCsvData] = useState(null);
@@ -13,10 +14,7 @@ export function AirdropTool() {
 
   async function getAssetDecimals(assetId) {
     try {
-      const nodeURL =
-        localStorage.getItem("networkType") === "mainnet"
-          ? "https://node.algoexplorerapi.io/"
-          : "https://node.testnet.algoexplorerapi.io/";
+      const nodeURL = getNodeURL();
       const algodClient = new algosdk.Algodv2("", nodeURL, {
         "User-Agent": "evil-tools",
       });
@@ -65,10 +63,7 @@ export function AirdropTool() {
     }
 
     try {
-      const nodeURL =
-        localStorage.getItem("networkType") === "mainnet"
-          ? "https://node.algoexplorerapi.io/"
-          : "https://node.testnet.algoexplorerapi.io/";
+      const nodeURL = getNodeURL();
       const algodClient = new algosdk.Algodv2("", nodeURL, {
         "User-Agent": "evil-tools",
       });
