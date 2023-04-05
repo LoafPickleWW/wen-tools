@@ -3,8 +3,9 @@ import Papa from "papaparse";
 import ConnectButton from "../components/ConnectButton";
 import algosdk from "algosdk";
 import { toast } from "react-toastify";
-import { TOOLS, createAssetConfigArray, sliceIntoChunks } from "../utils";
+import { createAssetConfigArray, getNodeURL, sliceIntoChunks } from "../utils";
 import SelectNetworkComponent from "../components/SelectNetworkComponent";
+import { TOOLS } from "../constants";
 
 export function BatchCollectionMetadataUpdate() {
   const [csvData, setCsvData] = useState(null);
@@ -15,7 +16,7 @@ export function BatchCollectionMetadataUpdate() {
     let headers;
     let data = [];
     for (let i = 0; i < csvData.length; i++) {
-      if (csvData[i].length == 1) continue;
+      if (csvData[i].length === 1) continue;
       if (i === 0) {
         headers = csvData[i];
       } else {
@@ -37,20 +38,20 @@ export function BatchCollectionMetadataUpdate() {
       };
       Object.keys(item).forEach((key) => {
         if (
-          key != "index" &&
-          key != "description" &&
-          key != "mime_type" &&
-          key != "standard" &&
-          key != "external_url"
+          key !== "index" &&
+          key !== "description" &&
+          key !== "mime_type" &&
+          key !== "standard" &&
+          key !== "external_url"
         ) {
           asset_note.properties[key] = item[key];
           delete item[key];
         }
         if (
-          key == "external_url" ||
-          key == "standard" ||
-          key == "description" ||
-          key == "mime_type"
+          key === "external_url" ||
+          key === "standard" ||
+          key === "description" ||
+          key === "mime_type"
         ) {
           asset_note[key] = item[key];
           delete item[key];
@@ -73,10 +74,7 @@ export function BatchCollectionMetadataUpdate() {
     }
     try {
       toast.info("Please sign the transactions!");
-      const nodeURL =
-        localStorage.getItem("networkType") == "mainnet"
-          ? "https://node.algoexplorerapi.io/"
-          : "https://node.testnet.algoexplorerapi.io/";
+      const nodeURL = getNodeURL();
       const algodClient = new algosdk.Algodv2("", nodeURL, {
         "User-Agent": "evil-tools",
       });

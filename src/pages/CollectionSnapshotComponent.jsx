@@ -1,53 +1,77 @@
 import { useState } from "react";
 import { toast } from "react-toastify";
 import axios from "axios";
-import { TOOLS, getNfdDomain } from "../utils";
+import { getIndexerURL, getNfdDomain } from "../utils";
 import SelectNetworkComponent from "../components/SelectNetworkComponent";
+import {
+  TOOLS,
+  MAINNET_ALGONODE_INDEXER,
+  TESTNET_ALGONODE_INDEXER,
+} from "../constants";
 
 export function CollectionSnapshot() {
   const [creatorWallet, setCreatorWallet] = useState("");
+  const [unitNamePrefix, setUnitNamePrefix] = useState("");
   const [collectionData, setCollectionData] = useState([]);
   const [loading, setLoading] = useState(false);
   const [counter, setCounter] = useState(0);
 
   async function getCollectionData() {
     if (creatorWallet) {
-      if (creatorWallet.length != 58) {
-        toast.error("Invalid wallet address!");
-        return;
+      var creatorWallets = creatorWallet.split(",").map((item) => item.trim());
+      for (let i = 0; i < creatorWallets.length; i++) {
+        if (creatorWallets[i].length !== 58) {
+          toast.error("You have entered an invalid wallet address!");
+          return;
+        }
       }
-      try {
-        const host =
-          localStorage.getItem("networkType") == "mainnet"
-            ? "https://mainnet-idx.algonode.cloud"
-            : "https://testnet-idx.algonode.cloud";
-        const url = `${host}/v2/accounts/${creatorWallet}?exclude=assets,apps-local-state,created-apps,none`;
-        const response = await axios.get(url);
-        setCollectionData(
-          response.data.account["created-assets"]
-            .map((asset) => asset.index)
-            .flat()
-        );
-      } catch (error) {
-        toast.error("Error getting collection data! Please try again.");
+      creatorWallets = [...new Set(creatorWallets)];
+      const host =
+        localStorage.getItem("networkType") === "mainnet"
+          ? MAINNET_ALGONODE_INDEXER
+          : TESTNET_ALGONODE_INDEXER;
+      var createdAssets = [];
+      for (let i = 0; i < creatorWallets.length; i++) {
+        try {
+          const url = `${host}/v2/accounts/${creatorWallets[i]}?exclude=assets,apps-local-state,created-apps,none`;
+          const response = await axios.get(url);
+          createdAssets = [
+            ...createdAssets,
+            ...response.data.account["created-assets"],
+          ];
+        } catch (err) {
+          //console.log(err);
+        }
       }
+      if (unitNamePrefix) {
+        const unitNamePrefixList = unitNamePrefix
+          .split(",")
+          .map((item) => item.trim().toLowerCase());
+        createdAssets = createdAssets.filter((asset) => {
+          for (let i = 0; i < unitNamePrefixList.length; i++) {
+            if (
+              asset.params["unit-name"]
+                .toLowerCase()
+                .startsWith(unitNamePrefixList[i]) && asset.params["total"] === 1
+            ) {
+              return true;
+            }
+          }
+          return false;
+        });
+      }
+      // just need assetid
+      createdAssets = createdAssets.map((asset) => asset.index);
+      setCollectionData(createdAssets);
     } else {
-      toast.info("Please enter a wallet address");
+      toast.info("Please enter at least one wallet address!");
     }
   }
 
   async function getAssetOwner(asset_id) {
     try {
-      const host1 =
-        localStorage.getItem("networkType") == "mainnet"
-          ? "https://mainnet-idx.algonode.cloud"
-          : "https://testnet-idx.algonode.cloud";
-      const host2 =
-        localStorage.getItem("networkType") == "mainnet"
-          ? "https://algoindexer.algoexplorerapi.io"
-          : "https://algoindexer.testnet.algoexplorerapi.io";
-      const host = Math.round(Math.random()) == 1 ? host1 : host2;
-      const url = `${host}/v2/assets/${asset_id}/balances?include-all=false&currency-greater-than=0`;
+      const indexerURL = getIndexerURL();
+      const url = `${indexerURL}/v2/assets/${asset_id}/balances?include-all=false&currency-greater-than=0`;
       const response = await axios.get(url);
       return response.data.balances[0].address;
     } catch (err) {
@@ -118,7 +142,7 @@ export function CollectionSnapshot() {
       exportCSVFile(
         ["wallet", "nfdomain", "assets", "assets_count"],
         data,
-        `${creatorWallet}-collection-snapshot.csv`
+        "collection-snapshot.csv"
       );
       setLoading(false);
       setCounter(0);
@@ -135,15 +159,26 @@ export function CollectionSnapshot() {
         {TOOLS.find((tool) => tool.path === window.location.pathname).label}
       </p>
       <SelectNetworkComponent />
-      <input
+      <textarea
         type="text"
+        rows={creatorWallet.split(",").length > 1 ? 3 : 1}
         id="creatorWallet"
-        placeholder="Enter Creator Wallet Address"
-        maxLength={58}
-        className="text-center bg-gray-800 text-white border-2 border-gray-700 rounded-lg p-2 my-2 w-64 mx-auto placeholder:text-center placeholder:text-sm"
+        placeholder="Enter Creator Wallet Address List"
+        className="bg-gray-800 text-white border-2 border-gray-700 rounded-lg p-2 my-2 w-64 text-sm mx-auto placeholder:text-center placeholder:text-sm"
         value={creatorWallet}
         onChange={(e) => setCreatorWallet(e.target.value)}
       />
+      <input
+        type="text"
+        id="unitNamePrefix"
+        placeholder="(Opt.) Unit Name Prefixes"
+        className="bg-gray-800 text-white border-2 border-gray-700 rounded-lg p-2 mb-2 w-48 text-sm mx-auto placeholder:text-center placeholder:text-sm"
+        value={unitNamePrefix}
+        onChange={(e) => setUnitNamePrefix(e.target.value)}
+      />
+      <p className="text-center text-xs mb-2 text-slate-300">
+        Separate multiple wallet addresses and prefixes with commas.
+      </p>
       <button
         className="mb-2 bg-red-1000 hover:bg-red-700 text-white text-base font-semibold rounded py-2 w-fit px-2 mx-auto mt-1 hover:scale-95 duration-700"
         onClick={getCollectionData}
@@ -152,19 +187,14 @@ export function CollectionSnapshot() {
       </button>
       {collectionData.length > 0 && (
         <>
-          {creatorWallet.length == 58 && collectionData && (
+          {collectionData && (
             <div className="flex flex-col justify-center items-center">
               <p className="text-center text-sm text-slate-300">
-                {creatorWallet.substring(0, 4)}...
-                {creatorWallet.substring(
-                  creatorWallet.length - 4,
-                  creatorWallet.length
-                )}{" "}
-                has{" "}
+                Wallets has{" "}
                 <span className="text-slate-100 font-semibold text-base animate-pulse">
                   {collectionData.length}
                 </span>{" "}
-                created assets
+                created assets.
               </p>
             </div>
           )}

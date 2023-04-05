@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { toast } from "react-toastify";
 import axios from "axios";
-import { TOOLS } from "../utils";
+import { getIndexerURL, getNodeURL } from "../utils";
 import SelectNetworkComponent from "../components/SelectNetworkComponent";
+import { TOOLS } from "../constants";
 
 export function WalletHoldings() {
   const [userWallet, setUserWallet] = useState("");
@@ -18,12 +19,9 @@ export function WalletHoldings() {
         return;
       }
       try {
-        const host =
-          localStorage.getItem("networkType") === "mainnet"
-            ? "https://mainnet-idx.algonode.cloud"
-            : "https://testnet-idx.algonode.cloud";
+        const indexerURL = getIndexerURL();
         const url =
-          `${host}/v2/accounts/${userWallet}?exclude=apps-local-state,created-apps,none` +
+          `${indexerURL}/v2/accounts/${userWallet}?exclude=apps-local-state,created-apps,none` +
           (!isIncludedCreatedAssets ? "" : ",created-assets");
         const response = await axios.get(url);
         if (isIncludedCreatedAssets) {
@@ -76,18 +74,7 @@ export function WalletHoldings() {
   async function getAssetData(asset, selectNetwork) {
     try {
       // asset_id	unit_name	asset_name	amount
-      var url;
-      if (selectNetwork === "mainnet") {
-        url =
-          Math.round(Math.random()) === 1
-            ? `https://node.algoexplorerapi.io/v2/assets/${asset.asset_id}`
-            : `https://mainnet-api.algonode.cloud/v2/assets/${asset.asset_id}`;
-      } else {
-        url =
-          Math.round(Math.random()) === 1
-            ? `https://node.testnet.algoexplorerapi.io/v2/assets/${asset.asset_id}`
-            : `https://testnet-api.algonode.cloud/v2/assets/${asset.asset_id}`;
-      }
+      const url = getNodeURL() + `/v2/assets/${asset.asset_id}`;	
       const response = await axios.get(url);
       return {
         asset_id: asset.asset_id,

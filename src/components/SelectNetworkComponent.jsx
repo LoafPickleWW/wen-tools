@@ -12,6 +12,7 @@ export default function SelectNetworkComponent() {
     if (localStorage.getItem("networkType") !== null) {
       updateNetworkType(localStorage.getItem("networkType"));
     } else {
+      // default network is mainnet
       updateNetworkType("mainnet");
     }
   }, []);

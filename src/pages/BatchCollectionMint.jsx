@@ -3,8 +3,9 @@ import Papa from "papaparse";
 import ConnectButton from "../components/ConnectButton";
 import algosdk from "algosdk";
 import { toast } from "react-toastify";
-import { TOOLS, createAssetMintArray, sliceIntoChunks } from "../utils";
+import {  createAssetMintArray, getNodeURL, sliceIntoChunks } from "../utils";
 import SelectNetworkComponent from "../components/SelectNetworkComponent";
+import { TOOLS } from "../constants";
 
 export function BatchCollectionMint() {
   const [csvData, setCsvData] = useState(null);
@@ -35,8 +36,9 @@ export function BatchCollectionMint() {
       toast.error("Please connect your wallet first!");
       return;
     }
+    const nodeURL = getNodeURL();
     const resp = await fetch(
-      `https://mainnet-api.algonode.cloud/v2/accounts/${wallet}?exclude=all`
+      `${nodeURL}/v2/accounts/${wallet}?exclude=all`
     ).then((res) => res.json());
     const min_balance = resp.amount - resp["min-balance"] / 10 ** 6;
     if (min_balance < (0.1 + 0.1 + 0.001) * data.length) {
@@ -114,10 +116,7 @@ export function BatchCollectionMint() {
     }
     try {
       toast.info("Please sign the transactions!");
-      const nodeURL =
-        localStorage.getItem("networkType") === "mainnet"
-          ? "https://node.algoexplorerapi.io/"
-          : "https://node.testnet.algoexplorerapi.io/";
+      const nodeURL = getNodeURL();
       const signedTransactions = await createAssetMintArray(
         data_for_txns,
         nodeURL

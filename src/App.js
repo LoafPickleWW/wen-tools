@@ -30,21 +30,33 @@ function App() {
         theme="dark"
       />
       <Router>
-        <Header/>
+        <Header />
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/airdrop" element={<AirdropTool />} />
-          <Route path="/batch-collection-mint" element={<BatchCollectionMint />} />
-          <Route path="/batch-metadata-update" element={<BatchCollectionMetadataUpdate />} />
+          <Route
+            path="/batch-collection-mint"
+            element={<BatchCollectionMint />}
+          />
+          <Route
+            path="/batch-metadata-update"
+            element={<BatchCollectionMetadataUpdate />}
+          />
           <Route path="/batch-optin" element={<BatchOptin />} />
           <Route path="/batch-optout" element={<BatchOptout />} />
-          <Route path="/find-collection-holders" element={<CollectionSnapshot />} />
-          <Route path="/download-collection-data" element={<DownloadCollectionData />} />
+          <Route
+            path="/find-collection-holders"
+            element={<CollectionSnapshot />}
+          />
+          <Route
+            path="/download-collection-data"
+            element={<DownloadCollectionData />}
+          />
           <Route path="/ipfs-upload" element={<UploadCollectionToIPFS />} />
-          <Route path="/wallet-holdings" element={<WalletHoldings/>} />
+          <Route path="/wallet-holdings" element={<WalletHoldings />} />
           <Route path="*" element={<Home />} />
         </Routes>
-        <Footer/>
+        <Footer />
       </Router>
     </div>
   );
