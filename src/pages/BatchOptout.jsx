@@ -97,7 +97,7 @@ export function BatchOptout() {
           ⚠️ ⚠️ ⚠️ ⚠️ <br />
           You can not opt-out of assets that you created.
           <br />
-          <span className="text-red-200 font-semibold">WARNING: Opting out of assets with a balance > 0 will send the asset back to the creator wallet and opt you out!</span>
+          <span className="text-red-400 font-semibold">WARNING: Opting out of assets with a balance > 0 will send the asset back to the creator wallet and opt you out!</span>
         </p>
       </p>
       <SelectNetworkComponent />
