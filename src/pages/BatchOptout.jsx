@@ -95,9 +95,9 @@ export function BatchOptout() {
         </a>
         <p className="text-sm mt-1 -mb-1 text-gray-400">
           ⚠️ ⚠️ ⚠️ ⚠️ <br />
-          You cannot opt-out assets that
+          You can not opt-out of assets that you created
           <br />
-          you created and with a balance > 0 will send the asset back <br /> to the creator wallet and opt you out.
+          Opting out of assets with a balance > 0 will send the asset back to the creator wallet and opt you out.
         </p>
       </p>
       <SelectNetworkComponent />
