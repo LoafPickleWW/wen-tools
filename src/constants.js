@@ -50,7 +50,12 @@ export const TOOLS = [
     description: "Mint an ARC-69 collection in bulk.",
     path: "/batch-collection-mint",
   },
-
+  {
+    id: "arc3_batch_mint",
+    label: "🖨️ ARC-3 Collection Mint",
+    description: "Mint an ARC-3 collection in bulk.",
+    path: "/arc3-collection-mint",
+  },
   {
     id: "batch_optin",
     label: "➕ Asset Add",

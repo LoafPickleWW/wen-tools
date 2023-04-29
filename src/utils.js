@@ -1,29 +1,32 @@
+import { PeraWalletConnect } from "@perawallet/connect";
+import MyAlgoConnect from "@randlabs/myalgo-connect";
 import {
   Algodv2,
+  algosToMicroalgos,
   computeGroupID,
   makeAssetConfigTxnWithSuggestedParamsFromObject,
-  makePaymentTxnWithSuggestedParamsFromObject,
-  algosToMicroalgos,
-  makeAssetTransferTxnWithSuggestedParamsFromObject,
   makeAssetCreateTxnWithSuggestedParamsFromObject,
+  makeAssetTransferTxnWithSuggestedParamsFromObject,
+  makePaymentTxnWithSuggestedParamsFromObject,
 } from "algosdk";
-import MyAlgoConnect from "@randlabs/myalgo-connect";
-import { PeraWalletConnect } from "@perawallet/connect";
 import axios from "axios";
+import { Web3Storage } from "web3.storage/dist/bundle.esm.min.js";
 import {
   DONATE_WALLET_1,
   DONATE_WALLET_2,
+  MAINNET_ALGOEXPLORER_INDEXER,
+  MAINNET_ALGOEXPLORER_NODE,
+  MAINNET_ALGONODE_INDEXER,
+  MAINNET_ALGONODE_NODE,
   MINT_FEE_PER_ASA,
   MINT_FEE_WALLET,
-  MAINNET_ALGOEXPLORER_NODE,
-  MAINNET_ALGONODE_NODE,
-  TESTNET_ALGOEXPLORER_NODE,
-  TESTNET_ALGONODE_NODE,
-  MAINNET_ALGOEXPLORER_INDEXER,
-  MAINNET_ALGONODE_INDEXER,
   TESTNET_ALGOEXPLORER_INDEXER,
+  TESTNET_ALGOEXPLORER_NODE,
   TESTNET_ALGONODE_INDEXER,
+  TESTNET_ALGONODE_NODE,
 } from "./constants";
+import { toast } from "react-toastify";
+
 const peraWallet = new PeraWalletConnect({ shouldShowSignTxnToast: true });
 
 export function sliceIntoChunks(arr, chunkSize) {
@@ -71,7 +74,11 @@ export function getIndexerURL() {
   }
 }
 
-async function signGroupTransactions(groups, wallet, isMultipleGroup = false) {
+export async function signGroupTransactions(
+  groups,
+  wallet,
+  isMultipleGroup = false
+) {
   let signedTxns;
   let txnsToValidate;
   try {
@@ -195,6 +202,57 @@ export async function createAssetMintArray(data_for_txns, nodeURL) {
   }
   const txnsToValidate = await signGroupTransactions(txnsArray, wallet, true);
   return txnsToValidate;
+}
+
+export async function createARC3AssetMintArray(data_for_txns, nodeURL, token) {
+  const wallet = localStorage.getItem("wallet");
+  if (wallet === "" || wallet === undefined) {
+    throw new Error("Wallet not found");
+  }
+  const algodClient = new Algodv2("", nodeURL, {
+    "User-Agent": "evil-tools",
+  });
+  const params = await algodClient.getTransactionParams().do();
+  const client = new Web3Storage({ token: token });
+  let txnsArray = [];
+  for (let i = 0; i < data_for_txns.length; i++) {
+    const jsonString = JSON.stringify(data_for_txns[i].ipfs_data);
+    const cid = await client.put(
+      [new Blob([jsonString])],
+      { wrapWithDirectory: false },
+      { contentType: "application/json" }
+    );
+    data_for_txns[i].asset_url_section = "ipfs://" + cid;
+    let asset_create_tx = makeAssetCreateTxnWithSuggestedParamsFromObject({
+      from: wallet,
+      manager: wallet,
+      assetName: data_for_txns[i].asset_name,
+      unitName: data_for_txns[i].unit_name,
+      total: parseInt(data_for_txns[i].total_supply),
+      decimals: parseInt(data_for_txns[i].decimals),
+      reserve: wallet,
+      freeze: data_for_txns[i].has_freeze === "Y" ? wallet : undefined,
+      assetURL: data_for_txns[i].asset_url_section + "#arc3",
+      suggestedParams: params,
+      note: new TextEncoder().encode(
+        "via Evil Tools | " + Math.random().toString(36).substring(2)
+      ),
+      clawback: data_for_txns[i].has_clawback === "Y" ? wallet : undefined,
+      strictEmptyAddressChecking: false,
+    });
+    txnsArray.push(asset_create_tx);
+    toast.info(`Asset ${i + 1} of ${data_for_txns.length} uploaded to IPFS`, {
+      autoClose: 200,
+    });
+  }
+  const groups = sliceIntoChunks(txnsArray, 16);
+  for (let i = 0; i < groups.length; i++) {
+    const groupID = computeGroupID(groups[i]);
+    for (let j = 0; j < groups[i].length; j++) {
+      groups[i][j].group = groupID;
+    }
+  }
+  return groups;
 }
 
 export async function createAirdropTransactions(

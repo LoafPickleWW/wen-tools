@@ -17,6 +17,7 @@ module.exports = {
         "primary-blue": "#6EC1E4",
         "primary-yellow": "#FFC000",
         "primary-red": "#BB000E",
+        "secondary-green": "#327A32",
       },
       fontSize: {
         'xxs': '0.6rem',

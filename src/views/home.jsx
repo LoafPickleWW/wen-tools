@@ -1,8 +1,8 @@
-import { useState } from "react";
-import { SelectToolComponent } from "../components/SelectToolComponent";
-import { toast } from "react-toastify";
-import { createDonationTransaction } from "../utils";
 import algosdk from "algosdk";
+import { useState } from "react";
+import { toast } from "react-toastify";
+import { SelectToolComponent } from "../components/SelectToolComponent";
+import { createDonationTransaction } from "../utils";
 //import MyAlgoConnect from "@randlabs/myalgo-connect";
 import { PeraWalletConnect } from "@perawallet/connect";
 import { MAINNET_ALGOEXPLORER_NODE } from "../constants";
@@ -52,10 +52,10 @@ export default function Home() {
       <main className="flex flex-col justify-center items-center  mx-4 md:mx-40  rounded-lg">
         <SelectToolComponent />
       </main>
-      <div className="flex flex-col mx-auto mt-4 items-center gap-1 pt-2 pb-3 rounded-2xl border-special-red border-2 w-[16rem]">
+      <div className="flex flex-col mx-auto mt-4 items-center gap-1 pt-2 pb-3 rounded-2xl border-secondary-green border-2 w-[16rem]">
         <p className="text-center text-lg">Donate</p>
         <input
-          className="border-red-300 border-2 rounded-xl text-red-700 text-center font-semibold transition max-w-[8rem] placeholder:text-center placeholder:text-red-800/50"
+          className="border-secondary-green border-2 rounded-xl text-secondary-green text-center font-semibold transition max-w-[8rem] placeholder:text-center placeholder:text-secondary-green/50"
           placeholder="ALGO amount"
           type="number"
           value={donationAmount}
@@ -64,7 +64,7 @@ export default function Home() {
           inputMode="numeric"
         />
         <button
-          className="bg-red-500/50 px-6 py-1 mt-1 rounded-lg hover:bg-red-800/50 transition"
+          className="bg-secondary-green/50 px-6 py-1 mt-1 rounded-lg hover:bg-secondary-green/50 transition"
           onClick={sendDonation}
         >
           Send

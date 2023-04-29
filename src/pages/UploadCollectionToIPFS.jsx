@@ -46,7 +46,7 @@ export function UploadCollectionToIPFS() {
         </label>
         <input
           type="text"
-          id="token"
+          id="ipfs-token"
           placeholder="token"
           className="text-center bg-gray-800 text-white border-2 border-gray-700 rounded-lg p-2 my-2 w-48 mx-auto placeholder:text-center placeholder:text-sm"
           value={token}
@@ -57,7 +57,7 @@ export function UploadCollectionToIPFS() {
           <a
             href="https://web3.storage/docs/#get-an-api-token"
             target="_blank"
-            className="text-blue-500 hover:text-blue-300 transition"
+            className="text-secondary-green/50 hover:text-secondary-green/80 transition"
             rel="noreferrer"
           >
             here

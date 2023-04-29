@@ -14,6 +14,7 @@ import { DownloadCollectionData } from "./pages/DownloadCollectionData";
 import { BatchCollectionMetadataUpdate } from "./pages/BatchMetadataUpdateComponent";
 import { WalletHoldings } from "./pages/WalletHoldings";
 import { MultimintAssetHolders } from "./pages/MultimintAssetHolders";
+import { ARC3MintTool } from "./pages/ARC3MintTool";
 
 function App() {
   return (
@@ -38,6 +39,10 @@ function App() {
           <Route
             path="/batch-collection-mint"
             element={<BatchCollectionMint />}
+          />
+          <Route
+            path="/arc3-collection-mint"
+            element={<ARC3MintTool />}
           />
           <Route
             path="/batch-metadata-update"

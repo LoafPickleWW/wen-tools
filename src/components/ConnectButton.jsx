@@ -72,7 +72,7 @@ const ConnectButton = () => {
           <div className="flex flex-col">
             <button
               id="connect-button"
-              className="bg-primary-green rounded-md py-3 px-8 w-fit mx-auto hover:scale-102 font-extrabold text-secondary-black transition"
+              className="bg-secondary-green rounded-md py-3 px-8 w-fit mx-auto hover:scale-102 font-extrabold text-secondary-black transition"
               onClick={
                 walletAddress
                   ? () => handleDisconnect()

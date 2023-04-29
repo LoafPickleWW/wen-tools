@@ -180,7 +180,7 @@ export function CollectionSnapshot() {
         Separate multiple wallet addresses and prefixes with commas.<br/>Just works with 1/1 ASAs.
       </p>
       <button
-        className="mb-2 bg-red-1000 hover:bg-red-700 text-white text-base font-semibold rounded py-2 w-fit px-2 mx-auto mt-1 hover:scale-95 duration-700"
+        className="mb-2 bg-secondary-green/80 hover:bg-secondary-green text-white text-base font-semibold rounded py-2 w-fit px-2 mx-auto mt-1 hover:scale-95 duration-700"
         onClick={getCollectionData}
       >
         Get Holders Data

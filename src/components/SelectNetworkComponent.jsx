@@ -19,14 +19,14 @@ export default function SelectNetworkComponent() {
 
   return (
     <div className="px-4 py-2 rounded-lg">
-      <p className="text-sm font-medium text-center text-red-300">
+      <p className="text-sm font-medium text-center text-primary-green/80">
         Select Network
       </p>
       <div className="inline-flex items-center space-x-2">
         <select
           value={selectNetwork}
           onChange={(e) => updateNetworkType(e.target.value)}
-          className="rounded border-gray-300 text-red-600 transition focus:ring-red-600 px-2"
+          className="rounded border-gray-300 text-secondary-green transition focus:ring-secondary-green px-2"
         >
           <option value="mainnet">Mainnet</option>
           <option value="testnet">Testnet</option>
