@@ -167,7 +167,7 @@ export function ARC3MintTool() {
         true
       );
 
-      signedAssetTransactions = sliceIntoChunks(signedAssetTransactions, 16);
+      signedAssetTransactions = sliceIntoChunks(signedAssetTransactions, 2);
 
       for (let i = 0; i < signedAssetTransactions.length; i++) {
         toast.info(
@@ -318,6 +318,7 @@ export function ARC3MintTool() {
               )}
             </>
           )}
+          <p className="text-sm italic py-1 text-slate-200">Fee: 0.1A/ASA</p>
         </div>
       )}
       <p className="text-center text-xs text-slate-400 py-2">

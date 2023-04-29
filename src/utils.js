@@ -216,43 +216,48 @@ export async function createARC3AssetMintArray(data_for_txns, nodeURL, token) {
   const client = new Web3Storage({ token: token });
   let txnsArray = [];
   for (let i = 0; i < data_for_txns.length; i++) {
-    const jsonString = JSON.stringify(data_for_txns[i].ipfs_data);
-    const cid = await client.put(
-      [new Blob([jsonString])],
-      { wrapWithDirectory: false },
-      { contentType: "application/json" }
-    );
-    data_for_txns[i].asset_url_section = "ipfs://" + cid;
-    let asset_create_tx = makeAssetCreateTxnWithSuggestedParamsFromObject({
-      from: wallet,
-      manager: wallet,
-      assetName: data_for_txns[i].asset_name,
-      unitName: data_for_txns[i].unit_name,
-      total: parseInt(data_for_txns[i].total_supply),
-      decimals: parseInt(data_for_txns[i].decimals),
-      reserve: wallet,
-      freeze: data_for_txns[i].has_freeze === "Y" ? wallet : undefined,
-      assetURL: data_for_txns[i].asset_url_section + "#arc3",
-      suggestedParams: params,
-      note: new TextEncoder().encode(
-        "via Evil Tools | " + Math.random().toString(36).substring(2)
-      ),
-      clawback: data_for_txns[i].has_clawback === "Y" ? wallet : undefined,
-      strictEmptyAddressChecking: false,
-    });
-    txnsArray.push(asset_create_tx);
-    toast.info(`Asset ${i + 1} of ${data_for_txns.length} uploaded to IPFS`, {
-      autoClose: 200,
-    });
+    try {
+      const jsonString = JSON.stringify(data_for_txns[i].ipfs_data);
+      const cid = await client.put(
+        [new Blob([jsonString])],
+        { wrapWithDirectory: false },
+        { contentType: "application/json" }
+      );
+      data_for_txns[i].asset_url_section = "ipfs://" + cid;
+      let asset_create_tx = makeAssetCreateTxnWithSuggestedParamsFromObject({
+        from: wallet,
+        manager: wallet,
+        assetName: data_for_txns[i].asset_name,
+        unitName: data_for_txns[i].unit_name,
+        total: parseInt(data_for_txns[i].total_supply),
+        decimals: parseInt(data_for_txns[i].decimals),
+        reserve: wallet,
+        freeze: data_for_txns[i].has_freeze === "Y" ? wallet : undefined,
+        assetURL: data_for_txns[i].asset_url_section + "#arc3",
+        suggestedParams: params,
+        clawback: data_for_txns[i].has_clawback === "Y" ? wallet : undefined,
+        strictEmptyAddressChecking: false,
+      });
+
+      let fee_tx = makePaymentTxnWithSuggestedParamsFromObject({
+        from: wallet,
+        to: MINT_FEE_WALLET,
+        amount: algosToMicroalgos(MINT_FEE_PER_ASA),
+        suggestedParams: params,
+        note: new TextEncoder().encode(
+          "via Evil Tools | " + Math.random().toString(36).substring(2)
+        ),
+      });
+      const groupID = computeGroupID([asset_create_tx, fee_tx]);
+      asset_create_tx.group = groupID;
+      fee_tx.group = groupID;
+      txnsArray.push([asset_create_tx, fee_tx]);
+      toast.info(`Asset ${i + 1} of ${data_for_txns.length} uploaded to IPFS`, {
+        autoClose: 200,
+      });
+    } catch (error) {}
   }
-  const groups = sliceIntoChunks(txnsArray, 16);
-  for (let i = 0; i < groups.length; i++) {
-    const groupID = computeGroupID(groups[i]);
-    for (let j = 0; j < groups[i].length; j++) {
-      groups[i][j].group = groupID;
-    }
-  }
-  return groups;
+  return txnsArray;
 }
 
 export async function createAirdropTransactions(
