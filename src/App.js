@@ -15,6 +15,8 @@ import { BatchCollectionMetadataUpdate } from "./pages/BatchMetadataUpdateCompon
 import { WalletHoldings } from "./pages/WalletHoldings";
 import { MultimintAssetHolders } from "./pages/MultimintAssetHolders";
 import { ARC3MintTool } from "./pages/ARC3MintTool";
+import { ARC19MintTool } from "./pages/ARC19MintTool";
+import { ARC19UpdateTool } from "./pages/ARC19UpdateTool";
 
 function App() {
   return (
@@ -37,7 +39,7 @@ function App() {
           <Route path="/" element={<Home />} />
           <Route path="/airdrop" element={<AirdropTool />} />
           <Route
-            path="/batch-collection-mint"
+            path="/arc69-collection-mint"
             element={<BatchCollectionMint />}
           />
           <Route
@@ -45,7 +47,7 @@ function App() {
             element={<ARC3MintTool />}
           />
           <Route
-            path="/batch-metadata-update"
+            path="/arc69-metadata-update"
             element={<BatchCollectionMetadataUpdate />}
           />
           <Route path="/batch-optin" element={<BatchOptin />} />
@@ -59,6 +61,8 @@ function App() {
             element={<DownloadCollectionData />}
           />
           <Route path="/ipfs-upload" element={<UploadCollectionToIPFS />} />
+          <Route path="/arc19-collection-mint" element={<ARC19MintTool />} />
+          <Route path="/arc19-metadata-update" element={<ARC19UpdateTool />} />
           <Route path="/wallet-holdings" element={<WalletHoldings />} />
           <Route
             path="/multimint-asset-holders"

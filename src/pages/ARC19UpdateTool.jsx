@@ -1,18 +1,34 @@
-import { useState } from "react";
-import Papa from "papaparse";
-import ConnectButton from "../components/ConnectButton";
 import algosdk from "algosdk";
+import Papa from "papaparse";
+import { useState } from "react";
 import { toast } from "react-toastify";
-import { createAssetMintArray, getNodeURL, sliceIntoChunks } from "../utils";
+import ConnectButton from "../components/ConnectButton";
 import SelectNetworkComponent from "../components/SelectNetworkComponent";
 import { TOOLS } from "../constants";
+import {
+  getNodeURL,
+  signGroupTransactions,
+  sliceIntoChunks,
+  updateARC19AssetMintArray,
+} from "../utils";
 
-export function BatchCollectionMint() {
+export function ARC19UpdateTool() {
   const [csvData, setCsvData] = useState(null);
   const [isTransactionsFinished, setIsTransactionsFinished] = useState(false);
   const [txSendingInProgress, setTxSendingInProgress] = useState(false);
+  const [token, setToken] = useState("");
+  const [assetTransactions, setAssetTransactions] = useState([]);
 
   const handleFileData = async () => {
+    const wallet = localStorage.getItem("wallet");
+    if (wallet === null || wallet === undefined) {
+      toast.error("Please connect your wallet first!");
+      return;
+    }
+    if (token === "") {
+      toast.error("Please enter a token!");
+      return;
+    }
     let headers;
     let data = [];
     for (let i = 0; i < csvData.length; i++) {
@@ -31,108 +47,119 @@ export function BatchCollectionMint() {
         data.push(obj);
       }
     }
-    const wallet = localStorage.getItem("wallet");
-    if (wallet === null || wallet === undefined) {
-      toast.error("Please connect your wallet first!");
-      return;
-    }
+
     const nodeURL = getNodeURL();
     const resp = await fetch(
       `${nodeURL}/v2/accounts/${wallet}?exclude=all`
     ).then((res) => res.json());
     const min_balance = resp.amount - resp["min-balance"] / 10 ** 6;
-    if (min_balance < (0.1 + 0.1 + 0.001) * data.length) {
-      toast.error("You don't have enough balance to mint these assets!");
+    if (min_balance < (0.05 + 0.001) * data.length) {
+      toast.error("You don't have enough balance to update these assets!");
       return;
     }
+
     let data_for_txns = [];
     data.forEach((item) => {
-      let asset_note = {
-        standard: "arc69",
-        external_url: item.external_url,
-        mime_type: item.mime_type,
+      const asset_id = item.asset_id;
+      const name = item.name;
+      let ipfs_cid = item.image_ipfs_cid;
+
+      if (ipfs_cid && ipfs_cid.startsWith("ipfs://")) {
+        ipfs_cid = ipfs_cid.replace("ipfs://", "");
+      }
+
+      let ipfs_data = {
+        name: name,
+        standard: "arc3",
+        image: ipfs_cid ? "ipfs://" + ipfs_cid : "",
+        image_mime_type: item.mime_type,
         description: item.description,
         properties: {},
+        extra_properties: {},
+        extra: {},
       };
-      Object.keys(asset_note).forEach((key) => {
-        if (asset_note[key] === "") {
-          delete asset_note[key];
+
+      Object.keys(ipfs_data).forEach((key) => {
+        if (ipfs_data[key] === "") {
+          delete ipfs_data[key];
         }
       });
+
       Object.keys(item).forEach((key) => {
         if (key.startsWith("property_")) {
-          asset_note.properties[key.replace("property_", "")] = item[key];
+          ipfs_data.properties[key.replace("property_", "")] = item[key];
+        }
+        if (key.startsWith("extra_")) {
+          ipfs_data.extra[key.replace("extra_", "")] = item[key];
+        }
+        if (key.startsWith("extra_property_")) {
+          ipfs_data.extra_properties[key.replace("extra_property_", "")] =
+            item[key];
         }
       });
-      const asset_name = item.name;
-      const unit_name = item.unit_name;
-      const has_clawback = item.has_clawback;
-      const has_freeze = item.has_freeze;
-      const decimals = item.decimals;
-      const total_supply = item.total_supply;
-      const asset_url = item.url;
-      if (asset_url.length > 96) {
-        toast.error(
-          `Asset URL cannot be longer than 96 characters, too long for ${asset_name}`
-        );
-        return;
-      }
-      if (asset_name.length > 32) {
-        toast.error(
-          `Asset name cannot be longer than 32 characters, too long for ${asset_name}`
-        );
-        return;
-      }
-      if (unit_name.length > 8) {
-        toast.error(
-          `Unit name cannot be longer than 8 characters, too long for ${asset_name}`
-        );
-        return;
-      }
-      if (decimals > 19) {
-        toast.error(
-          `Decimals cannot be more than 19, too many for ${asset_name}`
-        );
-        return;
-      }
       const transaction_data = {
-        asset_name,
-        unit_name,
-        has_clawback,
-        has_freeze,
-        decimals,
-        asset_url,
-        total_supply,
-        asset_note,
+        asset_id,
+        ipfs_data,
       };
       data_for_txns.push(transaction_data);
     });
-    if (
-      localStorage.getItem("wallet") === null ||
-      localStorage.getItem("wallet") === undefined
-    ) {
-      toast.error("You must connect your wallet first");
-      return;
-    }
     try {
-      toast.info("Please sign the transactions!");
       const nodeURL = getNodeURL();
-      const signedTransactions = await createAssetMintArray(
-        data_for_txns,
-        nodeURL
-      );
-      const groups = sliceIntoChunks(signedTransactions, 2);
+      toast.info("Uploading metadata to IPFS...");
       setTxSendingInProgress(true);
+      const unsignedAssetTransactions = await updateARC19AssetMintArray(
+        data_for_txns,
+        nodeURL,
+        token
+      );
+      setAssetTransactions(unsignedAssetTransactions);
+      setTxSendingInProgress(false);
+      toast.info("Please sign the transactions!");
+    } catch (error) {
+      toast.error(error.message);
+      setTxSendingInProgress(false);
+    }
+  };
+
+  const sendTransactions = async () => {
+    try {
+      const wallet = localStorage.getItem("wallet");
+      if (wallet === null || wallet === undefined) {
+        toast.error("Please connect your wallet first!");
+        return;
+      }
+      if (assetTransactions.length === 0) {
+        toast.error("Please create transactions first!");
+        return;
+      }
+      setTxSendingInProgress(true);
+      const nodeURL = getNodeURL();
       const algodClient = new algosdk.Algodv2("", nodeURL, {
         "User-Agent": "evil-tools",
       });
-      for (let i = 0; i < groups.length; i++) {
-        //toast.info(`Sending group ${i + 1} of ${groups.length}`);
-        const { txId } = await algodClient.sendRawTransaction(groups[i]).do();
+
+      let signedAssetTransactions = await signGroupTransactions(
+        assetTransactions,
+        wallet,
+        true
+      );
+
+      signedAssetTransactions = sliceIntoChunks(signedAssetTransactions, 2);
+
+      for (let i = 0; i < signedAssetTransactions.length; i++) {
+        toast.info(
+          `Sending group ${i + 1} of ${signedAssetTransactions.length}`
+        );
+        const { txId } = await algodClient
+          .sendRawTransaction(signedAssetTransactions[i])
+          .do();
         await algosdk.waitForConfirmation(algodClient, txId, 3);
-        toast.success(`Transaction ${i + 1} of ${groups.length} confirmed!`, {
-          autoClose: 1000,
-        });
+        toast.success(
+          `Group ${i + 1} of ${signedAssetTransactions.length} confirmed!`,
+          {
+            autoClose: 1000,
+          }
+        );
       }
       setIsTransactionsFinished(true);
       setTxSendingInProgress(false);
@@ -152,17 +179,37 @@ export function BatchCollectionMint() {
       <SelectNetworkComponent />
       <p>1- Connect Creator Wallet</p>
       <ConnectButton />
-      <p className="text-center text-lg text-secondary-green hover:underline">
+      <p className="text-center text-base underline text-secondary-green hover:underline">
         <a
-          className="hover:text-pink-400 transition"
-          href="https://loafpickle.medium.com/evil-tools-mass-mint-tool-d06b8fc054b1"
+          className="hover:text-primary-green transition"
+          href="https://loafpickle.medium.com/mass-arc3-19-mint-tool-742b2a595a60"
           target="_blank"
           rel="noopener noreferrer"
         >
-          ⚠️ CHECK DOCS BEFORE USING ⚠️
+          Check Guide Here
         </a>
       </p>
-      <p>2- Upload CSV file</p>
+      <p>2- Enter Web3Storage Token</p>
+      <input
+        type="text"
+        id="ipfs-token"
+        placeholder="token"
+        className="text-center bg-gray-800 text-white border-2 border-gray-700 rounded-lg p-2 mb-2 w-48 mx-auto placeholder:text-center placeholder:text-sm"
+        value={token}
+        onChange={(e) => setToken(e.target.value)}
+      />
+      <p className="text-xs text-slate-400 font-roboto -mt-2 mb-2">
+        you can get your token{" "}
+        <a
+          href="https://web3.storage/docs/#get-an-api-token"
+          target="_blank"
+          className="text-primary-green/70 hover:text-secondary-green/80 transition"
+          rel="noreferrer"
+        >
+          here
+        </a>
+      </p>
+      <p>3- Upload CSV file</p>
       {csvData == null ? (
         <label
           htmlFor="dropzone-file"
@@ -215,17 +262,24 @@ export function BatchCollectionMint() {
               <p className="text-sm text-gray-400">
                 {csvData.length - 1} assets found!
               </p>
-              <p className="text-sm italic py-1">3- Sign Your Transactions</p>
-              <p className="text-sm italic py-1 text-slate-200">
-                Fee: 0.1A/ASA
+              <p className="text-sm italic py-1">
+                {assetTransactions.length > 0
+                  ? "4- Approve & Send"
+                  : "3- Create Transactions"}
               </p>
               {!txSendingInProgress ? (
                 <button
                   id="approve-send"
                   className="mb-2 bg-green-500 hover:bg-green-700 text-black text-base font-semibold rounded py-2 w-fit px-2 mx-auto mt-1 hover:scale-95 duration-700"
-                  onClick={handleFileData}
+                  onClick={
+                    assetTransactions.length > 0
+                      ? sendTransactions
+                      : handleFileData
+                  }
                 >
-                  Approve & Send
+                  {assetTransactions.length > 0
+                    ? "Approve & Send"
+                    : "Create Transactions"}
                 </button>
               ) : (
                 <div className="mx-auto flex flex-col">
@@ -233,14 +287,19 @@ export function BatchCollectionMint() {
                     className="spinner-border animate-spin inline-block mx-auto w-8 h-8 border-4 rounded-full"
                     role="status"
                   ></div>
-                  Please wait... Transactions are sending to the network.
+                  Please wait...{" "}
+                  {assetTransactions.length > 0
+                    ? "Sending transactions to network.."
+                    : "Creating transactions..."}
                 </div>
               )}
             </>
           )}
         </div>
       )}
-      <p className="text-center text-xs text-slate-400 py-2">
+                <p className="text-sm italic text-slate-200">Fee: 0.1A/ASA</p>
+
+      <p className="text-center text-xs text-slate-400 py-1">
         ⚠️If you reload or close this page, you will lose your progress⚠️
         <br />
         You can reload the page if you want to stop/restart the process!

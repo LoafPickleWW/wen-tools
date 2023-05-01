@@ -173,7 +173,7 @@ export function AirdropTool() {
                 <br />
               </p>
               <p className="pb-2 text-slate-400 text-xs">
-                You can reload the page if you want to use another tool.
+                You can reload the page if you want to use again.
               </p>
             </>
           ) : (

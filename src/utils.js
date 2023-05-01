@@ -4,12 +4,15 @@ import {
   Algodv2,
   algosToMicroalgos,
   computeGroupID,
+  encodeAddress,
   makeAssetConfigTxnWithSuggestedParamsFromObject,
   makeAssetCreateTxnWithSuggestedParamsFromObject,
   makeAssetTransferTxnWithSuggestedParamsFromObject,
   makePaymentTxnWithSuggestedParamsFromObject,
 } from "algosdk";
 import axios from "axios";
+import { CID } from "multiformats/cid";
+import { toast } from "react-toastify";
 import { Web3Storage } from "web3.storage/dist/bundle.esm.min.js";
 import {
   DONATE_WALLET_1,
@@ -24,8 +27,8 @@ import {
   TESTNET_ALGOEXPLORER_NODE,
   TESTNET_ALGONODE_INDEXER,
   TESTNET_ALGONODE_NODE,
+  UPDATE_FEE_PER_ASA,
 } from "./constants";
-import { toast } from "react-toastify";
 
 const peraWallet = new PeraWalletConnect({ shouldShowSignTxnToast: true });
 
@@ -218,11 +221,7 @@ export async function createARC3AssetMintArray(data_for_txns, nodeURL, token) {
   for (let i = 0; i < data_for_txns.length; i++) {
     try {
       const jsonString = JSON.stringify(data_for_txns[i].ipfs_data);
-      const cid = await client.put(
-        [new Blob([jsonString])],
-        { wrapWithDirectory: false },
-        { contentType: "application/json" }
-      );
+      const cid = await pinJSONToIPFS(client, jsonString);
       data_for_txns[i].asset_url_section = "ipfs://" + cid;
       let asset_create_tx = makeAssetCreateTxnWithSuggestedParamsFromObject({
         from: wallet,
@@ -260,6 +259,114 @@ export async function createARC3AssetMintArray(data_for_txns, nodeURL, token) {
   return txnsArray;
 }
 
+export async function createARC19AssetMintArray(data_for_txns, nodeURL, token) {
+  const wallet = localStorage.getItem("wallet");
+  if (wallet === "" || wallet === undefined) {
+    throw new Error("Wallet not found");
+  }
+  if (token === "" || token === undefined) {
+    throw new Error("IPFS token not found");
+  }
+  const algodClient = new Algodv2("", nodeURL, {
+    "User-Agent": "evil-tools",
+  });
+  const params = await algodClient.getTransactionParams().do();
+  const client = new Web3Storage({ token: token });
+  let txnsArray = [];
+  for (let i = 0; i < data_for_txns.length; i++) {
+    try {
+      const jsonString = JSON.stringify(data_for_txns[i].ipfs_data);
+      const cid = await pinJSONToIPFS(client, jsonString);
+      const { assetURL, reserveAddress } = createReserveAddressFromIpfsCid(cid);
+      let asset_create_tx = makeAssetCreateTxnWithSuggestedParamsFromObject({
+        from: wallet,
+        manager: wallet,
+        assetName: data_for_txns[i].asset_name,
+        unitName: data_for_txns[i].unit_name,
+        total: parseInt(data_for_txns[i].total_supply),
+        decimals: parseInt(data_for_txns[i].decimals),
+        reserve: reserveAddress,
+        freeze: data_for_txns[i].has_freeze === "Y" ? wallet : undefined,
+        assetURL: assetURL,
+        suggestedParams: params,
+        clawback: data_for_txns[i].has_clawback === "Y" ? wallet : undefined,
+        strictEmptyAddressChecking: false,
+      });
+
+      let fee_tx = makePaymentTxnWithSuggestedParamsFromObject({
+        from: wallet,
+        to: MINT_FEE_WALLET,
+        amount: algosToMicroalgos(MINT_FEE_PER_ASA),
+        suggestedParams: params,
+        note: new TextEncoder().encode(
+          "via Evil Tools | " + Math.random().toString(36).substring(2)
+        ),
+      });
+      const groupID = computeGroupID([asset_create_tx, fee_tx]);
+      asset_create_tx.group = groupID;
+      fee_tx.group = groupID;
+      txnsArray.push([asset_create_tx, fee_tx]);
+      toast.info(`Asset ${i + 1} of ${data_for_txns.length} uploaded to IPFS`, {
+        autoClose: 200,
+      });
+    } catch (error) {}
+  }
+  return txnsArray;
+}
+
+export async function updateARC19AssetMintArray(data_for_txns, nodeURL, token) {
+  const wallet = localStorage.getItem("wallet");
+  if (wallet === "" || wallet === undefined) {
+    throw new Error("Wallet not found");
+  }
+  if (token === "" || token === undefined) {
+    throw new Error("IPFS token not found");
+  }
+  const algodClient = new Algodv2("", nodeURL, {
+    "User-Agent": "evil-tools",
+  });
+  const params = await algodClient.getTransactionParams().do();
+  const client = new Web3Storage({ token: token });
+  let txnsArray = [];
+  for (let i = 0; i < data_for_txns.length; i++) {
+    try {
+      const jsonString = JSON.stringify(data_for_txns[i].ipfs_data);
+      const cid = await pinJSONToIPFS(client, jsonString);
+      const { reserveAddress } = createReserveAddressFromIpfsCid(cid);
+
+      let update_tx = makeAssetConfigTxnWithSuggestedParamsFromObject({
+        from: wallet,
+        assetIndex: parseInt(data_for_txns[i].asset_id),
+        note: new TextEncoder().encode(JSON.stringify(data_for_txns[i].note)),
+        manager: wallet,
+        reserve: reserveAddress,
+        //freeze: undefined,
+        //clawback: undefined,
+        suggestedParams: params,
+        strictEmptyAddressChecking: false,
+      });
+
+      let fee_tx = makePaymentTxnWithSuggestedParamsFromObject({
+        from: wallet,
+        to: MINT_FEE_WALLET,
+        amount: algosToMicroalgos(UPDATE_FEE_PER_ASA),
+        suggestedParams: params,
+        note: new TextEncoder().encode(
+          "via Evil Tools | " + Math.random().toString(36).substring(2)
+        ),
+      });
+      const groupID = computeGroupID([update_tx, fee_tx]);
+      update_tx.group = groupID;
+      fee_tx.group = groupID;
+      txnsArray.push([update_tx, fee_tx]);
+      toast.info(`Asset ${i + 1} of ${data_for_txns.length} uploaded to IPFS`, {
+        autoClose: 200,
+      });
+    } catch (error) {}
+  }
+  return txnsArray;
+}
+
 export async function createAirdropTransactions(
   data_for_txns,
   nodeURL,
@@ -280,7 +387,8 @@ export async function createAirdropTransactions(
         amount: algosToMicroalgos(data_for_txns[i].amount * 1),
         suggestedParams: params,
         note: new TextEncoder().encode(
-          "via Evil Tools | " + Math.random().toString(36).substring(2)
+          "Sent using Evil Tools - A Thurstober Digital Studios Product! Free Tools for Algorand Creators and Collectors!  " +
+            Math.random().toString(36).substring(2)
         ),
       });
     } else {
@@ -292,7 +400,8 @@ export async function createAirdropTransactions(
         assetIndex: parseInt(data_for_txns[i].asset_id),
         suggestedParams: params,
         note: new TextEncoder().encode(
-          "via Evil Tools | " + Math.random().toString(36).substring(2)
+          "Sent using Evil Tools - A Thurstober Digital Studios Product! Free Tools for Algorand Creators and Collectors!  " +
+            Math.random().toString(36).substring(2)
         ),
       });
     }
@@ -499,4 +608,46 @@ export async function getNfdDomain(wallet) {
   } else {
     return "";
   }
+}
+
+function codeToCodec(code) {
+  switch (code.toString(16)) {
+    case "55":
+      return "raw";
+    case "70":
+      return "dag-pb";
+    default:
+      throw new Error("Unknown codec");
+  }
+}
+
+export async function pinJSONToIPFS(client, json) {
+  try {
+    const cid = await client.put(
+      [new Blob([json])],
+      { wrapWithDirectory: false },
+      { contentType: "application/json" }
+    );
+    return cid;
+  } catch (error) {
+    throw new Error("IPFS pinning failed");
+  }
+}
+
+export function createReserveAddressFromIpfsCid(ipfsCid) {
+  const decoded = CID.parse(ipfsCid);
+  const version = decoded.version;
+  const codec = codeToCodec(decoded.code);
+
+  if (version === 0) {
+    throw new Error("CID version 0 does not support directories");
+  }
+
+  const assetURL = `template-ipfs://{ipfscid:${version}:${codec}:reserve:sha2-256}`;
+
+  const reserveAddress = encodeAddress(
+    Uint8Array.from(Buffer.from(decoded.multihash.digest))
+  );
+
+  return { assetURL, reserveAddress };
 }
