@@ -378,6 +378,7 @@ export async function createAirdropTransactions(
   const params = await algodClient.getTransactionParams().do();
   let txnsArray = [];
   const wallet = localStorage.getItem("wallet");
+  console.log(data_for_txns);
   for (let i = 0; i < data_for_txns.length; i++) {
     let tx;
     if (data_for_txns[i].asset_id === 1) {
@@ -396,7 +397,7 @@ export async function createAirdropTransactions(
       tx = makeAssetTransferTxnWithSuggestedParamsFromObject({
         from: wallet,
         to: data_for_txns[i].receiver,
-        amount: data_for_txns[i].amount * 10 ** data_for_txns[i].decimals,
+        amount: parseInt(data_for_txns[i].amount * (10 ** data_for_txns[i].decimals)),
         assetIndex: parseInt(data_for_txns[i].asset_id),
         suggestedParams: params,
         note: new TextEncoder().encode(

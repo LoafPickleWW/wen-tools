@@ -28,6 +28,13 @@ export function AirdropTool() {
   }
 
   const handleFileData = async () => {
+    if (
+      localStorage.getItem("wallet") === null ||
+      localStorage.getItem("wallet") === undefined
+    ) {
+      toast.error("Wallet not found!");
+      return;
+    }
     let headers;
     let data = [];
     for (let i = 0; i < csvData.length; i++) {
@@ -54,14 +61,6 @@ export function AirdropTool() {
       if (assetIds[i] === 1) continue;
       assetDecimals[assetIds[i]] = await getAssetDecimals(assetIds[i]);
     }
-    if (
-      localStorage.getItem("wallet") === null ||
-      localStorage.getItem("wallet") === undefined
-    ) {
-      toast.error("Wallet not found!");
-      return;
-    }
-
     try {
       const nodeURL = getNodeURL();
       const algodClient = new algosdk.Algodv2("", nodeURL, {
