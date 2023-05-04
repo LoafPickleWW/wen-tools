@@ -30,18 +30,18 @@ export const IPFS_ENDPOINT = "https://ipfs.algonode.xyz/ipfs/";
 // TOOLS
 export const TOOLS = [
   {
-    id: "collection_data",
-    label: "⬇️ Download Collection Data",
-    description: "Download all the data for a collection in CSV format.",
-    path: "/download-collection-data",
-    category: "general",
-  },
-  {
     id: "collection_snapshot",
     label: "🔎 Find Collection Holders",
     description: "Download all the holders for a collection in CSV format.",
     path: "/find-collection-holders",
     category: "general",
+  },
+  {
+    id: "collection_data",
+    label: "⬇️ Download ARC69 Collection Data",
+    description: "Download ARC69 data for a collection in CSV format.",
+    path: "/download-arc69-collection-data",
+    category: "arc69",
   },
   {
     id: "batch_mint",

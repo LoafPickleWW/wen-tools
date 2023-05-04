@@ -10,7 +10,7 @@ import { BatchCollectionMint } from "./pages/BatchCollectionMint";
 import { BatchOptin } from "./pages/BatchOptin";
 import { BatchOptout } from "./pages/BatchOptout";
 import { CollectionSnapshot } from "./pages/CollectionSnapshotComponent";
-import { DownloadCollectionData } from "./pages/DownloadCollectionData";
+import { Download69CollectionData } from "./pages/Download69CollectionData";
 import { BatchCollectionMetadataUpdate } from "./pages/BatchMetadataUpdateComponent";
 import { WalletHoldings } from "./pages/WalletHoldings";
 import { MultimintAssetHolders } from "./pages/MultimintAssetHolders";
@@ -57,8 +57,8 @@ function App() {
             element={<CollectionSnapshot />}
           />
           <Route
-            path="/download-collection-data"
-            element={<DownloadCollectionData />}
+            path="/download-arc69-collection-data"
+            element={<Download69CollectionData />}
           />
           <Route path="/ipfs-upload" element={<UploadCollectionToIPFS />} />
           <Route path="/arc19-collection-mint" element={<ARC19MintTool />} />
