@@ -83,7 +83,7 @@ export function BatchOptout() {
       <p className="text-2xl font-bold mt-1">
         {TOOLS.find((tool) => tool.path === window.location.pathname).label}
       </p>
-      <p className="text-center text-lg text-pink-200 mt-2">
+      <button className="text-center text-lg text-pink-200 mt-2 bg-pink-700 px-4 py-2 rounded">
         <a
           className="hover:text-pink-400 transition"
           href="https://loafpickle.medium.com/evil-tools-batch-asset-add-f5aa28db2fc7"
@@ -91,14 +91,16 @@ export function BatchOptout() {
           rel="noopener noreferrer"
         >
           INSTRUCTIONS
-          <br /> (Click here)
         </a>
-        <p className="text-sm mt-1 -mb-1 text-gray-400">
-          ⚠️ ⚠️ ⚠️ ⚠️ <br />
-          You can not opt-out of assets that you created.
-          <br />
-          <span className="text-secondary-green font-semibold">WARNING: Opting out of assets with a balance greater than 0 will send the asset back to the creator wallet and opt you out!</span>
-        </p>
+      </button>
+      <p className="text-sm mt-1 -mb-1 text-gray-400">
+        ⚠️ ⚠️ ⚠️ ⚠️ <br />
+        You can not opt-out of assets that you created.
+        <br />
+        <span className="text-secondary-green font-semibold">
+          WARNING: Opting out of assets with a balance greater than 0 will send
+          the asset back to the creator wallet and opt you out!
+        </span>
       </p>
       <SelectNetworkComponent />
       <p>1- Connect Opt-out Wallet</p>

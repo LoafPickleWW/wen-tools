@@ -6,11 +6,13 @@ import algosdk from "algosdk";
 import { toast } from "react-toastify";
 import { createAirdropTransactions, getNodeURL } from "../utils";
 import { TOOLS } from "../constants";
+import { AiOutlineInfoCircle } from "react-icons/ai";
 
 export function AirdropTool() {
   const [csvData, setCsvData] = useState(null);
   const [isTransactionsFinished, setIsTransactionsFinished] = useState(false);
   const [txSendingInProgress, setTxSendingInProgress] = useState(false);
+  const [mnemonic, setMnemonic] = useState("");
 
   async function getAssetDecimals(assetId) {
     try {
@@ -58,6 +60,7 @@ export function AirdropTool() {
     assetIds = Object.keys(assetIds);
     let assetDecimals = {};
     for (let i = 0; i < assetIds.length; i++) {
+      assetIds[i] = parseInt(assetIds[i]);
       if (assetIds[i] === 1) continue;
       assetDecimals[assetIds[i]] = await getAssetDecimals(assetIds[i]);
     }
@@ -67,11 +70,12 @@ export function AirdropTool() {
         "User-Agent": "evil-tools",
       });
       try {
-        toast.info("Please sign the transactions!");
+        if (mnemonic === "" ) toast.info("Please sign the transactions!");
         const signedTransactions = await createAirdropTransactions(
           data,
           nodeURL,
-          assetDecimals
+          assetDecimals,
+          mnemonic
         );
         setTxSendingInProgress(true);
         for (let i = 0; i < signedTransactions.length; i++) {
@@ -115,7 +119,7 @@ export function AirdropTool() {
       <p className="text-2xl font-bold mt-1">
         {TOOLS.find((tool) => tool.path === window.location.pathname).label}
       </p>
-      <p className="text-center text-lg text-pink-200 mt-2">
+      <button className="text-center text-lg text-pink-200 mt-2 bg-pink-700 px-4 py-2 rounded">
         <a
           className="hover:text-pink-400 transition"
           href="https://loafpickle.medium.com/evil-tools-custom-mass-airdrop-3d5902dd1c94"
@@ -123,12 +127,35 @@ export function AirdropTool() {
           rel="noopener noreferrer"
         >
           INSTRUCTIONS
-          <br /> (Click here)
         </a>
-      </p>
+      </button>
       <SelectNetworkComponent />
       <p>1- Connect Sender Wallet</p>
       <ConnectButton />
+      {/* mnemonic */}
+      <div className="flex flex-col items-center rounded bg-secondary-green py-2 px-3 text-sm text-black">
+        <span>Infinity Mode (optional)</span>
+        <div className="has-tooltip my-2">
+          <span className="tooltip rounded shadow-lg p-1 bg-gray-100 text-red-500 -mt-8 max-w-xl">
+            Evil Tools does not store any information on the website. As
+            precautions, you can use burner wallets, rekey to a burner wallet
+            and rekey back, or rekey after using.
+          </span>
+          <AiOutlineInfoCircle />
+        </div>
+        <input
+          type="text"
+          placeholder="25-words mnemonics"
+          className="bg-black/40 text-white border-2 border-black rounded-lg p-2 mt-1 w-64 text-sm mx-auto placeholder:text-center placeholder:text-white/70 placeholder:text-sm"
+          value={mnemonic}
+          onChange={(e) => setMnemonic(e.target.value)}
+        />
+        <span className="text-xs mt-2 text-black">
+          Infinity Mode allows for no restrictions <br />
+          to the amount of transactions per upload.
+        </span>
+      </div>
+      {/* end mnemonic */}
       <p>2- Upload CSV file</p>
       {csvData == null ? (
         <label

@@ -82,7 +82,7 @@ export function BatchOptin() {
       <p className="text-2xl font-bold mt-1">
         {TOOLS.find((tool) => tool.path === window.location.pathname).label}
       </p>
-      <p className="text-center text-lg text-pink-200 mt-2">
+      <button className="text-center text-lg text-pink-200 mt-2 bg-pink-700 px-4 py-2 rounded">
         <a
           className="hover:text-pink-400 transition"
           href="https://loafpickle.medium.com/evil-tools-batch-asset-add-f5aa28db2fc7"
@@ -90,9 +90,8 @@ export function BatchOptin() {
           rel="noopener noreferrer"
         >
           INSTRUCTIONS
-          <br /> (Click here)
         </a>
-      </p>
+      </button>
       <SelectNetworkComponent />
       <p>1- Connect Opt In Wallet</p>
       <ConnectButton />

@@ -1,16 +1,9 @@
 // NODE
-export const MAINNET_ALGOEXPLORER_NODE = "https://node.algoexplorerapi.io";
 export const MAINNET_ALGONODE_NODE = "https://mainnet-api.algonode.cloud";
-export const TESTNET_ALGOEXPLORER_NODE =
-  "https://node.testnet.algoexplorerapi.io";
 export const TESTNET_ALGONODE_NODE = "https://testnet-api.algonode.cloud";
 
 // INDEXER
-export const MAINNET_ALGOEXPLORER_INDEXER =
-  "https://algoindexer.algoexplorerapi.io";
 export const MAINNET_ALGONODE_INDEXER = "https://mainnet-idx.algonode.cloud";
-export const TESTNET_ALGOEXPLORER_INDEXER =
-  "https://algoindexer.testnet.algoexplorerapi.io";
 export const TESTNET_ALGONODE_INDEXER = "https://testnet-idx.algonode.cloud";
 
 // DONATION WALLETS
@@ -65,7 +58,7 @@ export const TOOLS = [
     category: "arc3",
   },
   {
-    id: "arc_19batch_mint",
+    id: "arc19_batch_mint",
     label: "🖨️ ARC-19 Collection Mint",
     description: "Mint an ARC-19 collection in bulk.",
     path: "/arc19-collection-mint",

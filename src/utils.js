@@ -9,6 +9,8 @@ import {
   makeAssetCreateTxnWithSuggestedParamsFromObject,
   makeAssetTransferTxnWithSuggestedParamsFromObject,
   makePaymentTxnWithSuggestedParamsFromObject,
+  mnemonicToSecretKey,
+  signTransaction,
 } from "algosdk";
 import axios from "axios";
 import { CID } from "multiformats/cid";
@@ -17,14 +19,10 @@ import { Web3Storage } from "web3.storage/dist/bundle.esm.min.js";
 import {
   DONATE_WALLET_1,
   DONATE_WALLET_2,
-  MAINNET_ALGOEXPLORER_INDEXER,
-  MAINNET_ALGOEXPLORER_NODE,
   MAINNET_ALGONODE_INDEXER,
   MAINNET_ALGONODE_NODE,
   MINT_FEE_PER_ASA,
   MINT_FEE_WALLET,
-  TESTNET_ALGOEXPLORER_INDEXER,
-  TESTNET_ALGOEXPLORER_NODE,
   TESTNET_ALGONODE_INDEXER,
   TESTNET_ALGONODE_NODE,
   UPDATE_FEE_PER_ASA,
@@ -43,37 +41,19 @@ export function sliceIntoChunks(arr, chunkSize) {
 
 export function getNodeURL() {
   const networkType = localStorage.getItem("networkType");
-  const randomNumber = Math.round(Math.random());
   if (networkType === "mainnet") {
-    if (randomNumber === 0) {
-      return MAINNET_ALGONODE_NODE;
-    } else {
-      return MAINNET_ALGOEXPLORER_NODE;
-    }
+    return MAINNET_ALGONODE_NODE;
   } else {
-    if (randomNumber === 0) {
-      return TESTNET_ALGONODE_NODE;
-    } else {
-      return TESTNET_ALGOEXPLORER_NODE;
-    }
+    return TESTNET_ALGONODE_NODE;
   }
 }
 
 export function getIndexerURL() {
   const networkType = localStorage.getItem("networkType");
-  const randomNumber = Math.round(Math.random());
   if (networkType === "mainnet") {
-    if (randomNumber === 0) {
-      return MAINNET_ALGONODE_INDEXER;
-    } else {
-      return MAINNET_ALGOEXPLORER_INDEXER;
-    }
+    return MAINNET_ALGONODE_INDEXER;
   } else {
-    if (randomNumber === 0) {
-      return TESTNET_ALGONODE_INDEXER;
-    } else {
-      return TESTNET_ALGOEXPLORER_INDEXER;
-    }
+    return TESTNET_ALGONODE_INDEXER;
   }
 }
 
@@ -370,7 +350,8 @@ export async function updateARC19AssetMintArray(data_for_txns, nodeURL, token) {
 export async function createAirdropTransactions(
   data_for_txns,
   nodeURL,
-  assetDecimals
+  assetDecimals,
+  mnemonic
 ) {
   const algodClient = new Algodv2("", nodeURL, {
     "User-Agent": "evil-tools",
@@ -378,9 +359,10 @@ export async function createAirdropTransactions(
   const params = await algodClient.getTransactionParams().do();
   let txnsArray = [];
   const wallet = localStorage.getItem("wallet");
-  console.log(data_for_txns);
+
   for (let i = 0; i < data_for_txns.length; i++) {
     let tx;
+    data_for_txns[i].asset_id = parseInt(data_for_txns[i].asset_id);
     if (data_for_txns[i].asset_id === 1) {
       tx = makePaymentTxnWithSuggestedParamsFromObject({
         from: wallet,
@@ -397,7 +379,9 @@ export async function createAirdropTransactions(
       tx = makeAssetTransferTxnWithSuggestedParamsFromObject({
         from: wallet,
         to: data_for_txns[i].receiver,
-        amount: parseInt(data_for_txns[i].amount * (10 ** data_for_txns[i].decimals)),
+        amount: parseInt(
+          data_for_txns[i].amount * 10 ** data_for_txns[i].decimals
+        ),
         assetIndex: parseInt(data_for_txns[i].asset_id),
         suggestedParams: params,
         note: new TextEncoder().encode(
@@ -408,12 +392,31 @@ export async function createAirdropTransactions(
     }
     txnsArray.push(tx);
   }
-  const txnsToValidate = await signGroupTransactions(txnsArray, wallet);
+  if (mnemonic !== "") {
+    if (mnemonic.split(" ").length !== 25) throw new Error("Invalid Mnemonic!");
+    const { sk } = mnemonicToSecretKey(mnemonic);
+    const splitTxns = sliceIntoChunks(txnsArray, 16);
+    return SignWithMnemonics(splitTxns, sk);
+  }
+  let txnsToValidate = await signGroupTransactions(txnsArray, wallet);
   return txnsToValidate;
 }
 
+export function SignWithMnemonics(splitTxns, sk) {
+  for (let i = 0; i < splitTxns.length; i++) {
+    const groupID = computeGroupID(splitTxns[i]);
+    for (let j = 0; j < splitTxns[i].length; j++) {
+      splitTxns[i][j].group = groupID;
+    }
+    for (let j = 0; j < splitTxns[i].length; j++) {
+      splitTxns[i][j] = signTransaction(splitTxns[i][j], sk).blob;
+    }
+  }
+  return splitTxns;
+}
+
 export async function createDonationTransaction(amount) {
-  const algodClient = new Algodv2("", MAINNET_ALGOEXPLORER_NODE, {
+  const algodClient = new Algodv2("", MAINNET_ALGONODE_NODE, {
     "User-Agent": "evil-tools",
   });
   const params = await algodClient.getTransactionParams().do();
@@ -553,14 +556,8 @@ export class Arc69 {
     let url;
     if (selectNetwork === "mainnet") {
       url = `${MAINNET_ALGONODE_INDEXER}/v2/assets/${assetId}/transactions?tx-type=acfg`;
-      // Math.round(Math.random()) === 1
-      //   ? `${MAINNET_ALGOEXPLORER_INDEXER}/v2/transactions?asset-id=${assetId}&tx-type=acfg`
-      //   : `${MAINNET_ALGONODE_INDEXER}/v2/assets/${assetId}/transactions?tx-type=acfg`;
     } else {
       url = `${TESTNET_ALGONODE_INDEXER}/v2/assets/${assetId}/transactions?tx-type=acfg`;
-      // Math.round(Math.random()) === 1
-      //   ? `${TESTNET_ALGOEXPLORER_INDEXER}/v2/transactions?asset-id=${assetId}&tx-type=acfg`
-      //   : `${TESTNET_ALGONODE_INDEXER}/v2/assets/${assetId}/transactions?tx-type=acfg`;
     }
 
     let transactions;

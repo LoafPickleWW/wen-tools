@@ -5,7 +5,7 @@ import { SelectToolComponent } from "../components/SelectToolComponent";
 import { createDonationTransaction } from "../utils";
 //import MyAlgoConnect from "@randlabs/myalgo-connect";
 import { PeraWalletConnect } from "@perawallet/connect";
-import { MAINNET_ALGOEXPLORER_NODE } from "../constants";
+import { MAINNET_ALGONODE_NODE } from "../constants";
 const peraWallet = new PeraWalletConnect({ shouldShowSignTxnToast: true });
 
 export default function Home() {
@@ -34,7 +34,7 @@ export default function Home() {
     } else {
       try {
         const group = await createDonationTransaction(donationAmount);
-        const algodClient = new algosdk.Algodv2("", MAINNET_ALGOEXPLORER_NODE, {
+        const algodClient = new algosdk.Algodv2("", MAINNET_ALGONODE_NODE, {
           "User-Agent": "evil-tools",
         });
         toast.info("Sending transaction...");
