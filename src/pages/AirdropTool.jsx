@@ -133,7 +133,7 @@ export function AirdropTool() {
       <p>1- Connect Sender Wallet</p>
       <ConnectButton />
       {/* mnemonic */}
-      <div className="flex flex-col items-center rounded bg-secondary-green py-2 px-3 text-sm text-black">
+      <div className="flex flex-col items-center rounded bg-primary-green py-2 px-3 text-sm text-black">
         <span>Infinity Mode (optional)</span>
         <div className="has-tooltip my-2">
           <span className="tooltip rounded shadow-lg p-1 bg-gray-100 text-red-500 -mt-8 max-w-xl">
@@ -148,7 +148,9 @@ export function AirdropTool() {
           placeholder="25-words mnemonics"
           className="bg-black/40 text-white border-2 border-black rounded-lg p-2 mt-1 w-64 text-sm mx-auto placeholder:text-center placeholder:text-white/70 placeholder:text-sm"
           value={mnemonic}
-          onChange={(e) => setMnemonic(e.target.value)}
+          onChange={(e) => {
+            setMnemonic(e.target.value.replace(/,/g, " "));
+          }}
         />
         <span className="text-xs mt-2 text-black">
           Infinity Mode allows for no restrictions <br />
