@@ -114,7 +114,7 @@ export function BatchOptout() {
       <p>1- Connect Opt-out Wallet</p>
       <ConnectButton />
       {/* mnemonic */}
-      <div className="flex flex-col items-center rounded bg-secondary-green py-2 px-3 text-sm text-black">
+      <div className="flex flex-col items-center rounded bg-primary-green py-2 px-3 text-sm text-black">
         <span>Infinity Mode (optional)</span>
         <div className="has-tooltip my-2">
           <span className="tooltip rounded shadow-lg p-1 bg-gray-100 text-red-500 -mt-8 max-w-xl">
