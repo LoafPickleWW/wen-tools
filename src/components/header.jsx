@@ -2,15 +2,30 @@ import ConnectButton from "./ConnectButton";
 
 export const Header = () => {
   return (
-    <header className="flex flex-row items-center justify-between border-gray-200 px-4 md:px-8 py-2 mb-1 bg-gray-800">
-      <a href="/">
-        <img
-          src="./eviltools.png"
-          className="h-12 hover:scale-95 duration-700"
-          alt="eviltools"
-        />
-      </a>
-      <ConnectButton />
-    </header>
+    <>
+      <header className="flex flex-row items-center justify-between border-gray-200 px-4 md:px-8 py-2 bg-gray-800">
+        <a href="/">
+          <img
+            src="./eviltools.png"
+            className="h-12 hover:scale-95 duration-700"
+            alt="eviltools"
+          />
+        </a>
+        <ConnectButton />
+      </header>
+      <div className="bg-primary-green text-black flex py-1 justify-center items-center mb-2">
+        <p className="text-center text-sm">
+          You can read more about Infinity Mode{" "}
+          <a
+            href="https://loafpickle.medium.com/evil-tools-infinity-mode-1bd70ec71c2b"
+            target="_blank"
+            rel="noreferrer"
+            className="font-semibold hover:text-green-800 transition"
+          >
+            🔗 here!
+          </a>
+        </p>
+      </div>
+    </>
   );
 };

@@ -6,11 +6,13 @@ import { toast } from "react-toastify";
 import { createAssetConfigArray, getNodeURL, sliceIntoChunks } from "../utils";
 import SelectNetworkComponent from "../components/SelectNetworkComponent";
 import { TOOLS } from "../constants";
+import { AiOutlineInfoCircle } from "react-icons/ai";
 
 export function BatchCollectionMetadataUpdate() {
   const [csvData, setCsvData] = useState(null);
   const [isTransactionsFinished, setIsTransactionsFinished] = useState(false);
   const [txSendingInProgress, setTxSendingInProgress] = useState(false);
+  const [mnemonic, setMnemonic] = useState("");
 
   const handleFileData = async () => {
     let headers;
@@ -73,27 +75,37 @@ export function BatchCollectionMetadataUpdate() {
       return;
     }
     try {
-      toast.info("Please sign the transactions!");
+      if (mnemonic === "") toast.info("Please sign the transactions!");
       const nodeURL = getNodeURL();
       const algodClient = new algosdk.Algodv2("", nodeURL, {
         "User-Agent": "evil-tools",
       });
       const signedTransactions = await createAssetConfigArray(
         data_for_txns,
-        nodeURL
+        nodeURL,
+        mnemonic
       );
-      const groups = sliceIntoChunks(signedTransactions, 16);
       setTxSendingInProgress(true);
-      for (let i = 0; i < groups.length; i++) {
-        //toast.info(`Sending group ${i + 1} of ${groups.length}`);
-        const { txId } = await algodClient.sendRawTransaction(groups[i]).do();
-        await algosdk.waitForConfirmation(algodClient, txId, 3);
-        toast.success(
-          `Group ${i + 1} of ${groups.length} confirmed!`,
-          {
-            autoClose: 1000,
+      for (let i = 0; i < signedTransactions.length; i++) {
+        try {
+          await algodClient.sendRawTransaction(signedTransactions[i]).do();
+          if (i % 5 === 0) {
+            toast.success(
+              `Transaction ${i + 1} of ${signedTransactions.length} confirmed!`,
+              {
+                autoClose: 1000,
+              }
+            );
           }
-        );
+        } catch (error) {
+          toast.error(
+            `Transaction ${i + 1} of ${signedTransactions.length} failed!`,
+            {
+              autoClose: 1000,
+            }
+          );
+        }
+        await new Promise((resolve) => setTimeout(resolve, 150));
       }
       setIsTransactionsFinished(true);
       setTxSendingInProgress(false);
@@ -107,10 +119,36 @@ export function BatchCollectionMetadataUpdate() {
 
   return (
     <div className="mb-4 text-center flex flex-col items-center max-w-[40rem] gap-y-2 mx-auto text-white">
-      <p className="text-2xl font-bold mt-1">{TOOLS.find((tool) => tool.path ===  window.location.pathname).label}</p>
-      <SelectNetworkComponent/>
+      <p className="text-2xl font-bold mt-1">
+        {TOOLS.find((tool) => tool.path === window.location.pathname).label}
+      </p>
+      <SelectNetworkComponent />
       <p>1- Connect Creator Wallet</p>
       <ConnectButton />
+      {/* mnemonic */}
+      <div className="flex flex-col items-center rounded bg-secondary-green py-2 px-3 text-sm text-black">
+        <span>Infinity Mode (optional)</span>
+        <div className="has-tooltip my-2">
+          <span className="tooltip rounded shadow-lg p-1 bg-gray-100 text-red-500 -mt-8 max-w-xl">
+            Evil Tools does not store any information on the website. As
+            precautions, you can use burner wallets, rekey to a burner wallet
+            and rekey back, or rekey after using.
+          </span>
+          <AiOutlineInfoCircle />
+        </div>
+        <input
+          type="text"
+          placeholder="25-words mnemonics"
+          className="bg-black/40 text-white border-2 border-black rounded-lg p-2 mt-1 w-64 text-sm mx-auto placeholder:text-center placeholder:text-white/70 placeholder:text-sm"
+          value={mnemonic}
+          onChange={(e) => setMnemonic(e.target.value)}
+        />
+        <span className="text-xs mt-2 text-black">
+          Infinity Mode allows for no restrictions <br />
+          to the amount of transactions per upload.
+        </span>
+      </div>
+      {/* end mnemonic */}
       <p>2- Upload CSV file</p>
       {csvData == null ? (
         <label
@@ -184,7 +222,7 @@ export function BatchCollectionMetadataUpdate() {
           )}
         </div>
       )}
-            <p className="text-center text-xs text-slate-400 py-2">
+      <p className="text-center text-xs text-slate-400 py-2">
         ⚠️If you reload or close this page, you will lose your progress⚠️
         <br />
         You can reload the page if you want to stop/restart the process!

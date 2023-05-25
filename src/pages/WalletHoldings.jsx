@@ -85,7 +85,6 @@ export function WalletHoldings() {
         ),
       };
     } catch (err) {
-      //console.log(err);
       return "";
     }
   }

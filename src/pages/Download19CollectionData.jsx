@@ -1,21 +1,22 @@
 import { useState } from "react";
 import { toast } from "react-toastify";
 import axios from "axios";
-import { Arc69 } from "../utils";
+import algosdk from "algosdk";
 import SelectNetworkComponent from "../components/SelectNetworkComponent";
 import {
   TOOLS,
   MAINNET_ALGONODE_INDEXER,
   TESTNET_ALGONODE_INDEXER,
 } from "../constants";
+import { CID } from "multiformats/cid";
+import * as mfsha2 from "multiformats/hashes/sha2";
+import * as digest from "multiformats/hashes/digest";
 
-export function Download69CollectionData() {
+export function Download19CollectionData() {
   const [creatorWallet, setCreatorWallet] = useState("");
   const [collectionData, setCollectionData] = useState([]);
   const [loading, setLoading] = useState(false);
   const [counter, setCounter] = useState(0);
-
-  const arc69 = new Arc69();
 
   async function getCollectionData() {
     if (creatorWallet) {
@@ -30,42 +31,18 @@ export function Download69CollectionData() {
             : TESTNET_ALGONODE_INDEXER;
         const url = `${host}/v2/accounts/${creatorWallet}?exclude=assets,apps-local-state,created-apps,none`;
         const response = await axios.get(url);
-        setCollectionData(response.data.account["created-assets"]);
+        const createdAssets = response.data.account["created-assets"].filter(
+          (asset) =>
+            asset.params.url
+              ? asset.params.url.includes("template-ipfs:")
+              : false
+        );
+        setCollectionData(createdAssets);
       } catch (error) {
         toast.error("Error getting collection data! Please try again.");
       }
     } else {
       toast.info("Please enter a wallet address");
-    }
-  }
-
-  async function getAssetData(asset) {
-    try {
-      const metadata = await arc69.fetch(
-        asset.index,
-        localStorage.getItem("networkType")
-      );
-      const asset_data_csv = {
-        index: asset.index,
-        name: asset.params.name,
-        "unit-name": asset.params["unit-name"],
-        url: asset.params.url,
-        metadata_description: metadata.description || "",
-        metadata_external_url: metadata.external_url || "",
-        metadata_mime_type: metadata.mime_type || "",
-      };
-      if (metadata.properties) {
-        Object.entries(metadata.properties).map(([trait_type, value]) => {
-          return (asset_data_csv[`metadata_${trait_type}`] = value);
-        });
-      }
-      if (metadata.attributes) {
-        metadata.attributes.map(({ trait_type, value }) => {
-          return (asset_data_csv[`metadata_${trait_type}`] = value);
-        });
-      }
-      return asset_data_csv;
-    } catch (err) {
     }
   }
 
@@ -112,16 +89,62 @@ export function Download69CollectionData() {
     }
   }
 
+  async function getARC19AssetMetadataData(url, reserve) {
+    try {
+      let chunks = url.split("://");
+      if (chunks[0] === "template-ipfs" && chunks[1].startsWith("{ipfscid:")) {
+        const cidComponents = chunks[1].split(":");
+        const cidVersion = cidComponents[1];
+        const cidCodec = cidComponents[2];
+        let cidCodecCode;
+        if (cidCodec === "raw") {
+          cidCodecCode = 0x55;
+        } else if (cidCodec === "dag-pb") {
+          cidCodecCode = 0x70;
+        }
+        const addr = algosdk.decodeAddress(reserve);
+        const mhdigest = digest.create(mfsha2.sha256.code, addr.publicKey);
+        const cid = CID.create(parseInt(cidVersion), cidCodecCode, mhdigest);
+        const response = await axios.get(
+          `https://ipfs.algonode.xyz/ipfs/${cid}`
+        );
+        return response.data;
+      }
+      return {};
+    } catch (error) {
+      return {};
+    }
+  }
+
   async function downloadCollectionDataAsCSV() {
     if (collectionData.length > 0) {
       setLoading(true);
-      const data = [];
+      let data = [];
       let count = 0;
       for (const asset of collectionData) {
-        const asset_data = await getAssetData(asset);
+        const asset_metadata = await getARC19AssetMetadataData(
+          asset.params.url,
+          asset.params.reserve
+        );
+        let asset_data = {
+          index: asset.index,
+          name: asset.params.name,
+          "unit-name": asset.params["unit-name"],
+          reserve: asset.params.reserve,
+        };
+        for (const key in asset_metadata) {
+          if (key === "properties" || key === "extra") {
+            for (const k in asset_metadata[key]) {
+              asset_data[`${key}_${k}`] = asset_metadata[key][k];
+            }
+          } else {
+            asset_data[key] = asset_metadata[key];
+          }
+        }
         count++;
         setCounter(count);
         data.push(asset_data);
+        await new Promise((resolve) => setTimeout(resolve, 50));
       }
       const headers = Object.keys(
         data.reduce((a, b) =>
@@ -129,9 +152,9 @@ export function Download69CollectionData() {
         )
       );
       exportCSVFile(
-        headers ? headers : ["index", "name", "unit-name", "url", "metadata"],
+        headers ? headers : ["index", "name", "unit-name", "metadata"],
         data,
-        `${creatorWallet}-collection-data.csv`
+        `${creatorWallet}-arc19-collection-data.csv`
       );
       setLoading(false);
       setCounter(0);
@@ -175,9 +198,9 @@ export function Download69CollectionData() {
                 )}{" "}
                 has{" "}
                 <span className="text-slate-100 font-semibold text-base animate-pulse">
-                  {collectionData.length || 0}
+                  {collectionData.length}
                 </span>{" "}
-                created assets
+                created ARC-19 assets
               </p>
             </div>
           )}

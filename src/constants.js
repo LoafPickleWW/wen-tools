@@ -31,8 +31,8 @@ export const TOOLS = [
   },
   {
     id: "collection_data",
-    label: "⬇️ Download ARC69 Collection Data",
-    description: "Download ARC69 data for a collection in CSV format.",
+    label: "⬇️ Download ARC-69 Collection Data",
+    description: "Download ARC-69 data for a collection in CSV format.",
     path: "/download-arc69-collection-data",
     category: "arc69",
   },
@@ -69,6 +69,13 @@ export const TOOLS = [
     label: "⬆️ ARC-19 Collection Metadata Update",
     description: "Update the metadata for an ARC-19 collection in bulk.",
     path: "/arc19-metadata-update",
+    category: "arc19",
+  },
+  {
+    id: "arc19_collection_data",
+    label: "⬇️ Download ARC-19 Collection Data",
+    description: "Download ARC-19 data for a collection in CSV format.",
+    path: "/download-arc19-collection-data",
     category: "arc19",
   },
   {

@@ -17,6 +17,7 @@ import { MultimintAssetHolders } from "./pages/MultimintAssetHolders";
 import { ARC3MintTool } from "./pages/ARC3MintTool";
 import { ARC19MintTool } from "./pages/ARC19MintTool";
 import { ARC19UpdateTool } from "./pages/ARC19UpdateTool";
+import { Download19CollectionData } from "./pages/Download19CollectionData";
 
 function App() {
   return (
@@ -59,6 +60,10 @@ function App() {
           <Route
             path="/download-arc69-collection-data"
             element={<Download69CollectionData />}
+          />
+          <Route
+            path="/download-arc19-collection-data"
+            element={<Download19CollectionData />}
           />
           <Route path="/ipfs-upload" element={<UploadCollectionToIPFS />} />
           <Route path="/arc19-collection-mint" element={<ARC19MintTool />} />

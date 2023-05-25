@@ -10,7 +10,9 @@ import {
   signGroupTransactions,
   sliceIntoChunks,
   updateARC19AssetMintArray,
+  SignWithMnemonics,
 } from "../utils";
+import { AiOutlineInfoCircle } from "react-icons/ai";
 
 export function ARC19UpdateTool() {
   const [csvData, setCsvData] = useState(null);
@@ -18,6 +20,7 @@ export function ARC19UpdateTool() {
   const [txSendingInProgress, setTxSendingInProgress] = useState(false);
   const [token, setToken] = useState("");
   const [assetTransactions, setAssetTransactions] = useState([]);
+  const [mnemonic, setMnemonic] = useState("");
 
   const handleFileData = async () => {
     const wallet = localStorage.getItem("wallet");
@@ -138,28 +141,47 @@ export function ARC19UpdateTool() {
         "User-Agent": "evil-tools",
       });
 
-      let signedAssetTransactions = await signGroupTransactions(
-        assetTransactions,
-        wallet,
-        true
-      );
+      let signedAssetTransactions;
+      if (mnemonic !== "") {
+        if (mnemonic.split(" ").length !== 25)
+          throw new Error("Invalid Mnemonic!");
+        const { sk } = algosdk.mnemonicToSecretKey(mnemonic);
+        signedAssetTransactions = SignWithMnemonics(
+          assetTransactions.flat(),
+          sk
+        );
+      } else {
+        signedAssetTransactions = await signGroupTransactions(
+          assetTransactions,
+          wallet,
+          true
+        );
+      }
 
       signedAssetTransactions = sliceIntoChunks(signedAssetTransactions, 2);
 
       for (let i = 0; i < signedAssetTransactions.length; i++) {
-        toast.info(
-          `Sending group ${i + 1} of ${signedAssetTransactions.length}`
-        );
-        const { txId } = await algodClient
-          .sendRawTransaction(signedAssetTransactions[i])
-          .do();
-        await algosdk.waitForConfirmation(algodClient, txId, 3);
-        toast.success(
-          `Group ${i + 1} of ${signedAssetTransactions.length} confirmed!`,
-          {
-            autoClose: 1000,
+        try {
+          await algodClient.sendRawTransaction(signedAssetTransactions[i]).do();
+          if (i % 5 === 0) {
+            toast.success(
+              `Transaction ${i + 1} of ${
+                signedAssetTransactions.length
+              } confirmed!`,
+              {
+                autoClose: 1000,
+              }
+            );
           }
-        );
+        } catch (error) {
+          toast.error(
+            `Transaction ${i + 1} of ${signedAssetTransactions.length} failed!`,
+            {
+              autoClose: 1000,
+            }
+          );
+        }
+        await new Promise((resolve) => setTimeout(resolve, 150));
       }
       setIsTransactionsFinished(true);
       setTxSendingInProgress(false);
@@ -179,6 +201,30 @@ export function ARC19UpdateTool() {
       <SelectNetworkComponent />
       <p>1- Connect Creator Wallet</p>
       <ConnectButton />
+      {/* mnemonic */}
+      <div className="flex flex-col items-center rounded bg-secondary-green py-2 px-3 text-sm text-black">
+        <span>Infinity Mode (optional)</span>
+        <div className="has-tooltip my-2">
+          <span className="tooltip rounded shadow-lg p-1 bg-gray-100 text-red-500 -mt-8 max-w-xl">
+            Evil Tools does not store any information on the website. As
+            precautions, you can use burner wallets, rekey to a burner wallet
+            and rekey back, or rekey after using.
+          </span>
+          <AiOutlineInfoCircle />
+        </div>
+        <input
+          type="text"
+          placeholder="25-words mnemonics"
+          className="bg-black/40 text-white border-2 border-black rounded-lg p-2 mt-1 w-64 text-sm mx-auto placeholder:text-center placeholder:text-white/70 placeholder:text-sm"
+          value={mnemonic}
+          onChange={(e) => setMnemonic(e.target.value)}
+        />
+        <span className="text-xs mt-2 text-black">
+          Infinity Mode allows for no restrictions <br />
+          to the amount of transactions per upload.
+        </span>
+      </div>
+      {/* end mnemonic */}
       <p className="text-center text-base underline text-secondary-green hover:underline">
         <a
           className="hover:text-primary-green transition"
@@ -297,7 +343,7 @@ export function ARC19UpdateTool() {
           )}
         </div>
       )}
-                <p className="text-sm italic text-slate-200">Fee: 0.1A/ASA</p>
+      <p className="text-sm italic text-slate-200">Fee: 0.1A/ASA</p>
 
       <p className="text-center text-xs text-slate-400 py-1">
         ⚠️If you reload or close this page, you will lose your progress⚠️

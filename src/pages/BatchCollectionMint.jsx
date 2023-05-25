@@ -6,11 +6,13 @@ import { toast } from "react-toastify";
 import { createAssetMintArray, getNodeURL, sliceIntoChunks } from "../utils";
 import SelectNetworkComponent from "../components/SelectNetworkComponent";
 import { TOOLS } from "../constants";
+import { AiOutlineInfoCircle } from "react-icons/ai";
 
 export function BatchCollectionMint() {
   const [csvData, setCsvData] = useState(null);
   const [isTransactionsFinished, setIsTransactionsFinished] = useState(false);
   const [txSendingInProgress, setTxSendingInProgress] = useState(false);
+  const [mnemonic, setMnemonic] = useState("");
 
   const handleFileData = async () => {
     let headers;
@@ -115,11 +117,12 @@ export function BatchCollectionMint() {
       return;
     }
     try {
-      toast.info("Please sign the transactions!");
+      if (mnemonic === "") toast.info("Please sign the transactions!");
       const nodeURL = getNodeURL();
       const signedTransactions = await createAssetMintArray(
         data_for_txns,
-        nodeURL
+        nodeURL,
+        mnemonic
       );
       const groups = sliceIntoChunks(signedTransactions, 2);
       setTxSendingInProgress(true);
@@ -127,12 +130,25 @@ export function BatchCollectionMint() {
         "User-Agent": "evil-tools",
       });
       for (let i = 0; i < groups.length; i++) {
-        //toast.info(`Sending group ${i + 1} of ${groups.length}`);
-        const { txId } = await algodClient.sendRawTransaction(groups[i]).do();
-        await algosdk.waitForConfirmation(algodClient, txId, 3);
-        toast.success(`Transaction ${i + 1} of ${groups.length} confirmed!`, {
-          autoClose: 1000,
-        });
+        try {
+          await algodClient.sendRawTransaction(groups[i]).do();
+          if (i % 5 === 0) {
+            toast.success(
+              `Transaction ${i + 1} of ${signedTransactions.length} confirmed!`,
+              {
+                autoClose: 1000,
+              }
+            );
+          }
+        } catch (error) {
+          toast.error(
+            `Transaction ${i + 1} of ${signedTransactions.length} failed!`,
+            {
+              autoClose: 1000,
+            }
+          );
+        }
+        await new Promise((resolve) => setTimeout(resolve, 150));
       }
       setIsTransactionsFinished(true);
       setTxSendingInProgress(false);
@@ -152,6 +168,32 @@ export function BatchCollectionMint() {
       <SelectNetworkComponent />
       <p>1- Connect Creator Wallet</p>
       <ConnectButton />
+      {/* mnemonic */}
+      <div className="flex flex-col items-center rounded bg-primary-green py-2 px-3 text-sm text-black">
+        <span>Infinity Mode (optional)</span>
+        <div className="has-tooltip my-2">
+          <span className="tooltip rounded shadow-lg p-1 bg-gray-100 text-red-500 -mt-8 max-w-xl">
+            Evil Tools does not store any information on the website. As
+            precautions, you can use burner wallets, rekey to a burner wallet
+            and rekey back, or rekey after using.
+          </span>
+          <AiOutlineInfoCircle />
+        </div>
+        <input
+          type="text"
+          placeholder="25-words mnemonics"
+          className="bg-black/40 text-white border-2 border-black rounded-lg p-2 mt-1 w-64 text-sm mx-auto placeholder:text-center placeholder:text-white/70 placeholder:text-sm"
+          value={mnemonic}
+          onChange={(e) => {
+            setMnemonic(e.target.value.replace(/,/g, " "));
+          }}
+        />
+        <span className="text-xs mt-2 text-black">
+          Infinity Mode allows for no restrictions <br />
+          to the amount of transactions per upload.
+        </span>
+      </div>
+      {/* end mnemonic */}
       <p className="text-center text-lg text-secondary-green hover:underline">
         <a
           className="hover:text-pink-400 transition"

@@ -40,7 +40,6 @@ export function CollectionSnapshot() {
             ...response.data.account["created-assets"],
           ];
         } catch (err) {
-          //console.log(err);
         }
       }
       if (unitNamePrefix) {
@@ -75,7 +74,6 @@ export function CollectionSnapshot() {
       const response = await axios.get(url);
       return response.data.balances[0].address;
     } catch (err) {
-      //console.log(err);
     }
   }
 

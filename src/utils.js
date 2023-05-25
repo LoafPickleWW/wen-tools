@@ -11,6 +11,7 @@ import {
   makePaymentTxnWithSuggestedParamsFromObject,
   mnemonicToSecretKey,
   signTransaction,
+  decodeAddress,
 } from "algosdk";
 import axios from "axios";
 import { CID } from "multiformats/cid";
@@ -100,11 +101,18 @@ export async function signGroupTransactions(
     }
     return txnsToValidate;
   } catch (error) {
-    //console.log(error);
   }
 }
 
-export async function createAssetConfigArray(data_for_txns, nodeURL) {
+export function SignWithMnemonics(txnsArray, sk) {
+  let signedTxns = [];
+  for (let i = 0; i < txnsArray.length; i++) {
+    signedTxns.push(signTransaction(txnsArray[i], sk).blob);
+  }
+  return signedTxns;
+}
+
+export async function createAssetConfigArray(data_for_txns, nodeURL, mnemonic) {
   const algodClient = new Algodv2("", nodeURL, {
     "User-Agent": "evil-tools",
   });
@@ -114,7 +122,7 @@ export async function createAssetConfigArray(data_for_txns, nodeURL) {
   for (let i = 0; i < data_for_txns.length; i++) {
     let tx = makeAssetConfigTxnWithSuggestedParamsFromObject({
       from: wallet,
-      assetIndex: data_for_txns[i].asset_id,
+      assetIndex: parseInt(data_for_txns[i].asset_id),
       note: new TextEncoder().encode(JSON.stringify(data_for_txns[i].note)),
       manager: wallet,
       reserve: wallet,
@@ -124,6 +132,11 @@ export async function createAssetConfigArray(data_for_txns, nodeURL) {
       strictEmptyAddressChecking: false,
     });
     txnsArray.push(tx);
+  }
+  if (mnemonic !== "") {
+    if (mnemonic.split(" ").length !== 25) throw new Error("Invalid Mnemonic!");
+    const { sk } = mnemonicToSecretKey(mnemonic);
+    return SignWithMnemonics(txnsArray, sk);
   }
   const groups = sliceIntoChunks(txnsArray, 16);
   for (let i = 0; i < groups.length; i++) {
@@ -140,7 +153,7 @@ export async function createAssetConfigArray(data_for_txns, nodeURL) {
   }
 }
 
-export async function createAssetMintArray(data_for_txns, nodeURL) {
+export async function createAssetMintArray(data_for_txns, nodeURL, mnemonic) {
   const algodClient = new Algodv2("", nodeURL, {
     "User-Agent": "evil-tools",
   });
@@ -183,11 +196,21 @@ export async function createAssetMintArray(data_for_txns, nodeURL) {
       txnsArray.push([asset_create_tx, fee_tx]);
     } catch (error) {}
   }
+  if (mnemonic !== "") {
+    if (mnemonic.split(" ").length !== 25) throw new Error("Invalid Mnemonic!");
+    const { sk } = mnemonicToSecretKey(mnemonic);
+    return SignWithMnemonics(txnsArray.flat(), sk);
+  }
   const txnsToValidate = await signGroupTransactions(txnsArray, wallet, true);
   return txnsToValidate;
 }
 
-export async function createARC3AssetMintArray(data_for_txns, nodeURL, token) {
+export async function createARC3AssetMintArray(
+  data_for_txns,
+  nodeURL,
+  token,
+  mnemonic
+) {
   const wallet = localStorage.getItem("wallet");
   if (wallet === "" || wallet === undefined) {
     throw new Error("Wallet not found");
@@ -395,24 +418,10 @@ export async function createAirdropTransactions(
   if (mnemonic !== "") {
     if (mnemonic.split(" ").length !== 25) throw new Error("Invalid Mnemonic!");
     const { sk } = mnemonicToSecretKey(mnemonic);
-    const splitTxns = sliceIntoChunks(txnsArray, 16);
-    return SignWithMnemonics(splitTxns, sk);
+    return SignWithMnemonics(txnsArray, sk);
   }
   let txnsToValidate = await signGroupTransactions(txnsArray, wallet);
   return txnsToValidate;
-}
-
-export function SignWithMnemonics(splitTxns, sk) {
-  for (let i = 0; i < splitTxns.length; i++) {
-    const groupID = computeGroupID(splitTxns[i]);
-    for (let j = 0; j < splitTxns[i].length; j++) {
-      splitTxns[i][j].group = groupID;
-    }
-    for (let j = 0; j < splitTxns[i].length; j++) {
-      splitTxns[i][j] = signTransaction(splitTxns[i][j], sk).blob;
-    }
-  }
-  return splitTxns;
 }
 
 export async function createDonationTransaction(amount) {
@@ -463,11 +472,10 @@ export async function createDonationTransaction(amount) {
     }
     return txnsToValidate;
   } catch (error) {
-    //console.log(error);
   }
 }
 
-export async function createAssetOptInTransactions(assets, nodeURL) {
+export async function createAssetOptInTransactions(assets, nodeURL, mnemonic) {
   const algodClient = new Algodv2("", nodeURL, {
     "User-Agent": "evil-tools",
   });
@@ -484,6 +492,11 @@ export async function createAssetOptInTransactions(assets, nodeURL) {
       note: new TextEncoder().encode("via Evil Tools"),
     });
     txnsArray.push(tx);
+  }
+  if (mnemonic !== "") {
+    if (mnemonic.split(" ").length !== 25) throw new Error("Invalid Mnemonic!");
+    const { sk } = mnemonicToSecretKey(mnemonic);
+    return SignWithMnemonics(txnsArray, sk);
   }
   const groups = sliceIntoChunks(txnsArray, 16);
   for (let i = 0; i < groups.length; i++) {
@@ -513,7 +526,8 @@ async function getAssetCreatorWallet(assetId, selectNetwork) {
 export async function createAssetOptoutTransactions(
   assets,
   nodeURL,
-  networkType
+  networkType,
+  mnemonic
 ) {
   const algodClient = new Algodv2("", nodeURL, {
     "User-Agent": "evil-tools",
@@ -535,6 +549,11 @@ export async function createAssetOptoutTransactions(
       });
       txnsArray.push(tx);
     }
+  }
+  if (mnemonic !== "") {
+    if (mnemonic.split(" ").length !== 25) throw new Error("Invalid Mnemonic!");
+    const { sk } = mnemonicToSecretKey(mnemonic);
+    return SignWithMnemonics(txnsArray, sk);
   }
   const groups = sliceIntoChunks(txnsArray, 16);
   for (let i = 0; i < groups.length; i++) {

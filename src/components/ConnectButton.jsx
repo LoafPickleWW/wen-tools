@@ -31,7 +31,6 @@ const ConnectButton = () => {
       toast.success("Connected!");
       window.location.reload();
     } catch (err) {
-      //console.log(err);
     }
   };
 
@@ -44,7 +43,6 @@ const ConnectButton = () => {
       toast.success("Connected!");
       window.location.reload();
     } catch (err) {
-      //console.log(err);
     }
   };
 

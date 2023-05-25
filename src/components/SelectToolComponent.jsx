@@ -19,7 +19,7 @@ export function SelectToolComponent() {
           {TOOLS.map((tool) => tool.category)
             .filter((value, index, self) => self.indexOf(value) === index)
             .map((category) => (
-              <option value={category}>{category}</option>
+              <option value={category} key={category}>{category}</option>
             ))}
         </select>
       </div>

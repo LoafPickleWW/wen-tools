@@ -70,7 +70,7 @@ export function AirdropTool() {
         "User-Agent": "evil-tools",
       });
       try {
-        if (mnemonic === "" ) toast.info("Please sign the transactions!");
+        if (mnemonic === "") toast.info("Please sign the transactions!");
         const signedTransactions = await createAirdropTransactions(
           data,
           nodeURL,
@@ -80,24 +80,26 @@ export function AirdropTool() {
         setTxSendingInProgress(true);
         for (let i = 0; i < signedTransactions.length; i++) {
           try {
-            const { txId } = await algodClient
-              .sendRawTransaction(signedTransactions[i])
-              .do();
-            await algosdk.waitForConfirmation(algodClient, txId, 3);
-            toast.success(
-              `Group ${i + 1} of ${signedTransactions.length} confirmed!`,
-              {
-                autoClose: 1000,
-              }
-            );
+            await algodClient.sendRawTransaction(signedTransactions[i]).do();
+            if (i % 5 === 0) {
+              toast.success(
+                `Transaction ${i + 1} of ${
+                  signedTransactions.length
+                } confirmed!`,
+                {
+                  autoClose: 1000,
+                }
+              );
+            }
           } catch (error) {
             toast.error(
-              `Group ${i + 1} of ${signedTransactions.length} failed!`,
+              `Transaction ${i + 1} of ${signedTransactions.length} failed!`,
               {
                 autoClose: 1000,
               }
             );
           }
+          await new Promise((resolve) => setTimeout(resolve, 150));
         }
         setIsTransactionsFinished(true);
         setTxSendingInProgress(false);
