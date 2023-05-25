@@ -194,16 +194,16 @@ export function BatchCollectionMint() {
         </span>
       </div>
       {/* end mnemonic */}
-      <p className="text-center text-lg text-secondary-green hover:underline">
+      <button className="text-center text-lg text-pink-200 mt-2 bg-pink-700 px-4 py-2 rounded">
         <a
           className="hover:text-pink-400 transition"
           href="https://loafpickle.medium.com/evil-tools-mass-mint-tool-d06b8fc054b1"
           target="_blank"
           rel="noopener noreferrer"
         >
-          ⚠️ CHECK DOCS BEFORE USING ⚠️
+          CHECK GUIDE HERE
         </a>
-      </p>
+      </button>
       <p>2- Upload CSV file</p>
       {csvData == null ? (
         <label

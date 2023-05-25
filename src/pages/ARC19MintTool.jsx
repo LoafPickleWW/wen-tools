@@ -253,7 +253,7 @@ export function ARC19MintTool() {
         </span>
       </div>
       {/* end mnemonic */}
-      <p className="text-center text-base underline text-secondary-green hover:underline">
+      <button className="text-center text-lg text-pink-200 mt-2 bg-pink-700 px-4 py-2 rounded">
         <a
           className="hover:text-primary-green transition"
           href="https://loafpickle.medium.com/mass-arc3-19-mint-tool-742b2a595a60"
@@ -262,7 +262,7 @@ export function ARC19MintTool() {
         >
           Check Guide Here
         </a>
-      </p>
+      </button>
       <p>2- Enter Web3Storage Token</p>
       <input
         type="text"
