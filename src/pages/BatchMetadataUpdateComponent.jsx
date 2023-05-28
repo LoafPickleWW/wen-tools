@@ -3,7 +3,7 @@ import Papa from "papaparse";
 import ConnectButton from "../components/ConnectButton";
 import algosdk from "algosdk";
 import { toast } from "react-toastify";
-import { createAssetConfigArray, getNodeURL, sliceIntoChunks } from "../utils";
+import { createAssetConfigArray, getNodeURL } from "../utils";
 import SelectNetworkComponent from "../components/SelectNetworkComponent";
 import { TOOLS } from "../constants";
 import { AiOutlineInfoCircle } from "react-icons/ai";
@@ -149,6 +149,16 @@ export function BatchCollectionMetadataUpdate() {
         </span>
       </div>
       {/* end mnemonic */}
+      <button className="text-center text-lg text-pink-200 mt-2 bg-pink-700 px-4 py-2 rounded">
+        <a
+          className="hover:text-primary-green transition"
+          href="https://loafpickle.medium.com/evil-tools-arc69-made-easy-c7913885cfd2"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Check Guide Here
+        </a>
+      </button>
       <p>2- Upload CSV file</p>
       {csvData == null ? (
         <label
