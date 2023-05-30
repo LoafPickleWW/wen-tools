@@ -11,7 +11,6 @@ import {
   makePaymentTxnWithSuggestedParamsFromObject,
   mnemonicToSecretKey,
   signTransaction,
-  decodeAddress,
 } from "algosdk";
 import axios from "axios";
 import { CID } from "multiformats/cid";
@@ -100,8 +99,7 @@ export async function signGroupTransactions(
       throw new Error("Transaction signing failed");
     }
     return txnsToValidate;
-  } catch (error) {
-  }
+  } catch (error) {}
 }
 
 export function SignWithMnemonics(txnsArray, sk) {
@@ -138,19 +136,8 @@ export async function createAssetConfigArray(data_for_txns, nodeURL, mnemonic) {
     const { sk } = mnemonicToSecretKey(mnemonic);
     return SignWithMnemonics(txnsArray, sk);
   }
-  const groups = sliceIntoChunks(txnsArray, 16);
-  for (let i = 0; i < groups.length; i++) {
-    const groupID = computeGroupID(groups[i]);
-    for (let j = 0; j < groups[i].length; j++) {
-      groups[i][j].group = groupID;
-    }
-  }
-  try {
-    const txnsToValidate = await signGroupTransactions(groups, wallet, true);
-    return txnsToValidate;
-  } catch (error) {
-    throw new Error("Transaction signing failed");
-  }
+  let txnsToValidate = await signGroupTransactions(txnsArray, wallet);
+  return txnsToValidate;
 }
 
 export async function createAssetMintArray(data_for_txns, nodeURL, mnemonic) {
@@ -471,8 +458,7 @@ export async function createDonationTransaction(amount) {
       throw new Error("Transaction signing failed");
     }
     return txnsToValidate;
-  } catch (error) {
-  }
+  } catch (error) {}
 }
 
 export async function createAssetOptInTransactions(assets, nodeURL, mnemonic) {

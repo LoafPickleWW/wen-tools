@@ -71,7 +71,7 @@ export function WalletHoldings() {
     }
   }
 
-  async function getAssetData(asset, selectNetwork) {
+  async function getAssetData(asset) {
     try {
       // asset_id	unit_name	asset_name	amount
       const url = getNodeURL() + `/v2/assets/${asset.asset_id}`;
@@ -139,7 +139,7 @@ export function WalletHoldings() {
       let count = 0;
       const networkType = localStorage.getItem("networkType");
       for (const asset of walletData) {
-        const asset_data = await getAssetData(asset, networkType);
+        const asset_data = await getAssetData(asset);
         count++;
         setCounter(count);
         if (asset_data !== "") {
