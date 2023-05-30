@@ -114,20 +114,6 @@ export const TOOLS = [
     category: "general",
   },
   {
-    id: "mass_clawback",
-    label: "🔙 Mass Clawback",
-    description: "Clawback assets in bulk.",
-    path: "/mass-clawback",
-    category: "general",
-  },
-  {
-    id: "mass_freeze",
-    label: "🧊 Mass Freeze",
-    description: "Freeze assets in bulk.",
-    path: "/mass-freeze",
-    category: "general",
-  },
-  {
     id: "ipfs_upload",
     label: "📁 IPFS Collection Upload",
     description: "Upload a collection images to IPFS.",
