@@ -69,6 +69,18 @@ export default function Home() {
         >
           Send
         </button>
+        <span className="text-xs text-center text-slate-300">
+          or scan the QR code below with Pera
+        </span>
+        <a
+          href="algorand://VYPDFMVRXCI2Z4FPC2GHB4QC6PSCTEDAS4EU7GE3W4B3MRHXNZO6BB2RZA?amount=50000000&note=Evil%20Tools%20Donation"
+        >
+          <img
+            src="./qr.svg"
+            alt="donate"
+            className="w-32 h-32 md:w-40 md:h-40 md:mt-1 rounded-lg hover:brightness-110"
+          />
+        </a>
       </div>
       <p className="font-bold text-slate-300 text-xs mt-1 text-center">
         supported by{" "}

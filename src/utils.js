@@ -499,6 +499,49 @@ export async function createAssetOptInTransactions(assets, nodeURL, mnemonic) {
   }
 }
 
+export async function createClawbackTransactions(
+  data_for_txns,
+  nodeURL,
+  mnemonic
+) {
+  const algodClient = new Algodv2("", nodeURL, {
+    "User-Agent": "evil-tools",
+  });
+  const params = await algodClient.getTransactionParams().do();
+  let txnsArray = [];
+  const wallet = localStorage.getItem("wallet");
+  for (let i = 0; i < data_for_txns.length; i++) {
+    const tx = makeAssetTransferTxnWithSuggestedParamsFromObject({
+      from: wallet,
+      to: wallet,
+      revocationTarget: data_for_txns[i].addr,
+      suggestedParams: params,
+      assetIndex: parseInt(data_for_txns[i].index),
+      amount: parseInt(data_for_txns[i].amount),
+      note: new TextEncoder().encode("via Evil Tools"),
+    });
+    txnsArray.push(tx);
+  }
+  if (mnemonic !== "") {
+    if (mnemonic.split(" ").length !== 25) throw new Error("Invalid Mnemonic!");
+    const { sk } = mnemonicToSecretKey(mnemonic);
+    return SignWithMnemonics(txnsArray, sk);
+  }
+  const groups = sliceIntoChunks(txnsArray, 16);
+  for (let i = 0; i < groups.length; i++) {
+    const groupID = computeGroupID(groups[i]);
+    for (let j = 0; j < groups[i].length; j++) {
+      groups[i][j].group = groupID;
+    }
+  }
+  try {
+    const txnsToValidate = await signGroupTransactions(groups, wallet, true);
+    return sliceIntoChunks(txnsToValidate, 16);
+  } catch (error) {
+    throw new Error("Transaction signing failed");
+  }
+}
+
 async function getAssetCreatorWallet(assetId, selectNetwork) {
   try {
     const url = getNodeURL(selectNetwork) + `/v2/assets/${assetId}`;
