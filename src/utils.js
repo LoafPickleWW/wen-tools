@@ -367,6 +367,9 @@ export async function createAirdropTransactions(
     "User-Agent": "evil-tools",
   });
   const params = await algodClient.getTransactionParams().do();
+  if (data_for_txns.length > 16) {
+    params.lastRound = params.firstRound + 3000;
+  }
   let txnsArray = [];
   const wallet = localStorage.getItem("wallet");
 
