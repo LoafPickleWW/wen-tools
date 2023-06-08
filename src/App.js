@@ -54,7 +54,7 @@ function App() {
           />
           <Route path="/batch-optin" element={<BatchOptin />} />
           <Route path="/batch-optout" element={<BatchOptout />} />
-          <Route path="/batch-delete" element={<BatchDelete />} />
+          <Route path="/batch-destroy" element={<BatchDelete />} />
           <Route
             path="/find-collection-holders"
             element={<CollectionSnapshot />}
