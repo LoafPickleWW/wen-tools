@@ -93,6 +93,13 @@ export const TOOLS = [
     category: "general",
   },
   {
+    id: "mass_delete",
+    label: "❌ Asset Delete",
+    description: "Destroy/Delete assets in bulk.",
+    path: "/batch-delete",
+    category: "general",
+  },
+  {
     id: "airdrop_tool",
     label: "🪂 Asset Send/Airdrop",
     description: "Airdrop assets/ALGO to a list of addresses.",

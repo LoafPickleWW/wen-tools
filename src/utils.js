@@ -11,6 +11,7 @@ import {
   makePaymentTxnWithSuggestedParamsFromObject,
   mnemonicToSecretKey,
   signTransaction,
+  makeAssetDestroyTxnWithSuggestedParamsFromObject,
 } from "algosdk";
 import axios from "axios";
 import { CID } from "multiformats/cid";
@@ -367,9 +368,6 @@ export async function createAirdropTransactions(
     "User-Agent": "evil-tools",
   });
   const params = await algodClient.getTransactionParams().do();
-  if (data_for_txns.length > 500) {
-    params.lastRound = params.firstRound + 3000;
-  }
   let txnsArray = [];
   const wallet = localStorage.getItem("wallet");
 
@@ -602,6 +600,51 @@ export async function createAssetOptoutTransactions(
   }
 }
 
+export async function createAssetDeleteTransactions(assets, nodeURL, mnemonic) {
+  const wallet = localStorage.getItem("wallet");
+  if (wallet === "" || wallet === undefined) {
+    throw new Error("Wallet not found");
+  }
+  const algodClient = new Algodv2("", nodeURL, {
+    "User-Agent": "evil-tools",
+  });
+  console.log(assets);
+  const params = await algodClient.getTransactionParams().do();
+  let txnsArray = [];
+  for (let i = 0; i < assets.length; i++) {
+    try {
+      let asset_create_tx = makeAssetDestroyTxnWithSuggestedParamsFromObject({
+        from: wallet,
+        suggestedParams: params,
+        assetIndex: parseInt(assets[i]),
+        note: new TextEncoder().encode(
+          "via Evil Tools | " + Math.random().toString(36).substring(2)
+        ),
+      });
+      let fee_tx = makePaymentTxnWithSuggestedParamsFromObject({
+        from: wallet,
+        to: MINT_FEE_WALLET,
+        amount: algosToMicroalgos(UPDATE_FEE_PER_ASA),
+        suggestedParams: params,
+      });
+      const groupID = computeGroupID([asset_create_tx, fee_tx]);
+      asset_create_tx.group = groupID;
+      fee_tx.group = groupID;
+      txnsArray.push([asset_create_tx, fee_tx]);
+    } catch (error) {
+      console.log(error);
+    }
+  }
+  console.log(txnsArray);
+  if (mnemonic !== "") {
+    if (mnemonic.split(" ").length !== 25) throw new Error("Invalid Mnemonic!");
+    const { sk } = mnemonicToSecretKey(mnemonic);
+    return SignWithMnemonics(txnsArray.flat(), sk);
+  }
+  const txnsToValidate = await signGroupTransactions(txnsArray, wallet, true);
+  return txnsToValidate;
+}
+
 export class Arc69 {
   async fetch(assetId, selectNetwork) {
     let url;
@@ -699,4 +742,35 @@ export function createReserveAddressFromIpfsCid(ipfsCid) {
   );
 
   return { assetURL, reserveAddress };
+}
+
+export async function getAssetsFromAddress(address, indexerURL) {
+  let threshold = 1000;
+  let userAssets = await axios.get(`${indexerURL}accounts/${address}/assets`);
+  while (userAssets.data.assets.length === threshold) {
+    const nextAssets = await axios.get(
+      `${indexerURL}accounts/${address}/assets?next=${userAssets.data["next-token"]}`
+    );
+    userAssets.data.assets = userAssets.data.assets.concat(
+      nextAssets.data.assets
+    );
+    userAssets.data["next-token"] = nextAssets.data["next-token"];
+    threshold += 1000;
+  }
+  return userAssets.data.assets
+    .filter((asset) => asset.amount >= 1)
+    .map((asset) => asset["asset-id"]);
+}
+
+export async function getCreatedAssets(address, nodeURL) {
+  const assets = await Promise.all(
+    address.map(async (address) => {
+      const res = await axios.get(nodeURL + "accounts/" + address);
+      let project_created_asset = res.data["created-assets"].map(
+        (asset) => asset.index
+      );
+      return project_created_asset;
+    })
+  );
+  return assets.flat();
 }

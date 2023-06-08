@@ -29,12 +29,13 @@ export const Footer = () => {
             </a>
           </div>
             <a
-              className="font-semibold text-secondary-green/80 transition text-xs hover:text-secondary-green"
+              className="font-semibold text-secondary-green/80 transition text-xs text-center hover:text-secondary-green"
               href="https://twitter.com/cryptolews"
               target="_blank"
               rel="noopener noreferrer"
             >
-              developer
+              developed 
+              <br/>by bykewel
             </a>
         </div>
       </div>

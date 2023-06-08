@@ -18,6 +18,7 @@ import { ARC3MintTool } from "./pages/ARC3MintTool";
 import { ARC19MintTool } from "./pages/ARC19MintTool";
 import { ARC19UpdateTool } from "./pages/ARC19UpdateTool";
 import { Download19CollectionData } from "./pages/Download19CollectionData";
+import { BatchDelete } from "./pages/BatchDelete";
 
 function App() {
   return (
@@ -53,6 +54,7 @@ function App() {
           />
           <Route path="/batch-optin" element={<BatchOptin />} />
           <Route path="/batch-optout" element={<BatchOptout />} />
+          <Route path="/batch-delete" element={<BatchDelete />} />
           <Route
             path="/find-collection-holders"
             element={<CollectionSnapshot />}
