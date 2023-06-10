@@ -141,7 +141,7 @@ export function AirdropTool() {
         >
           ASA from Thurstober Digital Studios
         </a>
-        , you can use note field too.
+        , you can add a custom note. Must be less than 999 characters.
       </p>
       <SelectNetworkComponent />
       <p>1- Connect Sender Wallet</p>
