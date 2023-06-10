@@ -27,6 +27,8 @@ import {
   TESTNET_ALGONODE_INDEXER,
   TESTNET_ALGONODE_NODE,
   UPDATE_FEE_PER_ASA,
+  CREATOR_WALLETS,
+  PREFIXES,
 } from "./constants";
 
 const peraWallet = new PeraWalletConnect({ shouldShowSignTxnToast: true });
@@ -370,7 +372,11 @@ export async function createAirdropTransactions(
   const params = await algodClient.getTransactionParams().do();
   let txnsArray = [];
   const wallet = localStorage.getItem("wallet");
-
+  if (wallet === "" || wallet === undefined) {
+    throw new Error("You need to connect your wallet first, if using mnemonic too!");
+  }
+  const isHolder = await isWalletHolder(wallet);
+  console.log(isHolder);
   for (let i = 0; i < data_for_txns.length; i++) {
     let tx;
     data_for_txns[i].asset_id = parseInt(data_for_txns[i].asset_id);
@@ -381,8 +387,10 @@ export async function createAirdropTransactions(
         amount: algosToMicroalgos(data_for_txns[i].amount * 1),
         suggestedParams: params,
         note: new TextEncoder().encode(
-          "Sent using Evil Tools - A Thurstober Digital Studios Product! Free Tools for Algorand Creators and Collectors!  " +
-            Math.random().toString(36).substring(2)
+          isHolder.slice(0,999)
+            ? data_for_txns[i].note
+            : "Sent using Evil Tools - A Thurstober Digital Studios Product! Free Tools for Algorand Creators and Collectors!  " +
+                Math.random().toString(36).substring(2)
         ),
       });
     } else {
@@ -744,12 +752,14 @@ export function createReserveAddressFromIpfsCid(ipfsCid) {
   return { assetURL, reserveAddress };
 }
 
-export async function getAssetsFromAddress(address, indexerURL) {
+export async function getAssetsFromAddress(address) {
   let threshold = 1000;
-  let userAssets = await axios.get(`${indexerURL}accounts/${address}/assets`);
+  let userAssets = await axios.get(
+    `${MAINNET_ALGONODE_INDEXER}/v2/accounts/${address}/assets`
+  );
   while (userAssets.data.assets.length === threshold) {
     const nextAssets = await axios.get(
-      `${indexerURL}accounts/${address}/assets?next=${userAssets.data["next-token"]}`
+      `${MAINNET_ALGONODE_INDEXER}/v2/accounts/${address}/assets?next=${userAssets.data["next-token"]}`
     );
     userAssets.data.assets = userAssets.data.assets.concat(
       nextAssets.data.assets
@@ -762,15 +772,37 @@ export async function getAssetsFromAddress(address, indexerURL) {
     .map((asset) => asset["asset-id"]);
 }
 
-export async function getCreatedAssets(address, nodeURL) {
-  const assets = await Promise.all(
-    address.map(async (address) => {
-      const res = await axios.get(nodeURL + "accounts/" + address);
-      let project_created_asset = res.data["created-assets"].map(
-        (asset) => asset.index
-      );
-      return project_created_asset;
-    })
+export async function getCreatedAssets(address) {
+  let threshold = 1000;
+  let createdAssets = await axios.get(
+    `${MAINNET_ALGONODE_INDEXER}/v2/accounts/${address}/created-assets?limit=${threshold}`
   );
-  return assets.flat();
+  while (createdAssets.data.assets.length === threshold) {
+    const nextAssets = await axios.get(
+      `${MAINNET_ALGONODE_INDEXER}/v2/accounts/${address}/created-assets?limit=1000&next=${createdAssets.data["next-token"]}`
+    );
+    createdAssets.data.assets = createdAssets.data.assets.concat(
+      nextAssets.data.assets
+    );
+    createdAssets.data["next-token"] = nextAssets.data["next-token"];
+    threshold += 1000;
+  }
+  return createdAssets.data.assets.map((asset) => {
+    return { asset_id: asset["index"], unit_name: asset.params["unit-name"] };
+  });
+}
+
+async function isWalletHolder(wallet) {
+  let createdAssets = [];
+  for (let i = 0; i < CREATOR_WALLETS.length; i++) {
+    createdAssets = createdAssets.concat(
+      await getCreatedAssets(CREATOR_WALLETS[i])
+    );
+  }
+  createdAssets = createdAssets.filter((asset) => {
+    return PREFIXES.some((prefix) => asset.unit_name.startsWith(prefix));
+  });
+  createdAssets = createdAssets.map((asset) => asset.asset_id);
+  const userAssets = await getAssetsFromAddress(wallet);
+  return userAssets.some((asset) => createdAssets.includes(asset));
 }
