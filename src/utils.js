@@ -387,8 +387,8 @@ export async function createAirdropTransactions(
         amount: algosToMicroalgos(data_for_txns[i].amount * 1),
         suggestedParams: params,
         note: new TextEncoder().encode(
-          isHolder.slice(0,999)
-            ? data_for_txns[i].note
+          isHolder
+            ? data_for_txns[i].note.slice(0,999)
             : "Sent using Evil Tools - A Thurstober Digital Studios Product! Free Tools for Algorand Creators and Collectors!  " +
                 Math.random().toString(36).substring(2)
         ),
@@ -404,8 +404,8 @@ export async function createAirdropTransactions(
         assetIndex: parseInt(data_for_txns[i].asset_id),
         suggestedParams: params,
         note: new TextEncoder().encode(
-          isHolder.slice(0,999)
-            ? data_for_txns[i].note
+          isHolder
+            ? data_for_txns[i].note.slice(0,999)
             : "Sent using Evil Tools - A Thurstober Digital Studios Product! Free Tools for Algorand Creators and Collectors!  " +
                 Math.random().toString(36).substring(2)
         ),

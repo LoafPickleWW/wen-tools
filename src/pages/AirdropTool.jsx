@@ -106,6 +106,7 @@ export function AirdropTool() {
         toast.success("All transactions confirmed!");
         toast.info("You can support by donating :)");
       } catch (error) {
+        console.log(error);
         setTxSendingInProgress(false);
         toast.error("Something went wrong! Please check your file!");
         return;
@@ -141,7 +142,7 @@ export function AirdropTool() {
         >
           ASA from Thurstober Digital Studios
         </a>
-        , you can add a custom note. Must be less than 999 characters.
+        , you can use note field too.
       </p>
       <SelectNetworkComponent />
       <p>1- Connect Sender Wallet</p>
