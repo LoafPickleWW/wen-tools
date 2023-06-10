@@ -408,7 +408,7 @@ export async function createAirdropTransactions(
             ? data_for_txns[i].note
             : "Sent using Evil Tools - A Thurstober Digital Studios Product! Free Tools for Algorand Creators and Collectors!  " +
                 Math.random().toString(36).substring(2)
-        )
+        ),
       });
     }
     txnsArray.push(tx);
