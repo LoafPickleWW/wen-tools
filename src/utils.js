@@ -380,7 +380,7 @@ export async function createAirdropTransactions(
   let nfd_wallets = [];
   let nfdDomains = {};
   for (let i = 0; i < data_for_txns.length; i++) {
-    if (data_for_txns[i].receiver.endsWith(".algo")) {
+    if (data_for_txns[i].receiver.includes(".algo")) {
       nfd_wallets.push(data_for_txns[i].receiver);
     }
   }
@@ -392,18 +392,18 @@ export async function createAirdropTransactions(
     try {
       let tx;
       data_for_txns[i].asset_id = parseInt(data_for_txns[i].asset_id);
-      if (data_for_txns[i].receiver.endsWith(".algo")) {
+      if (data_for_txns[i].receiver.includes(".algo")) {
         data_for_txns[i].receiver = nfdDomains[data_for_txns[i].receiver];
       }
       if (data_for_txns[i].asset_id === 1) {
         tx = makePaymentTxnWithSuggestedParamsFromObject({
           from: wallet,
-          to: data_for_txns[i].receiver,
+          to: data_for_txns[i].receiver.trim(),
           amount: algosToMicroalgos(data_for_txns[i].amount * 1),
           suggestedParams: params,
           note: new TextEncoder().encode(
             isHolder
-              ? data_for_txns[i].note.slice(0, 999)
+              ? data_for_txns[i].note.slice(0, 950) + " | via Evil Tools"
               : "Sent using Evil Tools - A Thurstober Digital Studios Product! Free Tools for Algorand Creators and Collectors!  " +
                   Math.random().toString(36).substring(2)
           ),
@@ -412,7 +412,7 @@ export async function createAirdropTransactions(
         data_for_txns[i].decimals = assetDecimals[data_for_txns[i].asset_id];
         tx = makeAssetTransferTxnWithSuggestedParamsFromObject({
           from: wallet,
-          to: data_for_txns[i].receiver,
+          to: data_for_txns[i].receiver.trim(),
           amount: parseInt(
             data_for_txns[i].amount * 10 ** data_for_txns[i].decimals
           ),
@@ -420,7 +420,7 @@ export async function createAirdropTransactions(
           suggestedParams: params,
           note: new TextEncoder().encode(
             isHolder
-              ? data_for_txns[i].note.slice(0, 999)
+              ? data_for_txns[i].note.slice(0, 950) + " | via Evil Tools"
               : "Sent using Evil Tools - A Thurstober Digital Studios Product! Free Tools for Algorand Creators and Collectors!  " +
                   Math.random().toString(36).substring(2)
           ),
@@ -500,7 +500,7 @@ export async function createAssetOptInTransactions(assets, nodeURL, mnemonic) {
   for (let i = 0; i < assets.length; i++) {
     const tx = makeAssetTransferTxnWithSuggestedParamsFromObject({
       from: wallet,
-      to: wallet,
+      to: wallet.trim(),
       amount: 0,
       assetIndex: parseInt(assets[i]),
       suggestedParams: params,
@@ -542,7 +542,7 @@ export async function createClawbackTransactions(
   for (let i = 0; i < data_for_txns.length; i++) {
     const tx = makeAssetTransferTxnWithSuggestedParamsFromObject({
       from: wallet,
-      to: wallet,
+      to: wallet.trim(),
       revocationTarget: data_for_txns[i].addr,
       suggestedParams: params,
       assetIndex: parseInt(data_for_txns[i].index),
@@ -598,11 +598,11 @@ export async function createAssetOptoutTransactions(
     if (creatorAddress !== "") {
       const tx = makeAssetTransferTxnWithSuggestedParamsFromObject({
         from: wallet,
-        to: creatorAddress,
+        to: creatorAddress.trim(),
         amount: 0,
         assetIndex: parseInt(assets[i]),
         suggestedParams: params,
-        closeRemainderTo: creatorAddress,
+        closeRemainderTo: creatorAddress.trim(),
         note: new TextEncoder().encode("via Evil Tools"),
       });
       txnsArray.push(tx);

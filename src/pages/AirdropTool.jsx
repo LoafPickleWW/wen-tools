@@ -106,7 +106,6 @@ export function AirdropTool() {
         toast.success("All transactions confirmed!");
         toast.info("You can support by donating :)");
       } catch (error) {
-        console.log(error);
         setTxSendingInProgress(false);
         toast.error("Something went wrong! Please check your file!");
         return;
