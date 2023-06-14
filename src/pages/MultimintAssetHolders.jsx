@@ -7,6 +7,7 @@ import {
   MAINNET_ALGONODE_INDEXER,
   TESTNET_ALGONODE_INDEXER,
 } from "../constants";
+import {getNfDomainsInBulk} from "../utils";
 
 export function MultimintAssetHolders() {
   const [assetId, setAssetId] = useState("");
@@ -129,34 +130,6 @@ export function MultimintAssetHolders() {
     }
   }
 
-  async function getNftDomainsInBulk(wallets, bulkSize = 20) {
-    const uniqueWallets = [...new Set(wallets)];
-    let nfdDomains = {};
-    let counter = 0;
-    for (let i = 0; i < uniqueWallets.length; i += bulkSize) {
-      const chunk = uniqueWallets
-        .slice(i, i + bulkSize)
-        .map((wallet) => `address=${wallet}`)
-        .join("&");
-      try {
-        const response = await axios.get(
-          `https://api.nf.domains/nfd/address?${chunk}`
-        );
-        for (const domain of response.data) {
-          nfdDomains[domain.owner] = domain.name;
-        }
-      } catch {
-        continue;
-      }
-      counter += bulkSize;
-      if (counter > uniqueWallets.length) {
-        counter = uniqueWallets.length;
-      }
-      setCounter(counter);
-    }
-    return nfdDomains;
-  }
-
   async function downloadAssetHoldersDataAsCSV() {
     if (assetHolders.length > 0) {
       setLoading(true);
@@ -166,7 +139,7 @@ export function MultimintAssetHolders() {
         const assetHolderWallets = asset.holders.map(
           (holder) => holder.address
         );
-        const nfdDomains = await getNftDomainsInBulk(assetHolderWallets, 20);
+        const nfdDomains = await getNfDomainsInBulk(assetHolderWallets, 20);
         for (let j = 0; j < asset.holders.length; j++) {
           const holder = asset.holders[j];
           data.push({

@@ -373,45 +373,63 @@ export async function createAirdropTransactions(
   let txnsArray = [];
   const wallet = localStorage.getItem("wallet");
   if (wallet === "" || wallet === undefined) {
-    throw new Error("You need to connect your wallet first, if using mnemonic too!");
+    throw new Error(
+      "You need to connect your wallet first, if using mnemonic too!"
+    );
+  }
+  let nfd_wallets = [];
+  let nfdDomains = {};
+  for (let i = 0; i < data_for_txns.length; i++) {
+    if (data_for_txns[i].receiver.endsWith(".algo")) {
+      nfd_wallets.push(data_for_txns[i].receiver);
+    }
+  }
+  if (nfd_wallets.length > 0) {
+    nfdDomains = await getAddressesFromNFDomain(nfd_wallets);
   }
   const isHolder = await isWalletHolder(wallet);
-  console.log(isHolder);
   for (let i = 0; i < data_for_txns.length; i++) {
-    let tx;
-    data_for_txns[i].asset_id = parseInt(data_for_txns[i].asset_id);
-    if (data_for_txns[i].asset_id === 1) {
-      tx = makePaymentTxnWithSuggestedParamsFromObject({
-        from: wallet,
-        to: data_for_txns[i].receiver,
-        amount: algosToMicroalgos(data_for_txns[i].amount * 1),
-        suggestedParams: params,
-        note: new TextEncoder().encode(
-          isHolder
-            ? data_for_txns[i].note.slice(0,999)
-            : "Sent using Evil Tools - A Thurstober Digital Studios Product! Free Tools for Algorand Creators and Collectors!  " +
-                Math.random().toString(36).substring(2)
-        ),
-      });
-    } else {
-      data_for_txns[i].decimals = assetDecimals[data_for_txns[i].asset_id];
-      tx = makeAssetTransferTxnWithSuggestedParamsFromObject({
-        from: wallet,
-        to: data_for_txns[i].receiver,
-        amount: parseInt(
-          data_for_txns[i].amount * 10 ** data_for_txns[i].decimals
-        ),
-        assetIndex: parseInt(data_for_txns[i].asset_id),
-        suggestedParams: params,
-        note: new TextEncoder().encode(
-          isHolder
-            ? data_for_txns[i].note.slice(0,999)
-            : "Sent using Evil Tools - A Thurstober Digital Studios Product! Free Tools for Algorand Creators and Collectors!  " +
-                Math.random().toString(36).substring(2)
-        ),
-      });
+    try {
+      let tx;
+      data_for_txns[i].asset_id = parseInt(data_for_txns[i].asset_id);
+      if (data_for_txns[i].receiver.endsWith(".algo")) {
+        data_for_txns[i].receiver = nfdDomains[data_for_txns[i].receiver];
+      }
+      if (data_for_txns[i].asset_id === 1) {
+        tx = makePaymentTxnWithSuggestedParamsFromObject({
+          from: wallet,
+          to: data_for_txns[i].receiver,
+          amount: algosToMicroalgos(data_for_txns[i].amount * 1),
+          suggestedParams: params,
+          note: new TextEncoder().encode(
+            isHolder
+              ? data_for_txns[i].note.slice(0, 999)
+              : "Sent using Evil Tools - A Thurstober Digital Studios Product! Free Tools for Algorand Creators and Collectors!  " +
+                  Math.random().toString(36).substring(2)
+          ),
+        });
+      } else {
+        data_for_txns[i].decimals = assetDecimals[data_for_txns[i].asset_id];
+        tx = makeAssetTransferTxnWithSuggestedParamsFromObject({
+          from: wallet,
+          to: data_for_txns[i].receiver,
+          amount: parseInt(
+            data_for_txns[i].amount * 10 ** data_for_txns[i].decimals
+          ),
+          assetIndex: parseInt(data_for_txns[i].asset_id),
+          suggestedParams: params,
+          note: new TextEncoder().encode(
+            isHolder
+              ? data_for_txns[i].note.slice(0, 999)
+              : "Sent using Evil Tools - A Thurstober Digital Studios Product! Free Tools for Algorand Creators and Collectors!  " +
+                  Math.random().toString(36).substring(2)
+          ),
+        });
+      }
+      txnsArray.push(tx);
+    } catch (error) {
+      toast.error("Error in creating transaction " + (i + 1));
     }
-    txnsArray.push(tx);
   }
   if (mnemonic !== "") {
     if (mnemonic.split(" ").length !== 25) throw new Error("Invalid Mnemonic!");
@@ -807,4 +825,51 @@ async function isWalletHolder(wallet) {
   createdAssets = createdAssets.map((asset) => asset.asset_id);
   const userAssets = await getAssetsFromAddress(wallet);
   return userAssets.some((asset) => createdAssets.includes(asset));
+}
+
+export async function getNfDomainsInBulk(wallets, bulkSize = 20) {
+  const uniqueWallets = [...new Set(wallets)];
+  let nfdDomains = {};
+  let counter = 0;
+  for (let i = 0; i < uniqueWallets.length; i += bulkSize) {
+    const chunk = uniqueWallets
+      .slice(i, i + bulkSize)
+      .map((wallet) => `address=${wallet}`)
+      .join("&");
+    try {
+      const response = await axios.get(
+        `https://api.nf.domains/nfd/address?${chunk}`
+      );
+      for (const domain of response.data) {
+        nfdDomains[domain.owner] = domain.name;
+      }
+    } catch {
+      continue;
+    }
+    counter += bulkSize;
+    if (counter > uniqueWallets.length) {
+      counter = uniqueWallets.length;
+    }
+  }
+  return nfdDomains;
+}
+
+export async function getAddressesFromNFDomain(domains) {
+  toast.info("Fetching NFDomain addresses", { autoClose: 1000 });
+  const uniqueDomains = [...new Set(domains)];
+  let nfdDomains = {};
+  for (let i = 0; i < uniqueDomains.length; i++) {
+    try {
+      const response = await axios.get(
+        `https://api.nf.domains/nfd/${uniqueDomains[i]}?view=tiny`
+      );
+      if (response.data.depositAccount) {
+        nfdDomains[uniqueDomains[i]] = response.data.depositAccount;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    } catch {
+      continue;
+    }
+  }
+  return nfdDomains;
 }
