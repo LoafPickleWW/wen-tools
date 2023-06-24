@@ -7,16 +7,16 @@ import {
   MAINNET_ALGONODE_INDEXER,
   TESTNET_ALGONODE_INDEXER,
 } from "../constants";
-import {getNfDomainsInBulk} from "../utils";
+import { getNfDomainsInBulk } from "../utils";
 
 export function MultimintAssetHolders() {
   const [assetId, setAssetId] = useState("");
   const [assetHolders, setAssetHolders] = useState([]);
   const [assetOwnersLoading, setAssetOwnersLoading] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [counter, setCounter] = useState(0);
+  const [checkOptin, setCheckOptin] = useState(false);
 
-  async function getAssetOwners(asset_id) {
+  async function getAssetOwners(asset_id, isOptin = false) {
     const indexerURL =
       localStorage.getItem("networkType") === "mainnet"
         ? MAINNET_ALGONODE_INDEXER
@@ -35,17 +35,20 @@ export function MultimintAssetHolders() {
       toast.error(`${asset_id} is not a valid asset id!`);
       throw Error(`${asset_id} is not a valid asset id!`);
     }
-
     try {
       let response = await axios.get(
-        `${indexerURL}/v2/assets/${asset_id}/balances?currency-greater-than=0`
+        `${indexerURL}/v2/assets/${asset_id}/balances` +
+          (!isOptin ? "?currency-greater-than=0" : "")
       );
       while (
         response.data["next-token"] &&
         response.data.balances.length === threshold
       ) {
         const nextResponse = await axios.get(
-          `${indexerURL}/v2/assets/${asset_id}/balances?currency-greater-than=0&next=${response.data["next-token"]}`
+          `${indexerURL}/v2/assets/${asset_id}/balances` +
+            (!isOptin
+              ? `?currency-greater-than=0&next=${response.data["next-token"]}`
+              : `?next=${response.data["next-token"]}`)
         );
         response.data.balances = response.data.balances.concat(
           nextResponse.data.balances
@@ -74,19 +77,23 @@ export function MultimintAssetHolders() {
       .map((item) => item.trim())
       .filter((item) => item !== "");
     assetIDs = [...new Set(assetIDs)];
-    if (assetId) {
-      let assetBalances = [];
-      setAssetOwnersLoading(true);
-      for (const asset_id of assetIDs) {
-        try {
-          const asset_owners = await getAssetOwners(asset_id);
-          assetBalances.push(asset_owners);
-        } catch (e) {}
+    try {
+      if (assetId) {
+        let assetBalances = [];
+        setAssetOwnersLoading(true);
+        for (const asset_id of assetIDs) {
+          try {
+            const asset_owners = await getAssetOwners(asset_id, checkOptin);
+            assetBalances.push(asset_owners);
+          } catch (e) {}
+        }
+        setAssetHolders(assetBalances);
+        setAssetOwnersLoading(false);
+      } else {
+        toast.info("Please enter at least one asset id!");
       }
-      setAssetHolders(assetBalances);
-      setAssetOwnersLoading(false);
-    } else {
-      toast.info("Please enter at least one asset id!");
+    } catch (error) {
+      console.log(error);
     }
   }
 
@@ -156,7 +163,6 @@ export function MultimintAssetHolders() {
         "asset_holders.csv"
       );
       setLoading(false);
-      setCounter(0);
       toast.success("Downloaded successfully!");
       toast.info("You can support by donating :)");
     } else {
@@ -181,6 +187,22 @@ export function MultimintAssetHolders() {
       <p className="text-center text-xs mb-2 text-slate-300">
         Separate multiple asset ids with commas.
       </p>
+      {/* add checkbox for checkOptin too */}
+      <div className="flex items-center justify-center">
+        <input
+          type="checkbox"
+          id="check_optin"
+          className="mr-2"
+          checked={checkOptin}
+          onChange={(e) => setCheckOptin(e.target.checked)}
+        />
+        <label htmlFor="check_optin" className="text-slate-300">
+          Check Optin
+        </label>
+      </div>
+      <span className="text-center text-xs mb-2 text-slate-300">
+        Check also opted-in wallets (with 0 balances)
+      </span>
       <button
         className="mb-2 bg-secondary-green/80 hover:bg-secondary-green text-white text-base font-semibold rounded py-2 w-fit px-2 mx-auto mt-1 hover:scale-95 duration-700"
         onClick={getAssetHolders}
@@ -219,19 +241,13 @@ export function MultimintAssetHolders() {
                 role="status"
               ></div>
               Fetching NFDomains...
-              <p className="text-center text-sm text-slate-300">
-                {counter}/
-                {assetHolders
-                  .map((asset) => asset.holders.length)
-                  .reduce((a, b) => a + b, 0)}
-              </p>
             </div>
           ) : (
             <button
               onClick={downloadAssetHoldersDataAsCSV}
               className="mb-2 bg-green-500 hover:bg-green-700 text-black text-base font-semibold rounded py-2 w-fit px-2 mx-auto mt-2 hover:scale-95 duration-700"
             >
-              Download Asset Holders
+              Download Asset {checkOptin ? "Opted-in " : "Holders"}
             </button>
           )}
         </>

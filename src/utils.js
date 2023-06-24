@@ -850,6 +850,7 @@ export async function getNfDomainsInBulk(wallets, bulkSize = 20) {
     if (counter > uniqueWallets.length) {
       counter = uniqueWallets.length;
     }
+    await new Promise((resolve) => setTimeout(resolve, 100));
   }
   return nfdDomains;
 }
