@@ -203,6 +203,7 @@ export function MultimintAssetHolders() {
       }
       if (checkVerifiedOnly) {
         toast.info("Fetching NFDs' socials...");
+        data = data.filter((item) => item.nfdomain !== "");
         const nfdDomains = data.map((item) => item.nfdomain);
         const nfdSocials = await getNFDsSocials(nfdDomains);
         data = data.map((item) => {
