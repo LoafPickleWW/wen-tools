@@ -267,7 +267,7 @@ export function ARC3MintTool() {
           target="_blank"
           rel="noopener noreferrer"
         >
-          Template
+          CSV Template
         </a>
       </button>
       <p>2- Enter Web3Storage Token</p>
