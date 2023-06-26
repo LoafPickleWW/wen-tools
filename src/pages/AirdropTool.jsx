@@ -131,7 +131,17 @@ export function AirdropTool() {
           INSTRUCTIONS
         </a>
       </button>
-      <p className="text-xs italic text-slate-400">
+      <button className="text-center text-lg text-pink-200 mt-2 bg-pink-700 px-4 py-2 rounded">
+        <a
+          className="hover:text-pink-400 transition"
+          href="https://docs.google.com/spreadsheets/d/1YN7NhxXyNmBZ80nopbcu23Pme-xastrobfIu_MnALiA/edit?usp=sharing"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          CSV Template
+        </a>
+      </button>
+      <p className="text-sm italic text-slate-400">
         If you have any{" "}
         <a
           href="https://www.nftexplorer.app/collections?q=thurstober"
