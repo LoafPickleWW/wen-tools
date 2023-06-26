@@ -263,6 +263,16 @@ export function ARC19MintTool() {
           Check Guide Here
         </a>
       </button>
+      <button className="text-center text-lg text-pink-200 mt-2 bg-pink-700 px-4 py-2 rounded">
+        <a
+          className="hover:text-primary-green transition"
+          href="https://docs.google.com/spreadsheets/d/1rN4QEcuiXhsh7j6AsAoAe530pdsl2HW0QBHrbIwC6p8/edit?usp=sharing"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          CSV Template
+        </a>
+      </button>
       <p>2- Enter Web3Storage Token</p>
       <input
         type="text"
