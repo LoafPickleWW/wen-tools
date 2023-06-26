@@ -266,7 +266,7 @@ export function MultimintAssetHolders() {
         </div>
         {!isHorseHolder && (
           <span className="text-slate-400 text-xs text-center mx-auto mt-2">
-            You need to be a Horse holder to use these features.
+            Horse Holder Only Premium Filters
           </span>
         )}
         <div className="flex items-center justify-center">
