@@ -323,7 +323,7 @@ export function MultimintAssetHolders() {
                 <span className="animate-pulse font-semibold">
                   {assetHolder.holders.length}
                 </span>{" "}
-                holders.
+                wallets opted-in.
               </p>
             </div>
           ))}
