@@ -107,6 +107,16 @@ export function BatchDelete() {
           INSTRUCTIONS
         </a>
       </button>
+      <button className="text-center text-lg text-pink-200 mt-2 bg-pink-700 px-4 py-2 rounded">
+        <a
+          className="hover:text-pink-400 transition"
+          href="https://docs.google.com/spreadsheets/d/19tIbqeIQ1wxgNWjyx6eLNHfgxitK539cz3sJFrzLmlU/edit?usp=sharing"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          CSV Template
+        </a>
+      </button>
       <SelectNetworkComponent />
       <p>1- Connect Wallet</p>
       <ConnectButton />
