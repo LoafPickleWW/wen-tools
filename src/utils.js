@@ -788,7 +788,7 @@ export async function getAssetsFromAddress(address) {
     threshold += 1000;
   }
   return userAssets.data.assets
-    .filter((asset) => asset.amount >= 1)
+    .filter((asset) => asset.amount > 0)
     .map((asset) => asset["asset-id"]);
 }
 
@@ -812,7 +812,7 @@ export async function getCreatedAssets(address) {
   });
 }
 
-async function isWalletHolder(wallet) {
+export async function isWalletHolder(wallet) {
   let createdAssets = [];
   for (let i = 0; i < CREATOR_WALLETS.length; i++) {
     createdAssets = createdAssets.concat(

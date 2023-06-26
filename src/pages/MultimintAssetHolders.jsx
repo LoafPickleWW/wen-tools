@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { toast } from "react-toastify";
 import axios from "axios";
 import SelectNetworkComponent from "../components/SelectNetworkComponent";
@@ -7,7 +7,7 @@ import {
   MAINNET_ALGONODE_INDEXER,
   TESTNET_ALGONODE_INDEXER,
 } from "../constants";
-import { getNfDomainsInBulk } from "../utils";
+import { getNfDomainsInBulk, isWalletHolder } from "../utils";
 
 export function MultimintAssetHolders() {
   const [assetId, setAssetId] = useState("");
@@ -15,8 +15,26 @@ export function MultimintAssetHolders() {
   const [assetOwnersLoading, setAssetOwnersLoading] = useState(false);
   const [loading, setLoading] = useState(false);
   const [checkOptin, setCheckOptin] = useState(false);
+  const [checkNfdOnly, setCheckNfdOnly] = useState(false);
+  const [checkVerifiedOnly, setCheckVerifiedOnly] = useState(false);
+  const [isHorseHolder, setIsHorseHolder] = useState(false);
 
-  async function getAssetOwners(asset_id, isOptin = false) {
+  async function checkWalletIsOwner() {
+    const wallet = localStorage.getItem("wallet");
+    if (wallet) {
+      const isHolder = await isWalletHolder(wallet);
+      setIsHorseHolder(isHolder);
+    } else {
+      setIsHorseHolder(false);
+    }
+  }
+
+  useEffect(() => {
+    checkWalletIsOwner();
+  }, []);
+
+  async function getAssetOwners(asset_id) {
+    const isOptin = checkOptin;
     const indexerURL =
       localStorage.getItem("networkType") === "mainnet"
         ? MAINNET_ALGONODE_INDEXER
@@ -83,7 +101,7 @@ export function MultimintAssetHolders() {
         setAssetOwnersLoading(true);
         for (const asset_id of assetIDs) {
           try {
-            const asset_owners = await getAssetOwners(asset_id, checkOptin);
+            const asset_owners = await getAssetOwners(asset_id);
             assetBalances.push(asset_owners);
           } catch (e) {}
         }
@@ -137,6 +155,28 @@ export function MultimintAssetHolders() {
     }
   }
 
+  async function getNFDsSocials(nfdomains) {
+    let nfdSocials = {};
+    nfdomains = [...new Set(nfdomains)];
+    for (let i = 0; i < nfdomains.length; i++) {
+      const nfdomain = nfdomains[i];
+      const url = `https://api.nf.domains/nfd/${nfdomain}?view=full&poll=false&nocache=false`;
+      try {
+        const response = await axios.get(url);
+        const twitter = response.data.properties.verified.twitter || "";
+        const discord = response.data.properties.verified.discord || "";
+        nfdSocials[nfdomain] = { twitter, discord };
+      } catch (error) {
+        nfdSocials[nfdomain] = { twitter: "", discord: "" };
+      }
+      if (i % 10 === 0) {
+        toast.info(`Fetching NFDomains' socials... ${i}/${nfdomains.length}`);
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      }
+    }
+    return nfdSocials;
+  }
+
   async function downloadAssetHoldersDataAsCSV() {
     if (assetHolders.length > 0) {
       setLoading(true);
@@ -157,11 +197,34 @@ export function MultimintAssetHolders() {
           });
         }
       }
-      exportCSVFile(
-        ["wallet", "nfdomain", "asset_id", "amount"],
-        data,
-        "asset_holders.csv"
-      );
+      let headers = ["wallet", "nfdomain", "asset_id", "amount"];
+      if (checkNfdOnly) {
+        data = data.filter((item) => item.nfdomain !== "");
+      }
+      if (checkVerifiedOnly) {
+        toast.info("Fetching NFDs' socials...");
+        const nfdDomains = data.map((item) => item.nfdomain);
+        const nfdSocials = await getNFDsSocials(nfdDomains);
+        data = data.map((item) => {
+          return {
+            ...item,
+            twitter: nfdSocials[item.nfdomain].twitter,
+            discord: nfdSocials[item.nfdomain].discord,
+          };
+        });
+        data = data.filter(
+          (item) => item.twitter !== "" || item.discord !== ""
+        );
+        headers = [
+          "wallet",
+          "nfdomain",
+          "asset_id",
+          "amount",
+          "twitter",
+          "discord",
+        ];
+      }
+      exportCSVFile(headers, data, "asset_holders.csv");
       setLoading(false);
       toast.success("Downloaded successfully!");
       toast.info("You can support by donating :)");
@@ -187,22 +250,51 @@ export function MultimintAssetHolders() {
       <p className="text-center text-xs mb-2 text-slate-300">
         Separate multiple asset ids with commas.
       </p>
-      {/* add checkbox for checkOptin too */}
-      <div className="flex items-center justify-center">
-        <input
-          type="checkbox"
-          id="check_optin"
-          className="mr-2"
-          checked={checkOptin}
-          onChange={(e) => setCheckOptin(e.target.checked)}
-        />
-        <label htmlFor="check_optin" className="text-slate-300">
-          Check Optin
-        </label>
+      <div className="flex flex-col items-start text-sm py-2 bg-black/20 px-4 rounded-xl">
+        <div className="flex items-center justify-center">
+          <input
+            type="checkbox"
+            id="check_optin"
+            className="mr-2"
+            checked={checkOptin}
+            onChange={(e) => setCheckOptin(e.target.checked)}
+          />
+          <label htmlFor="check_optin" className="text-slate-300">
+            Check Optin (with 0 balances too)
+          </label>
+        </div>
+        {!isHorseHolder && (
+          <span className="text-slate-400 text-xs text-center mx-auto mt-2">
+            You need to be a Horse holder to use these features.
+          </span>
+        )}
+        <div className="flex items-center justify-center">
+          <input
+            type="checkbox"
+            id="check_optin"
+            className="mr-2"
+            checked={checkNfdOnly}
+            onChange={(e) => setCheckNfdOnly(e.target.checked)}
+            disabled={!isHorseHolder}
+          />
+          <label htmlFor="check_optin" className="text-slate-300">
+            NFD wallets only
+          </label>
+        </div>
+        <div className="flex items-center justify-center">
+          <input
+            type="checkbox"
+            id="check_optin"
+            className="mr-2"
+            disabled={!isHorseHolder}
+            checked={checkVerifiedOnly}
+            onChange={(e) => setCheckVerifiedOnly(e.target.checked)}
+          />
+          <label htmlFor="check_optin" className="text-slate-300">
+            Verified with NFD's Twitter or Discord only
+          </label>
+        </div>
       </div>
-      <span className="text-center text-xs mb-2 text-slate-300">
-        Check also opted-in wallets (with 0 balances)
-      </span>
       <button
         className="mb-2 bg-secondary-green/80 hover:bg-secondary-green text-white text-base font-semibold rounded py-2 w-fit px-2 mx-auto mt-1 hover:scale-95 duration-700"
         onClick={getAssetHolders}
