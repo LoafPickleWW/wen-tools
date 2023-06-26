@@ -112,7 +112,7 @@ export const TOOLS = [
   {
     id: "airdrop_tool",
     label: "🪂 Asset Send/Airdrop",
-    description: "Airdrop assets/ALGO to a list of addresses.",
+    description: "Airdrop/Send assets/ALGO to a list of addresses.",
     path: "/airdrop",
     category: "general",
   },
