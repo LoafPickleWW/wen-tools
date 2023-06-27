@@ -264,6 +264,10 @@ export function ARC19UpdateTool() {
         >
           here
         </a>
+      <p className="text-2xl text-white font-roboto -mt-2 mb-2">
+        This tool is not compatible with NFTs minted from algonfts.art.
+        </a>
+      </p>
       </p>
       <p>3- Upload CSV file</p>
       {csvData == null ? (
