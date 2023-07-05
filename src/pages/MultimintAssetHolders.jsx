@@ -266,7 +266,16 @@ export function MultimintAssetHolders() {
         </div>
         {!isHorseHolder && (
           <span className="text-slate-400 text-xs text-center mx-auto mt-2">
-            Horse Holder Only Premium Filters
+            If you hold any{" "}
+            <a
+              href="https://www.nftexplorer.app/collections?q=thurstober"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-slate-500 hover:text-slate-300 transition"
+            >
+              ASA from Thurstober Digital Studios
+            </a>
+            , You can enjoy these Premium Filters:
           </span>
         )}
         <div className="flex items-center justify-center">
