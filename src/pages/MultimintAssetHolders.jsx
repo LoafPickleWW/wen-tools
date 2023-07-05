@@ -264,7 +264,7 @@ export function MultimintAssetHolders() {
             Check Optin (with 0 balances too)
           </label>
         </div>
-        {!isHolder && (
+        {!isHorseHolder && (
           <span className="text-slate-400 text-xs text-center mx-auto mt-2">
             If you hold any{" "}
             <a
