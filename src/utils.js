@@ -318,7 +318,7 @@ export async function updateARC19AssetMintArray(data_for_txns, nodeURL, token) {
   const algodClient = new Algodv2("", nodeURL, {
     "User-Agent": "evil-tools",
   });
-  const params = await algodClient.getTransactionParams().do();
+  let params = await algodClient.getTransactionParams().do();
   const client = new Web3Storage({ token: token });
   let txnsArray = [];
   for (let i = 0; i < data_for_txns.length; i++) {
@@ -356,6 +356,9 @@ export async function updateARC19AssetMintArray(data_for_txns, nodeURL, token) {
         autoClose: 200,
       });
     } catch (error) {}
+    if (i % 100 === 0) {
+      params = await algodClient.getTransactionParams().do();
+    }
   }
   return txnsArray;
 }
