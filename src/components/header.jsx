@@ -3,7 +3,7 @@ import ConnectButton from "./ConnectButton";
 export const Header = () => {
   return (
     <>
-      <header className="flex flex-row items-center justify-between border-gray-200 px-4 md:px-8 py-2 bg-gray-800">
+      <header className="flex flex-row items-center justify-between border-gray-200 px-4 md:px-8 py-3 bg-gray-800">
        <div className="mx-auto">
         <div className="flex justify-between items-center">
           <a href="/">
@@ -17,7 +17,7 @@ export const Header = () => {
             <a href="https://thurstober.com" className="flex items-center">
               <img
                 className="h-12 hover:scale-95 duration-700"
-                src="./thurs_logo_white3xz.png"
+                src="./cherry.png"
                 alt="logo"
               />
             </a>
