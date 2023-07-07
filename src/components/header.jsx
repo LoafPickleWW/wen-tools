@@ -12,7 +12,7 @@ export const Header = () => {
             />
           </a>
        <div className="mx-auto">
-           <div className="flex items-center">
+           <div className="flex items-center gap-x-1">
             <a href="https://thurstober.com" className="flex items-center">
               <img
                 className="h-16 hover:scale-95 duration-700"
