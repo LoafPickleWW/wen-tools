@@ -8,7 +8,7 @@ export const Footer = () => {
           <a href="https://thurstober.com" className="flex items-center">
             <img
               className="h-8 hover:scale-95 duration-700"
-              src="./logo.png"
+              src="./thurs_logo_white3x.png"
               alt="logo"
             />
           </a>
