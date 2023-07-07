@@ -13,17 +13,17 @@ export const Header = () => {
               alt="eviltools"
             />
           </a>
-          <div className="flex items-center gap-x-2">
+           <div className="flex items-center gap-x-2">
             <a href="https://thurstober.com" className="flex items-center">
               <img
-                className="h-8 hover:scale-95 duration-700"
+                className="h-12 hover:scale-95 duration-700"
                 src="./thurs_logo_white3xz.png"
                 alt="logo"
               />
             </a>
-          </div> 
-        </div>
-      </div>
+           </div> 
+         </div>
+       </div>
         <ConnectButton />
       </header>
       <div className="bg-primary-green text-black flex py-1 justify-center items-center mb-2">
