@@ -7,8 +7,8 @@ export const Footer = () => {
         <div className="flex justify-between items-center">
           <a href="https://thurstober.com" className="flex items-center">
             <img
-              className="h-8 hover:scale-120 duration-700"
-              src="./thurs_logo_white3x.png"
+              className="h-8 hover:scale-95 duration-700"
+              src="./thurs_logo_white3xz.png"
               alt="logo"
             />
           </a>
