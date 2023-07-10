@@ -5,8 +5,11 @@ export const Footer = () => {
     <footer className="py-3 px-4 sm:px-6 bg-gray-800 text-secondary-green w-full bottom-0 fixed">
       <div className="mx-auto">
         <div className="flex justify-between items-center">
-          <a href="https://algonode.io" target="_blank" rel="noreferrer noopener" className="flex items-center">
-          powered by <br /> Algonode.io
+          <a href="https://algonode.io"
+            target="_blank"
+            rel="noreferrer noopener"
+            className="font-semibold text-secondary-green/80 transition text-xs text-center hover:text-secondary-green">
+            powered by <br /> Algonode.io
           </a>
           <div className="flex items-center gap-x-2">
             <a
@@ -24,15 +27,15 @@ export const Footer = () => {
               <FaTwitter className="w-6 h-6 text-secondary-green/80 hover:text-secondary-green transition" />
             </a>
           </div>
-            <a
-              className="font-semibold text-secondary-green/80 transition text-xs text-center hover:text-secondary-green"
-              href="https://twitter.com/cryptolews"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              developed 
-              <br/>by bykewel
-            </a>
+          <a
+            className="font-semibold text-secondary-green/80 transition text-xs text-center hover:text-secondary-green"
+            href="https://twitter.com/cryptolews"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            developed
+            <br />by bykewel
+          </a>
         </div>
       </div>
     </footer>
