@@ -5,12 +5,8 @@ export const Footer = () => {
     <footer className="py-3 px-4 sm:px-6 bg-gray-800 text-secondary-green w-full bottom-0 fixed">
       <div className="mx-auto">
         <div className="flex justify-between items-center">
-          <a href="https://thurstober.com" className="flex items-center">
-            <img
-              className="h-8 hover:scale-95 duration-700"
-              src="./thurs_logo_white3xz.png"
-              alt="logo"
-            />
+          <a href="https://algonode.io" target="_blank" rel="noreferrer noopener" className="flex items-center">
+          powered by <br /> Algonode.io
           </a>
           <div className="flex items-center gap-x-2">
             <a

@@ -4,6 +4,8 @@ export const Header = () => {
   return (
     <>
       <header className="flex flex-row items-center justify-between border-gray-200 px-4 md:px-8 py-3 bg-gray-800">
+        <div className="flex items-s">
+        <div className="mt-2">
           <a href="/">
             <img
               src="./eviltools.png"
@@ -11,17 +13,17 @@ export const Header = () => {
               alt="eviltools"
             />
           </a>
-       <div className="mx-auto">
-           <div className="flex items-center mb-2">
+          </div>
+          <div className="ml-2">
             <a href="https://thurstober.com" className="flex items-center">
               <img
-                className="h-16 hover:scale-95 duration-700"
+                className="h-[70px] hover:scale-95 duration-700"
                 src="./cherry.png"
                 alt="logo"
               />
             </a>
-           </div> 
-       </div>
+          </div>
+        </div>
         <ConnectButton />
       </header>
       <div className="bg-primary-green text-black flex py-1 justify-center items-center mb-2">
