@@ -22,7 +22,7 @@ import { BatchDelete } from "./pages/BatchDelete";
 
 function App() {
   return (
-    <div className="bg-gray-900 flex flex-col min-h-screen font-roboto">
+    <div className="bg-gray-900 flex flex-col min-h-screen font-roboto pb-[100px]">
       <ToastContainer
         pauseOnFocusLoss={false}
         closeOnClick
