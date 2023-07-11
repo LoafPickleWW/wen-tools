@@ -639,7 +639,6 @@ export async function createAssetDeleteTransactions(assets, nodeURL, mnemonic) {
   const algodClient = new Algodv2("", nodeURL, {
     "User-Agent": "evil-tools",
   });
-  console.log(assets);
   const params = await algodClient.getTransactionParams().do();
   let txnsArray = [];
   for (let i = 0; i < assets.length; i++) {
@@ -666,7 +665,6 @@ export async function createAssetDeleteTransactions(assets, nodeURL, mnemonic) {
       console.log(error);
     }
   }
-  console.log(txnsArray);
   if (mnemonic !== "") {
     if (mnemonic.split(" ").length !== 25) throw new Error("Invalid Mnemonic!");
     const { sk } = mnemonicToSecretKey(mnemonic);

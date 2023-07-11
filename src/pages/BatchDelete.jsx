@@ -17,6 +17,7 @@ export function BatchDelete() {
   const [isTransactionsFinished, setIsTransactionsFinished] = useState(false);
   const [txSendingInProgress, setTxSendingInProgress] = useState(false);
   const [mnemonic, setMnemonic] = useState("");
+  const [assetIds, setAssetIds] = useState([]);
 
   const handleFileData = async () => {
     let assets = [];
@@ -25,7 +26,6 @@ export function BatchDelete() {
         assets.push(parseInt(csvData[i][0]));
       }
     }
-    console.log(assets);
     if (assets.length === 0) {
       toast.error("No assets found in the file!");
       return;
@@ -47,7 +47,6 @@ export function BatchDelete() {
           nodeURL,
           mnemonic
         );
-        console.log(signedTransactions);
         const groups = sliceIntoChunks(signedTransactions, 2);
         setTxSendingInProgress(true);
         const algodClient = new algosdk.Algodv2("", nodeURL, {
@@ -58,21 +57,16 @@ export function BatchDelete() {
             await algodClient.sendRawTransaction(groups[i]).do();
             if (i % 5 === 0) {
               toast.success(
-                `Transaction ${i + 1} of ${
-                  groups.length
-                } confirmed!`,
+                `Transaction ${i + 1} of ${groups.length} confirmed!`,
                 {
                   autoClose: 1000,
                 }
               );
             }
           } catch (error) {
-            toast.error(
-              `Transaction ${i + 1} of ${groups.length} failed!`,
-              {
-                autoClose: 1000,
-              }
-            );
+            toast.error(`Transaction ${i + 1} of ${groups.length} failed!`, {
+              autoClose: 1000,
+            });
           }
           await new Promise((resolve) => setTimeout(resolve, 150));
         }
@@ -145,36 +139,68 @@ export function BatchDelete() {
       </div>
       {/* end mnemonic */}
       <p>2- Upload CSV file</p>
-      {csvData == null ? (
-        <label
-          htmlFor="dropzone-file"
-          className="flex flex-col justify-center items-center w-[16rem] h-[8rem] px-4  rounded-lg border-2  border-dashed cursor-pointer hover:bg-bray-800 bg-gray-700  border-gray-600 hover:border-gray-500 hover:bg-gray-600"
-        >
-          <div className="flex flex-col justify-center items-center pt-5 pb-6">
-            <p className="mb-1 text-sm text-gray-400 font-bold">
-              Click to upload file
-            </p>
-            <p className="text-xs text-gray-400">(CSV)</p>
+      {csvData === null ? (
+        <div>
+          <label
+            htmlFor="dropzone-file"
+            className="flex flex-col justify-center items-center w-[16rem] h-[8rem] px-4  rounded-lg border-2  border-dashed cursor-pointer hover:bg-bray-800 bg-gray-700  border-gray-600 hover:border-gray-500 hover:bg-gray-600"
+          >
+            <div className="flex flex-col justify-center items-center pt-5 pb-6">
+              <p className="mb-1 text-sm text-gray-400 font-bold">
+                Click to upload file
+              </p>
+              <p className="text-xs text-gray-400">(CSV)</p>
+            </div>
+            <input
+              className="hidden"
+              id="dropzone-file"
+              type="file"
+              accept=".csv"
+              onChange={(e) => {
+                const file = e.target.files[0];
+                Papa.parse(file, {
+                  complete: function (results) {
+                    const filteredData = results.data.filter(
+                      (row) => row[0].length > 1
+                    );
+                    setCsvData(filteredData);
+                  },
+                  skipEmptyLines: true,
+                });
+              }}
+            />
+          </label>
+          <div>
+            <p className="text-center text-xs text-slate-300 py-1">or</p>
+            <div className="flex flex-col items-center">
+              <textarea
+                id="asset_id_list"
+                placeholder="Asset IDs, one per line or comma separated"
+                className="bg-gray-800 text-white border-2 border-gray-700 rounded-lg p-1 text-sm mx-auto placeholder:text-center placeholder:text-sm"
+                style={{ width: "10rem", height: "8rem" }}
+                value={assetIds}
+                onChange={(e) => {
+                  setAssetIds(e.target.value);
+                }}
+              />
+              <button
+                id="confirm-input"
+                className="mb-2 bg-green-500 hover:bg-green-700 text-black text-sm font-semibold rounded py-1 w-fit px-4 mx-auto mt-1 hover:scale-95 duration-700"
+                onClick={() => {
+                  // split with comma or newline
+                  let splittedAssetIds = assetIds.split(/[\n,]/);
+                  for (let i = 0; i < splittedAssetIds.length; i++) {
+                    splittedAssetIds[i] = [splittedAssetIds[i].trim()];
+                  }
+                  splittedAssetIds.unshift(["asset_id"]);
+                  setCsvData(splittedAssetIds);
+                }}
+              >
+                Next
+              </button>
+            </div>
           </div>
-          <input
-            className="hidden"
-            id="dropzone-file"
-            type="file"
-            accept=".csv"
-            onChange={(e) => {
-              const file = e.target.files[0];
-              Papa.parse(file, {
-                complete: function (results) {
-                  const filteredData = results.data.filter(
-                    (row) => row[0].length > 1
-                  );
-                  setCsvData(filteredData);
-                },
-                skipEmptyLines: true,
-              });
-            }}
-          />
-        </label>
+        </div>
       ) : (
         <div className="flex flex-col justify-center items-center w-[16rem]">
           {isTransactionsFinished ? (
@@ -191,7 +217,7 @@ export function BatchDelete() {
             <>
               <p className="mb-1 text-sm font-bold">File uploaded</p>
               <p className="text-sm text-gray-400">
-                {csvData.length - 1} assets found!
+                {csvData.length - 1} assets found.
               </p>
               <p>3- Sign Your Transactions</p>
               {!txSendingInProgress ? (
