@@ -181,7 +181,7 @@ export function ARC19UpdateTool() {
             }
           );
         }
-        await new Promise((resolve) => setTimeout(resolve, 150));
+        await new Promise((resolve) => setTimeout(resolve, 20));
       }
       setIsTransactionsFinished(true);
       setTxSendingInProgress(false);
