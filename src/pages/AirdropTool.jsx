@@ -99,7 +99,7 @@ export function AirdropTool() {
               }
             );
           }
-          await new Promise((resolve) => setTimeout(resolve, 150));
+          await new Promise((resolve) => setTimeout(resolve, 10));
         }
         setIsTransactionsFinished(true);
         setTxSendingInProgress(false);
