@@ -5,7 +5,7 @@ export const Footer = () => {
     <footer className="py-3 px-4 sm:px-6 bg-gray-800 text-secondary-green w-full bottom-0 fixed">
       <div className="mx-auto">
         <div className="flex justify-between items-center">
-          <a href="https://algonode.io"
+          <a href="https://algonode.io?ref=eviltools"
             target="_blank"
             rel="noreferrer noopener"
             className="font-semibold text-secondary-green/80 transition text-xs text-center hover:text-secondary-green">

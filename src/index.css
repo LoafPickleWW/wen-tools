@@ -21,3 +21,18 @@ input[type="number"] {
 .has-tooltip:hover .tooltip {
   @apply visible z-10;
 }
+
+@keyframes ticker {
+  100% {
+    transform: translateX(+100%);
+  }
+  0% {
+    transform: translateX(-100%);
+  }
+}
+
+.ticker-text {
+  animation: ticker 10s linear infinite;
+  display: inline-block;
+  white-space: nowrap;
+}
