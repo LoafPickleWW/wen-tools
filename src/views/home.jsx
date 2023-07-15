@@ -106,7 +106,7 @@ export default function Home() {
             </svg>
           </a>
           <a
-            href="https://algoverify.me?ref=eviltools"
+            href="https://nf.domains?ref=eviltools"
             className="flex justify-center items-center opacity-80 hover:opacity-100 transition"
           >
             <svg viewBox="0 0 1260 400" fill="white" className="h-6 w-auto">
@@ -116,7 +116,7 @@ export default function Home() {
             </svg>
           </a>
           <a
-            href="https://nf.domains?ref=eviltools"
+            href="https://algoverify.me?ref=eviltools"
             className="flex justify-center text-center items-center opacity-80 hover:opacity-100 transition"
           >
             Algo<br/>Verify
