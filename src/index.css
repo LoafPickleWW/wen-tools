@@ -23,16 +23,17 @@ input[type="number"] {
 }
 
 @keyframes ticker {
-  100% {
-    transform: translateX(+100%);
-  }
   0% {
-    transform: translateX(-100%);
+    transform: translateX(-150%);
+  }
+  100% {
+    transform: translateX(+150%);
   }
 }
 
 .ticker-text {
-  animation: ticker 10s linear infinite;
+  animation: ticker 7s linear infinite;
   display: inline-block;
   white-space: nowrap;
+  width: max-content;
 }

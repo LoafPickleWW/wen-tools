@@ -39,7 +39,7 @@ export const Header = () => {
           </a>
         </p>
       </div>
-      <div className="bg-primary-yellow text-black flex py-1 justify-center items-center">
+      <div className="bg-secondary-yellow text-black flex py-1 justify-center items-center">
         <p className="text-center text-sm ticker-text">Big Announcement: Coming Soon</p>
       </div>
     </>
