@@ -41,7 +41,7 @@ export const Header = () => {
       </div>
       <div className="bg-secondary-yellow text-black flex py-1 justify-center items-center">
         <p className="text-center text-sm ticker-text">
-          We have partnered with Algorand's Top Marketplace {" "}
+          We have partnered with {" "}
           <a
             href="https://www.randgallery.com/algo-collection/"
             target="_blank"
