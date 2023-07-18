@@ -40,7 +40,17 @@ export const Header = () => {
         </p>
       </div>
       <div className="bg-secondary-yellow text-black flex py-1 justify-center items-center">
-        <p className="text-center text-sm ticker-text">Big Announcement: Coming Soon</p>
+        <p className="text-center text-sm ticker-text">
+          We have partnered with Algorand's Top Marketplace {" "}
+          <a
+            href="https://www.randgallery.com/algo-collection/"
+            target="_blank"
+            rel="noreferrer"
+            className="font-semibold hover:text-green-800 transition"
+          >
+            Rand!
+          </a>
+        </p>
       </div>
     </>
   );
