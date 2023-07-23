@@ -4,11 +4,13 @@ import { ImCross } from "react-icons/im";
 import { toast } from "react-toastify";
 import MyAlgoConnect from "@randlabs/myalgo-connect";
 import { PeraWalletConnect } from "@perawallet/connect";
+import { DeflyWalletConnect } from "@blockshake/defly-connect";
 
 const ConnectButton = () => {
   const [walletAddress, setWalletAddress] = useState("");
   const [showConnectPopup, setShowConnectPopup] = useState(false);
   const peraWallet = new PeraWalletConnect();
+  const deflyWallet = new DeflyWalletConnect();
 
   useEffect(() => {
     const userAddressLocal = localStorage.getItem("wallet");
@@ -46,12 +48,29 @@ const ConnectButton = () => {
     }
   };
 
-  const handleDisconnect = async () => {
-    if (localStorage.getItem("walletType") === "PERA") {
-      peraWallet.disconnect();
+  const connectToDefly = async () => {
+    try {
+      const accounts = await deflyWallet.connect();
+      setWalletAddress(accounts[0]);
+      localStorage.setItem("wallet", accounts[0]);
+      setShowConnectPopup(false);
+      toast.success("Connected!");
+      window.location.reload();
+    } catch (err) {
+      console.log(err);
     }
-    localStorage.removeItem("wallet");
-    localStorage.removeItem("walletType");
+  };
+
+  const handleDisconnect = async () => {
+    try {
+      peraWallet.disconnect();
+    } catch (error) {
+    }
+    try {
+      deflyWallet.disconnect();
+    } catch (error) {
+    }
+    localStorage.clear();
     setWalletAddress("");
     toast.success("Disconnected!");
     window.location.reload();
@@ -121,6 +140,14 @@ const ConnectButton = () => {
                     onClick={connectToPera}
                   >
                     Pera
+                  </button>
+                </div>
+                <div>
+                  <button
+                    className="bg-[#131313] px-5 py-2 rounded-md w-64 text-white  hover:scale-95 transition"
+                    onClick={connectToDefly}
+                  >
+                    Defly
                   </button>
                 </div>
                 <div>

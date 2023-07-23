@@ -30,8 +30,10 @@ import {
   CREATOR_WALLETS,
   PREFIXES,
 } from "./constants";
+import { DeflyWalletConnect } from "@blockshake/defly-connect";
 
 const peraWallet = new PeraWalletConnect({ shouldShowSignTxnToast: true });
+const deflyWallet = new DeflyWalletConnect({ shouldShowSignTxnToast: true });
 
 export function sliceIntoChunks(arr, chunkSize) {
   const res = [];
@@ -91,7 +93,32 @@ export async function signGroupTransactions(
         signedTxns = await peraWallet.signTransaction([multipleTxnGroups]);
       }
       txnsToValidate = signedTxns.flat();
-    } else {
+    } 
+    else if (localStorage.getItem("DeflyWallet.Wallet") != null) {
+      await deflyWallet.reconnectSession();
+      let multipleTxnGroups;
+      if (isMultipleGroup) {
+        multipleTxnGroups = groups.map((group) => {
+          return group.map((txn) => {
+            return { txn: txn, signers: [wallet] };
+          });
+        });
+      } else {
+        multipleTxnGroups = groups.map((txn) => {
+          return { txn: txn, signers: [wallet] };
+        });
+      }
+      if (multipleTxnGroups.length === 0) {
+        throw new Error("Transaction signing failed!");
+      }
+      if (isMultipleGroup) {
+        signedTxns = await deflyWallet.signTransaction(multipleTxnGroups);
+      } else {
+        signedTxns = await deflyWallet.signTransaction([multipleTxnGroups]);
+      }
+      txnsToValidate = signedTxns.flat();
+    } 
+    else {
       const myAlgoConnect = new MyAlgoConnect();
       signedTxns = await myAlgoConnect.signTransaction(
         groups.flat().map((txn) => txn.toByte())
@@ -478,6 +505,14 @@ export async function createDonationTransaction(amount) {
         { txn: txnsArray[1], signers: [wallet] },
       ];
       signedTxns = await peraWallet.signTransaction([multipleTxnGroups]);
+      txnsToValidate = signedTxns.flat();
+    } else if (localStorage.getItem("DeflyWallet.Wallet") != null) {
+      await deflyWallet.reconnectSession();
+      const multipleTxnGroups = [
+        { txn: txnsArray[0], signers: [wallet] },
+        { txn: txnsArray[1], signers: [wallet] },
+      ];
+      signedTxns = await deflyWallet.signTransaction([multipleTxnGroups]);
       txnsToValidate = signedTxns.flat();
     } else {
       const myAlgoConnect = new MyAlgoConnect();
