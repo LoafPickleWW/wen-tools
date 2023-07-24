@@ -156,7 +156,7 @@ const ConnectButton = () => {
                     className="bg-blue-600 px-5 py-2 rounded-md w-64 text-black  hover:scale-95 transition grayscale"
                   >
                     MyAlgo <br />
-                    (use only emergency)
+                    (Emergency Use Only)
                   </button>
                 </div>
               </div>
