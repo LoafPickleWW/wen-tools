@@ -394,7 +394,8 @@ export async function createAirdropTransactions(
   data_for_txns,
   nodeURL,
   assetDecimals,
-  mnemonic
+  mnemonic,
+  checkNoteHolder = true
 ) {
   const algodClient = new Algodv2("", nodeURL, {
     "User-Agent": "evil-tools",
@@ -417,7 +418,7 @@ export async function createAirdropTransactions(
   if (nfd_wallets.length > 0) {
     nfdDomains = await getAddressesFromNFDomain(nfd_wallets);
   }
-  const isHolder = await isWalletHolder(wallet);
+  const isHolder = checkNoteHolder === true ? await isWalletHolder(wallet) : false;
   for (let i = 0; i < data_for_txns.length; i++) {
     try {
       let tx;

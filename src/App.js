@@ -19,6 +19,7 @@ import { ARC19MintTool } from "./pages/ARC19MintTool";
 import { ARC19UpdateTool } from "./pages/ARC19UpdateTool";
 import { Download19CollectionData } from "./pages/Download19CollectionData";
 import { BatchDelete } from "./pages/BatchDelete";
+import { SimpleSendTool } from "./pages/SimpleSendTool";
 
 function App() {
   return (
@@ -40,6 +41,7 @@ function App() {
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/airdrop" element={<AirdropTool />} />
+          <Route path="/simple-send" element={<SimpleSendTool />} />
           <Route
             path="/arc69-collection-mint"
             element={<BatchCollectionMint />}
