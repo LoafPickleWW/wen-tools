@@ -22,6 +22,7 @@ export function SimpleSendTool() {
   const [assets, setAssets] = useState([]);
   const [receivers, setReceivers] = useState([]);
   const [amount, setAmount] = useState("");
+  const [note, setNote] = useState("");
 
   const [isTransactionsFinished, setIsTransactionsFinished] = useState(false);
   const [txSendingInProgress, setTxSendingInProgress] = useState(false);
@@ -43,6 +44,12 @@ export function SimpleSendTool() {
   }
 
   async function handleNext() {
+    const wallet = localStorage.getItem("wallet");
+    if (wallet === "" || wallet === undefined) {
+      throw new Error(
+        "You need to connect your wallet first, if using mnemonic too!"
+      );
+    }
     let splittedAssetIds;
     let splittedReceivers;
     let transaction_data = [];
@@ -90,6 +97,11 @@ export function SimpleSendTool() {
         });
       }
     }
+    if (note !== "") {
+      for (let i = 0; i < transaction_data.length; i++) {
+        transaction_data[i].note = note;
+      }
+    }
     console.log(transaction_data);
     try {
       const nodeURL = getNodeURL();
@@ -102,8 +114,7 @@ export function SimpleSendTool() {
           transaction_data,
           nodeURL,
           assetDecimals,
-          mnemonic,
-          false
+          mnemonic
         );
         setTxSendingInProgress(true);
         for (let i = 0; i < signedTransactions.length; i++) {
@@ -274,6 +285,30 @@ export function SimpleSendTool() {
           />
         </div>
       </div>
+      <label className="text-xs text-slate-400">
+        <p className="text-sm italic text-slate-400">
+          If you have any{" "}
+          <a
+            href="https://www.nftexplorer.app/collections?q=thurstober"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-slate-500 hover:text-slate-300 transition"
+          >
+            ASA from Thurstober Digital Studios
+          </a>
+          , you can use note field too.
+        </p>
+      </label>
+      <input
+        type="text"
+        placeholder="Note"
+        className="bg-gray-800 text-white border-2 border-gray-700 rounded-lg p-1 text-sm mx-auto placeholder:text-center placeholder:text-sm"
+        style={{ width: "10rem" }}
+        value={note}
+        onChange={(e) => {
+          setNote(e.target.value);
+        }}
+      />
       <div className="flex flex-col justify-center items-center w-[16rem]">
         {isTransactionsFinished ? (
           <>

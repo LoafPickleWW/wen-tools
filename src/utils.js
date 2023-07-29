@@ -93,8 +93,7 @@ export async function signGroupTransactions(
         signedTxns = await peraWallet.signTransaction([multipleTxnGroups]);
       }
       txnsToValidate = signedTxns.flat();
-    } 
-    else if (localStorage.getItem("DeflyWallet.Wallet") != null) {
+    } else if (localStorage.getItem("DeflyWallet.Wallet") != null) {
       await deflyWallet.reconnectSession();
       let multipleTxnGroups;
       if (isMultipleGroup) {
@@ -117,8 +116,7 @@ export async function signGroupTransactions(
         signedTxns = await deflyWallet.signTransaction([multipleTxnGroups]);
       }
       txnsToValidate = signedTxns.flat();
-    } 
-    else {
+    } else {
       const myAlgoConnect = new MyAlgoConnect();
       signedTxns = await myAlgoConnect.signTransaction(
         groups.flat().map((txn) => txn.toByte())
@@ -394,8 +392,7 @@ export async function createAirdropTransactions(
   data_for_txns,
   nodeURL,
   assetDecimals,
-  mnemonic,
-  checkNoteHolder = true
+  mnemonic
 ) {
   const algodClient = new Algodv2("", nodeURL, {
     "User-Agent": "evil-tools",
@@ -418,7 +415,7 @@ export async function createAirdropTransactions(
   if (nfd_wallets.length > 0) {
     nfdDomains = await getAddressesFromNFDomain(nfd_wallets);
   }
-  const isHolder = checkNoteHolder === true ? await isWalletHolder(wallet) : false;
+  const isHolder = await isWalletHolder(wallet);
   for (let i = 0; i < data_for_txns.length; i++) {
     try {
       let tx;
