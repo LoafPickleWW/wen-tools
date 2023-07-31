@@ -245,9 +245,9 @@ export function SimpleAirdropTool() {
           to the amount of transactions per upload.
         </span>
       </div>
-      <div className="container mx-auto grid sm:grid-cols-1 md:grid-cols-2 pt-2 gap-2">
+      <div className="container flex flex-col pt-2 gap-y-2">
         <div className="flex flex-col rounded border-gray-300  dark:border-gray-700">
-          <label className="text-xs text-slate-400">Creator Wallet(s)</label>
+          <label className="text-xs text-slate-400">Creator Wallet(s)*</label>
           <textarea
             id="creator_wallets_id"
             placeholder="one per line or comma separated"
@@ -262,12 +262,10 @@ export function SimpleAirdropTool() {
         <div className="flex flex-col rounded border-gray-300  dark:border-gray-700">
           <label className="text-xs text-slate-400">
             Unit-name Prefix(es)
-            <br />
-            (optional)
           </label>
           <textarea
             id="prefixes_id"
-            placeholder="one per line or comma separated"
+            placeholder="one per line or comma separated (optional)"
             className="bg-gray-800 text-white border-2 border-gray-700 rounded-lg p-1 text-sm mx-auto placeholder:text-center placeholder:text-sm"
             style={{ width: "10rem", height: "5rem" }}
             value={prefixes}
@@ -277,7 +275,7 @@ export function SimpleAirdropTool() {
           />
         </div>
         <div className="flex flex-col rounded border-gray-300  dark:border-gray-700">
-          <label className="text-xs text-slate-400">Amount</label>
+          <label className="text-xs text-slate-400">Amount*</label>
           <input
             type="number"
             className="bg-gray-800 text-white border-2 text-center border-gray-700 rounded-lg p-1 text-sm mx-auto placeholder:text-center placeholder:text-sm"
@@ -290,7 +288,7 @@ export function SimpleAirdropTool() {
           />
         </div>
         <div className="flex flex-col rounded border-gray-300  dark:border-gray-700">
-          <label className="text-xs text-slate-400">Asset ID</label>
+          <label className="text-xs text-slate-400">Asset ID*</label>
           <input
             type="text"
             className="bg-gray-800 text-white border-2 border-gray-700 rounded-lg p-1 text-sm mx-auto placeholder:text-center placeholder:text-sm"
@@ -305,11 +303,10 @@ export function SimpleAirdropTool() {
       <div className="flex flex-col rounded border-gray-300  dark:border-gray-700">
         <label className="text-xs text-slate-400">
           Note
-          <br />
-          (optional)
         </label>
         <input
           type="text"
+          placeholder="(optional)"
           className="bg-gray-800 text-white border-2 border-gray-700 rounded-lg p-1 text-sm mx-auto placeholder:text-center placeholder:text-sm"
           style={{ width: "10rem" }}
           value={note}
