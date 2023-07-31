@@ -222,7 +222,7 @@ export function SimpleAirdropTool() {
       <p>1- Connect Sender Wallet</p>
       <ConnectButton />
       <div className="flex flex-col items-center rounded bg-primary-green py-2 px-3 text-sm text-black">
-        <span>Infinity Mode (optional)</span>
+        <span>Infinity Mode - Recommended via Escrow</span>
         <div className="has-tooltip my-2">
           <span className="tooltip rounded shadow-lg p-1 bg-gray-100 text-red-500 -mt-8 max-w-xl">
             Evil Tools does not store any information on the website. As
