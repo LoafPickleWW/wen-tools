@@ -72,7 +72,7 @@ export default function Home() {
         <span className="text-xs text-center text-slate-300">
           or scan the QR code below with Pera
         </span>
-        <a href="algorand://VYPDFMVRXCI2Z4FPC2GHB4QC6PSCTEDAS4EU7GE3W4B3MRHXNZO6BB2RZA?amount=50000000&note=Evil%20Tools%20Donation">
+        <a href="algorand://VYPDFMVRXCI2Z4FPC2GHB4QC6PSCTEDAS4EU7GE3W4B3MRHXNZO6BB2RZA?amount=10000000&note=Evil%20Tools%20Donation">
           <img
             src="./qr.svg"
             alt="donate"

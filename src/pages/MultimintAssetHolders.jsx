@@ -111,7 +111,7 @@ export function MultimintAssetHolders() {
         toast.info("Please enter at least one asset id!");
       }
     } catch (error) {
-      console.log(error);
+      //console.log(error);
     }
   }
 

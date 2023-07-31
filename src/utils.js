@@ -695,7 +695,7 @@ export async function createAssetDeleteTransactions(assets, nodeURL, mnemonic) {
       fee_tx.group = groupID;
       txnsArray.push([asset_create_tx, fee_tx]);
     } catch (error) {
-      console.log(error);
+      //console.log(error);
     }
   }
   if (mnemonic !== "") {
@@ -809,11 +809,13 @@ export function createReserveAddressFromIpfsCid(ipfsCid) {
 export async function getAssetsFromAddress(address) {
   let threshold = 1000;
   let userAssets = await axios.get(
-    `${MAINNET_ALGONODE_INDEXER}/v2/accounts/${address}/assets`
+    `${getIndexerURL()}/v2/accounts/${address}/assets`
   );
   while (userAssets.data.assets.length === threshold) {
     const nextAssets = await axios.get(
-      `${MAINNET_ALGONODE_INDEXER}/v2/accounts/${address}/assets?next=${userAssets.data["next-token"]}`
+      `${getIndexerURL()}/v2/accounts/${address}/assets?next=${
+        userAssets.data["next-token"]
+      }`
     );
     userAssets.data.assets = userAssets.data.assets.concat(
       nextAssets.data.assets
@@ -829,11 +831,13 @@ export async function getAssetsFromAddress(address) {
 export async function getCreatedAssets(address) {
   let threshold = 1000;
   let createdAssets = await axios.get(
-    `${MAINNET_ALGONODE_INDEXER}/v2/accounts/${address}/created-assets?limit=${threshold}`
+    `${getIndexerURL()}/v2/accounts/${address}/created-assets?limit=${threshold}`
   );
   while (createdAssets.data.assets.length === threshold) {
     const nextAssets = await axios.get(
-      `${MAINNET_ALGONODE_INDEXER}/v2/accounts/${address}/created-assets?limit=1000&next=${createdAssets.data["next-token"]}`
+      `${getIndexerURL()}/v2/accounts/${address}/created-assets?limit=1000&next=${
+        createdAssets.data["next-token"]
+      }`
     );
     createdAssets.data.assets = createdAssets.data.assets.concat(
       nextAssets.data.assets
@@ -907,4 +911,16 @@ export async function getAddressesFromNFDomain(domains) {
     }
   }
   return nfdDomains;
+}
+
+export async function getOwnerAddressOfAsset(assetId) {
+  try {
+    const url =
+      getIndexerURL() +
+      `/v2/assets/${assetId}/balances?currency-greater-than=0`;
+    const response = await axios.get(url);
+    return response.data.balances[0].address;
+  } catch (err) {
+    return "";
+  }
 }

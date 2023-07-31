@@ -117,6 +117,14 @@ export const TOOLS = [
     category: "asset",
   },
   {
+    id: "simple_airdrop_tool",
+    label: "🪂 Simple Airdrop",
+    description:
+      "Premium Tool - Easily Airdrop a Token of any amount to holders from a creator wallet.",
+    path: "/simple-airdrop",
+    category: "asset",
+  },
+  {
     id: "simple_send_tool",
     label: "📨 Simple Send",
     description:

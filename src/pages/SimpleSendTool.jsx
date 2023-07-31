@@ -38,7 +38,7 @@ export function SimpleSendTool() {
       return assetInfo.params.decimals;
     } catch (error) {
       toast.error(
-        "Something went wrong! Please check your file and network type."
+        "Something went wrong! Please check your form and network type."
       );
     }
   }
@@ -102,7 +102,6 @@ export function SimpleSendTool() {
         transaction_data[i].note = note;
       }
     }
-    console.log(transaction_data);
     try {
       const nodeURL = getNodeURL();
       const algodClient = new algosdk.Algodv2("", nodeURL, {
@@ -146,7 +145,7 @@ export function SimpleSendTool() {
         toast.info("You can support by donating :)");
       } catch (error) {
         setTxSendingInProgress(false);
-        toast.error("Something went wrong! Please check your file!");
+        toast.error("Something went wrong! Please check your form!");
         return;
       }
     } catch (error) {
