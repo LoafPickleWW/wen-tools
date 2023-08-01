@@ -423,6 +423,7 @@ export async function createAirdropTransactions(
       if (data_for_txns[i].receiver.includes(".algo")) {
         data_for_txns[i].receiver = nfdDomains[data_for_txns[i].receiver];
       }
+      data_for_txns[i].note = data_for_txns[i].note || "";
       if (data_for_txns[i].asset_id === 1) {
         tx = makePaymentTxnWithSuggestedParamsFromObject({
           from: wallet,
