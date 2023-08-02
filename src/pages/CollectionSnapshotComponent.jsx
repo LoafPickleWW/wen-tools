@@ -1,13 +1,15 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { toast } from "react-toastify";
 import axios from "axios";
-import { getIndexerURL, getNfdDomain } from "../utils";
-import SelectNetworkComponent from "../components/SelectNetworkComponent";
 import {
-  TOOLS,
-  MAINNET_ALGONODE_INDEXER,
-  TESTNET_ALGONODE_INDEXER,
-} from "../constants";
+  getIndexerURL,
+  getNfdDomain,
+  isWalletHolder,
+  getRandCreatorListings,
+  getCreatedAssets,
+} from "../utils";
+import SelectNetworkComponent from "../components/SelectNetworkComponent";
+import { TOOLS } from "../constants";
 
 export function CollectionSnapshot() {
   const [creatorWallet, setCreatorWallet] = useState("");
@@ -15,10 +17,30 @@ export function CollectionSnapshot() {
   const [collectionData, setCollectionData] = useState([]);
   const [loading, setLoading] = useState(false);
   const [counter, setCounter] = useState(0);
+  const [checkRandSupport, setCheckRandSupport] = useState(false);
+  const [randCreatorListings, setRandCreatorListings] = useState([]);
+  const [isHorseHolder, setIsHorseHolder] = useState(false);
+
+  async function checkWalletIsOwner() {
+    const wallet = localStorage.getItem("wallet");
+    if (wallet) {
+      const isHolder = await isWalletHolder(wallet);
+      setIsHorseHolder(isHolder);
+    } else {
+      setIsHorseHolder(false);
+    }
+  }
+
+  useEffect(() => {
+    checkWalletIsOwner();
+  }, []);
 
   async function getCollectionData() {
     if (creatorWallet) {
-      let creatorWallets = creatorWallet.split(",").map((item) => item.trim()).filter((item) => item !== "");
+      let creatorWallets = creatorWallet
+        .split(",")
+        .map((item) => item.trim())
+        .filter((item) => item !== "");
       for (let i = 0; i < creatorWallets.length; i++) {
         if (creatorWallets[i].length !== 58) {
           toast.error("You have entered an invalid wallet address!");
@@ -26,41 +48,43 @@ export function CollectionSnapshot() {
         }
       }
       creatorWallets = [...new Set(creatorWallets)];
-      const host =
-        localStorage.getItem("networkType") === "mainnet"
-          ? MAINNET_ALGONODE_INDEXER
-          : TESTNET_ALGONODE_INDEXER;
       let createdAssets = [];
       for (let i = 0; i < creatorWallets.length; i++) {
-        try {
-          const url = `${host}/v2/accounts/${creatorWallets[i]}?exclude=assets,apps-local-state,created-apps,none`;
-          const response = await axios.get(url);
-          createdAssets = [
-            ...createdAssets,
-            ...response.data.account["created-assets"],
-          ];
-        } catch (err) {
-        }
+        createdAssets = createdAssets.concat(
+          await getCreatedAssets(creatorWallets[i])
+        );
       }
       if (unitNamePrefix) {
         const unitNamePrefixList = unitNamePrefix
           .split(",")
           .map((item) => item.trim().toLowerCase());
         createdAssets = createdAssets.filter((asset) => {
-          for (let i = 0; i < unitNamePrefixList.length; i++) {
-            if (
-              asset.params["unit-name"]
-                .toLowerCase()
-                .startsWith(unitNamePrefixList[i]) && asset.params["total"] === 1
-            ) {
-              return true;
-            }
-          }
-          return false;
+          const unitName = asset.unit_name.toLowerCase();
+          return unitNamePrefixList.some((prefix) =>
+            unitName.startsWith(prefix)
+          );
         });
       }
-      // just need assetid
-      createdAssets = createdAssets.map((asset) => asset.index);
+      createdAssets = createdAssets.map((asset) => asset.asset_id);
+      if (checkRandSupport) {
+        let randData = [];
+        for (let i = 0; i < creatorWallets.length; i++) {
+          let creatorListings = await getRandCreatorListings(creatorWallets[i]);
+          creatorListings = creatorListings.filter((listing) =>
+            createdAssets.includes(listing.assetId)
+          );
+          randData = randData.concat(creatorListings);
+        }
+        randData = randData.reduce((acc, listing) => {
+          if (acc[listing.sellerAddress]) {
+            acc[listing.sellerAddress].push(listing.assetId);
+          } else {
+            acc[listing.sellerAddress] = [listing.assetId];
+          }
+          return acc;
+        }, {});
+        setRandCreatorListings(randData);
+      }
       setCollectionData(createdAssets);
     } else {
       toast.info("Please enter at least one wallet address!");
@@ -73,8 +97,7 @@ export function CollectionSnapshot() {
       const url = `${indexerURL}/v2/assets/${asset_id}/balances?include-all=false&currency-greater-than=0`;
       const response = await axios.get(url);
       return response.data.balances[0].address;
-    } catch (err) {
-    }
+    } catch (err) {}
   }
 
   function convertToCSV(headers, objArray) {
@@ -91,9 +114,21 @@ export function CollectionSnapshot() {
       let line = "";
       line += key + ",";
       line += value.nfd + ",";
+      if (checkRandSupport) {
+        if (!value.listed_assets) {
+          value.listed_assets = [];
+        }
+        line += value.assets.length + value.listed_assets.length + ",";
+      }
       const asset_list = "[" + value.assets.map((asset) => asset).join(",");
-      line += '"' + asset_list + "]" + '",';
+      line += '"' + asset_list + ']",';
       line += value.assets.length + ",";
+      if (checkRandSupport) {
+        const listed_asset_list =
+          "[" + value.listed_assets.map((asset) => asset).join(",");
+        line += '"' + listed_asset_list + ']",';
+        line += value.listed_assets.length + ",";
+      }
       str += line + "\r\n";
     });
 
@@ -101,6 +136,7 @@ export function CollectionSnapshot() {
   }
 
   function exportCSVFile(headers, items, fileTitle) {
+    try {
     let csv = convertToCSV(headers, items);
     let blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
     if (navigator.msSaveBlob) {
@@ -116,6 +152,9 @@ export function CollectionSnapshot() {
         link.click();
         document.body.removeChild(link);
       }
+    }
+    } catch (err) {
+      toast.error("Something went wrong!");
     }
   }
 
@@ -137,11 +176,24 @@ export function CollectionSnapshot() {
           };
         }
       }
-      exportCSVFile(
-        ["wallet", "nfdomain", "assets", "assets_count"],
-        data,
-        "collection-snapshot.csv"
-      );
+      let headers = ["wallet", "nfdomain", "assets", "assets_count"];
+      if (checkRandSupport) {
+        headers = [
+          "wallet",
+          "nfdomain",
+          "total_assets_count",
+          "assets",
+          "assets_count",
+          "listed_assets",
+          "listed_assets_count",
+        ];
+        Object.entries(randCreatorListings).forEach(([key, value]) => {
+          if (data[key]) {
+            data[key].listed_assets = value;
+          }
+        });
+      }
+      exportCSVFile(headers, data, "collection-snapshot.csv");
       setLoading(false);
       setCounter(0);
       toast.success("Collection data downloaded successfully!");
@@ -174,8 +226,40 @@ export function CollectionSnapshot() {
         value={unitNamePrefix}
         onChange={(e) => setUnitNamePrefix(e.target.value)}
       />
+      <div className="flex flex-col items-start text-sm py-2 bg-black/20 px-4 rounded-xl">
+        {!isHorseHolder && (
+          <span className="text-slate-400 text-xs text-center mx-auto my-2">
+            If you hold any{" "}
+            <a
+              href="https://www.nftexplorer.app/collections?q=thurstober"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-slate-500 hover:text-slate-300 transition"
+            >
+              ASA from Thurstober Digital Studios
+            </a>
+            <br />
+            You can enjoy these Premium Filters:
+          </span>
+        )}
+        <div className="flex items-center justify-center">
+          <input
+            type="checkbox"
+            id="check_rand"
+            className="mr-2"
+            disabled={!isHorseHolder}
+            checked={checkRandSupport}
+            onChange={(e) => setCheckRandSupport(e.target.checked)}
+          />
+          <label htmlFor="check_rand" className="text-slate-300">
+            RandGallery listing support
+          </label>
+        </div>
+      </div>
       <p className="text-center text-xs mb-2 text-slate-300">
-        Separate multiple wallet addresses and prefixes with commas.<br/>Just works with 1/1 ASAs.
+        Separate multiple wallet addresses and prefixes with commas.
+        <br />
+        Just works with 1/1 ASAs.
       </p>
       <button
         className="mb-2 bg-secondary-green/80 hover:bg-secondary-green text-white text-base font-semibold rounded py-2 w-fit px-2 mx-auto mt-1 hover:scale-95 duration-700"

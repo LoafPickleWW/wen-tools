@@ -7,7 +7,11 @@ import {
   MAINNET_ALGONODE_INDEXER,
   TESTNET_ALGONODE_INDEXER,
 } from "../constants";
-import { getNfDomainsInBulk, isWalletHolder } from "../utils";
+import {
+  getNfDomainsInBulk,
+  isWalletHolder,
+  getRandListingAsset,
+} from "../utils";
 
 export function MultimintAssetHolders() {
   const [assetId, setAssetId] = useState("");
@@ -17,6 +21,7 @@ export function MultimintAssetHolders() {
   const [checkOptin, setCheckOptin] = useState(false);
   const [checkNfdOnly, setCheckNfdOnly] = useState(false);
   const [checkVerifiedOnly, setCheckVerifiedOnly] = useState(false);
+  const [checkRandSupport, setCheckRandSupport] = useState(false);
   const [isHorseHolder, setIsHorseHolder] = useState(false);
 
   async function checkWalletIsOwner() {
@@ -128,7 +133,7 @@ export function MultimintAssetHolders() {
       let line = "";
       for (let index in headers) {
         if (line !== "") line += ",";
-        line += array[i][headers[index]];
+        line += array[i][headers[index]] || "";
       }
       str += line + "\r";
     }
@@ -216,14 +221,31 @@ export function MultimintAssetHolders() {
         data = data.filter(
           (item) => item.twitter !== "" || item.discord !== ""
         );
-        headers = [
-          "wallet",
-          "nfdomain",
-          "asset_id",
-          "amount",
-          "twitter",
-          "discord",
-        ];
+        headers = [...headers, "twitter", "discord"];
+      }
+      if (checkRandSupport) {
+        toast.info("Fetching RandGallery listings...");
+        let assetIds = assetHolders.map((item) => item.asset_id);
+        assetIds = [...new Set(assetIds)];
+        for (let i = 0; i < assetIds.length; i++) {
+          const assetId = assetIds[i];
+          const randListing = await getRandListingAsset(assetId);
+          if (randListing.length > 0) {
+            for (let j = 0; j < randListing.length; j++) {
+              const sellerAddress = randListing[j].sellerAddress;
+              const escrowAddress = randListing[j].escrowAddress;
+              const index = data.findIndex(
+                (item) =>
+                  item.wallet === escrowAddress && item.asset_id === assetId
+              );
+              if (index !== -1) {
+                data[index].listed_on_rand = "YES";
+                data[index].wallet = sellerAddress;
+              }
+            }
+          }
+        }
+        headers = [...headers, "listed_on_rand"];
       }
       exportCSVFile(headers, data, "asset_holders.csv");
       setLoading(false);
@@ -302,6 +324,19 @@ export function MultimintAssetHolders() {
           />
           <label htmlFor="check_optin" className="text-slate-300">
             Verified with NFD's Twitter or Discord only
+          </label>
+        </div>
+        <div className="flex items-center justify-center">
+          <input
+            type="checkbox"
+            id="check_rand"
+            className="mr-2"
+            disabled={!isHorseHolder}
+            checked={checkRandSupport}
+            onChange={(e) => setCheckRandSupport(e.target.checked)}
+          />
+          <label htmlFor="check_rand" className="text-slate-300">
+            RandGallery listing support
           </label>
         </div>
       </div>

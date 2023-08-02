@@ -925,3 +925,35 @@ export async function getOwnerAddressOfAsset(assetId) {
     return "";
   }
 }
+
+export async function getRandListingAsset(assetId) {
+  try {
+    const url = `https://www.randswap.com/v1/listings/asset/${assetId}?token=EVIL_TOOLS_AXvH4zL08HYRqt58gv66ENBDclBnTgcW`;
+    const response = await axios.get(url);
+    const assetData = response.data.map((listing) => {
+      return {
+        sellerAddress: listing.sellerAddress,
+        escrowAddress: listing.escrowAddress,
+      };
+    });
+    return assetData;
+  } catch (err) {
+    return [];
+  }
+}
+
+export async function getRandCreatorListings(creatorWallet) {
+  try {
+    const url = `https://www.randswap.com/v1/listings/creator/${creatorWallet}?token=EVIL_TOOLS_AXvH4zL08HYRqt58gv66ENBDclBnTgcW`;
+    const response = await axios.get(url);
+    const assetData = response.data.map((listing) => {
+      return {
+        assetId: listing.assetId,
+        sellerAddress: listing.sellerAddress,
+      };
+    });
+    return assetData;
+  } catch (err) {
+    return "";
+  }
+}
