@@ -218,13 +218,18 @@ export function SimpleMint() {
         wallet,
         true
       );
+      if (!signedAssetTransaction) {
+        setProcessStep(2);
+        toast.error("Transaction not signed!");
+        return;
+      }
       const groups = sliceIntoChunks(signedAssetTransaction, 2);
       await algodClient.sendRawTransaction(groups[0]).do();
       toast.success("Asset created successfully!");
       setProcessStep(4);
     } catch (error) {
-      //console.log(error);
-      toast.error(error.message);
+      toast.error("Something went wrong!");
+      setProcessStep(2);
     }
   }
 
@@ -304,7 +309,7 @@ export function SimpleMint() {
                   totalSupply: e.target.value,
                 });
               }}
-              placeholder="Recommended: 1 for NFTS"
+              placeholder="Recommended: 1 for NFTs"
               value={formData.totalSupply}
             />
           </div>
@@ -325,7 +330,7 @@ export function SimpleMint() {
                 });
               }}
               value={formData.decimals}
-              placeholder="Recommended: 0 for NFTS"
+              placeholder="Recommended: 0 for NFTs"
             />
           </div>
         </div>

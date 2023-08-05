@@ -168,6 +168,3 @@ export const TOOLS = [
     category: "mint",
   },
 ];
-
-export const ARC19_URL_TEMPLATE =
-  "template-ipfs://{ipfscid:0:dag-pb:reserve:sha2-256}";

@@ -144,11 +144,9 @@ export function SimpleUpdate() {
         const arc69 = new Arc69();
         const selectNetwork = localStorage.getItem("networkType");
         assetMetadata = await arc69.fetch(assetID, selectNetwork);
-        console.log(assetMetadata);
         if (assetMetadata.attributes && !assetMetadata.properties) {
           assetMetadata.properties = assetMetadata.attributes;
           delete assetMetadata.attributes;
-          // make key-value pair
           assetMetadata.properties = assetMetadata.properties.reduce(
             (obj, item) => {
               obj[item.trait_type] = item.value;
@@ -327,13 +325,18 @@ export function SimpleUpdate() {
         wallet,
         true
       );
+      if (!signedAssetTransaction) {
+        setProcessStep(2);
+        toast.error("Transaction not signed!");
+        return;
+      }
       const groups = sliceIntoChunks(signedAssetTransaction, 2);
       await algodClient.sendRawTransaction(groups[0]).do();
       toast.success("Asset updated successfully!");
       setProcessStep(4);
     } catch (error) {
-      //console.log(error);
-      toast.error(error.message);
+      toast.error("Something went wrong!");
+      setProcessStep(2);
     }
   }
 
@@ -358,17 +361,40 @@ export function SimpleUpdate() {
           <p>Connect Creator Wallet</p>
           <ConnectButton />
           <div className="w-full px-10">
-            <p className="focus:outline-nonetext-sm font-light leading-tight text-slate-200 mt-4">
-              Asset:{" "}
-              <a
-                className="font-medium text-slate-300 underline hover:text-slate-400 transition"
-                href={`${getAlgoexplorerURL()}/asset/${assetID}`}
-                target="_blank"
-                rel="noreferrer"
+            <div className="flex flex-row justify-between">
+              <button
+                className="rounded bg-secondary-green hover:bg-secondary-green/80  text-white px-4 py-1 mt-2"
+                onClick={() => {
+                  setAssetID("");
+                  setFormData({
+                    name: "",
+                    unitName: "",
+                    totalSupply: 1,
+                    decimals: 0,
+                    image: null,
+                    format: "",
+                    freeze: false,
+                    clawback: false,
+                    image_url: "",
+                    image_mime_type: "",
+                    metadata: [],
+                  });
+                }}
               >
-                {assetID}
-              </a>
-            </p>
+                Back
+              </button>
+              <p className="focus:outline-nonetext-sm font-light leading-tight text-slate-200 mt-4">
+                Asset:{" "}
+                <a
+                  className="font-medium text-slate-300 underline hover:text-slate-400 transition"
+                  href={`${getAlgoexplorerURL()}/asset/${assetID}`}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  {assetID}
+                </a>
+              </p>
+            </div>
             <div className="mt-4 md:flex items-center text-start gap-x-4">
               <div className="flex flex-col">
                 <label className="mb-2 text-sm leading-none text-gray-200">
@@ -484,7 +510,7 @@ export function SimpleUpdate() {
                       )}`
                     : formData.image_url
                 }
-                className="h-60 mx-auto mt-4 object-contain rounded-md"
+                className="w-60 mx-auto mt-4 object-contain rounded-md"
                 alt="asset"
               />
             )}

@@ -25,7 +25,7 @@ export function SelectToolComponent() {
         Mint Tools
       </p>
       <div className="container mx-auto grid lg:grid-cols-3 gap-2">
-        {TOOLS.filter((tool) => tool.category === "mint" && tool.id !== "simple_mint" && tool.id !== "simple_update").map((tool) => (
+        {TOOLS.filter((tool) => tool.category === "mint").map((tool) => (
           <div className="col-span-3 xl:col-span-1 rounded-lg shadow bg-gray-800 border border-gray-700 hover:bg-gray-700">
             <Link to={tool.path} key={tool.id} className="block p-4">
               <h5 className="mb-2 text-2xl font-bold tracking-tight text-white">
