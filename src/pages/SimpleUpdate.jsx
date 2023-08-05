@@ -123,6 +123,9 @@ export function SimpleUpdate() {
       const response = await axios.get(`${nodeURL}/v2/assets/${assetID}`);
       const assetData = response.data;
       function findFormat(url) {
+        if (!url) {
+            throw new Error("This asset doesn't have a URL field.");
+        }
         if (url.includes("template-ipfs")) {
           return "ARC19";
         } else if (url.includes("#arc3")) {
