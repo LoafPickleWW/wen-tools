@@ -24,7 +24,7 @@ export function SimpleUpdate() {
     totalSupply: 1,
     decimals: 0,
     image: null,
-    format: "ARC19",
+    format: "",
     freeze: false,
     clawback: false,
     image_url: "",
@@ -127,8 +127,10 @@ export function SimpleUpdate() {
           return "ARC19";
         } else if (url.includes("#arc3")) {
           return "ARC3";
-        } else {
+        } else if (url.includes("ipfs://") || url.includes("ipfs/")) {
           return "ARC69";
+        } else {
+          throw new Error("Invalid asset or ARC format!");
         }
       }
       const assetFormat = findFormat(assetData.params["url"]);
@@ -142,6 +144,18 @@ export function SimpleUpdate() {
         const arc69 = new Arc69();
         const selectNetwork = localStorage.getItem("networkType");
         assetMetadata = await arc69.fetch(assetID, selectNetwork);
+        console.log(assetMetadata);
+        if (assetMetadata.attributes && !assetMetadata.properties) {
+          assetMetadata.properties = assetMetadata.attributes;
+          delete assetMetadata.attributes;
+          // make key-value pair
+          assetMetadata.properties = assetMetadata.properties.reduce(
+            (obj, item) => {
+              obj[item.trait_type] = item.value;
+              return obj;
+            }
+          );
+        }
       } else {
         if (assetData.params["url"].startsWith("ipfs://")) {
           assetMetadata = await axios
@@ -153,13 +167,16 @@ export function SimpleUpdate() {
             .then((res) => res.data);
         }
       }
-      let metadata = Object.keys(assetMetadata.properties).map((key, index) => {
-        return {
-          id: index,
-          category: key,
-          name: assetMetadata.properties[key],
-        };
-      });
+      let metadata = [];
+      if (assetMetadata.properties) {
+        metadata = Object.keys(assetMetadata.properties).map((key, index) => {
+          return {
+            id: index,
+            category: key,
+            name: assetMetadata.properties[key],
+          };
+        });
+      }
       if (assetMetadata.description) {
         metadata = [
           ...metadata,
@@ -194,7 +211,11 @@ export function SimpleUpdate() {
         image_mime_type: assetMetadata.image_mime_type,
       });
     } catch (error) {
-      console.log(error);
+      if (error.response) {
+        toast.error(error.response.data.message);
+      } else {
+        toast.error(error.message);
+      }
       setAssetID("");
     }
   }
