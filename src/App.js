@@ -21,6 +21,8 @@ import { Download19CollectionData } from "./pages/Download19CollectionData";
 import { BatchDelete } from "./pages/BatchDelete";
 import { SimpleSendTool } from "./pages/SimpleSendTool";
 import { SimpleAirdropTool } from "./pages/SimpleAirdropTool";
+import { SimpleMint } from "./pages/SimpleMint";
+import { SimpleUpdate } from "./pages/SimpleUpdate";
 
 function App() {
   return (
@@ -48,10 +50,7 @@ function App() {
             path="/arc69-collection-mint"
             element={<BatchCollectionMint />}
           />
-          <Route
-            path="/arc3-collection-mint"
-            element={<ARC3MintTool />}
-          />
+          <Route path="/arc3-collection-mint" element={<ARC3MintTool />} />
           <Route
             path="/arc69-metadata-update"
             element={<BatchCollectionMetadataUpdate />}
@@ -79,6 +78,8 @@ function App() {
             path="/multimint-asset-holders"
             element={<MultimintAssetHolders />}
           />
+          <Route path="/simple-mint" element={<SimpleMint />} />
+          <Route path="/simple-update" element={<SimpleUpdate />} />
           <Route path="*" element={<Home />} />
         </Routes>
         <Footer />

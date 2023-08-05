@@ -137,22 +137,22 @@ export function CollectionSnapshot() {
 
   function exportCSVFile(headers, items, fileTitle) {
     try {
-    let csv = convertToCSV(headers, items);
-    let blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-    if (navigator.msSaveBlob) {
-      navigator.msSaveBlob(blob, fileTitle);
-    } else {
-      let link = document.createElement("a");
-      if (link.download !== undefined) {
-        let url = URL.createObjectURL(blob);
-        link.setAttribute("href", url);
-        link.setAttribute("download", fileTitle);
-        link.style.visibility = "hidden";
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+      let csv = convertToCSV(headers, items);
+      let blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+      if (navigator.msSaveBlob) {
+        navigator.msSaveBlob(blob, fileTitle);
+      } else {
+        let link = document.createElement("a");
+        if (link.download !== undefined) {
+          let url = URL.createObjectURL(blob);
+          link.setAttribute("href", url);
+          link.setAttribute("download", fileTitle);
+          link.style.visibility = "hidden";
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+        }
       }
-    }
     } catch (err) {
       toast.error("Something went wrong!");
     }

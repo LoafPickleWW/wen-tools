@@ -153,6 +153,20 @@ export const TOOLS = [
     path: "/ipfs-upload",
     category: "asset",
   },
+  {
+    id: "simple_mint",
+    label: "🖨️ Simple Mint",
+    description: "Easily Mint an Asset on Algorand",
+    path: "/simple-mint",
+    category: "mint",
+  },
+  {
+    id: "simple_update",
+    label: "⬆️ Simple Update",
+    description: "Easily update your Mutable Assets",
+    path: "/simple-update",
+    category: "mint",
+  },
 ];
 
 export const ARC19_URL_TEMPLATE =

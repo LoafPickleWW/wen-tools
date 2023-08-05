@@ -12,6 +12,7 @@ import {
   mnemonicToSecretKey,
   signTransaction,
   makeAssetDestroyTxnWithSuggestedParamsFromObject,
+  decodeAddress,
 } from "algosdk";
 import axios from "axios";
 import { CID } from "multiformats/cid";
@@ -29,8 +30,11 @@ import {
   UPDATE_FEE_PER_ASA,
   CREATOR_WALLETS,
   PREFIXES,
+  IPFS_ENDPOINT,
 } from "./constants";
 import { DeflyWalletConnect } from "@blockshake/defly-connect";
+import * as mfsha2 from "multiformats/hashes/sha2";
+import * as digest from "multiformats/hashes/digest";
 
 const peraWallet = new PeraWalletConnect({ shouldShowSignTxnToast: true });
 const deflyWallet = new DeflyWalletConnect({ shouldShowSignTxnToast: true });
@@ -59,6 +63,16 @@ export function getIndexerURL() {
     return MAINNET_ALGONODE_INDEXER;
   } else {
     return TESTNET_ALGONODE_INDEXER;
+  }
+}
+
+export function getAlgoexplorerURL(){
+  const networkType = localStorage.getItem("networkType");
+  if (networkType === "mainnet") {
+    return "https://algoexplorer.io";
+  }
+  else{
+    return "https://testnet.algoexplorer.io";
   }
 }
 
@@ -138,7 +152,12 @@ export function SignWithMnemonics(txnsArray, sk) {
   return signedTxns;
 }
 
-export async function createAssetConfigArray(data_for_txns, nodeURL, mnemonic) {
+export async function createAssetConfigArray(
+  data_for_txns,
+  nodeURL,
+  mnemonic,
+  sign = true
+) {
   const algodClient = new Algodv2("", nodeURL, {
     "User-Agent": "evil-tools",
   });
@@ -146,7 +165,7 @@ export async function createAssetConfigArray(data_for_txns, nodeURL, mnemonic) {
   let txnsArray = [];
   const wallet = localStorage.getItem("wallet");
   for (let i = 0; i < data_for_txns.length; i++) {
-    let tx = makeAssetConfigTxnWithSuggestedParamsFromObject({
+    let asset_update_tx = makeAssetConfigTxnWithSuggestedParamsFromObject({
       from: wallet,
       assetIndex: parseInt(data_for_txns[i].asset_id),
       note: new TextEncoder().encode(JSON.stringify(data_for_txns[i].note)),
@@ -157,18 +176,38 @@ export async function createAssetConfigArray(data_for_txns, nodeURL, mnemonic) {
       suggestedParams: params,
       strictEmptyAddressChecking: false,
     });
-    txnsArray.push(tx);
+    const fee_tx = makePaymentTxnWithSuggestedParamsFromObject({
+      from: wallet,
+      to: MINT_FEE_WALLET,
+      amount: algosToMicroalgos(UPDATE_FEE_PER_ASA),
+      suggestedParams: params,
+      note: new TextEncoder().encode(
+        "via Evil Tools | " + Math.random().toString(36).substring(2)
+      ),
+    });
+    const groupID = computeGroupID([asset_update_tx, fee_tx]);
+    asset_update_tx.group = groupID;
+    fee_tx.group = groupID;
+    txnsArray.push([asset_update_tx, fee_tx]);
+  }
+  if (sign === false) {
+    return txnsArray;
   }
   if (mnemonic !== "") {
     if (mnemonic.split(" ").length !== 25) throw new Error("Invalid Mnemonic!");
     const { sk } = mnemonicToSecretKey(mnemonic);
-    return SignWithMnemonics(txnsArray, sk);
+    return SignWithMnemonics(txnsArray.flat(), sk);
   }
-  let txnsToValidate = await signGroupTransactions(txnsArray, wallet);
+  const txnsToValidate = await signGroupTransactions(txnsArray, wallet, true);
   return txnsToValidate;
 }
 
-export async function createAssetMintArray(data_for_txns, nodeURL, mnemonic) {
+export async function createAssetMintArray(
+  data_for_txns,
+  nodeURL,
+  mnemonic,
+  sign = true
+) {
   const algodClient = new Algodv2("", nodeURL, {
     "User-Agent": "evil-tools",
   });
@@ -211,6 +250,9 @@ export async function createAssetMintArray(data_for_txns, nodeURL, mnemonic) {
       txnsArray.push([asset_create_tx, fee_tx]);
     } catch (error) {}
   }
+  if (sign === false) {
+    return txnsArray;
+  }
   if (mnemonic !== "") {
     if (mnemonic.split(" ").length !== 25) throw new Error("Invalid Mnemonic!");
     const { sk } = mnemonicToSecretKey(mnemonic);
@@ -220,12 +262,7 @@ export async function createAssetMintArray(data_for_txns, nodeURL, mnemonic) {
   return txnsToValidate;
 }
 
-export async function createARC3AssetMintArray(
-  data_for_txns,
-  nodeURL,
-  token,
-  mnemonic
-) {
+export async function createARC3AssetMintArray(data_for_txns, nodeURL, token) {
   const wallet = localStorage.getItem("wallet");
   if (wallet === "" || wallet === undefined) {
     throw new Error("Wallet not found");
@@ -789,6 +826,20 @@ export async function pinJSONToIPFS(client, json) {
   }
 }
 
+export async function pinImageToIPFS(token, image) {
+  try {
+    const client = new Web3Storage({ token: token });
+    const cid = await client.put(
+      [new Blob([image])],
+      { wrapWithDirectory: false },
+      { contentType: image.type }
+    );
+    return cid;
+  } catch (error) {
+    throw new Error("IPFS pinning failed");
+  }
+}
+
 export function createReserveAddressFromIpfsCid(ipfsCid) {
   const decoded = CID.parse(ipfsCid);
   const version = decoded.version;
@@ -955,5 +1006,30 @@ export async function getRandCreatorListings(creatorWallet) {
     return assetData;
   } catch (err) {
     return "";
+  }
+}
+
+export async function getARC19AssetMetadataData(url, reserve) {
+  try {
+    let chunks = url.split("://");
+    if (chunks[0] === "template-ipfs" && chunks[1].startsWith("{ipfscid:")) {
+      const cidComponents = chunks[1].split(":");
+      const cidVersion = cidComponents[1];
+      const cidCodec = cidComponents[2];
+      let cidCodecCode;
+      if (cidCodec === "raw") {
+        cidCodecCode = 0x55;
+      } else if (cidCodec === "dag-pb") {
+        cidCodecCode = 0x70;
+      }
+      const addr = decodeAddress(reserve);
+      const mhdigest = digest.create(mfsha2.sha256.code, addr.publicKey);
+      const cid = CID.create(parseInt(cidVersion), cidCodecCode, mhdigest);
+      const response = await axios.get(`${IPFS_ENDPOINT}${cid}`);
+      return response.data;
+    }
+    return {};
+  } catch (error) {
+    return {};
   }
 }

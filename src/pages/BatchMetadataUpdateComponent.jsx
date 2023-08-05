@@ -3,7 +3,7 @@ import Papa from "papaparse";
 import ConnectButton from "../components/ConnectButton";
 import algosdk from "algosdk";
 import { toast } from "react-toastify";
-import { createAssetConfigArray, getNodeURL } from "../utils";
+import { createAssetConfigArray, getNodeURL, sliceIntoChunks } from "../utils";
 import SelectNetworkComponent from "../components/SelectNetworkComponent";
 import { TOOLS } from "../constants";
 import { AiOutlineInfoCircle } from "react-icons/ai";
@@ -80,11 +80,12 @@ export function BatchCollectionMetadataUpdate() {
       const algodClient = new algosdk.Algodv2("", nodeURL, {
         "User-Agent": "evil-tools",
       });
-      const signedTransactions = await createAssetConfigArray(
+      let signedTransactions = await createAssetConfigArray(
         data_for_txns,
         nodeURL,
         mnemonic
       );
+      signedTransactions = sliceIntoChunks(signedTransactions, 2);
       setTxSendingInProgress(true);
       for (let i = 0; i < signedTransactions.length; i++) {
         try {
@@ -232,6 +233,7 @@ export function BatchCollectionMetadataUpdate() {
           )}
         </div>
       )}
+      <p className="text-sm italic text-slate-200">Fee: 0.05A/ASA</p>
       <p className="text-center text-xs text-slate-400 py-2">
         ⚠️If you reload or close this page, you will lose your progress⚠️
         <br />

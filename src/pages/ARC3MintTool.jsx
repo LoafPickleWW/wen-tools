@@ -136,7 +136,6 @@ export function ARC3MintTool() {
         data_for_txns,
         nodeURL,
         token,
-        mnemonic
       );
       setAssetTransactions(unsignedAssetTransactions);
       setTxSendingInProgress(false);
