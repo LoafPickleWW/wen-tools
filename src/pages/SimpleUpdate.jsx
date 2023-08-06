@@ -5,7 +5,7 @@ import algosdk from "algosdk";
 import { toast } from "react-toastify";
 import axios from "axios";
 import {
-  pinImageToIPFS,
+  pinImageToNFTStorage,
   getNodeURL,
   updateARC19AssetMintArray,
   createAssetConfigArray,
@@ -15,7 +15,7 @@ import {
   getARC19AssetMetadataData,
   getAlgoexplorerURL,
 } from "../utils";
-import { TOOLS, IPFS_ENDPOINT } from "../constants";
+import { TOOLS, IPFS_ENDPOINT, NFT_STORAGE_KEY } from "../constants";
 
 export function SimpleUpdate() {
   const [formData, setFormData] = useState({
@@ -124,7 +124,7 @@ export function SimpleUpdate() {
       const assetData = response.data;
       function findFormat(url) {
         if (!url) {
-            throw new Error("This asset doesn't have a URL field.");
+          throw new Error("This asset doesn't have a URL field.");
         }
         if (url.includes("template-ipfs")) {
           return "ARC19";
@@ -259,7 +259,7 @@ export function SimpleUpdate() {
       if (formData.image && formData.format === "ARC19") {
         toast.info("Uploading the image to IPFS...");
         const imageURL =
-          "ipfs://" + (await pinImageToIPFS(token, formData.image));
+          "ipfs://" + (await pinImageToNFTStorage(token, formData.image));
         metadata.image = imageURL;
         metadata.image_mime_type = formData.image.type;
       } else if (formData.format === "ARC3") {
@@ -281,7 +281,8 @@ export function SimpleUpdate() {
         const unsignedAssetTransactions = await updateARC19AssetMintArray(
           [transaction_data],
           nodeURL,
-          token
+          token,
+          true
         );
         setTransaction(unsignedAssetTransactions);
       } else if (formData.format === "ARC69") {
@@ -302,8 +303,8 @@ export function SimpleUpdate() {
       toast.info("Please sign the transaction");
       setProcessStep(2);
     } catch (error) {
-      //console.log(error);
-      toast.error(error.message);
+      console.log(error);
+      toast.error("Something went wrong!");
     }
   }
 
@@ -477,32 +478,6 @@ export function SimpleUpdate() {
                 </div>
               </div>
             </div>
-            {/* <div className="mt-4 flex flex-row items-center text-start justify-center gap-x-4">
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input
-                  type="checkbox"
-                  className="sr-only peer"
-                  id="freeze"
-                  defaultChecked={formData.freeze}
-                />
-                <div className="w-11 h-6 bg-gray-400 peer-focus:outline-none peer-focus:ring-4  rounded-full peer  peer-checked:after:translate-x-full  after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all border-gray-600 peer-checked:bg-blue-600"></div>
-                <span className="ml-3 text-sm font-medium text-gray-300">
-                  Freeze
-                </span>
-              </label>
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input
-                  type="checkbox"
-                  className="sr-only peer"
-                  id="clawback"
-                  defaultChecked={formData.clawback}
-                />
-                <div className="w-11 h-6 bg-gray-400 peer-focus:outline-none peer-focus:ring-4  rounded-full peer  peer-checked:after:translate-x-full  after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all border-gray-600 peer-checked:bg-blue-600"></div>
-                <span className="ml-3 text-sm font-medium text-gray-300">
-                  Clawback
-                </span>
-              </label>
-            </div> */}
             {formData.image_url && (
               <img
                 src={
@@ -560,28 +535,56 @@ export function SimpleUpdate() {
             <>
               {formData.format === "ARC19" && (
                 <div className="flex flex-col mt-4">
-                  <label className="mb-1 text-sm leading-none text-gray-200">
-                    Web3 Storage Token*
-                  </label>
-                  <input
-                    type="text"
-                    id="ipfs-token"
-                    placeholder="token"
-                    className="w-48 bg-gray-300 text-sm font-medium text-center leading-none text-black placeholder:text-black/30 px-3 py-2 border rounded border-gray-200"
-                    value={token}
-                    onChange={(e) => setToken(e.target.value)}
-                  />
-                  <p className="text-xs text-slate-400 font-roboto mt-1">
-                    you can get your token{" "}
-                    <a
-                      href="https://web3.storage/docs/#get-an-api-token"
-                      target="_blank"
-                      className="text-primary-green/70 hover:text-secondary-green/80 transition"
-                      rel="noreferrer"
+                  <div className="flex flex-row items-center justify-center gap-x-2 mb-2">
+                    <input
+                      type="checkbox"
+                      id="ipfs"
+                      className="peer"
+                      value={token === NFT_STORAGE_KEY}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setToken(NFT_STORAGE_KEY);
+                        } else {
+                          setToken("");
+                        }
+                      }}
+                    />
+                    <label
+                      htmlFor="ipfs"
+                      className="text-sm font-light leading-tight text-gray-200 peer-checked:text-primary-green/80 peer-checked:font-medium cursor-pointer"
                     >
-                      here
-                    </a>
-                  </p>
+                      Use Public Token - Opt out from hosting your image
+                    </label>
+                  </div>
+                  {token !== NFT_STORAGE_KEY && (
+                    <>
+                      <p className="text-xs text-slate-400 font-roboto my-2">
+                        or
+                      </p>
+                      <label className="mb-1 text-sm leading-none text-gray-200">
+                        NFT Storage Token*
+                      </label>
+                      <input
+                        type="text"
+                        id="ipfs-token"
+                        placeholder="token"
+                        className="w-48 mx-auto bg-gray-300 text-sm font-medium text-center leading-none text-black placeholder:text-black/30 px-3 py-2 border rounded border-gray-200"
+                        value={token}
+                        onChange={(e) => setToken(e.target.value)}
+                      />
+                      <p className="text-xs text-slate-400 font-roboto mt-1">
+                        you can get your own token{" "}
+                        <a
+                          href="https://nft.storage/docs/#get-an-api-token"
+                          target="_blank"
+                          className="text-primary-green/70 hover:text-secondary-green/80 transition"
+                          rel="noreferrer"
+                        >
+                          here
+                        </a>
+                      </p>{" "}
+                    </>
+                  )}
                 </div>
               )}
               <div className="flex flex-col justify-center items-center w-[16rem]">

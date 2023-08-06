@@ -66,12 +66,11 @@ export function getIndexerURL() {
   }
 }
 
-export function getAlgoexplorerURL(){
+export function getAlgoexplorerURL() {
   const networkType = localStorage.getItem("networkType");
   if (networkType === "mainnet") {
     return "https://algoexplorer.io";
-  }
-  else{
+  } else {
     return "https://testnet.algoexplorer.io";
   }
 }
@@ -262,7 +261,12 @@ export async function createAssetMintArray(
   return txnsToValidate;
 }
 
-export async function createARC3AssetMintArray(data_for_txns, nodeURL, token) {
+export async function createARC3AssetMintArray(
+  data_for_txns,
+  nodeURL,
+  token,
+  isNFTStorage = false
+) {
   const wallet = localStorage.getItem("wallet");
   if (wallet === "" || wallet === undefined) {
     throw new Error("Wallet not found");
@@ -271,12 +275,17 @@ export async function createARC3AssetMintArray(data_for_txns, nodeURL, token) {
     "User-Agent": "evil-tools",
   });
   const params = await algodClient.getTransactionParams().do();
-  const client = new Web3Storage({ token: token });
   let txnsArray = [];
   for (let i = 0; i < data_for_txns.length; i++) {
     try {
       const jsonString = JSON.stringify(data_for_txns[i].ipfs_data);
-      const cid = await pinJSONToIPFS(client, jsonString);
+      let cid;
+      if (!isNFTStorage) {
+        const client = new Web3Storage({ token: token });
+        cid = await pinJSONToIPFS(client, jsonString);
+      } else {
+        cid = await pinJSONToNFTStorage(token, jsonString);
+      }
       data_for_txns[i].asset_url_section = "ipfs://" + cid;
       let asset_create_tx = makeAssetCreateTxnWithSuggestedParamsFromObject({
         from: wallet,
@@ -314,7 +323,12 @@ export async function createARC3AssetMintArray(data_for_txns, nodeURL, token) {
   return txnsArray;
 }
 
-export async function createARC19AssetMintArray(data_for_txns, nodeURL, token) {
+export async function createARC19AssetMintArray(
+  data_for_txns,
+  nodeURL,
+  token,
+  isNFTStorage = false
+) {
   const wallet = localStorage.getItem("wallet");
   if (wallet === "" || wallet === undefined) {
     throw new Error("Wallet not found");
@@ -326,12 +340,17 @@ export async function createARC19AssetMintArray(data_for_txns, nodeURL, token) {
     "User-Agent": "evil-tools",
   });
   const params = await algodClient.getTransactionParams().do();
-  const client = new Web3Storage({ token: token });
   let txnsArray = [];
   for (let i = 0; i < data_for_txns.length; i++) {
     try {
       const jsonString = JSON.stringify(data_for_txns[i].ipfs_data);
-      const cid = await pinJSONToIPFS(client, jsonString);
+      let cid;
+      if (!isNFTStorage) {
+        const client = new Web3Storage({ token: token });
+        cid = await pinJSONToIPFS(client, jsonString);
+      } else {
+        cid = await pinJSONToNFTStorage(token, jsonString);
+      }
       const { assetURL, reserveAddress } = createReserveAddressFromIpfsCid(cid);
       let asset_create_tx = makeAssetCreateTxnWithSuggestedParamsFromObject({
         from: wallet,
@@ -369,7 +388,12 @@ export async function createARC19AssetMintArray(data_for_txns, nodeURL, token) {
   return txnsArray;
 }
 
-export async function updateARC19AssetMintArray(data_for_txns, nodeURL, token) {
+export async function updateARC19AssetMintArray(
+  data_for_txns,
+  nodeURL,
+  token,
+  isNFTStorage = false
+) {
   const wallet = localStorage.getItem("wallet");
   if (wallet === "" || wallet === undefined) {
     throw new Error("Wallet not found");
@@ -381,14 +405,18 @@ export async function updateARC19AssetMintArray(data_for_txns, nodeURL, token) {
     "User-Agent": "evil-tools",
   });
   let params = await algodClient.getTransactionParams().do();
-  const client = new Web3Storage({ token: token });
   let txnsArray = [];
   for (let i = 0; i < data_for_txns.length; i++) {
     try {
       const jsonString = JSON.stringify(data_for_txns[i].ipfs_data);
-      const cid = await pinJSONToIPFS(client, jsonString);
+      let cid;
+      if (!isNFTStorage) {
+        const client = new Web3Storage({ token: token });
+        cid = await pinJSONToIPFS(client, jsonString);
+      } else {
+        cid = await pinJSONToNFTStorage(token, jsonString);
+      }
       const { reserveAddress } = createReserveAddressFromIpfsCid(cid);
-
       let update_tx = makeAssetConfigTxnWithSuggestedParamsFromObject({
         from: wallet,
         assetIndex: parseInt(data_for_txns[i].asset_id),
@@ -1031,5 +1059,32 @@ export async function getARC19AssetMetadataData(url, reserve) {
     return {};
   } catch (error) {
     return {};
+  }
+}
+
+export async function pinJSONToNFTStorage(token, json) {
+  try {
+    const response = await axios.post("https://api.nft.storage/upload", json, {
+      headers: {
+        Authorization: "Bearer " + token,
+      },
+    });
+    console.log(response);
+    return response.data.value.cid;
+  } catch (error) {
+    throw new Error("IPFS pinning failed");
+  }
+}
+
+export async function pinImageToNFTStorage(token, image) {
+  try {
+    const response = await axios.post("https://api.nft.storage/upload", image, {
+      headers: {
+        Authorization: "Bearer " + token,
+      },
+    });
+    return response.data.value.cid;
+  } catch (error) {
+    throw new Error("IPFS pinning failed");
   }
 }

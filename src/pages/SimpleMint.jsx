@@ -4,15 +4,15 @@ import SelectNetworkComponent from "../components/SelectNetworkComponent";
 import algosdk from "algosdk";
 import { toast } from "react-toastify";
 import {
-  pinImageToIPFS,
   getNodeURL,
   createARC3AssetMintArray,
   createARC19AssetMintArray,
   createAssetMintArray,
   signGroupTransactions,
   sliceIntoChunks,
+  pinImageToNFTStorage,
 } from "../utils";
-import { TOOLS } from "../constants";
+import { TOOLS, NFT_STORAGE_KEY } from "../constants";
 
 export function SimpleMint() {
   const [formData, setFormData] = useState({
@@ -147,7 +147,7 @@ export function SimpleMint() {
       });
       toast.info("Uploading the image to IPFS...");
       const imageURL =
-        "ipfs://" + (await pinImageToIPFS(token, formData.image));
+        "ipfs://" + (await pinImageToNFTStorage(token, formData.image));
       const nodeURL = getNodeURL();
       metadata.image = imageURL;
       let metadataForIPFS = {
@@ -164,13 +164,15 @@ export function SimpleMint() {
         unsignedAssetTransaction = await createARC3AssetMintArray(
           [metadataForIPFS],
           nodeURL,
-          token
+          token,
+          true
         );
       } else if (formData.format === "ARC19") {
         unsignedAssetTransaction = await createARC19AssetMintArray(
           [metadataForIPFS],
           nodeURL,
-          token
+          token,
+          true
         );
       } else if (formData.format === "ARC69") {
         metadataForIPFS = {
@@ -192,8 +194,8 @@ export function SimpleMint() {
       toast.info("Please sign the transaction");
       setProcessStep(2);
     } catch (error) {
-      //console.log(error);
-      toast.error(error.message);
+      console.log(error);
+      toast.error("Something went wrong!");
     }
   }
 
@@ -451,28 +453,54 @@ export function SimpleMint() {
         </button>
       </div>
       <div className="flex flex-col mt-4">
-        <label className="mb-1 text-sm leading-none text-gray-200">
-          Web3 Storage Token*
-        </label>
-        <input
-          type="text"
-          id="ipfs-token"
-          placeholder="token"
-          className="w-48 bg-gray-300 text-sm font-medium text-center leading-none text-black placeholder:text-black/30 px-3 py-2 border rounded border-gray-200"
-          value={token}
-          onChange={(e) => setToken(e.target.value)}
-        />
-        <p className="text-xs text-slate-400 font-roboto mt-1">
-          you can get your token{" "}
-          <a
-            href="https://web3.storage/docs/#get-an-api-token"
-            target="_blank"
-            className="text-primary-green/70 hover:text-secondary-green/80 transition"
-            rel="noreferrer"
+        <div className="flex flex-row items-center justify-center gap-x-2">
+          <input
+            type="checkbox"
+            id="ipfs"
+            className="peer"
+            value={token === NFT_STORAGE_KEY}
+            onChange={(e) => {
+              if (e.target.checked) {
+                setToken(NFT_STORAGE_KEY);
+              } else {
+                setToken("");
+              }
+            }}
+          />
+          <label
+            htmlFor="ipfs"
+            className="text-sm font-light leading-tight text-gray-200 peer-checked:text-primary-green/80 peer-checked:font-medium cursor-pointer"
           >
-            here
-          </a>
-        </p>
+            Use Public Token - Opt out from hosting your image
+          </label>
+        </div>
+        {token !== NFT_STORAGE_KEY && (
+          <>
+            <p className="text-xs text-slate-400 font-roboto my-2">or</p>
+            <label className="mb-1 text-sm leading-none text-gray-200">
+              NFT Storage Token*
+            </label>
+            <input
+              type="text"
+              id="ipfs-token"
+              placeholder="token"
+              className="w-48 mx-auto bg-gray-300 text-sm font-medium text-center leading-none text-black placeholder:text-black/30 px-3 py-2 border rounded border-gray-200"
+              value={token}
+              onChange={(e) => setToken(e.target.value)}
+            />
+            <p className="text-xs text-slate-400 font-roboto mt-1">
+              you can get your own token{" "}
+              <a
+                href="https://nft.storage/docs/#get-an-api-token"
+                target="_blank"
+                className="text-primary-green/70 hover:text-secondary-green/80 transition"
+                rel="noreferrer"
+              >
+                here
+              </a>
+            </p>{" "}
+          </>
+        )}
       </div>
       <div className="flex flex-col justify-center items-center w-[16rem]">
         {processStep === 4 ? (
