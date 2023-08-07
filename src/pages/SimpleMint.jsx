@@ -526,7 +526,7 @@ export function SimpleMint() {
                 rel="noreferrer"
                 className="text-primary-yellow hover:text-primary-yellow/80 transition text-lg py-2 animate-pulse"
               >
-                View the Created Asset
+                View the Created Asset (May take up to 30s to Load)
               </a>
             )}
             <p className="pb-2 text-slate-400 text-xs">
