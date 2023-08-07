@@ -5,6 +5,9 @@ export function SelectToolComponent() {
   return (
     <div className="text-center">
       <p className="col-span-3 text-center text-2xl font-bold tracking-tight text-white">
+        Evil Tools - Our Most Devious Plot to Onboard New Users to Algorand!
+      </p>
+      <p className="col-span-3 text-center text-2xl font-bold tracking-tight text-white">
         Asset Tools
       </p>
       <div className="container mx-auto grid lg:grid-cols-3 gap-2">
