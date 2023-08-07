@@ -12,6 +12,7 @@ import {
   sliceIntoChunks,
   pinImageToNFTStorage,
   getAssetPreviewURL,
+  getTokenPreviewURL,
 } from "../utils";
 import { TOOLS, NFT_STORAGE_KEY } from "../constants";
 
@@ -375,7 +376,9 @@ export function SimpleMint() {
                 value={formData.format}
               >
                 <option value="ARC3">ARC3 - Unchangeable</option>
-                <option value="ARC19">ARC19 - Changeable Images and Data</option>
+                <option value="ARC19">
+                  ARC19 - Changeable Images and Data
+                </option>
                 <option value="ARC69">ARC69- Changeable Data</option>
                 <option value="Token">Token</option>
               </select>
@@ -514,7 +517,11 @@ export function SimpleMint() {
             </p>
             {createdAssetID && (
               <a
-                href={getAssetPreviewURL(createdAssetID)}
+                href={
+                  formData.format === "Token"
+                    ? getTokenPreviewURL(createdAssetID)
+                    : getAssetPreviewURL(createdAssetID)
+                }
                 target="_blank"
                 rel="noreferrer"
                 className="text-primary-yellow hover:text-primary-yellow/80 transition text-lg py-2 animate-pulse"
