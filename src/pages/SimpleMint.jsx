@@ -11,6 +11,7 @@ import {
   signGroupTransactions,
   sliceIntoChunks,
   pinImageToNFTStorage,
+  getAssetPreviewURL,
 } from "../utils";
 import { TOOLS, NFT_STORAGE_KEY } from "../constants";
 
@@ -40,6 +41,7 @@ export function SimpleMint() {
   const [token, setToken] = useState("");
   const [processStep, setProcessStep] = useState(0);
   const [transaction, setTransaction] = useState(null);
+  const [createdAssetID, setCreatedAssetID] = useState(null);
 
   const TraitMetadatInputField = (id) => {
     return (
@@ -120,17 +122,20 @@ export function SimpleMint() {
         formData.unitName === "" ||
         formData.totalSupply === "" ||
         formData.decimals === "" ||
-        formData.image === null ||
         token === ""
       ) {
         toast.error("Please fill all the required fields");
+        return;
+      }
+      if (formData.format !== "Token" && formData.image === null) {
+        toast.error("Please select an image");
         return;
       }
       setProcessStep(1);
       let metadata = {
         name: formData.name,
         standard: formData.format.toLocaleLowerCase(),
-        image_mime_type: formData.image.type,
+        image_mime_type: formData.image ? formData.image.type : "",
         properties: {},
       };
       formData.metadata.forEach((data) => {
@@ -145,9 +150,14 @@ export function SimpleMint() {
           }
         }
       });
-      toast.info("Uploading the image to IPFS...");
-      const imageURL =
-        "ipfs://" + (await pinImageToNFTStorage(token, formData.image));
+      let imageURL;
+      if (formData.format === "Token" && formData.image === null) {
+        imageURL = "";
+      } else {
+        toast.info("Uploading the image to IPFS...");
+        imageURL =
+          "ipfs://" + (await pinImageToNFTStorage(token, formData.image));
+      }
       const nodeURL = getNodeURL();
       metadata.image = imageURL;
       let metadataForIPFS = {
@@ -174,7 +184,7 @@ export function SimpleMint() {
           token,
           true
         );
-      } else if (formData.format === "ARC69") {
+      } else if (formData.format === "ARC69" || formData.format === "Token") {
         metadataForIPFS = {
           ...metadataForIPFS,
           asset_note: metadata,
@@ -226,7 +236,9 @@ export function SimpleMint() {
         return;
       }
       const groups = sliceIntoChunks(signedAssetTransaction, 2);
-      await algodClient.sendRawTransaction(groups[0]).do();
+      const { txId } = await algodClient.sendRawTransaction(groups[0]).do();
+      const result = await algosdk.waitForConfirmation(algodClient, txId, 3);
+      setCreatedAssetID(result["asset-index"]);
       toast.success("Asset created successfully!");
       setProcessStep(4);
     } catch (error) {
@@ -329,7 +341,7 @@ export function SimpleMint() {
         <div className="mt-4 md:flex items-center text-start gap-x-4">
           <div className="flex flex-col md:mt-0 mt-4">
             <label className="mb-2 text-sm leading-none text-gray-200">
-              Select Image*
+              Select Image{formData.format !== "Token" && "*"}
             </label>
             <input
               className="block w-64 text-sm border border-gray-200 rounded cursor-pointer bg-gray-300  focus:outline-none  text-black font-medium"
@@ -348,7 +360,7 @@ export function SimpleMint() {
           </div>
           <div className="flex flex-col md:mt-0 mt-4">
             <label className="mb-2 text-sm leading-none text-gray-200">
-              ARC format*
+              Asset format*
             </label>
             <div className="inline-flex items-center space-x-2">
               <select
@@ -363,8 +375,9 @@ export function SimpleMint() {
                 value={formData.format}
               >
                 <option value="ARC3">ARC3 - Unchangeable</option>
-                <option value="ARC19">ARC19 - Fully Changeable</option>
-                <option value="ARC69">ARC69 - Changeable Data</option>
+                <option value="ARC19">ARC19 - Changeable Images and Data</option>
+                <option value="ARC69">ARC69- Changeable Data</option>
+                <option value="Token">Token</option>
               </select>
             </div>
           </div>
@@ -495,10 +508,20 @@ export function SimpleMint() {
       <div className="flex flex-col justify-center items-center w-[16rem]">
         {processStep === 4 ? (
           <>
-            <p className="pt-4 text-green-500 animate-pulse text-sm">
+            <p className="pt-4 text-green-500 text-sm">
               Asset created successfully!
               <br />
             </p>
+            {createdAssetID && (
+              <a
+                href={getAssetPreviewURL(createdAssetID)}
+                target="_blank"
+                rel="noreferrer"
+                className="text-primary-yellow hover:text-primary-yellow/80 transition text-lg py-2 animate-pulse"
+              >
+                View the Created Asset
+              </a>
+            )}
             <p className="pb-2 text-slate-400 text-xs">
               You can reload the page if you want to use again.
             </p>
@@ -506,7 +529,7 @@ export function SimpleMint() {
         ) : processStep === 3 ? (
           <>
             <p className="pt-4 text-green-500 animate-pulse text-sm">
-              Sending transactions...
+              Sending transaction...
             </p>
           </>
         ) : processStep === 2 ? (
@@ -541,7 +564,9 @@ export function SimpleMint() {
           </button>
         )}
       </div>
-      <p className="text-sm italic text-slate-200">*It is recommended that Creators Host their own Files</p>
+      <p className="text-sm italic text-slate-200">
+        *It is recommended that Creators Host their own Files
+      </p>
       <p className="text-sm italic text-slate-200">Fee: 0.1A</p>
       <p className="text-center text-xs text-slate-400 py-2">
         ⚠️If you reload or close this page, you will lose your progress⚠️

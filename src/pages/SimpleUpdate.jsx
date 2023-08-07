@@ -13,7 +13,7 @@ import {
   sliceIntoChunks,
   Arc69,
   getARC19AssetMetadataData,
-  getAlgoexplorerURL,
+  getAssetPreviewURL,
 } from "../utils";
 import { TOOLS, IPFS_ENDPOINT, NFT_STORAGE_KEY } from "../constants";
 
@@ -381,7 +381,7 @@ export function SimpleUpdate() {
                 Asset:{" "}
                 <a
                   className="font-medium text-slate-300 underline hover:text-slate-400 transition"
-                  href={`${getAlgoexplorerURL()}/asset/${assetID}`}
+                  href={`${getAssetPreviewURL()}/asset/${assetID}`}
                   target="_blank"
                   rel="noreferrer"
                 >
@@ -580,10 +580,20 @@ export function SimpleUpdate() {
               <div className="flex flex-col justify-center items-center w-[16rem]">
                 {processStep === 4 ? (
                   <>
-                    <p className="pt-4 text-green-500 animate-pulse text-sm">
+                    <p className="pt-4 text-green-500 text-sm">
                       Asset updated successfully!
                       <br />
                     </p>
+                    {assetID && (
+                      <a
+                        href={getAssetPreviewURL(assetID)}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-primary-yellow hover:text-primary-yellow/80 transition text-lg py-2 animate-pulse"
+                      >
+                        View the Updated Asset
+                      </a>
+                    )}
                     <p className="pb-2 text-slate-400 text-xs">
                       You can reload the page if you want to use again.
                     </p>
@@ -645,7 +655,9 @@ export function SimpleUpdate() {
           </button>
         </div>
       )}
-      <p className="text-sm italic text-slate-200">*It is recommended that Creators Host their own Files</p>
+      <p className="text-sm italic text-slate-200">
+        *It is recommended that Creators Host their own Files
+      </p>
       <p className="text-sm italic text-slate-200">Fee: 0.05A</p>
       <p className="text-center text-xs text-slate-400 py-2">
         ⚠️If you reload or close this page, you will lose your progress⚠️

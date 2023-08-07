@@ -66,12 +66,12 @@ export function getIndexerURL() {
   }
 }
 
-export function getAlgoexplorerURL() {
+export function getAssetPreviewURL(assetID) {
   const networkType = localStorage.getItem("networkType");
   if (networkType === "mainnet") {
-    return "https://algoexplorer.io";
+    return "https://www.nftexplorer.app/asset/" + assetID;
   } else {
-    return "https://testnet.algoexplorer.io";
+    return "https://testnet.explorer.perawallet.app/assets/" + assetID;
   }
 }
 
@@ -223,7 +223,9 @@ export async function createAssetMintArray(
         manager: wallet,
         assetName: data_for_txns[i].asset_name,
         unitName: data_for_txns[i].unit_name,
-        total: parseInt(data_for_txns[i].total_supply),
+        total:
+          parseInt(data_for_txns[i].total_supply) *
+          10 ** parseInt(data_for_txns[i].decimals),
         decimals: parseInt(data_for_txns[i].decimals),
         reserve: wallet,
         freeze: data_for_txns[i].has_freeze === "Y" ? wallet : undefined,
@@ -292,7 +294,9 @@ export async function createARC3AssetMintArray(
         manager: wallet,
         assetName: data_for_txns[i].asset_name,
         unitName: data_for_txns[i].unit_name,
-        total: parseInt(data_for_txns[i].total_supply),
+        total:
+          parseInt(data_for_txns[i].total_supply) *
+          10 ** parseInt(data_for_txns[i].decimals),
         decimals: parseInt(data_for_txns[i].decimals),
         reserve: wallet,
         freeze: data_for_txns[i].has_freeze === "Y" ? wallet : undefined,
@@ -357,7 +361,9 @@ export async function createARC19AssetMintArray(
         manager: wallet,
         assetName: data_for_txns[i].asset_name,
         unitName: data_for_txns[i].unit_name,
-        total: parseInt(data_for_txns[i].total_supply),
+        total:
+          parseInt(data_for_txns[i].total_supply) *
+          10 ** parseInt(data_for_txns[i].decimals),
         decimals: parseInt(data_for_txns[i].decimals),
         reserve: reserveAddress,
         freeze: data_for_txns[i].has_freeze === "Y" ? wallet : undefined,
