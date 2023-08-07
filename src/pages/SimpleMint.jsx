@@ -362,9 +362,9 @@ export function SimpleMint() {
                 }}
                 value={formData.format}
               >
-                <option value="ARC3 - Unchangeable">ARC3</option>
-                <option value="ARC19 - Changing Images and Data">ARC19</option>
-                <option value="ARC69- Changing Data">ARC69</option>
+                <option value="ARC3">ARC3 - Unchangable</option>
+                <option value="ARC19">ARC19 - Changing Image and Data</option>
+                <option value="ARC69">ARC69 - Changing Data</option>
               </select>
             </div>
           </div>
