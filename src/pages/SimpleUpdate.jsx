@@ -381,7 +381,7 @@ export function SimpleUpdate() {
                 Asset:{" "}
                 <a
                   className="font-medium text-slate-300 underline hover:text-slate-400 transition"
-                  href={`${getAssetPreviewURL()}/asset/${assetID}`}
+                  href={getAssetPreviewURL(assetID)}
                   target="_blank"
                   rel="noreferrer"
                 >
