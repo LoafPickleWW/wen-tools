@@ -240,16 +240,6 @@ export function SimpleMint() {
       <p className="text-2xl font-bold mt-1">
         {TOOLS.find((tool) => tool.path === window.location.pathname).label}
       </p>
-      <button className="text-center text-lg text-pink-200 mt-2 bg-pink-700 px-4 py-2 rounded">
-        <a
-          className="hover:text-pink-400 transition"
-          href="https://loafpickle.medium.com/evil-tools-custom-mass-airdrop-3d5902dd1c94"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          INSTRUCTIONS
-        </a>
-      </button>
       <SelectNetworkComponent />
       <p>Connect Creator Wallet</p>
       <ConnectButton />
@@ -372,9 +362,9 @@ export function SimpleMint() {
                 }}
                 value={formData.format}
               >
-                <option value="ARC3">ARC3</option>
-                <option value="ARC19">ARC19</option>
-                <option value="ARC69">ARC69</option>
+                <option value="ARC3 - Unchangeable">ARC3</option>
+                <option value="ARC19 - Changing Images and Data">ARC19</option>
+                <option value="ARC69- Changing Data">ARC69</option>
               </select>
             </div>
           </div>
@@ -471,14 +461,14 @@ export function SimpleMint() {
             htmlFor="ipfs"
             className="text-sm font-light leading-tight text-gray-200 peer-checked:text-primary-green/80 peer-checked:font-medium cursor-pointer"
           >
-            Use Public Token - Opt out from hosting your image
+            Use Public Token - Opt out from hosting your image*
           </label>
         </div>
         {token !== NFT_STORAGE_KEY && (
           <>
             <p className="text-xs text-slate-400 font-roboto my-2">or</p>
             <label className="mb-1 text-sm leading-none text-gray-200">
-              NFT Storage Token*
+              NFT Storage Token**
             </label>
             <input
               type="text"
@@ -489,7 +479,7 @@ export function SimpleMint() {
               onChange={(e) => setToken(e.target.value)}
             />
             <p className="text-xs text-slate-400 font-roboto mt-1">
-              you can get your own token{" "}
+              **You can get your own token{" "}
               <a
                 href="https://nft.storage/docs/#get-an-api-token"
                 target="_blank"
@@ -551,6 +541,7 @@ export function SimpleMint() {
           </button>
         )}
       </div>
+      <p className="text-sm italic text-slate-200">*It is recommended that Creators Host their own Files</p>
       <p className="text-sm italic text-slate-200">Fee: 0.1A</p>
       <p className="text-center text-xs text-slate-400 py-2">
         ⚠️If you reload or close this page, you will lose your progress⚠️
