@@ -203,7 +203,7 @@ export function SimpleAirdropTool() {
             rel="noopener noreferrer"
             className="text-slate-500 hover:text-slate-300 transition"
           >
-            ASA from Thurstober Digital Studios
+            Horse from Thurstober Digital Studios
           </a>
           , you can use this tool.
         </p>
