@@ -551,7 +551,7 @@ export function SimpleMint() {
                 sendTransaction();
               }}
             >
-              Sign
+              Step 2: Sign
             </button>
           </>
         ) : processStep === 1 ? (
@@ -567,7 +567,7 @@ export function SimpleMint() {
             className="rounded bg-secondary-green hover:bg-secondary-green/80 transition text-white/90 font-semibold px-4 py-1 mt-2"
             onClick={mint}
           >
-            Mint
+            Step 1: Mint
           </button>
         )}
       </div>
