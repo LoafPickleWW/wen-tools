@@ -124,7 +124,8 @@ export function SimpleUpdate() {
       const assetData = response.data;
       function findFormat(url) {
         if (!url) {
-          throw new Error("This asset doesn't have a URL field.");
+          //throw new Error("This asset doesn't have a URL field.");
+          return "ARC69";
         }
         if (url.includes("template-ipfs")) {
           return "ARC19";
@@ -480,6 +481,11 @@ export function SimpleUpdate() {
                 }
                 className="w-60 mx-auto mt-4 object-contain rounded-md"
                 alt="asset"
+                id="asset_image"
+                onError={(e) => {
+                  e.target.onerror = null;
+                  window.document.getElementById("asset_image").remove();
+                }}
               />
             )}
             <p className="focus:outline-nonetext-sm font-light leading-tight text-gray-200 mt-4">

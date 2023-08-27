@@ -242,6 +242,7 @@ export async function createAssetMintArray(
         note: note,
         clawback: data_for_txns[i].has_clawback === "Y" ? wallet : undefined,
         strictEmptyAddressChecking: false,
+        defaultFrozen: data_for_txns[i].default_frozen === "Y" ? true : false,
       });
 
       let fee_tx = makePaymentTxnWithSuggestedParamsFromObject({
@@ -311,6 +312,7 @@ export async function createARC3AssetMintArray(
         assetURL: data_for_txns[i].asset_url_section + "#arc3",
         suggestedParams: params,
         clawback: data_for_txns[i].has_clawback === "Y" ? wallet : undefined,
+        defaultFrozen: data_for_txns[i].default_frozen === "Y" ? true : false,
         strictEmptyAddressChecking: false,
       });
 
@@ -379,6 +381,7 @@ export async function createARC19AssetMintArray(
         suggestedParams: params,
         clawback: data_for_txns[i].has_clawback === "Y" ? wallet : undefined,
         strictEmptyAddressChecking: false,
+        defaultFrozen: data_for_txns[i].default_frozen === "Y" ? true : false,
       });
 
       let fee_tx = makePaymentTxnWithSuggestedParamsFromObject({

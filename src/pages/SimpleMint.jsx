@@ -26,6 +26,8 @@ export function SimpleMint() {
     format: "ARC19",
     freeze: false,
     clawback: false,
+    defaultFrozen: false,
+    urlField: "",
     metadata: [
       {
         id: 1,
@@ -152,8 +154,8 @@ export function SimpleMint() {
         }
       });
       let imageURL;
-      if (formData.format === "Token" && formData.image === null) {
-        imageURL = "";
+      if (formData.format === "Token") {
+        imageURL = formData.urlField;
       } else {
         toast.info("Uploading the image to IPFS...");
         imageURL =
@@ -166,6 +168,7 @@ export function SimpleMint() {
         unit_name: formData.unitName,
         has_clawback: formData.clawback ? "Y" : "N",
         has_freeze: formData.freeze ? "Y" : "N",
+        default_frozen: formData.defaultFrozen ? "Y" : "N",
         decimals: formData.decimals,
         total_supply: formData.totalSupply,
         ipfs_data: metadata,
@@ -340,25 +343,45 @@ export function SimpleMint() {
           </div>
         </div>
         <div className="mt-4 md:flex items-center text-start gap-x-4">
-          <div className="flex flex-col md:mt-0 mt-4">
-            <label className="mb-2 text-sm leading-none text-gray-200">
-              Select Image{formData.format !== "Token" && "*"}
-            </label>
-            <input
-              className="block w-64 text-sm border border-gray-200 rounded cursor-pointer bg-gray-300  focus:outline-none  text-black font-medium"
-              id="select_image"
-              type="file"
-              accept="image/*"
-              multiple={false}
-              required
-              onChange={(e) => {
-                setFormData({
-                  ...formData,
-                  image: e.target.files[0],
-                });
-              }}
-            />
-          </div>
+          {formData.format !== "Token" ? (
+            <div className="flex flex-col md:mt-0 mt-4">
+              <label className="mb-2 text-sm leading-none text-gray-200">
+                Select Image*
+              </label>
+              <input
+                className="block w-64 text-sm border border-gray-200 rounded cursor-pointer bg-gray-300  focus:outline-none  text-black font-medium"
+                id="select_image"
+                type="file"
+                accept="image/*"
+                multiple={false}
+                required
+                onChange={(e) => {
+                  setFormData({
+                    ...formData,
+                    image: e.target.files[0],
+                  });
+                }}
+              />
+            </div>
+          ) : (
+            <div className="flex flex-col md:mt-0 mt-4">
+              <label className="mb-2 text-sm leading-none text-gray-200">
+                URL Field
+              </label>
+              <input
+                className="w-64 bg-gray-300 text-sm font-medium text-center leading-none placeholder:text-sm text-black placeholder:text-black/30 px-3 py-1 border rounded border-gray-200"
+                id="select_image"
+                type="text"
+                value={formData.urlField}
+                onChange={(e) => {
+                  setFormData({
+                    ...formData,
+                    urlField: e.target.value,
+                  });
+                }}
+              />
+            </div>
+          )}
           <div className="flex flex-col md:mt-0 mt-4">
             <label className="mb-2 text-sm leading-none text-gray-200">
               Asset format*
@@ -423,7 +446,25 @@ export function SimpleMint() {
             </span>
           </label>
         </div>
-        <p className="focus:outline-nonetext-sm font-light leading-tight text-gray-200 mt-4">
+        <label className="relative inline-flex items-center cursor-pointer mt-1">
+          <input
+            type="checkbox"
+            className="sr-only peer"
+            id="defaultFrozen"
+            onChange={(e) => {
+              setFormData({
+                ...formData,
+                defaultFrozen: e.target.checked,
+              });
+            }}
+            checked={formData.defaultFrozen}
+          />
+          <div className="w-11 h-6 bg-gray-400 peer-focus:outline-none peer-focus:ring-4  rounded-full peer  peer-checked:after:translate-x-full  after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all border-gray-600 peer-checked:bg-blue-600"></div>
+          <span className="ml-2 text-sm font-medium text-gray-300">
+            Default Frozen
+          </span>
+        </label>
+        <p className="focus:outline-nonetext-sm font-light leading-tight text-gray-200 mt-2">
           Property Metadata
           <br />
           (optional)

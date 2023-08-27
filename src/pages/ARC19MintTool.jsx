@@ -141,7 +141,7 @@ export function ARC19MintTool() {
       const unsignedAssetTransactions = await createARC19AssetMintArray(
         data_for_txns,
         nodeURL,
-        token
+        token,
       );
       setAssetTransactions(unsignedAssetTransactions);
       setTxSendingInProgress(false);
