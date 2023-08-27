@@ -178,8 +178,8 @@ export async function createAssetConfigArray(
       note: new TextEncoder().encode(JSON.stringify(data_for_txns[i].note)),
       manager: wallet,
       reserve: wallet,
-      freeze: undefined,
-      clawback: undefined,
+      freeze: data_for_txns[i].freeze || undefined,
+      clawback: data_for_txns[i].clawback || undefined,
       suggestedParams: params,
       strictEmptyAddressChecking: false,
     });
@@ -440,8 +440,8 @@ export async function updateARC19AssetMintArray(
         note: new TextEncoder().encode(JSON.stringify(data_for_txns[i].note)),
         manager: wallet,
         reserve: reserveAddress,
-        //freeze: undefined,
-        //clawback: undefined,
+        freeze: data_for_txns[i].freeze || undefined,
+        clawback: data_for_txns[i].clawback || undefined,
         suggestedParams: params,
         strictEmptyAddressChecking: false,
       });
@@ -1086,7 +1086,6 @@ export async function pinJSONToNFTStorage(token, json) {
         Authorization: "Bearer " + token,
       },
     });
-    console.log(response);
     return response.data.value.cid;
   } catch (error) {
     throw new Error("IPFS pinning failed");

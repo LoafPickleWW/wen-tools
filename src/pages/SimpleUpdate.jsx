@@ -205,8 +205,8 @@ export function SimpleUpdate() {
         unitName: assetData.params["unit-name"],
         totalSupply: assetData.params["total"],
         decimals: assetData.params["decimals"],
-        freeze: assetData.params["freeze"] === undefined ? false : true,
-        clawback: assetData.params["clawback"] === undefined ? false : true,
+        freeze: assetData.params["freeze"],
+        clawback: assetData.params["clawback"],
         format: assetFormat,
         metadata: metadata,
         image_url: assetMetadata.image || assetData.params["url"],
@@ -278,6 +278,8 @@ export function SimpleUpdate() {
         const transaction_data = {
           asset_id: assetID,
           ipfs_data: metadata,
+          freeze: formData.freeze,
+          clawback: formData.clawback,
         };
         const unsignedAssetTransactions = await updateARC19AssetMintArray(
           [transaction_data],
@@ -290,6 +292,8 @@ export function SimpleUpdate() {
         const transaction_data = {
           asset_id: assetID,
           note: metadata,
+          freeze: formData.freeze,
+          clawback: formData.clawback,
         };
         const signedTransactions = await createAssetConfigArray(
           [transaction_data],
@@ -304,7 +308,6 @@ export function SimpleUpdate() {
       toast.info("Please sign the transaction");
       setProcessStep(2);
     } catch (error) {
-      console.log(error);
       toast.error("Something went wrong!");
     }
   }

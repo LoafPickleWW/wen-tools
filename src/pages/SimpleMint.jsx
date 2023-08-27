@@ -157,6 +157,10 @@ export function SimpleMint() {
       if (formData.format === "Token") {
         imageURL = formData.urlField;
       } else {
+        if (formData.image === null) {
+          toast.error("Please select an image");
+          return;
+        }
         toast.info("Uploading the image to IPFS...");
         imageURL =
           "ipfs://" + (await pinImageToNFTStorage(token, formData.image));
