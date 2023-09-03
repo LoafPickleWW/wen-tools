@@ -211,6 +211,8 @@ export function SimpleUpdate() {
         metadata: metadata,
         image_url: assetMetadata.image || assetData.params["url"],
         image_mime_type: assetMetadata.image_mime_type,
+        animation_url: assetMetadata.animation_url || assetData.params["url"],
+        animation_mime_type: assetMetadata.animation_mime_type,
       });
     } catch (error) {
       if (error.response) {
@@ -261,8 +263,15 @@ export function SimpleUpdate() {
         toast.info("Uploading the image to IPFS...");
         const imageURL =
           "ipfs://" + (await pinImageToNFTStorage(token, formData.image));
-        metadata.image = imageURL;
-        metadata.image_mime_type = formData.image.type;
+        if (formData.image && formData.image.type.includes("video")) {
+          metadata.animation_url = imageURL;
+          metadata.animation_mime_type = formData.image
+            ? formData.image.type
+            : "";
+        } else {
+          metadata.image = imageURL;
+          metadata.image_mime_type = formData.image ? formData.image.type : "";
+        }
       } else if (formData.format === "ARC3") {
         throw new Error("ARC3 assets can't be updated");
       } else {
@@ -271,6 +280,12 @@ export function SimpleUpdate() {
         }
         if (formData.image_url) {
           metadata.image = formData.image_url;
+        }
+        if (formData.animation_url) {
+          metadata.animation_url = formData.animation_url;
+        }
+        if (formData.animation_mime_type) {
+          metadata.animation_mime_type = formData.animation_mime_type;
         }
       }
       const nodeURL = getNodeURL();
@@ -377,6 +392,9 @@ export function SimpleUpdate() {
                     image_mime_type: "",
                     metadata: [],
                   });
+                  setProcessStep(0);
+                  setTransaction(null);
+                  
                 }}
               >
                 Back
@@ -447,7 +465,7 @@ export function SimpleUpdate() {
                     className="block w-64 text-sm border border-gray-200 rounded cursor-pointer bg-gray-300  focus:outline-none  text-black font-medium"
                     id="select_image"
                     type="file"
-                    accept="image/*"
+                    accept="image/*,video/*"
                     multiple={false}
                     required
                     onChange={(e) => {
@@ -489,6 +507,27 @@ export function SimpleUpdate() {
                   e.target.onerror = null;
                   window.document.getElementById("asset_image").remove();
                 }}
+              />
+            )}
+            {formData.animation_url && (
+              <video
+                src={
+                  formData.animation_url.startsWith("ipfs://")
+                    ? `${IPFS_ENDPOINT}${formData.animation_url.replace(
+                        "ipfs://",
+                        ""
+                      )}`
+                    : formData.animation_url
+                }
+                className="w-60 mx-auto mt-4 object-contain rounded-md"
+                alt="asset_video"
+                id="asset_video"
+                onError={(e) => {
+                  e.target.onerror = null;
+                  window.document.getElementById("asset_video").remove();
+                }}
+                controls
+                autoPlay
               />
             )}
             <p className="focus:outline-nonetext-sm font-light leading-tight text-gray-200 mt-4">

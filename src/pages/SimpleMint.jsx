@@ -138,7 +138,6 @@ export function SimpleMint() {
       let metadata = {
         name: formData.name,
         standard: formData.format.toLocaleLowerCase(),
-        image_mime_type: formData.image ? formData.image.type : "",
         properties: {},
       };
       formData.metadata.forEach((data) => {
@@ -166,7 +165,19 @@ export function SimpleMint() {
           "ipfs://" + (await pinImageToNFTStorage(token, formData.image));
       }
       const nodeURL = getNodeURL();
-      metadata.image = imageURL;
+
+      if (formData.image) {
+        if (formData.image.type.includes("video")) {
+          metadata.animation_url = imageURL;
+          metadata.animation_mime_type = formData.image
+            ? formData.image.type
+            : "";
+        } else {
+          metadata.image = imageURL;
+          metadata.image_mime_type = formData.image ? formData.image.type : "";
+        }
+      }
+
       let metadataForIPFS = {
         asset_name: formData.name,
         unit_name: formData.unitName,
@@ -356,7 +367,7 @@ export function SimpleMint() {
                 className="block w-64 text-sm border border-gray-200 rounded cursor-pointer bg-gray-300  focus:outline-none  text-black font-medium"
                 id="select_image"
                 type="file"
-                accept="image/*"
+                accept="image/*,video/*"
                 multiple={false}
                 required
                 onChange={(e) => {
