@@ -18,6 +18,7 @@ export function CollectionSnapshot() {
   const [loading, setLoading] = useState(false);
   const [counter, setCounter] = useState(0);
   const [checkRandSupport, setCheckRandSupport] = useState(false);
+  const [checkSeparated, setCheckSeparated] = useState(false);
   const [randCreatorListings, setRandCreatorListings] = useState([]);
   const [isHorseHolder, setIsHorseHolder] = useState(false);
 
@@ -109,28 +110,38 @@ export function CollectionSnapshot() {
       row += headers[index] + ",";
     }
     str += row + "\r";
-
-    Object.entries(array).forEach(([key, value]) => {
-      let line = "";
-      line += key + ",";
-      line += value.nfd + ",";
-      if (checkRandSupport) {
-        if (!value.listed_assets) {
-          value.listed_assets = [];
+    if (checkSeparated) {
+      for (let i = 0; i < array.length; i++) {
+        console.log(array[i]);
+        let line = "";
+        line += array[i].asset_id + ",";
+        line += array[i].wallet + ",";
+        line += array[i].nfd + ",";
+        str += line + "\r\n";
+      }
+    } else {
+      Object.entries(array).forEach(([key, value]) => {
+        let line = "";
+        line += key + ",";
+        line += value.nfd + ",";
+        if (checkRandSupport) {
+          if (!value.listed_assets) {
+            value.listed_assets = [];
+          }
+          line += value.assets.length + value.listed_assets.length + ",";
         }
-        line += value.assets.length + value.listed_assets.length + ",";
-      }
-      const asset_list = "[" + value.assets.map((asset) => asset).join(",");
-      line += '"' + asset_list + ']",';
-      line += value.assets.length + ",";
-      if (checkRandSupport) {
-        const listed_asset_list =
-          "[" + value.listed_assets.map((asset) => asset).join(",");
-        line += '"' + listed_asset_list + ']",';
-        line += value.listed_assets.length + ",";
-      }
-      str += line + "\r\n";
-    });
+        const asset_list = "[" + value.assets.map((asset) => asset).join(",");
+        line += '"' + asset_list + ']",';
+        line += value.assets.length + ",";
+        if (checkRandSupport) {
+          const listed_asset_list =
+            "[" + value.listed_assets.map((asset) => asset).join(",");
+          line += '"' + listed_asset_list + ']",';
+          line += value.listed_assets.length + ",";
+        }
+        str += line + "\r\n";
+      });
+    }
 
     return str;
   }
@@ -161,7 +172,7 @@ export function CollectionSnapshot() {
   async function downloadCollectionDataAsCSV() {
     if (collectionData.length > 0) {
       setLoading(true);
-      const data = [];
+      let data = [];
       let count = 0;
       for (const asset_id of collectionData) {
         const asset_owner = await getAssetOwner(asset_id);
@@ -192,6 +203,21 @@ export function CollectionSnapshot() {
             data[key].listed_assets = value;
           }
         });
+      }
+      if (checkSeparated) {
+        headers = ["asset_id", "wallet", "nfdomain"];
+        let newData = [];
+        Object.entries(data).forEach(([key, value]) => {
+          value.assets.forEach((asset_id) => {
+            newData.push({
+              asset_id,
+              wallet: key,
+              nfd: value.nfd,
+            });
+          });
+        });
+        console.log(newData);
+        data = newData;
       }
       exportCSVFile(headers, data, "collection-snapshot.csv");
       setLoading(false);
@@ -227,6 +253,18 @@ export function CollectionSnapshot() {
         onChange={(e) => setUnitNamePrefix(e.target.value)}
       />
       <div className="flex flex-col items-start text-sm py-2 bg-black/20 px-4 rounded-xl">
+        <div className="flex items-center justify-center">
+          <input
+            type="checkbox"
+            id="check_separated"
+            className="mr-2"
+            checked={checkSeparated}
+            onChange={(e) => setCheckSeparated(e.target.checked)}
+          />
+          <label htmlFor="check_separated" className="text-slate-300">
+            Non-aggregated Holder List
+          </label>
+        </div>
         {!isHorseHolder && (
           <span className="text-slate-400 text-xs text-center mx-auto my-2">
             If you hold any{" "}
@@ -256,7 +294,7 @@ export function CollectionSnapshot() {
           </label>
         </div>
       </div>
-      <p className="text-center text-xs mb-2 text-slate-300">
+      <p className="text-center text-xs my-2 text-slate-300">
         Separate multiple wallet addresses and prefixes with commas.
         <br />
         Just works with 1/1 ASAs.
