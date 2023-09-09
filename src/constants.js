@@ -110,6 +110,20 @@ export const TOOLS = [
     category: "asset",
   },
   {
+    id: "batch_clawback",
+    label: "🔙 Asset Clawback",
+    description: "Clawback assets in bulk.",
+    path: "/batch-clawback",
+    category: "asset",
+  },
+  {
+    id: "batch_freeze",
+    label: "🧊 Asset Freeze",
+    description: "Freeze/Unfreeze assets in bulk.",
+    path: "/batch-freeze",
+    category: "asset",
+  },
+  {
     id: "airdrop_tool",
     label: "🪂 Asset Send/Airdrop",
     description: "Airdrop/Send assets/ALGO to a list of addresses.",

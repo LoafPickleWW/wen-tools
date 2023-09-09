@@ -12,6 +12,7 @@ import {
   mnemonicToSecretKey,
   signTransaction,
   makeAssetDestroyTxnWithSuggestedParamsFromObject,
+  makeAssetFreezeTxnWithSuggestedParamsFromObject,
   decodeAddress,
 } from "algosdk";
 import axios from "axios";
@@ -400,7 +401,9 @@ export async function createARC19AssetMintArray(
       toast.info(`Asset ${i + 1} of ${data_for_txns.length} uploaded to IPFS`, {
         autoClose: 200,
       });
-    } catch (error) {}
+    } catch (error) {
+      console.log(error);
+    }
   }
   return txnsArray;
 }
@@ -650,6 +653,7 @@ export async function createAssetOptInTransactions(assets, nodeURL, mnemonic) {
 export async function createClawbackTransactions(
   data_for_txns,
   nodeURL,
+  assetDecimals,
   mnemonic
 ) {
   const algodClient = new Algodv2("", nodeURL, {
@@ -660,12 +664,56 @@ export async function createClawbackTransactions(
   const wallet = localStorage.getItem("wallet");
   for (let i = 0; i < data_for_txns.length; i++) {
     const tx = makeAssetTransferTxnWithSuggestedParamsFromObject({
-      from: wallet,
-      to: wallet.trim(),
-      revocationTarget: data_for_txns[i].addr,
+      from: wallet.trim(),
+      revocationTarget: data_for_txns[i].clawback_from,
+      to: data_for_txns[i].receiver,
       suggestedParams: params,
-      assetIndex: parseInt(data_for_txns[i].index),
-      amount: parseInt(data_for_txns[i].amount),
+      assetIndex: parseInt(data_for_txns[i].asset_id),
+      amount: parseInt(
+        data_for_txns[i].amount * 10 ** assetDecimals[data_for_txns[i].asset_id]
+      ),
+      note: new TextEncoder().encode("via Evil Tools"),
+    });
+    txnsArray.push(tx);
+  }
+  if (mnemonic !== "") {
+    if (mnemonic.split(" ").length !== 25) throw new Error("Invalid Mnemonic!");
+    const { sk } = mnemonicToSecretKey(mnemonic);
+    return SignWithMnemonics(txnsArray, sk);
+  }
+  const groups = sliceIntoChunks(txnsArray, 16);
+  for (let i = 0; i < groups.length; i++) {
+    const groupID = computeGroupID(groups[i]);
+    for (let j = 0; j < groups[i].length; j++) {
+      groups[i][j].group = groupID;
+    }
+  }
+  try {
+    const txnsToValidate = await signGroupTransactions(groups, wallet, true);
+    return sliceIntoChunks(txnsToValidate, 16);
+  } catch (error) {
+    throw new Error("Transaction signing failed");
+  }
+}
+
+export async function createFreezeTransactions(
+  data_for_txns,
+  nodeURL,
+  mnemonic
+) {
+  const algodClient = new Algodv2("", nodeURL, {
+    "User-Agent": "evil-tools",
+  });
+  const params = await algodClient.getTransactionParams().do();
+  let txnsArray = [];
+  const wallet = localStorage.getItem("wallet");
+  for (let i = 0; i < data_for_txns.length; i++) {
+    const tx = makeAssetFreezeTxnWithSuggestedParamsFromObject({
+      from: wallet.trim(),
+      suggestedParams: params,
+      assetIndex: parseInt(data_for_txns[i].asset_id),
+      freezeState: data_for_txns[i].frozen.trim() === "Y" ? true : false,
+      freezeTarget: data_for_txns[i].wallet,
       note: new TextEncoder().encode("via Evil Tools"),
     });
     txnsArray.push(tx);

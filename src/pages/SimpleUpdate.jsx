@@ -394,7 +394,6 @@ export function SimpleUpdate() {
                   });
                   setProcessStep(0);
                   setTransaction(null);
-                  
                 }}
               >
                 Back

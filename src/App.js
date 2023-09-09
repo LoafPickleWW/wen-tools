@@ -23,6 +23,8 @@ import { SimpleSendTool } from "./pages/SimpleSendTool";
 import { SimpleAirdropTool } from "./pages/SimpleAirdropTool";
 import { SimpleMint } from "./pages/SimpleMint";
 import { SimpleUpdate } from "./pages/SimpleUpdate";
+import { BatchClawback } from "./pages/BatchClawback";
+import { BatchFreeze } from "./pages/BatchFreeze";
 
 function App() {
   return (
@@ -58,6 +60,8 @@ function App() {
           <Route path="/batch-optin" element={<BatchOptin />} />
           <Route path="/batch-optout" element={<BatchOptout />} />
           <Route path="/batch-destroy" element={<BatchDelete />} />
+          <Route path="/batch-clawback" element={<BatchClawback />} />
+          <Route path="/batch-freeze" element={<BatchFreeze />} />
           <Route
             path="/find-collection-holders"
             element={<CollectionSnapshot />}

@@ -70,7 +70,9 @@ const ConnectButton = () => {
       deflyWallet.disconnect();
     } catch (error) {
     }
+    const networkType = localStorage.getItem("networkType");
     localStorage.clear();
+    localStorage.setItem("networkType", networkType);
     setWalletAddress("");
     toast.success("Disconnected!");
     window.location.reload();

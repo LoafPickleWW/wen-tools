@@ -12,8 +12,11 @@ export function SelectToolComponent() {
       </p>
       <div className="container mx-auto grid lg:grid-cols-3 gap-2">
         {TOOLS.filter((tool) => tool.category === "asset").map((tool) => (
-          <div className="col-span-3 xl:col-span-1 rounded-lg shadow bg-gray-800 border border-gray-700 hover:bg-gray-700">
-            <Link to={tool.path} key={tool.id} className="block p-4">
+          <div
+            className="col-span-3 xl:col-span-1 rounded-lg shadow bg-gray-800 border border-gray-700 hover:bg-gray-700"
+            key={tool.id}
+          >
+            <Link to={tool.path} className="block p-4">
               <h5 className="mb-2 text-2xl font-bold tracking-tight text-white">
                 {tool.label}
               </h5>
@@ -29,8 +32,11 @@ export function SelectToolComponent() {
       </p>
       <div className="container mx-auto grid lg:grid-cols-3 gap-2">
         {TOOLS.filter((tool) => tool.category === "mint").map((tool) => (
-          <div className="col-span-3 xl:col-span-1 rounded-lg shadow bg-gray-800 border border-gray-700 hover:bg-gray-700">
-            <Link to={tool.path} key={tool.id} className="block p-4">
+          <div
+            className="col-span-3 xl:col-span-1 rounded-lg shadow bg-gray-800 border border-gray-700 hover:bg-gray-700"
+            key={tool.id}
+          >
+            <Link to={tool.path} className="block p-4">
               <h5 className="mb-2 text-2xl font-bold tracking-tight text-white">
                 {tool.label}
               </h5>
