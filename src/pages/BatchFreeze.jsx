@@ -95,7 +95,7 @@ export function BatchFreeze() {
       <button className="text-center text-lg text-pink-200 mt-2 bg-pink-700 px-4 py-2 rounded">
         <a
           className="hover:text-pink-400 transition"
-          href="https://docs.google.com/spreadsheets/d/1YN7NhxXyNmBZ80nopbcu23Pme-xastrobfIu_MnALiA/edit?usp=sharing"
+          href="https://docs.google.com/spreadsheets/d/1RAJ_9GZfYQmqIYMVHAxwfTim8fiWTi7E5TGnWQlrKC8/edit?usp=sharing"
           target="_blank"
           rel="noopener noreferrer"
         >
@@ -105,11 +105,11 @@ export function BatchFreeze() {
       <button className="text-center text-lg text-pink-200 mt-2 bg-pink-700 px-4 py-2 rounded">
         <a
           className="hover:text-pink-400 transition"
-          href="https://loafpickle.medium.com/evil-tools-custom-mass-airdrop-3d5902dd1c94"
+          href="https://loafpickle.medium.com/evil-tools-mass-freeze-and-clawback-1e4c677fc574"
           target="_blank"
           rel="noopener noreferrer"
         >
-          GUIDE
+          How to Guide
         </a>
       </button>
       <SelectNetworkComponent />
