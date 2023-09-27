@@ -32,7 +32,7 @@ input[type="number"] {
 }
 
 .ticker-text {
-  animation: ticker 7s linear infinite;
+  animation: ticker 10s linear infinite;
   display: inline-block;
   white-space: nowrap;
   width: max-content;
