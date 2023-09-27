@@ -41,14 +41,14 @@ export const Header = () => {
       </div>
       <div className="bg-secondary-yellow text-black flex py-1 justify-center items-center">
         <p className="text-center text-sm ticker-text">
-          We have partnered with {" "}
+          Our Latest Technological Achievement: {" "}
           <a
-            href="https://www.randgallery.com/algo-collection/"
+            href="https://www.youtube.com/watch?v=S85gMIzRWJ0&ab_channel=Thurstober"
             target="_blank"
             rel="noreferrer"
             className="font-semibold hover:text-green-800 transition"
           >
-            Rand!
+            M.E.A.T.!
           </a>
         </p>
       </div>
