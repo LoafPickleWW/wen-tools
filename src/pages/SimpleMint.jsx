@@ -169,7 +169,7 @@ export function SimpleMint() {
       if (formData.image) {
         if (formData.image.type.includes("video")) {
           metadata.animation_url = imageURL;
-          metadata.animation_mime_type = formData.image
+          metadata.animation_url_mime_type = formData.image
             ? formData.image.type
             : "";
         } else {
