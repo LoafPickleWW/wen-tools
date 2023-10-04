@@ -84,10 +84,11 @@ export default function Home() {
         <h2 className="text-3xl font-semibold tracking-tight leading-tight text-center text-slate-100 -mb-2">
           Partners
         </h2>
-        <div className="grid grid-cols-3 mx-auto">
+        <div className="grid grid-cols-2 md:grid-cols-4 mx-auto">
           <a
             href="https://www.randgallery.com/algo-collection?ref=eviltools"
             className="flex justify-center opacity-80 hover:opacity-100 transition"
+            target="_blank noreferrer"
           >
             <svg
               width="56"
@@ -108,6 +109,7 @@ export default function Home() {
           <a
             href="https://nf.domains?ref=eviltools"
             className="flex justify-center items-center opacity-80 hover:opacity-100 transition"
+            target="_blank noreferrer"
           >
             <svg viewBox="0 0 1260 400" fill="white" className="h-6 w-auto">
               <polygon points="430,0 430,66.7 430,133.3 430,200 430,266.7 430,400 630,400 630,266.7 730,266.7 730,200 730,133.3 830,133.3 830,66.7 830,0 630,0"></polygon>
@@ -118,8 +120,22 @@ export default function Home() {
           <a
             href="https://algoverify.me?ref=eviltools"
             className="flex justify-center text-center items-center opacity-80 hover:opacity-100 transition"
+            target="_blank noreferrer"
           >
-            Algo<br/>Verify
+            Algo
+            <br />
+            Verify
+          </a>
+          <a
+            href="https://www.algorand.foundation?ref=eviltools"
+            className="flex justify-center opacity-80 hover:opacity-100 transition"
+            target="_blank noreferrer"
+          >
+            <img
+              src="./af_logo.svg"
+              alt="af"
+              className="w-24 h-20 md:w-32 md:h-32"
+            />
           </a>
         </div>
       </div>

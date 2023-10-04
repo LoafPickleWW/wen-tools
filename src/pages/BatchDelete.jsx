@@ -1,5 +1,5 @@
 import { useState } from "react";
-import Papa from "papaparse";
+//import Papa from "papaparse";
 import ConnectButton from "../components/ConnectButton";
 import algosdk from "algosdk";
 import { toast } from "react-toastify";
@@ -91,26 +91,6 @@ export function BatchDelete() {
       <p className="text-2xl font-bold mt-1">
         {TOOLS.find((tool) => tool.path === window.location.pathname).label}
       </p>
-      <button className="text-center text-lg text-pink-200 mt-2 bg-pink-700 px-4 py-2 rounded">
-        <a
-          className="hover:text-pink-400 transition"
-          href="https://loafpickle.medium.com/evil-tools-batch-asset-add-f5aa28db2fc7"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          INSTRUCTIONS
-        </a>
-      </button>
-      <button className="text-center text-lg text-pink-200 mt-2 bg-pink-700 px-4 py-2 rounded">
-        <a
-          className="hover:text-pink-400 transition"
-          href="https://docs.google.com/spreadsheets/d/19tIbqeIQ1wxgNWjyx6eLNHfgxitK539cz3sJFrzLmlU/edit?usp=sharing"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          CSV Template
-        </a>
-      </button>
       <SelectNetworkComponent />
       <p>1- Connect Wallet</p>
       <ConnectButton />
@@ -138,10 +118,10 @@ export function BatchDelete() {
         </span>
       </div>
       {/* end mnemonic */}
-      <p>2- Upload CSV file</p>
+      <p>2- Enter Assets</p>
       {csvData === null ? (
         <div>
-          <label
+          {/* <label
             htmlFor="dropzone-file"
             className="flex flex-col justify-center items-center w-[16rem] h-[8rem] px-4  rounded-lg border-2  border-dashed cursor-pointer hover:bg-bray-800 bg-gray-700  border-gray-600 hover:border-gray-500 hover:bg-gray-600"
           >
@@ -169,9 +149,9 @@ export function BatchDelete() {
                 });
               }}
             />
-          </label>
+          </label> */}
           <div>
-            <p className="text-center text-xs text-slate-300 py-1">or</p>
+            {/*<p className="text-center text-xs text-slate-300 py-1">or</p>*/}
             <div className="flex flex-col items-center">
               <textarea
                 id="asset_id_list"
@@ -215,7 +195,6 @@ export function BatchDelete() {
             </>
           ) : (
             <>
-              <p className="mb-1 text-sm font-bold">File uploaded</p>
               <p className="text-sm text-gray-400">
                 {csvData.length - 1} assets found.
               </p>
