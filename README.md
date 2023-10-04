@@ -26,7 +26,7 @@ To contribute, fork this repo and propose changes back via Pull Request.  One of
 
 ## Authors
 * **algovado** - *Initial work* - [algovado](https://github.com/algovado)
-* **LoafPckle** - *Initial work* - [algovado](https://github.com/LoafPickleWW)
+* **LoafPickle** - *Initial work* - [LoafPickle](https://github.com/LoafPickleWW)
 
 See the list of [contributors](https://github.com/thurstober-digital/evil-tools/contributors) who participated in this project.
 
