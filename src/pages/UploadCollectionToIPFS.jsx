@@ -12,7 +12,7 @@ export function UploadCollectionToIPFS() {
   const [loading, setLoading] = useState(false);
 
   async function uploadFiles() {
-    if (token == "") {
+    if (token === "") {
       toast.info("Please enter your token key!");
       return;
     }
@@ -103,7 +103,7 @@ export function UploadCollectionToIPFS() {
             Uploading...
           </div>
         )}
-        {collectionCid != "" && (
+        {collectionCid !== "" && (
           <div className="flex flex-col justify-center items-center">
             <p className="text-xs text-gray-500 font-semibold">
               Your collection cid is:

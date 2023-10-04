@@ -75,11 +75,11 @@ export function Download69CollectionData() {
     for (let i = 0; i < array.length; i++) {
       let line = "";
       for (let index in array[i]) {
-        if (line != "") line += ",";
+        if (line !== "") line += ",";
         line += '"' + array[i][index] + '"';
       }
       // don't put '\r\n' at the end of the last line
-      if (i != array.length - 1) {
+      if (i !== array.length - 1) {
         str += line + "\r\n";
       } else {
         str += line;
