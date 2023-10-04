@@ -1,4 +1,4 @@
-# Project Title
+# Evil Tools
 No-Code Front End Tooling for Bulk Processes on Algorand. These tools were designed with the aim of onboarding creators, collectors and developers.
 
 ## Getting Started
