@@ -577,10 +577,10 @@ export function SimpleUpdate() {
                       type="checkbox"
                       id="ipfs"
                       className="peer"
-                      value={token === process.env.NFT_STORAGE_KEY}
+                      value={token === process.env.REACT_APP_NFT_STORAGE_KEY}
                       onChange={(e) => {
                         if (e.target.checked) {
-                          setToken(process.env.NFT_STORAGE_KEY);
+                          setToken(process.env.REACT_APP_NFT_STORAGE_KEY);
                         } else {
                           setToken("");
                         }
@@ -593,7 +593,7 @@ export function SimpleUpdate() {
                       Use Public Token - Opt out from hosting your image**
                     </label>
                   </div>
-                  {token !== process.env.NFT_STORAGE_KEY && (
+                  {token !== process.env.REACT_APP_NFT_STORAGE_KEY && (
                     <>
                       <p className="text-xs text-slate-400 font-roboto my-2">
                         or
