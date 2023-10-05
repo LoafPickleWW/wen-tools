@@ -1072,7 +1072,7 @@ export async function getOwnerAddressOfAsset(assetId) {
 
 export async function getRandListingAsset(assetId) {
   try {
-    const url = `https://www.randswap.com/v1/listings/asset/${assetId}?token=EVIL_TOOLS_AXvH4zL08HYRqt58gv66ENBDclBnTgcW`;
+    const url = `https://www.randswap.com/v1/listings/asset/${assetId}`;
     const response = await axios.get(url);
     const assetData = response.data.map((listing) => {
       return {
@@ -1088,7 +1088,7 @@ export async function getRandListingAsset(assetId) {
 
 export async function getRandCreatorListings(creatorWallet) {
   try {
-    const url = `https://www.randswap.com/v1/listings/creator/${creatorWallet}?token=EVIL_TOOLS_AXvH4zL08HYRqt58gv66ENBDclBnTgcW`;
+    const url = `https://www.randswap.com/v1/listings/creator/${creatorWallet}`;
     const response = await axios.get(url);
     const assetData = response.data.map((listing) => {
       return {

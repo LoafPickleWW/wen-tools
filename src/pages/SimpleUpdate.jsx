@@ -15,7 +15,7 @@ import {
   getARC19AssetMetadataData,
   getAssetPreviewURL,
 } from "../utils";
-import { TOOLS, IPFS_ENDPOINT, NFT_STORAGE_KEY } from "../constants";
+import { TOOLS, IPFS_ENDPOINT } from "../constants";
 
 export function SimpleUpdate() {
   const [formData, setFormData] = useState({
@@ -577,10 +577,10 @@ export function SimpleUpdate() {
                       type="checkbox"
                       id="ipfs"
                       className="peer"
-                      value={token === NFT_STORAGE_KEY}
+                      value={token === process.env.NFT_STORAGE_KEY}
                       onChange={(e) => {
                         if (e.target.checked) {
-                          setToken(NFT_STORAGE_KEY);
+                          setToken(process.env.NFT_STORAGE_KEY);
                         } else {
                           setToken("");
                         }
@@ -593,7 +593,7 @@ export function SimpleUpdate() {
                       Use Public Token - Opt out from hosting your image**
                     </label>
                   </div>
-                  {token !== NFT_STORAGE_KEY && (
+                  {token !== process.env.NFT_STORAGE_KEY && (
                     <>
                       <p className="text-xs text-slate-400 font-roboto my-2">
                         or
