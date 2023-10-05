@@ -533,14 +533,14 @@ export function SimpleMint() {
             htmlFor="ipfs"
             className="text-sm font-light leading-tight text-gray-200 peer-checked:text-primary-green/80 peer-checked:font-medium cursor-pointer"
           >
-            Use Public Token - Opt out from hosting your image*
+            Use Public Token - Opt out from hosting your image**
           </label>
         </div>
         {token !== NFT_STORAGE_KEY && (
           <>
             <p className="text-xs text-slate-400 font-roboto my-2">or</p>
             <label className="mb-1 text-sm leading-none text-gray-200">
-              NFT Storage Token**
+              NFT Storage Token***
             </label>
             <input
               type="text"
@@ -551,7 +551,7 @@ export function SimpleMint() {
               onChange={(e) => setToken(e.target.value)}
             />
             <p className="text-xs text-slate-400 font-roboto mt-1">
-              **You can get your own token{" "}
+              ***You can get your own token{" "}
               <a
                 href="https://nft.storage/docs/#get-an-api-token"
                 target="_blank"
@@ -628,7 +628,7 @@ export function SimpleMint() {
         )}
       </div>
       <p className="text-sm italic text-slate-200">
-        *It is recommended that Creators Host their own Files
+        **It is recommended that any Creator Host their own Files using their own token. Evil Tools will not be held responsible for anything that happens to publicly hosted images. 
       </p>
       <p className="text-sm italic text-slate-200">Fee: 0.1A</p>
       <p className="text-center text-xs text-slate-400 py-2">
