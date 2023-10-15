@@ -877,19 +877,31 @@ export class Arc69 {
   }
 }
 
+async function fetchNFDJSON(url) {
+  while (true) {
+    const response = await fetch(url);
+    if (response.status === 404) {
+      return response;
+    }
+    const jsonData = await response.json();
+    if (response.status === 429 && jsonData.length > 0) {
+      // Wait for 'secsRemaining' seconds before retrying.
+      await new Promise(resolve => setTimeout(resolve, jsonData.secsRemaining * 1000));
+    } else {
+      // If status is not 429, return the json data and status.
+      return {status: response.status, body: jsonData};
+    }
+  }
+}
+
 export async function getNfdDomain(wallet) {
-  const nfdDomain = await fetch(
-    "https://api.nf.domains/nfd/address?address=" +
-      wallet +
-      "&limit=1&view=tiny"
+  const nfdDomain = await fetchNFDJSON(
+    "https://api.nf.domains/nfd/lookup?address=" +
+    wallet +
+    "&view=tiny"
   );
   if (nfdDomain.status === 200) {
-    const data = await nfdDomain.json();
-    if (data.length > 0) {
-      return data[0].name;
-    } else {
-      return "";
-    }
+    return nfdDomain.body[wallet].name;
   } else {
     return "";
   }
@@ -1020,11 +1032,11 @@ export async function getNfDomainsInBulk(wallets, bulkSize = 20) {
       .map((wallet) => `address=${wallet}`)
       .join("&");
     try {
-      const response = await axios.get(
-        `https://api.nf.domains/nfd/address?${chunk}`
-      );
-      for (const domain of response.data) {
-        nfdDomains[domain.owner] = domain.name;
+      const nfdLookup = await fetchNFDJSON(`https://api.nf.domains/nfd/lookup?view=tiny&${chunk}`);
+      if (nfdLookup.status === 200) {
+        for (const [account, domain] of Object.entries(nfdLookup.body)) {
+          nfdDomains[account] = domain.name;
+        }
       }
     } catch {
       continue;
