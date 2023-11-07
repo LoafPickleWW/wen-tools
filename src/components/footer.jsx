@@ -1,4 +1,4 @@
-import { FaDiscord, FaTwitter } from "react-icons/fa";
+import { FaDiscord, FaGithub, FaTwitter } from "react-icons/fa";
 
 export const Footer = () => {
   return (
@@ -16,6 +16,7 @@ export const Footer = () => {
               href="https://discord.gg/dNQZbW3bXm"
               target="_blank"
               rel="noopener noreferrer"
+              title="Discord"
             >
               <FaDiscord className="w-6 h-6 text-secondary-green/80 hover:text-secondary-green transition" />
             </a>
@@ -23,18 +24,19 @@ export const Footer = () => {
               href="https://twitter.com/thurstobertay"
               target="_blank"
               rel="noopener noreferrer"
+              title="Twitter"
             >
               <FaTwitter className="w-6 h-6 text-secondary-green/80 hover:text-secondary-green transition" />
             </a>
           </div>
           <a
             className="font-semibold text-secondary-green/80 transition text-xs text-center hover:text-secondary-green"
-            href="https://twitter.com/cryptolews"
+            href="https://github.com/thurstober-digital/evil-tools"
             target="_blank"
             rel="noopener noreferrer"
+            title="Open Source on Github"
           >
-            developed
-            <br />by bykewel
+            <FaGithub className="w-6 h-6 text-secondary-green/80 hover:text-secondary-green transition" />
           </a>
         </div>
       </div>
