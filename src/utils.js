@@ -190,7 +190,7 @@ export async function createAssetConfigArray(
       amount: algosToMicroalgos(UPDATE_FEE_PER_ASA),
       suggestedParams: params,
       note: new TextEncoder().encode(
-        "via Evil Tools | " + Math.random().toString(36).substring(2)
+        "via Thurstober Digital Studios | " + Math.random().toString(36).substring(2)
       ),
     });
     const groupID = computeGroupID([asset_update_tx, fee_tx]);
@@ -252,7 +252,7 @@ export async function createAssetMintArray(
         amount: algosToMicroalgos(MINT_FEE_PER_ASA),
         suggestedParams: params,
         note: new TextEncoder().encode(
-          "via Evil Tools | " + Math.random().toString(36).substring(2)
+          "via Thurstober Digital Studios | " + Math.random().toString(36).substring(2)
         ),
       });
       const groupID = computeGroupID([asset_create_tx, fee_tx]);
@@ -323,7 +323,7 @@ export async function createARC3AssetMintArray(
         amount: algosToMicroalgos(MINT_FEE_PER_ASA),
         suggestedParams: params,
         note: new TextEncoder().encode(
-          "via Evil Tools | " + Math.random().toString(36).substring(2)
+          "via Thurstober Digital Studios | " + Math.random().toString(36).substring(2)
         ),
       });
       const groupID = computeGroupID([asset_create_tx, fee_tx]);
@@ -391,7 +391,7 @@ export async function createARC19AssetMintArray(
         amount: algosToMicroalgos(MINT_FEE_PER_ASA),
         suggestedParams: params,
         note: new TextEncoder().encode(
-          "via Evil Tools | " + Math.random().toString(36).substring(2)
+          "via Thurstober Digital Studios | " + Math.random().toString(36).substring(2)
         ),
       });
       const groupID = computeGroupID([asset_create_tx, fee_tx]);
@@ -455,7 +455,7 @@ export async function updateARC19AssetMintArray(
         amount: algosToMicroalgos(UPDATE_FEE_PER_ASA),
         suggestedParams: params,
         note: new TextEncoder().encode(
-          "via Evil Tools | " + Math.random().toString(36).substring(2)
+          "via Thurstober Digital Studios | " + Math.random().toString(36).substring(2)
         ),
       });
       const groupID = computeGroupID([update_tx, fee_tx]);
@@ -518,7 +518,7 @@ export async function createAirdropTransactions(
           note: new TextEncoder().encode(
             isHolder
               ? data_for_txns[i].note.slice(0, 950) + " | via Evil Tools"
-              : "Sent using Evil Tools - A Thurstober Digital Studios Product! Free Tools for Algorand Creators and Collectors!  " +
+              : "Sent using The Laboratory - A Thurstober Digital Studios Product! Free Tools for Algorand Creators and Collectors!  " +
                   Math.random().toString(36).substring(2)
           ),
         });
@@ -535,7 +535,7 @@ export async function createAirdropTransactions(
           note: new TextEncoder().encode(
             isHolder
               ? data_for_txns[i].note.slice(0, 950) + " | via Evil Tools"
-              : "Sent using Evil Tools - A Thurstober Digital Studios Product! Free Tools for Algorand Creators and Collectors!  " +
+              : "Sent using The Laboratory - A Thurstober Digital Studios Product! Free Tools for Algorand Creators and Collectors!  " +
                   Math.random().toString(36).substring(2)
           ),
         });
@@ -565,7 +565,7 @@ export async function createDonationTransaction(amount) {
     to: DONATE_WALLET_1,
     amount: algosToMicroalgos(amount / 2),
     suggestedParams: params,
-    note: new TextEncoder().encode("Evil Tools Donation"),
+    note: new TextEncoder().encode("The Laboratory Donation"),
   });
 
   const tx2 = makePaymentTxnWithSuggestedParamsFromObject({
@@ -573,7 +573,7 @@ export async function createDonationTransaction(amount) {
     to: DONATE_WALLET_2,
     amount: algosToMicroalgos(amount / 2),
     suggestedParams: params,
-    note: new TextEncoder().encode("Evil Tools Donation"),
+    note: new TextEncoder().encode("The Laboratory Donation"),
   });
 
   const txnsArray = [tx, tx2];
@@ -812,7 +812,7 @@ export async function createAssetDeleteTransactions(assets, nodeURL, mnemonic) {
         suggestedParams: params,
         assetIndex: parseInt(assets[i]),
         note: new TextEncoder().encode(
-          "via Evil Tools | " + Math.random().toString(36).substring(2)
+          "via Thurstober Digital Studios | " + Math.random().toString(36).substring(2)
         ),
       });
       let fee_tx = makePaymentTxnWithSuggestedParamsFromObject({
