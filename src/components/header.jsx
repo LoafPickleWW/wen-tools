@@ -8,9 +8,9 @@ export const Header = () => {
           <div className="mt-2">
             <a href="/">
               <img
-                src="./eviltools.png"
+                src="./TL_large_white.png"
                 className="h-12 hover:scale-95 duration-700"
-                alt="eviltools"
+                alt="The Laboratory"
               />
             </a>
           </div>
