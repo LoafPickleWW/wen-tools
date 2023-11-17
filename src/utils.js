@@ -517,7 +517,7 @@ export async function createAirdropTransactions(
           suggestedParams: params,
           note: new TextEncoder().encode(
             isHolder
-              ? data_for_txns[i].note.slice(0, 950) + " | via Evil Tools"
+              ? data_for_txns[i].note.slice(0, 950) + " | via Thurstober Digital Studios"
               : "Sent using The Laboratory - A Thurstober Digital Studios Product! Free Tools for Algorand Creators and Collectors!  " +
                   Math.random().toString(36).substring(2)
           ),
@@ -534,7 +534,7 @@ export async function createAirdropTransactions(
           suggestedParams: params,
           note: new TextEncoder().encode(
             isHolder
-              ? data_for_txns[i].note.slice(0, 950) + " | via Evil Tools"
+              ? data_for_txns[i].note.slice(0, 950) + " | via Thurstober Digital Studios"
               : "Sent using The Laboratory - A Thurstober Digital Studios Product! Free Tools for Algorand Creators and Collectors!  " +
                   Math.random().toString(36).substring(2)
           ),
@@ -626,7 +626,7 @@ export async function createAssetOptInTransactions(assets, nodeURL, mnemonic) {
       amount: 0,
       assetIndex: parseInt(assets[i]),
       suggestedParams: params,
-      note: new TextEncoder().encode("via Evil Tools"),
+      note: new TextEncoder().encode("via Thurstober Digital Studios"),
     });
     txnsArray.push(tx);
   }
@@ -672,7 +672,7 @@ export async function createClawbackTransactions(
       amount: parseInt(
         data_for_txns[i].amount * 10 ** assetDecimals[data_for_txns[i].asset_id]
       ),
-      note: new TextEncoder().encode("via Evil Tools"),
+      note: new TextEncoder().encode("via Thurstober Digital Studios"),
     });
     txnsArray.push(tx);
   }
@@ -714,7 +714,7 @@ export async function createFreezeTransactions(
       assetIndex: parseInt(data_for_txns[i].asset_id),
       freezeState: data_for_txns[i].frozen.trim() === "Y" ? true : false,
       freezeTarget: data_for_txns[i].wallet,
-      note: new TextEncoder().encode("via Evil Tools"),
+      note: new TextEncoder().encode("via Thurstober Digital Studios"),
     });
     txnsArray.push(tx);
   }
@@ -770,7 +770,7 @@ export async function createAssetOptoutTransactions(
         assetIndex: parseInt(assets[i]),
         suggestedParams: params,
         closeRemainderTo: creatorAddress.trim(),
-        note: new TextEncoder().encode("via Evil Tools"),
+        note: new TextEncoder().encode("via Thurstober Digital Studios"),
       });
       txnsArray.push(tx);
     }
