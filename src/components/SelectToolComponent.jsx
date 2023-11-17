@@ -5,7 +5,7 @@ export function SelectToolComponent() {
   return (
     <div className="text-center">
       <p className="col-span-3 text-center text-3xl font-bold tracking-tight text-white">
-        Evil Tools - Our Most Devious Plot to Onboard New Users to Algorand!
+        The Laboratory - Enabling Blockchain 
       </p>
       <p className="col-span-3 text-center text-2xl font-bold tracking-tight text-white">
         Asset Tools
