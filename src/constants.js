@@ -33,11 +33,18 @@ export const PREFIXES = ["HORSE", "PONY", "tiny", "2INY"];
 // TOOLS
 export const TOOLS = [
   {
-    id: "collection_snapshot",
-    label: "🔎 Find Collection Holders",
-    description: "Download all the holders for a collection in CSV format.",
-    path: "/find-collection-holders",
-    category: "asset",
+    id: "simple_mint",
+    label: "🖨️ Simple Mint",
+    description: "Easily Mint an Asset on Algorand",
+    path: "/simple-mint",
+    category: "mint",
+  },
+  {
+    id: "simple_update",
+    label: "⬆️ Simple Update",
+    description: "Easily update your Mutable Assets",
+    path: "/simple-update",
+    category: "mint",
   },
   {
     id: "batch_mint",
@@ -96,6 +103,14 @@ export const TOOLS = [
     category: "asset",
   },
   {
+    id: "simple_send_tool",
+    label: "📨 Simple Send",
+    description:
+      "Easily mass send assets to a single or an asset to multiple wallets.",
+    path: "/simple-send",
+    category: "asset",
+  },
+  {
     id: "batch_optout",
     label: "➖ Asset Remove",
     description: "Optout assets in bulk.",
@@ -109,6 +124,21 @@ export const TOOLS = [
     path: "/batch-destroy",
     category: "asset",
   },
+  {
+    id: "simple_airdrop_tool",
+    label: "🪂 Simple Airdrop",
+    description:
+      "Premium Tool - Easily Airdrop a Token of any amount to holders from a creator wallet.",
+    path: "/simple-airdrop",
+    category: "asset",
+  },
+  {
+    id: "airdrop_tool",
+    label: "🪂 Asset Send/Airdrop",
+    description: "Airdrop/Send assets/ALGO to a list of addresses.",
+    path: "/airdrop",
+    category: "asset",
+  },  
   {
     id: "batch_clawback",
     label: "🔙 Asset Clawback",
@@ -124,35 +154,19 @@ export const TOOLS = [
     category: "asset",
   },
   {
-    id: "airdrop_tool",
-    label: "🪂 Asset Send/Airdrop",
-    description: "Airdrop/Send assets/ALGO to a list of addresses.",
-    path: "/airdrop",
-    category: "asset",
-  },
-  {
-    id: "simple_airdrop_tool",
-    label: "🪂 Simple Airdrop",
-    description:
-      "Premium Tool - Easily Airdrop a Token of any amount to holders from a creator wallet.",
-    path: "/simple-airdrop",
-    category: "asset",
-  },
-  {
-    id: "simple_send_tool",
-    label: "📨 Simple Send",
-    description:
-      "Easily mass send assets to a single or an asset to multiple wallets.",
-    path: "/simple-send",
-    category: "asset",
-  },
-  {
     id: "wallet_holdings",
     label: "💼 Wallet Holdings",
     description: "View the assets data of a wallet in CSV format.",
     path: "/wallet-holdings",
     category: "asset",
   },
+  {
+    id: "collection_snapshot",
+    label: "🔎 Find Collection Holders",
+    description: "Download all the holders for a collection in CSV format.",
+    path: "/find-collection-holders",
+    category: "asset",
+  },  
   {
     id: "multimint_asset_holders",
     label: "🌌 Multimint Asset Holders",
@@ -166,20 +180,6 @@ export const TOOLS = [
     description: "Upload a collection images to IPFS.",
     path: "/ipfs-upload",
     category: "asset",
-  },
-  {
-    id: "simple_mint",
-    label: "🖨️ Simple Mint",
-    description: "Easily Mint an Asset on Algorand",
-    path: "/simple-mint",
-    category: "mint",
-  },
-  {
-    id: "simple_update",
-    label: "⬆️ Simple Update",
-    description: "Easily update your Mutable Assets",
-    path: "/simple-update",
-    category: "mint",
   },
 ];
 
