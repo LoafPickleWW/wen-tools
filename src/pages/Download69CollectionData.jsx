@@ -63,6 +63,7 @@ export function Download69CollectionData() {
         metadata.attributes.map(({ trait_type, value }) => {
           return (asset_data_csv[`metadata_property_${trait_type}`] = value);
         });
+      }        
       if (metadata.filters) {
         metadata.filters.map(([ trait_type, value ]) => {
           return (asset_data_csv[`metadata_filters_${trait_type}`] = value);
