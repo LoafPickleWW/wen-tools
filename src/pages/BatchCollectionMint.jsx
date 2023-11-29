@@ -71,8 +71,7 @@ export function BatchCollectionMint() {
           asset_note.extra[key.replace("extra_", "")] = item[key];
         }
         if (key.startsWith("filters_")) {
-          asset_note.filters[key.replace("filters_", "")] =
-            item[key];
+          asset_note.filters[key.replace("filters_", "")] = item[key];
         }        
       });
       const asset_name = item.name;
