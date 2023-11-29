@@ -68,10 +68,10 @@ export function BatchCollectionMint() {
           asset_note.properties[key.replace("property_", "")] = item[key];
         }
         if (key.startsWith("extra_")) {
-          ipfs_data.extra[key.replace("extra_", "")] = item[key];
+          asset_note.extra[key.replace("extra_", "")] = item[key];
         }
         if (key.startsWith("filters_")) {
-          ipfs_data.filters[key.replace("filters_", "")] =
+          asset_note.filters[key.replace("filters_", "")] =
             item[key];
         }        
       });
