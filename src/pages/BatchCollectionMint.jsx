@@ -55,6 +55,8 @@ export function BatchCollectionMint() {
         mime_type: item.mime_type,
         description: item.description,
         properties: {},
+        filter: {},
+        extra: {},
       };
       Object.keys(asset_note).forEach((key) => {
         if (asset_note[key] === "") {
@@ -65,6 +67,13 @@ export function BatchCollectionMint() {
         if (key.startsWith("property_")) {
           asset_note.properties[key.replace("property_", "")] = item[key];
         }
+        if (key.startsWith("extra_")) {
+          ipfs_data.extra[key.replace("extra_", "")] = item[key];
+        }
+        if (key.startsWith("filter_")) {
+          ipfs_data.filter[key.replace("filter_", "")] =
+            item[key];
+        }        
       });
       const asset_name = item.name;
       const unit_name = item.unit_name;
