@@ -43,9 +43,9 @@ export function BatchCollectionMetadataUpdate() {
         extra: {},
       };
 
-      Object.keys(ipfs_data).forEach((key) => {
-        if (ipfs_data[key] === "") {
-          delete ipfs_data[key];
+      Object.keys(asset_note).forEach((key) => {
+        if (asset_note[key] === "") {
+          delete asset_note[key];
         }
       });
 
