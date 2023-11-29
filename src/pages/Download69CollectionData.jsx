@@ -69,7 +69,7 @@ export function Download69CollectionData() {
         });
       }
       return asset_data_csv;
-    } catch (err) {
+    } catch (error) {
       toast.error(error.message);
     }
   }
