@@ -36,27 +36,29 @@ export function BatchCollectionMetadataUpdate() {
     let data_for_txns = data;
     data_for_txns.forEach((item) => {
       let asset_note = {
+        mime_type: item.mime_type,
+        description: item.description,
         properties: {},
+        filters: {},
+        extra: {},
       };
-      Object.keys(item).forEach((key) => {
-        if (
-          key !== "index" &&
-          key !== "description" &&
-          key !== "mime_type" &&
-          key !== "standard" &&
-          key !== "external_url"
-        ) {
-          asset_note.properties[key] = item[key];
-          delete item[key];
+
+      Object.keys(ipfs_data).forEach((key) => {
+        if (ipfs_data[key] === "") {
+          delete ipfs_data[key];
         }
-        if (
-          key === "external_url" ||
-          key === "standard" ||
-          key === "description" ||
-          key === "mime_type"
-        ) {
-          asset_note[key] = item[key];
-          delete item[key];
+      });
+
+      Object.keys(item).forEach((key) => {
+        if (key.startsWith("property_")) {
+          ipfs_data.properties[key.replace("property_", "")] = item[key];
+        }
+        if (key.startsWith("extra_")) {
+          ipfs_data.extra[key.replace("extra_", "")] = item[key];
+        }
+        if (key.startsWith("filters_")) {
+          ipfs_data.filters[key.replace("filters_", "")] =
+            item[key];
         }
       });
       item.asset_id = parseInt(item.index);
