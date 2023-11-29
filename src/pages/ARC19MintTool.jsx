@@ -83,7 +83,7 @@ export function ARC19MintTool() {
         image_mime_type: item.mime_type,
         description: item.description,
         properties: {},
-        filter: {},
+        filters: {},
         extra: {},
       };
 
@@ -100,8 +100,8 @@ export function ARC19MintTool() {
         if (key.startsWith("extra_")) {
           ipfs_data.extra[key.replace("extra_", "")] = item[key];
         }
-        if (key.startsWith("filter_")) {
-          ipfs_data.filter[key.replace("filter_", "")] =
+        if (key.startsWith("filters_")) {
+          ipfs_data.filters[key.replace("filters_", "")] =
             item[key];
         }
       });
