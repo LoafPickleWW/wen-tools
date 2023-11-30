@@ -66,6 +66,7 @@ export function ARC19UpdateTool() {
       const asset_id = item.asset_id;
       const name = item.name;
       let ipfs_cid = item.image_ipfs_cid;
+      const asset_note = "";
 
       if (ipfs_cid && ipfs_cid.startsWith("ipfs://")) {
         ipfs_cid = ipfs_cid.replace("ipfs://", "");
@@ -103,6 +104,7 @@ export function ARC19UpdateTool() {
       const transaction_data = {
         asset_id,
         ipfs_data,
+        note: asset_note,
       };
       data_for_txns.push(transaction_data);
     });
