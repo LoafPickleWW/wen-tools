@@ -76,8 +76,9 @@ export function ARC3MintTool() {
         image: item.image_ipfs_cid ? "ipfs://" + item.image_ipfs_cid : "",
         image_mime_type: item.mime_type,
         description: item.description,
-        properties: {},
-        filters: {},
+        properties: {
+        filters: {}
+        },
         extra: {},
       };
 
@@ -95,7 +96,7 @@ export function ARC3MintTool() {
           ipfs_data.extra[key.replace("extra_", "")] = item[key];
         }
         if (key.startsWith("filters_")) {
-          ipfs_data.filters[key.replace("filters_", "")] =
+          ipfs_data.properties.filters[key.replace("filters_", "")] =
             item[key];
         }
       });
