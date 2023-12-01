@@ -38,8 +38,9 @@ export function BatchCollectionMetadataUpdate() {
       let asset_note = {
         mime_type: item.mime_type,
         description: item.description,
-        properties: {},
-        filters: {},
+        properties: {
+        filters: {}
+        },
         extra: {},
       };
 
@@ -57,7 +58,7 @@ export function BatchCollectionMetadataUpdate() {
           asset_note.extra[key.replace("extra_", "")] = item[key];
         }
         if (key.startsWith("filters_")) {
-          asset_note.filters[key.replace("filters_", "")] =
+          asset_note.properties.filters[key.replace("filters_", "")] =
             item[key];
         }
       });
