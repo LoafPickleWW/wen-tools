@@ -7,6 +7,7 @@ import { createAssetOptInTransactions, getNodeURL } from "../utils";
 import SelectNetworkComponent from "../components/SelectNetworkComponent";
 import { TOOLS } from "../constants";
 import { AiOutlineInfoCircle } from "react-icons/ai";
+import {useSearchParams} from "react-router-dom";
 
 export function BatchOptin() {
   const [csvData, setCsvData] = useState(null);
@@ -14,6 +15,20 @@ export function BatchOptin() {
   const [txSendingInProgress, setTxSendingInProgress] = useState(false);
   const [mnemonic, setMnemonic] = useState("");
   const [assetIds, setAssetIds] = useState([]);
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  useEffect(() => {
+    if (searchParams.has("ids")) {
+        try {
+            let ids = searchParams.get("ids").split(",").map(n => {
+                return parseInt(n, 10)
+            })
+            setAssetIds(ids);
+        } catch (error) {
+            toast.error("Failed to parse asset ids in URL!")
+        }
+    }
+  }, [searchParams]);
 
   const handleFileData = async () => {
     let assets = [];
