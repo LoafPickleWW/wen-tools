@@ -19,14 +19,7 @@ export function BatchOptin() {
 
   useEffect(() => {
     if (searchParams.has("ids")) {
-        try {
-            let ids = searchParams.get("ids").split(",").map(n => {
-                return parseInt(n, 10)
-            })
-            setAssetIds(ids);
-        } catch (error) {
-            toast.error("Failed to parse asset ids in URL!")
-        }
+        setAssetIds(searchParams.get("ids"));
     }
   }, [searchParams]);
 
