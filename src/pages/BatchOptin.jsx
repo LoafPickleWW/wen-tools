@@ -235,7 +235,7 @@ export function BatchOptin() {
       <button
         id="copy-link"
         className="mb-2 bg-green-500 hover:bg-green-700 text-black text-sm font-semibold rounded py-1 w-fit px-4 mx-auto mt-1 hover:scale-95 duration-700"
-        onclick={() => {
+        onClick={() => {
           navigator.clipboard.writeText(window.location.href.split("?")[0] + "?ids=" + assetIds);
         }}
         >
