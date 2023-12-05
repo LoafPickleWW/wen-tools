@@ -152,7 +152,7 @@ export function Download19CollectionData() {
         )
       );
       exportCSVFile(
-        headers ? headers : ["index", "name", "unit-name", "metadata"],
+        headers ? headers : ["asset_id", "name", "unit-name", "metadata"],
         data,
         `${creatorWallet}-arc19-collection-data.csv`
       );
