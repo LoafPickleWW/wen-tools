@@ -39,6 +39,7 @@ export function BatchCollectionMetadataUpdate() {
         mime_type: item.mime_type,
         description: item.description,
         properties: {
+        traits: {},
         filters: {}
         },
         extra: {},
@@ -52,7 +53,7 @@ export function BatchCollectionMetadataUpdate() {
 
       Object.keys(item).forEach((key) => {
         if (key.startsWith("property_")) {
-          asset_note.properties[key.replace("property_", "")] = item[key];
+          asset_note.properties.traits[key.replace("property_", "")] = item[key];
         }
         if (key.startsWith("extra_")) {
           asset_note.extra[key.replace("extra_", "")] = item[key];
