@@ -83,6 +83,7 @@ export function ARC19MintTool() {
         image_mime_type: item.mime_type,
         description: item.description,
         properties: {
+        traits: {},
         filters: {}
         },
         extra: {},
@@ -96,7 +97,7 @@ export function ARC19MintTool() {
 
       Object.keys(item).forEach((key) => {
         if (key.startsWith("property_")) {
-          ipfs_data.properties[key.replace("property_", "")] = item[key];
+          ipfs_data.properties.traits[key.replace("property_", "")] = item[key];
         }
         if (key.startsWith("extra_")) {
           ipfs_data.extra[key.replace("extra_", "")] = item[key];
