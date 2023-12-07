@@ -132,15 +132,23 @@ export function Download19CollectionData() {
           "unit-name": asset.params["unit-name"],
           reserve: asset.params.reserve,
         };
-        for (const key in asset_metadata) {
-          if (key === "properties" || key === "extra") {
-            for (const k in asset_metadata[key]) {
-              asset_data[`${key}_${k}`] = asset_metadata[key][k];
-            }
-          } else {
-            asset_data[key] = asset_metadata[key];
+      for (const topLevelKey in asset_metadata) {
+        if (topLevelKey === "properties") {
+          for (const secondLevelKey in asset_metadata[topLevelKey]) {
+            if (secondLevelKey == "traits" || secondLevelKey == "filter") {
+                for (const k in asset_metadata[topLevelKey][secondLevelKey]) {
+                    asset_data[`${secondLevelKey}_${k}`] = asset_metadata[topLevelKey][secondLevelKey][k];
+                  }
+              }
           }
+        } else if (topLevelKey === "extra") {
+          for (const key in asset_metadata[key]) {
+            asset_data[`${key}_${k}`] = asset_metadata[key][k];
+          }
+        } else {
+            asset_data[topLevelKey] = asset_metadata[topLevelKey];
         }
+      }
         count++;
         setCounter(count);
         data.push(asset_data);
