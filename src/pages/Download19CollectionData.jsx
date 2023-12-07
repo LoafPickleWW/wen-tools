@@ -140,7 +140,7 @@ export function Download19CollectionData() {
                 asset_data[`${secondLevelKey}_${k}`] = asset_metadata[topLevelKey][secondLevelKey][k];
               }
             } else {
-              asset_data[`${secondLevelKey}_${k}`] = asset_metadata[topLevelKey][secondLevelKey];
+              asset_data[`${topLevelKey}_${secondLevelKey}`] = asset_metadata[topLevelKey][secondLevelKey];
             }
           }
         } else if (topLevelKey === "extra") {
