@@ -144,12 +144,16 @@ export function Download19CollectionData() {
             }
           }
         } else if (topLevelKey === "extra") {
-          for (const key in asset_metadata[key]) {
-            asset_data[`${topLevelKey}_${key}`] = asset_metadata[topLevelKey][key];
+          for (const secondLevelKey in asset_metadata[topLevelKey]) {
+            if (typeof asset_metadata[topLevelKey][secondLevelKey] === "object") {
+              for (const k in asset_metadata[topLevelKey][secondLevelKey]) {
+                asset_data[`${secondLevelKey}_${k}`] = asset_metadata[topLevelKey][secondLevelKey][k];
+              }
+            } else {
+              asset_data[`${topLevelKey}_${secondLevelKey}`] = asset_metadata[topLevelKey][secondLevelKey];
+            }
           }
-        } else {
-            asset_data[topLevelKey] = asset_metadata[topLevelKey];
-        }
+        }  
       }
         count++;
         setCounter(count);
