@@ -55,7 +55,7 @@ export function Download69CollectionData() {
         metadata_mime_type: metadata.mime_type || "",
       };
       if (metadata.properties &&
-      properties.traits != null) {
+      metadata.properties.traits != null) {
         Object.entries(metadata.properties).map(([trait_type, value]) => {
           return (asset_data_csv[`metadata_property_${trait_type}`] = value);
         });
@@ -66,7 +66,7 @@ export function Download69CollectionData() {
         });
       }        
       if (metadata.filters &&
-      properties.filters != null) {
+      metadata.properties.filters != null) {
         Object.entries(metadata.filters).map(([ trait_type, value ]) => {
           return (asset_data_csv[`metadata_filters_${trait_type}`] = value);
         });
