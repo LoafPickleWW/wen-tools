@@ -68,6 +68,11 @@ export function Download69CollectionData() {
         Object.entries(metadata.properties.filters).map(([ trait_type, value ]) => {
           return (asset_data_csv[`metadata_filters_${trait_type}`] = value);
         });
+      }        
+      if (metadata.filters) {
+        Object.entries(metadata.filters).map(([ trait_type, value ]) => {
+          return (asset_data_csv[`metadata_filters_${trait_type}`] = value);
+        });
       }
       return asset_data_csv;
     } catch (error) {
