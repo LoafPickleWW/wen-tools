@@ -54,26 +54,29 @@ export function Download69CollectionData() {
         metadata_external_url: metadata.external_url || "",
         metadata_mime_type: metadata.mime_type || "",
       };
-      if (metadata.properties != null) {
-        Object.entries(metadata.properties).map(([trait_type, value]) => {
-          return (asset_data_csv[`metadata_property_${trait_type}`] = value);
-        });
+      for (const topLevelKey in metadata) {
+        if (topLevelKey === "properties") {
+          for (const secondLevelKey in metadata[topLevelKey]) {
+            if (typeof metadata[topLevelKey][secondLevelKey] === "object") {
+              for (const k in metadata[topLevelKey][secondLevelKey]) {
+                asset_data_csv[`${secondLevelKey}_${k}`] = metadata[topLevelKey][secondLevelKey][k];
+              }
+            } else {
+              asset_data_csv[`${topLevelKey}_${secondLevelKey}`] = metadata[topLevelKey][secondLevelKey];
+            }
+          }
+        } else if (topLevelKey === "extra") {
+          for (const secondLevelKey in metadata[topLevelKey]) {
+            if (typeof metadata[topLevelKey][secondLevelKey] === "object") {
+              for (const k in metadata[topLevelKey][secondLevelKey]) {
+                asset_data_csv[`${secondLevelKey}_${k}`] = metadata[topLevelKey][secondLevelKey][k];
+              }
+            } else {
+              asset_data_csv[`${topLevelKey}_${secondLevelKey}`] = metadata[topLevelKey][secondLevelKey];
+            }
+          }
+        }  
       }
-      if (metadata.attributes != null) {
-        metadata.attributes.map(({ trait_type, value }) => {
-          return (asset_data_csv[`metadata_property_${trait_type}`] = value);
-        });
-      }        
-//      if (metadata.properties.filters != null) {
-//        Object.entries(metadata.properties.filters).map(([ trait_type, value ]) => {
-//          return (asset_data_csv[`metadata_filters_${trait_type}`] = value);
-//        });
-//      }        
-//      if (metadata.filters != null) {
-//        Object.entries(metadata.filters).map(([ trait_type, value ]) => {
-//          return (asset_data_csv[`metadata_filters_${trait_type}`] = value);
-//        });
-//      }
       return asset_data_csv;
     } catch (error) {
       toast.error(error.message);
