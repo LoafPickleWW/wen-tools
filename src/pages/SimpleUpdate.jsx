@@ -171,9 +171,11 @@ export function SimpleUpdate() {
       }
       let metadata = [];
       if (assetMetadata.properties) {
+        let i = 0;
         for (const topLevelKey in assetMetadata.properties) {
-          if (typeof asset_metadata[topLevelKey] === "object") {
+          if (typeof assetMetadata[topLevelKey] === "object") {
             metadata.push(metadata, Object.keys(assetMetadata.properties).map((key, index) => {
+              i++;
               return {
                 id: index,
                 category: topLevelKey + "_" + key,
@@ -181,10 +183,11 @@ export function SimpleUpdate() {
               };
             }));
           } else {
+            i++;
             metadata.push({
               id: index,
-              category: key,
-              name: assetMetadata.properties[key],
+              category: topLevelKey,
+              name: assetMetadata.properties[topLevelKey],
             })
           }
         }
