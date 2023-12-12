@@ -177,7 +177,7 @@ export function SimpleUpdate() {
             metadata.push(metadata, Object.keys(assetMetadata.properties).map((key, index) => {
               i++;
               return {
-                id: index,
+                id: i,
                 category: topLevelKey + "_" + key,
                 name: assetMetadata.properties[key],
               };
@@ -185,7 +185,7 @@ export function SimpleUpdate() {
           } else {
             i++;
             metadata.push({
-              id: index,
+              id: i,
               category: topLevelKey,
               name: assetMetadata.properties[topLevelKey],
             })
