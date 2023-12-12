@@ -173,7 +173,7 @@ export function SimpleUpdate() {
       if (assetMetadata.properties) {
         let i = 0;
         for (const topLevelKey in assetMetadata.properties) {
-          if (typeof assetMetadata[topLevelKey] === "object") {
+          if (typeof assetMetadata.properties[topLevelKey] === "object") {
             metadata.push(metadata, Object.keys(assetMetadata.properties).map((key, index) => {
               i++;
               return {
