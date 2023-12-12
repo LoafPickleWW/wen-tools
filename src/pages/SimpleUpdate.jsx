@@ -179,7 +179,7 @@ export function SimpleUpdate() {
               return {
                 id: i,
                 category: topLevelKey + "_" + key,
-                name: assetMetadata.properties[key],
+                name: assetMetadata.properties[topLevelKey][key],
               };
             }));
           } else {
