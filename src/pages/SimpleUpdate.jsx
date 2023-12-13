@@ -171,26 +171,13 @@ export function SimpleUpdate() {
       }
       let metadata = [];
       if (assetMetadata.properties) {
-        let i = 0;
-        for (const topLevelKey in assetMetadata.properties) {
-          if (typeof assetMetadata.properties[topLevelKey] === "object") {
-            metadata.push(metadata, Object.keys(assetMetadata.properties).map((key, index) => {
-              i++;
-              return {
-                id: i,
-                category: topLevelKey + "_" + key,
-                name: assetMetadata.properties[topLevelKey][key],
-              };
-            }));
-          } else {
-            i++;
-            metadata.push({
-              id: i,
-              category: topLevelKey,
-              name: assetMetadata.properties[topLevelKey],
-            })
-          }
-        }
+        metadata = Object.keys(assetMetadata.properties).map((key, index) => {
+          return {
+            id: index,
+            category: key,
+            name: assetMetadata.properties[key],
+          };
+        });
       }
       if (assetMetadata.description) {
         metadata = [
