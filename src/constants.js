@@ -35,21 +35,21 @@ export const TOOLS = [
   {
     id: "simple_mint",
     label: "🖨️ Simple Mint",
-    description: "Easily Mint an Asset on Algorand",
+    description: "Easily Inscribe an Asset on Algorand",
     path: "/simple-mint",
     category: "mint",
   },
   {
     id: "simple_update",
     label: "⬆️ Simple Update",
-    description: "Easily update your Mutable Assets",
+    description: "Easily update your Mutable Inscriptions",
     path: "/simple-update",
     category: "mint",
   },
   {
     id: "batch_mint",
     label: "🖨️ ARC-69 Collection Mint",
-    description: "Mint an ARC-69 collection in bulk.",
+    description: "Inscribe an ARC-69 collection in bulk.",
     path: "/arc69-collection-mint",
     category: "mint",
   },
@@ -70,7 +70,7 @@ export const TOOLS = [
   {
     id: "arc19_batch_mint",
     label: "🖨️ ARC-19 Collection Mint",
-    description: "Mint an ARC-19 collection in bulk.",
+    description: "Inscribe an ARC-19 collection in bulk.",
     path: "/arc19-collection-mint",
     category: "mint",
   },
@@ -91,7 +91,7 @@ export const TOOLS = [
   {
     id: "arc3_batch_mint",
     label: "🖨️ ARC-3 Collection Mint",
-    description: "Mint an ARC-3 collection in bulk.",
+    description: "Inscribe an ARC-3 collection in bulk.",
     path: "/arc3-collection-mint",
     category: "mint",
   },
