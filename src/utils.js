@@ -517,7 +517,7 @@ export async function createAirdropTransactions(
           suggestedParams: params,
           note: new TextEncoder().encode(
             isHolder
-              ? data_for_txns[i].note.slice(0, 950) + " | via Thurstober Digital Studios" +
+              ? data_for_txns[i].note.slice(0, 950) + " | via Thurstober Digital Studios  " +
                   Math.random().toString(36).substring(2)
               : "Sent using The Laboratory - A Thurstober Digital Studios Product! Free Tools for Algorand Creators and Collectors!  " +
                   Math.random().toString(36).substring(2)
@@ -535,7 +535,7 @@ export async function createAirdropTransactions(
           suggestedParams: params,
           note: new TextEncoder().encode(
             isHolder
-              ? data_for_txns[i].note.slice(0, 950) + " | via Thurstober Digital Studios" +
+              ? data_for_txns[i].note.slice(0, 950) + " | via Thurstober Digital Studios  " +
                   Math.random().toString(36).substring(2)
               : "Sent using The Laboratory - A Thurstober Digital Studios Product! Free Tools for Algorand Creators and Collectors!  " +
                   Math.random().toString(36).substring(2)
