@@ -121,16 +121,13 @@ export function BatchFreeze() {
       <p>1- Connect Sender Wallet</p>
       <ConnectButton />
       {/* mnemonic */}
-      <div className="flex flex-col items-center rounded bg-primary-green py-2 px-3 text-sm text-black">
-        <span>Infinity Mode (optional)</span>
-        <div className="has-tooltip my-2">
-          <span className="tooltip rounded shadow-lg p-1 bg-gray-100 text-red-500 -mt-8 max-w-xl">
+      <div class="container">
+        <h2>Infinity Mode for 65+ Transactions</h2>
+        <button type="button" class="btn btn-info" data-toggle="collapse" data-target="#demo">Simple collapsible</button>
+        <div id="demo" class="collapse">
             Evil Tools does not store any information on the website. As
             precautions, you can use burner wallets, rekey to a burner wallet
             and rekey back, or rekey after using.
-          </span>
-          <AiOutlineInfoCircle />
-        </div>
         <input
           type="text"
           placeholder="25-words mnemonics"
@@ -140,10 +137,7 @@ export function BatchFreeze() {
             setMnemonic(e.target.value.replace(/,/g, " "));
           }}
         />
-        <span className="text-xs mt-2 text-black">
-          Infinity Mode allows for no restrictions <br />
-          to the amount of transactions per upload.
-        </span>
+        </div>  
       </div>
       {/* end mnemonic */}
       <p>2- Upload CSV file</p>
