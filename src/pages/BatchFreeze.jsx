@@ -7,6 +7,12 @@ import { toast } from "react-toastify";
 import { createFreezeTransactions, getNodeURL } from "../utils";
 import { TOOLS } from "../constants";
 import { AiOutlineInfoCircle } from "react-icons/ai";
+import {
+  Accordion,
+  AccordionBody,
+  AccordionHeader,
+  AccordionItem,
+} from 'reactstrap';
 
 export function BatchFreeze() {
   const [csvData, setCsvData] = useState(null);
@@ -121,31 +127,36 @@ export function BatchFreeze() {
       <p>1- Connect Sender Wallet</p>
       <ConnectButton />
       {/* mnemonic */}
-      <div className="accordion" id="accordionExample">
-        <div className="card">
-          <div className="card-header" id="headingOne">
-            <h2 className="mb-0">
-              <button className"btn btn-link" type="button" data-toggle="collapse" data-target="#collapseOne" aria-expanded="true" aria-controls="collapseOne">
-                Infinity Mode for 65+ Transactions
-              </button>
-            </h2>
+      function Example(props) {
+        const [open, setOpen] = useState('1');
+        const toggle = (id) => {
+          if (open === id) {
+            setOpen();
+          } else {
+            setOpen(id);
+          }
+        };
+        return (
+          <div>
+            <Accordion open={open} toggle={toggle}>
+              <AccordionItem>
+                <AccordionHeader targetId="1">Infinity Mode for 65+ Transactions</AccordionHeader>
+                <AccordionBody accordionId="1">
+                  Evil Tools does not store any information on the website. As precautions, you can use burner wallets, rekey to a burner wallet and rekey back, or rekey after using.
+                  <input
+                    type="text"
+                    placeholder="25-words mnemonics"
+                    className="bg-black/40 text-white border-2 border-black rounded-lg p-2 mt-1 w-64 text-sm mx-auto placeholder:text-center placeholder:text-white/70 placeholder:text-sm"
+                    value={mnemonic}
+                    onChange={(e) => {
+                      setMnemonic(e.target.value.replace(/,/g, " "));
+                    }}
+                  />
+                </AccordionBody>
+              </AccordionItem>
+            </Accordion>
           </div>
-          <div id="collapseOne" className="collapse show" aria-labelledby="headingOne" data-parent="#accordionExample">
-            <div className="card-body">
-              Evil Tools does not store any information on the website. As precautions, you can use burner wallets, rekey to a burner wallet and rekey back, or rekey after using.
-              <input
-                type="text"
-                placeholder="25-words mnemonics"
-                className="bg-black/40 text-white border-2 border-black rounded-lg p-2 mt-1 w-64 text-sm mx-auto placeholder:text-center placeholder:text-white/70 placeholder:text-sm"
-                value={mnemonic}
-                onChange={(e) => {
-                  setMnemonic(e.target.value.replace(/,/g, " "));
-                }}
-              />
-            </div>
-          </div>
-        </div> 
-      </div>  
+        );
       {/* end mnemonic */}
       <p>2- Upload CSV file</p>
       {csvData == null ? (
