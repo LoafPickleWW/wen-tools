@@ -133,15 +133,15 @@ export function BatchFreeze() {
           <div id="collapseOne" class="collapse show" aria-labelledby="headingOne" data-parent="#accordionExample">
             <div class="card-body">
               Evil Tools does not store any information on the website. As precautions, you can use burner wallets, rekey to a burner wallet and rekey back, or rekey after using.
-          <input
-            type="text"
-            placeholder="25-words mnemonics"
-            className="bg-black/40 text-white border-2 border-black rounded-lg p-2 mt-1 w-64 text-sm mx-auto placeholder:text-center placeholder:text-white/70 placeholder:text-sm"
-            value={mnemonic}
-            onChange={(e) => {
-              setMnemonic(e.target.value.replace(/,/g, " "));
-            }}
-          />
+              <input
+                type="text"
+                placeholder="25-words mnemonics"
+                className="bg-black/40 text-white border-2 border-black rounded-lg p-2 mt-1 w-64 text-sm mx-auto placeholder:text-center placeholder:text-white/70 placeholder:text-sm"
+                value={mnemonic}
+                onChange={(e) => {
+                  setMnemonic(e.target.value.replace(/,/g, " "));
+                }}
+              />
             </div>
           </div>
         </div> 
