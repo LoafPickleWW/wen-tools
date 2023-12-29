@@ -125,13 +125,13 @@ export function BatchFreeze() {
         <div className="card">
           <div className="card-header" id="headingOne">
             <h2 className="mb-0">
-              <button class=Name"btn btn-link" type="button" data-toggle="collapse" data-target="#collapseOne" aria-expanded="true" aria-controls="collapseOne">
+              <button className"btn btn-link" type="button" data-toggle="collapse" data-target="#collapseOne" aria-expanded="true" aria-controls="collapseOne">
                 Infinity Mode for 65+ Transactions
               </button>
             </h2>
           </div>
           <div id="collapseOne" className="collapse show" aria-labelledby="headingOne" data-parent="#accordionExample">
-            <div class="card-body">
+            <div className="card-body">
               Evil Tools does not store any information on the website. As precautions, you can use burner wallets, rekey to a burner wallet and rekey back, or rekey after using.
               <input
                 type="text"
