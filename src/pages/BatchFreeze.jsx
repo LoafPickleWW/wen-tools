@@ -121,24 +121,31 @@ export function BatchFreeze() {
       <p>1- Connect Sender Wallet</p>
       <ConnectButton />
       {/* mnemonic */}
-      <div class="container">
-        <h2>Infinity Mode for 65+ Transactions</h2>
-        <button type="button" class="btn btn-info" data-toggle="collapse" data-target="infinity">Open Infinity Mode</button>
-        <div id="infinity" class="collapse">
-            Evil Tools does not store any information on the website. As
-            precautions, you can use burner wallets, rekey to a burner wallet
-            and rekey back, or rekey after using.
-        <input
-          type="text"
-          placeholder="25-words mnemonics"
-          className="bg-black/40 text-white border-2 border-black rounded-lg p-2 mt-1 w-64 text-sm mx-auto placeholder:text-center placeholder:text-white/70 placeholder:text-sm"
-          value={mnemonic}
-          onChange={(e) => {
-            setMnemonic(e.target.value.replace(/,/g, " "));
-          }}
-        />
-        </div>  
-      </div>
+      <div class="accordion" id="accordionExample">
+        <div class="card">
+          <div class="card-header" id="headingOne">
+            <h2 class="mb-0">
+              <button class="btn btn-link" type="button" data-toggle="collapse" data-target="#collapseOne" aria-expanded="true" aria-controls="collapseOne">
+                Infinity Mode for 65+ Transactions
+              </button>
+            </h2>
+          </div>
+          <div id="collapseOne" class="collapse show" aria-labelledby="headingOne" data-parent="#accordionExample">
+            <div class="card-body">
+              Evil Tools does not store any information on the website. As precautions, you can use burner wallets, rekey to a burner wallet and rekey back, or rekey after using.
+          <input
+            type="text"
+            placeholder="25-words mnemonics"
+            className="bg-black/40 text-white border-2 border-black rounded-lg p-2 mt-1 w-64 text-sm mx-auto placeholder:text-center placeholder:text-white/70 placeholder:text-sm"
+            value={mnemonic}
+            onChange={(e) => {
+              setMnemonic(e.target.value.replace(/,/g, " "));
+            }}
+          />
+            </div>
+          </div>
+        </div> 
+      </div>  
       {/* end mnemonic */}
       <p>2- Upload CSV file</p>
       {csvData == null ? (
