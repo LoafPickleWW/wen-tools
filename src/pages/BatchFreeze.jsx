@@ -157,6 +157,7 @@ export function BatchFreeze() {
             </Accordion>
           </div>
         );
+      };
       {/* end mnemonic */}
       <p>2- Upload CSV file</p>
       {csvData == null ? (
