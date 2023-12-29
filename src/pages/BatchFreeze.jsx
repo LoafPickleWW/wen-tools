@@ -121,18 +121,10 @@ export function BatchFreeze() {
       <p>1- Connect Sender Wallet</p>
       <ConnectButton />
       {/* mnemonic */}
-      <html>
-      <head>
-        <meta name="viewport" content="width=device-width, initial-scale=1">
-        <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css">
-        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
-        <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>
-      </head>
-      <body>
       <div class="container">
         <h2>Infinity Mode for 65+ Transactions</h2>
-        <button type="button" class="btn btn-info" data-toggle="collapse" data-target="#demo">Open Infinity Mode</button>
-        <div id="demo" class="collapse">
+        <button type="button" class="btn btn-info" data-toggle="collapse" data-target="infinity">Open Infinity Mode</button>
+        <div id="infinity" class="collapse">
             Evil Tools does not store any information on the website. As
             precautions, you can use burner wallets, rekey to a burner wallet
             and rekey back, or rekey after using.
@@ -147,8 +139,6 @@ export function BatchFreeze() {
         />
         </div>  
       </div>
-      </body>
-      </html>
       {/* end mnemonic */}
       <p>2- Upload CSV file</p>
       {csvData == null ? (
