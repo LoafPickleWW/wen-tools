@@ -79,9 +79,9 @@ export function getAssetPreviewURL(assetID) {
 export function getTokenPreviewURL(assetID) {
   const networkType = localStorage.getItem("networkType");
   if (networkType === "mainnet") {
-    return "https://algoexplorer.io/asset/" + assetID;
+    return "https://allo.info/asset/" + assetID;
   }
-  return "https://testnet.algoexplorer.io/asset/" + assetID;
+  return "https://allo.info/asset/" + assetID;
 }
 
 export async function signGroupTransactions(
