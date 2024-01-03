@@ -54,9 +54,8 @@ export function BatchCollectionMint() {
         external_url: item.external_url,
         mime_type: item.mime_type,
         description: item.description,
-        properties: {
-        filters: {}
-        },
+        properties: {},
+        filters: {},
         extra: {},
       };
       Object.keys(asset_note).forEach((key) => {
