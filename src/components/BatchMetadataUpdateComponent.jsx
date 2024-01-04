@@ -4,6 +4,7 @@ import ConnectButton from './ConnectButton';
 import algosdk from "algosdk";
 import { toast } from "react-toastify";
 import { createAssetConfigArray, sliceIntoChunks } from '../utils';
+import { MAINNET_ALGONODE_NODE, TESTNET_ALGONODE_NODE } from '../constants';
 
 export function BatchCollectionMetadataUpdate(props) {
     const [csvData, setCsvData] = useState(null);
@@ -60,7 +61,7 @@ export function BatchCollectionMetadataUpdate(props) {
         }
         try {
             toast.info("Please sign the transactions!");
-            const nodeURL = localStorage.getItem("networkType") == "mainnet" ? "https://node.algoexplorerapi.io/" : "https://node.testnet.algoexplorerapi.io/";
+            const nodeURL = localStorage.getItem("networkType") == "mainnet" ? MAINNET_ALGONODE_NODE : TESTNET_ALGONODE_NODE;
             const algodClient = new algosdk.Algodv2("", nodeURL, {
                 "User-Agent": "evil-tools",
             });
