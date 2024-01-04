@@ -2,6 +2,7 @@ import { useState } from "react"
 import { toast } from "react-toastify";
 import axios from "axios";
 import { getNfdDomain } from "../utils";
+import { MAINNET_ALGONODE_INDEXER, TESTNET_ALGONODE_INDEXER } from "../constants";
 
 export function CollectionSnapshot(props) {
     const [creatorWallet, setCreatorWallet] = useState("");
@@ -30,9 +31,7 @@ export function CollectionSnapshot(props) {
 
     async function getAssetOwner(asset_id) {
         try {
-            const host1 = localStorage.getItem("networkType") == "mainnet" ? "https://mainnet-idx.algonode.cloud" : "https://testnet-idx.algonode.cloud";
-            const host2 = localStorage.getItem("networkType") == "mainnet" ? "https://algoindexer.algoexplorerapi.io" : "https://algoindexer.testnet.algoexplorerapi.io";
-            const host = Math.round(Math.random()) == 1 ? host1 : host2;
+            const host = localStorage.getItem("networkType") == "mainnet" ? MAINNET_ALGONODE_INDEXER : TESTNET_ALGONODE_INDEXER;
             const url = `${host}/v2/assets/${asset_id}/balances?include-all=false&currency-greater-than=0`;
             const response = await axios.get(url);
             return response.data.balances[0].address;
