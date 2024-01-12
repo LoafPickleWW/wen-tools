@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { toast } from "react-toastify";
 //import MyAlgoConnect from "@randlabs/myalgo-connect";
-import { Web3Storage } from "web3.storage/dist/bundle.esm.min.js";
+import { pinImageToNFTStorage } from "../utils";
 import { TOOLS } from "../constants";
 
 
@@ -20,10 +20,14 @@ export function UploadCollectionToIPFS() {
       toast.info("Please select a file first!");
       return;
     }
-    const client = new Web3Storage({ token: token });
+    if (!isNFTStorage) {
+       const client = new Web3Storage({ token: token });
+       cid = await pinJSONToIPFS(client, jsonString);
+     } else {
+       cid = await pinJSONToNFTStorage(token, jsonString);
+    }
     try {
       setLoading(true);
-      const cid = await client.put(selectedFiles, { wrapwithDirectory: true });
       setCollectionCid(cid);
       navigator.clipboard.writeText(cid);
       toast.success("Your cid copied to clipboard!");
@@ -41,7 +45,7 @@ export function UploadCollectionToIPFS() {
           {TOOLS.find((tool) => tool.path === window.location.pathname).label}
         </p>
         <label className=" font-roboto -mb-2 text-xs text-slate-400">
-          Enter Web3Storage Token
+          Enter NFT.Storage Token
         </label>
         <input
           type="text"
@@ -54,7 +58,7 @@ export function UploadCollectionToIPFS() {
         <p className="text-xs text-slate-400 font-roboto -mt-2 mb-2">
           you can get your token{" "}
           <a
-            href="https://web3.storage/docs/#get-an-api-token"
+            href="https://nft.storage/docs/#get-an-api-token"
             target="_blank"
             className="text-secondary-green/50 hover:text-secondary-green/80 transition"
             rel="noreferrer"
