@@ -24,7 +24,7 @@ export function UploadCollectionToIPFS() {
     }
     try {
       setLoading(true);
-      const cid = await client.put(selectedFiles, { wrapwithDirectory: true });
+      const cid = await pinJSONToNFTStorage(token, jsonString);
       setCollectionCid(cid);
       navigator.clipboard.writeText(cid);
       toast.success("Your cid copied to clipboard!");
