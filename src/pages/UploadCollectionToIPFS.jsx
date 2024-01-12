@@ -20,14 +20,11 @@ export function UploadCollectionToIPFS() {
       toast.info("Please select a file first!");
       return;
     }
-    if (!isNFTStorage) {
-       const client = new Web3Storage({ token: token });
-       cid = await pinJSONToIPFS(client, jsonString);
-     } else {
-       cid = await pinJSONToNFTStorage(token, jsonString);
+    const client = new pinJSONToNFTStorage({ token: token });
     }
     try {
       setLoading(true);
+      const cid = await client.put(selectedFiles, { wrapwithDirectory: true });
       setCollectionCid(cid);
       navigator.clipboard.writeText(cid);
       toast.success("Your cid copied to clipboard!");
