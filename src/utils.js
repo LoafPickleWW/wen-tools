@@ -18,7 +18,6 @@ import {
 import axios from "axios";
 import { CID } from "multiformats/cid";
 import { toast } from "react-toastify";
-import { Web3Storage } from "web3.storage/dist/bundle.esm.min.js";
 import {
   DONATE_WALLET_1,
   DONATE_WALLET_2,
@@ -190,7 +189,8 @@ export async function createAssetConfigArray(
       amount: algosToMicroalgos(UPDATE_FEE_PER_ASA),
       suggestedParams: params,
       note: new TextEncoder().encode(
-        "via Thurstober Digital Studios | " + Math.random().toString(36).substring(2)
+        "via Thurstober Digital Studios | " +
+          Math.random().toString(36).substring(2)
       ),
     });
     const groupID = computeGroupID([asset_update_tx, fee_tx]);
@@ -252,7 +252,8 @@ export async function createAssetMintArray(
         amount: algosToMicroalgos(MINT_FEE_PER_ASA),
         suggestedParams: params,
         note: new TextEncoder().encode(
-          "via Thurstober Digital Studios | " + Math.random().toString(36).substring(2)
+          "via Thurstober Digital Studios | " +
+            Math.random().toString(36).substring(2)
         ),
       });
       const groupID = computeGroupID([asset_create_tx, fee_tx]);
@@ -291,13 +292,7 @@ export async function createARC3AssetMintArray(
   for (let i = 0; i < data_for_txns.length; i++) {
     try {
       const jsonString = JSON.stringify(data_for_txns[i].ipfs_data);
-      let cid;
-      if (!isNFTStorage) {
-        const client = new Web3Storage({ token: token });
-        cid = await pinJSONToIPFS(client, jsonString);
-      } else {
-        cid = await pinJSONToNFTStorage(token, jsonString);
-      }
+      let cid = await pinJSONToNFTStorage(token, jsonString);
       data_for_txns[i].asset_url_section = "ipfs://" + cid;
       let asset_create_tx = makeAssetCreateTxnWithSuggestedParamsFromObject({
         from: wallet,
@@ -323,7 +318,8 @@ export async function createARC3AssetMintArray(
         amount: algosToMicroalgos(MINT_FEE_PER_ASA),
         suggestedParams: params,
         note: new TextEncoder().encode(
-          "via Thurstober Digital Studios | " + Math.random().toString(36).substring(2)
+          "via Thurstober Digital Studios | " +
+            Math.random().toString(36).substring(2)
         ),
       });
       const groupID = computeGroupID([asset_create_tx, fee_tx]);
@@ -359,13 +355,7 @@ export async function createARC19AssetMintArray(
   for (let i = 0; i < data_for_txns.length; i++) {
     try {
       const jsonString = JSON.stringify(data_for_txns[i].ipfs_data);
-      let cid;
-      if (!isNFTStorage) {
-        const client = new Web3Storage({ token: token });
-        cid = await pinJSONToIPFS(client, jsonString);
-      } else {
-        cid = await pinJSONToNFTStorage(token, jsonString);
-      }
+      let cid = await pinJSONToNFTStorage(token, jsonString);
       const { assetURL, reserveAddress } = createReserveAddressFromIpfsCid(cid);
       let asset_create_tx = makeAssetCreateTxnWithSuggestedParamsFromObject({
         from: wallet,
@@ -391,7 +381,8 @@ export async function createARC19AssetMintArray(
         amount: algosToMicroalgos(MINT_FEE_PER_ASA),
         suggestedParams: params,
         note: new TextEncoder().encode(
-          "via Thurstober Digital Studios | " + Math.random().toString(36).substring(2)
+          "via Thurstober Digital Studios | " +
+            Math.random().toString(36).substring(2)
         ),
       });
       const groupID = computeGroupID([asset_create_tx, fee_tx]);
@@ -429,13 +420,7 @@ export async function updateARC19AssetMintArray(
   for (let i = 0; i < data_for_txns.length; i++) {
     try {
       const jsonString = JSON.stringify(data_for_txns[i].ipfs_data);
-      let cid;
-      if (!isNFTStorage) {
-        const client = new Web3Storage({ token: token });
-        cid = await pinJSONToIPFS(client, jsonString);
-      } else {
-        cid = await pinJSONToNFTStorage(token, jsonString);
-      }
+      let cid = await pinJSONToNFTStorage(token, jsonString);
       const { reserveAddress } = createReserveAddressFromIpfsCid(cid);
       let update_tx = makeAssetConfigTxnWithSuggestedParamsFromObject({
         from: wallet,
@@ -455,7 +440,8 @@ export async function updateARC19AssetMintArray(
         amount: algosToMicroalgos(UPDATE_FEE_PER_ASA),
         suggestedParams: params,
         note: new TextEncoder().encode(
-          "via Thurstober Digital Studios | " + Math.random().toString(36).substring(2)
+          "via Thurstober Digital Studios | " +
+            Math.random().toString(36).substring(2)
         ),
       });
       const groupID = computeGroupID([update_tx, fee_tx]);
@@ -517,7 +503,8 @@ export async function createAirdropTransactions(
           suggestedParams: params,
           note: new TextEncoder().encode(
             isHolder
-              ? data_for_txns[i].note.slice(0, 950) + " | via Thurstober Digital Studios  " +
+              ? data_for_txns[i].note.slice(0, 950) +
+                  " | via Thurstober Digital Studios  " +
                   Math.random().toString(36).substring(2)
               : "Sent using The Laboratory - A Thurstober Digital Studios Product! Free Tools for Algorand Creators and Collectors!  " +
                   Math.random().toString(36).substring(2)
@@ -535,7 +522,8 @@ export async function createAirdropTransactions(
           suggestedParams: params,
           note: new TextEncoder().encode(
             isHolder
-              ? data_for_txns[i].note.slice(0, 950) + " | via Thurstober Digital Studios  " +
+              ? data_for_txns[i].note.slice(0, 950) +
+                  " | via Thurstober Digital Studios  " +
                   Math.random().toString(36).substring(2)
               : "Sent using The Laboratory - A Thurstober Digital Studios Product! Free Tools for Algorand Creators and Collectors!  " +
                   Math.random().toString(36).substring(2)
@@ -814,7 +802,8 @@ export async function createAssetDeleteTransactions(assets, nodeURL, mnemonic) {
         suggestedParams: params,
         assetIndex: parseInt(assets[i]),
         note: new TextEncoder().encode(
-          "via Thurstober Digital Studios | " + Math.random().toString(36).substring(2)
+          "via Thurstober Digital Studios | " +
+            Math.random().toString(36).substring(2)
         ),
       });
       let fee_tx = makePaymentTxnWithSuggestedParamsFromObject({
@@ -888,19 +877,19 @@ async function fetchNFDJSON(url) {
     const jsonData = await response.json();
     if (response.status === 429 && jsonData.length > 0) {
       // Wait for 'secsRemaining' seconds before retrying.
-      await new Promise(resolve => setTimeout(resolve, jsonData.secsRemaining * 1000));
+      await new Promise((resolve) =>
+        setTimeout(resolve, jsonData.secsRemaining * 1000)
+      );
     } else {
       // If status is not 429, return the json data and status.
-      return {status: response.status, body: jsonData};
+      return { status: response.status, body: jsonData };
     }
   }
 }
 
 export async function getNfdDomain(wallet) {
   const nfdDomain = await fetchNFDJSON(
-    "https://api.nf.domains/nfd/lookup?address=" +
-    wallet +
-    "&view=tiny"
+    "https://api.nf.domains/nfd/lookup?address=" + wallet + "&view=tiny"
   );
   if (nfdDomain.status === 200) {
     return nfdDomain.body[wallet].name;
@@ -926,20 +915,6 @@ export async function pinJSONToIPFS(client, json) {
       [new Blob([json])],
       { wrapWithDirectory: false },
       { contentType: "application/json" }
-    );
-    return cid;
-  } catch (error) {
-    throw new Error("IPFS pinning failed");
-  }
-}
-
-export async function pinImageToIPFS(token, image) {
-  try {
-    const client = new Web3Storage({ token: token });
-    const cid = await client.put(
-      [new Blob([image])],
-      { wrapWithDirectory: false },
-      { contentType: image.type }
     );
     return cid;
   } catch (error) {
@@ -1034,7 +1009,9 @@ export async function getNfDomainsInBulk(wallets, bulkSize = 20) {
       .map((wallet) => `address=${wallet}`)
       .join("&");
     try {
-      const nfdLookup = await fetchNFDJSON(`https://api.nf.domains/nfd/lookup?view=tiny&${chunk}`);
+      const nfdLookup = await fetchNFDJSON(
+        `https://api.nf.domains/nfd/lookup?view=tiny&${chunk}`
+      );
       if (nfdLookup.status === 200) {
         for (const [account, domain] of Object.entries(nfdLookup.body)) {
           nfdDomains[account] = domain.name;

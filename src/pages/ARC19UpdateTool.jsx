@@ -247,7 +247,7 @@ export function ARC19UpdateTool() {
           CSV Template
         </a>
       </button>
-      <p>2- Enter Web3Storage Token</p>
+      <p>2- Enter NFTStorage Token</p>
       <input
         type="text"
         id="ipfs-token"
@@ -259,7 +259,7 @@ export function ARC19UpdateTool() {
       <p className="text-xs text-slate-400 font-roboto -mt-2 mb-2">
         you can get your token{" "}
         <a
-          href="https://web3.storage/docs/#get-an-api-token"
+          href="https://nft.storage/docs/#get-an-api-token"
           target="_blank"
           className="text-primary-green/70 hover:text-secondary-green/80 transition"
           rel="noreferrer"
