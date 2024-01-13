@@ -1,8 +1,6 @@
 import { useState } from "react";
 import { toast } from "react-toastify";
-//import MyAlgoConnect from "@randlabs/myalgo-connect";
 import { Web3Storage } from "web3.storage/dist/bundle.esm.min.js";
-//import { pinImageToNFTStorage } from "../utils";
 import { TOOLS } from "../constants";
 
 
@@ -22,12 +20,9 @@ export function UploadCollectionToIPFS() {
       return;
     }
     const client = new Web3Storage({ token: token });
-//  const client = new pinJSONToNFTStorage({ token: token });
-    }
     try {
       setLoading(true);
       const cid = await client.put(selectedFiles, { wrapwithDirectory: true });
-//    const cid = await client.storeDirectory([selectedFiles]);
       setCollectionCid(cid);
       navigator.clipboard.writeText(cid);
       toast.success("Your cid copied to clipboard!");
@@ -45,7 +40,7 @@ export function UploadCollectionToIPFS() {
           {TOOLS.find((tool) => tool.path === window.location.pathname).label}
         </p>
         <label className=" font-roboto -mb-2 text-xs text-slate-400">
-          Enter Web3.Storage Token
+          Enter Web3Storage Token
         </label>
         <input
           type="text"
