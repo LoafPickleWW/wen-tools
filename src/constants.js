@@ -174,12 +174,12 @@ export const TOOLS = [
     path: "/multimint-asset-holders",
     category: "asset",
   },
-  {
-    id: "ipfs_upload",
-    label: "📁 IPFS Collection Upload",
-    description: "Upload a collection images to IPFS.",
-    path: "/ipfs-upload",
-    category: "asset",
-  },
+//  {
+//    id: "ipfs_upload",
+//    label: "📁 IPFS Collection Upload",
+//    description: "Upload a collection images to IPFS.",
+//    path: "/ipfs-upload",
+//    category: "asset",
+//  },
 ];
 
