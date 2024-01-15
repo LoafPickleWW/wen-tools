@@ -761,7 +761,7 @@ export async function createAssetOptoutTransactions(
         suggestedParams: params,
         closeRemainderTo: creatorAddress.trim(),
         note: new TextEncoder().encode("via Thurstober Digital Studios"),
-      }) else {
+      })} else {
       const tx = makeAssetTransferTxnWithSuggestedParamsFromObject({
         from: wallet,
         to: creatorAddress.trim(),
@@ -770,7 +770,7 @@ export async function createAssetOptoutTransactions(
         suggestedParams: params,
         closeRemainderTo: wallet.trim(),
         note: new TextEncoder().encode("via Thurstober Digital Studios"),
-      });
+      })};
       txnsArray.push(tx);
     }
   }
