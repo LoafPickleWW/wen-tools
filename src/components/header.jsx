@@ -41,14 +41,14 @@ export const Header = () => {
       </div>
       <div className="bg-secondary-yellow text-black flex py-1 justify-center items-center">
         <p className="text-center text-sm ticker-text">
-          Our Latest Technological Achievement: {" "}
+          Improve your wallet experience with the: {" "}
           <a
-            href="https://www.youtube.com/watch?v=S85gMIzRWJ0&ab_channel=Thurstober"
+            href="https://we.thurstober.com/"
             target="_blank"
             rel="noreferrer"
             className="font-semibold hover:text-green-800 transition"
           >
-            M.E.A.T.!
+            Wallet Enhancer!
           </a>
         </p>
       </div>
