@@ -761,6 +761,15 @@ export async function createAssetOptoutTransactions(
         suggestedParams: params,
         closeRemainderTo: creatorAddress.trim(),
         note: new TextEncoder().encode("via Thurstober Digital Studios"),
+      })else {
+          const tx = makeAssetTransferTxnWithSuggestedParamsFromObject({
+          from: wallet,
+          to: creatorAddress.trim(),
+          amount: 0,
+          assetIndex: parseInt(assets[i]),
+          suggestedParams: params,
+          closeRemainderTo: wallet.trim(),
+          note: new TextEncoder().encode("via Thurstober Digital Studios"),
       });
       txnsArray.push(tx);
     }
