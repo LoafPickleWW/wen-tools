@@ -129,6 +129,7 @@ export function Download19CollectionData() {
         let asset_data = {
           index: asset.index,
           name: asset.params.name,
+          image: asset.params.image,
           "unit-name": asset.params["unit-name"],
           reserve: asset.params.reserve,
         };
