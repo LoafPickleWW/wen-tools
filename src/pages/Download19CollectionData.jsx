@@ -129,9 +129,9 @@ export function Download19CollectionData() {
         let asset_data = {
           index: asset.index,
           name: asset.params.name,
-          image: asset.params.image,
           "unit-name": asset.params["unit-name"],
           reserve: asset.params.reserve,
+          image: asset_metadata.image,
         };
       for (const topLevelKey in asset_metadata) {
         if (topLevelKey === "properties") {
