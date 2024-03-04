@@ -69,9 +69,9 @@ export function getIndexerURL() {
 export function getAssetPreviewURL(assetID) {
   const networkType = localStorage.getItem("networkType");
   if (networkType === "mainnet") {
-    return "https://www.nftexplorer.app/asset/" + assetID;
+    return "https://explorer.perawallet.app/asset/" + assetID;
   } else {
-    return "https://testnet.explorer.perawallet.app/assets/" + assetID;
+    return "https://testnet.explorer.perawallet.app/asset/" + assetID;
   }
 }
 
