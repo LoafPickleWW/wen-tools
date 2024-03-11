@@ -74,7 +74,7 @@ export default function Home() {
         </span>
         <a href="algorand://RBZ4GUE7FFDZWCN532FFR5AIYJ6K4V2GKJS5B42JPSWOAVWUT4OHWG57YQ?amount=10000000&note=The%20Laboratory%20Donation">
           <img
-            src="./qr.svg"
+            src="./qr2.svg"
             alt="donate"
             className="w-32 h-32 md:w-40 md:h-40 md:mt-1 rounded-lg hover:brightness-110"
           />
