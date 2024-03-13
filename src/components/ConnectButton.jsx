@@ -2,15 +2,16 @@ import { useEffect, useState } from "react";
 import { BiWallet } from "react-icons/bi";
 import { ImCross } from "react-icons/im";
 import { toast } from "react-toastify";
-import MyAlgoConnect from "@randlabs/myalgo-connect";
 import { PeraWalletConnect } from "@perawallet/connect";
 import { DeflyWalletConnect } from "@blockshake/defly-connect";
+import { DaffiWalletConnect } from "@daffiwallet/connect";
 
 const ConnectButton = () => {
   const [walletAddress, setWalletAddress] = useState("");
   const [showConnectPopup, setShowConnectPopup] = useState(false);
   const peraWallet = new PeraWalletConnect();
   const deflyWallet = new DeflyWalletConnect();
+  const daffiWallet = new DaffiWalletConnect();
 
   useEffect(() => {
     const userAddressLocal = localStorage.getItem("wallet");
@@ -18,23 +19,6 @@ const ConnectButton = () => {
       setWalletAddress(userAddressLocal);
     }
   }, []);
-
-  const connectToMyalgo = async () => {
-    try {
-      const myAlgoConnect = new MyAlgoConnect({ disableLedgerNano: false });
-      const settings = {
-        shouldSelectOneAccount: true,
-        openManager: false,
-      };
-      const accounts = await myAlgoConnect.connect(settings);
-      setWalletAddress(accounts[0].address);
-      localStorage.setItem("wallet", accounts[0].address);
-      setShowConnectPopup(false);
-      toast.success("Connected!");
-      window.location.reload();
-    } catch (err) {
-    }
-  };
 
   const connectToPera = async () => {
     try {
@@ -45,6 +29,7 @@ const ConnectButton = () => {
       toast.success("Connected!");
       window.location.reload();
     } catch (err) {
+      toast.error("Failed to connect!");
     }
   };
 
@@ -57,7 +42,7 @@ const ConnectButton = () => {
       toast.success("Connected!");
       window.location.reload();
     } catch (err) {
-      //console.log(err);
+      toast.error("Failed to connect!");
     }
   };
 
@@ -76,6 +61,19 @@ const ConnectButton = () => {
     setWalletAddress("");
     toast.success("Disconnected!");
     window.location.reload();
+  };
+
+  const connectToDaffi = async () => {
+    try {
+      const accounts = await daffiWallet.connect();
+      setWalletAddress(accounts[0]);
+      localStorage.setItem("wallet", accounts[0]);
+      setShowConnectPopup(false);
+      toast.success("Connected!");
+      window.location.reload();
+    } catch (err) {
+      toast.error("Failed to connect!");
+    }
   };
 
   const shortenAddress = (address) => {
@@ -138,7 +136,7 @@ const ConnectButton = () => {
               <div className="flex flex-col justify-center gap-2 text-base">
                 <div>
                   <button
-                    className="bg-[#ffee55] px-5 py-2 rounded-md w-64 text-black  hover:scale-95 transition"
+                    className="bg-[#ffee55] px-5 py-2 rounded-md w-64 text-black font-semibold hover:scale-95 transition"
                     onClick={connectToPera}
                   >
                     Pera
@@ -154,12 +152,11 @@ const ConnectButton = () => {
                 </div>
                 <div>
                   <button
-                    onClick={connectToMyalgo}
-                    className="bg-blue-600 px-5 py-2 rounded-md w-64 text-black  hover:scale-95 transition grayscale"
+                    onClick={connectToDaffi}
+                    className="bg-[#00BAA4] px-5 py-2 rounded-md w-64 text-black font-semibold  hover:scale-95 transition"
                   >
-                    MyAlgo <br />
-                    (Emergency Use Only)
-                  </button>
+                    Daffi                
+                    </button>
                 </div>
               </div>
             </div>
