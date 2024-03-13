@@ -193,7 +193,8 @@ export function SimpleMint() {
         unsignedAssetTransaction = await createARC3AssetMintArray(
           [metadataForIPFS],
           nodeURL,
-          token
+          token,
+          true
         );
       } else if (formData.format === "ARC19") {
         unsignedAssetTransaction = await createARC19AssetMintArray(
