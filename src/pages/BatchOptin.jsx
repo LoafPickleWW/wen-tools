@@ -15,7 +15,7 @@ export function BatchOptin() {
   const [txSendingInProgress, setTxSendingInProgress] = useState(false);
   const [mnemonic, setMnemonic] = useState("");
   const [assetIds, setAssetIds] = useState([]);
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   useEffect(() => {
     if (searchParams.has("ids")) {
