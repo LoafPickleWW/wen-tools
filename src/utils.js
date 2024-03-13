@@ -1,5 +1,4 @@
 import { PeraWalletConnect } from "@perawallet/connect";
-import MyAlgoConnect from "@randlabs/myalgo-connect";
 import {
   Algodv2,
   algosToMicroalgos,
@@ -35,9 +34,11 @@ import {
 import { DeflyWalletConnect } from "@blockshake/defly-connect";
 import * as mfsha2 from "multiformats/hashes/sha2";
 import * as digest from "multiformats/hashes/digest";
+import { DaffiWalletConnect } from "@daffiwallet/connect";
 
 const peraWallet = new PeraWalletConnect({ shouldShowSignTxnToast: true });
 const deflyWallet = new DeflyWalletConnect({ shouldShowSignTxnToast: true });
+const daffiWallet = new DaffiWalletConnect({ shouldShowSignTxnToast: true });
 
 export function sliceIntoChunks(arr, chunkSize) {
   const res = [];
@@ -138,11 +139,27 @@ export async function signGroupTransactions(
       }
       txnsToValidate = signedTxns.flat();
     } else {
-      const myAlgoConnect = new MyAlgoConnect();
-      signedTxns = await myAlgoConnect.signTransaction(
-        groups.flat().map((txn) => txn.toByte())
-      );
-      txnsToValidate = signedTxns.flat().map((txn) => txn.blob);
+      await daffiWallet.reconnectSession();
+      let multipleTxnGroups;
+      if (isMultipleGroup) {
+        multipleTxnGroups = groups.map((group) => {
+          return group.map((txn) => {
+            return { txn: txn, signers: [wallet] };
+          });
+        });
+      } else {
+        multipleTxnGroups = groups.map((txn) => {
+          return { txn: txn, signers: [wallet] };
+        });
+      }
+      if (multipleTxnGroups.length === 0) {
+        throw new Error("Transaction signing failed!");
+      }
+      if (isMultipleGroup) {
+        signedTxns = await daffiWallet.signTransaction(multipleTxnGroups);
+      } else {
+        signedTxns = await daffiWallet.signTransaction([multipleTxnGroups]);
+      }
     }
     if (txnsToValidate == null) {
       throw new Error("Transaction signing failed");
@@ -278,7 +295,6 @@ export async function createARC3AssetMintArray(
   data_for_txns,
   nodeURL,
   token,
-  isNFTStorage = false
 ) {
   const wallet = localStorage.getItem("wallet");
   if (wallet === "" || wallet === undefined) {
@@ -589,11 +605,13 @@ export async function createDonationTransaction(amount) {
       signedTxns = await deflyWallet.signTransaction([multipleTxnGroups]);
       txnsToValidate = signedTxns.flat();
     } else {
-      const myAlgoConnect = new MyAlgoConnect();
-      signedTxns = await myAlgoConnect.signTransaction(
-        txnsArray.map((txn) => txn.toByte())
-      );
-      txnsToValidate = signedTxns.flat().map((txn) => txn.blob);
+      await daffiWallet.reconnectSession();
+      const multipleTxnGroups = [
+        { txn: txnsArray[0], signers: [wallet] },
+        { txn: txnsArray[1], signers: [wallet] },
+      ];
+      signedTxns = await daffiWallet.signTransaction([multipleTxnGroups]);
+      txnsToValidate = signedTxns.flat();
     }
     if (txnsToValidate.length === 0) {
       throw new Error("Transaction signing failed");
@@ -992,7 +1010,7 @@ export async function isWalletHolder(wallet) {
     );
   }
   createdAssets = createdAssets.filter((asset) => {
-    return PREFIXES.some((prefix) => asset.unit_name.startsWith(prefix));
+    return PREFIXES.some((prefix) => asset.unit_name && asset.unit_name.startsWith(prefix));
   });
   createdAssets = createdAssets.map((asset) => asset.asset_id);
   const userAssets = await getAssetsFromAddress(wallet);
