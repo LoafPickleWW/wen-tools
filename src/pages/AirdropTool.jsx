@@ -70,13 +70,13 @@ export function AirdropTool() {
         "User-Agent": "evil-tools",
       });
       try {
-        if (mnemonic === "") toast.info("Please sign the transactions!");
         const signedTransactions = await createAirdropTransactions(
           data,
           nodeURL,
           assetDecimals,
           mnemonic
         );
+        if (mnemonic === "") toast.info("Please sign the transactions!");
         setTxSendingInProgress(true);
         for (let i = 0; i < signedTransactions.length; i++) {
           try {
@@ -106,6 +106,7 @@ export function AirdropTool() {
         toast.success("All transactions confirmed!");
         toast.info("You can support by donating :)");
       } catch (error) {
+        console.log(error);
         setTxSendingInProgress(false);
         toast.error("Something went wrong! Please check your file!");
         return;
