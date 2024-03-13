@@ -486,30 +486,30 @@ export async function createAirdropTransactions(
   if (nfd_wallets.length > 0) {
     nfdDomains = await getAddressesFromNFDomain(nfd_wallets);
   }
-//  const isHolder = await isWalletHolder(wallet);
-//  for (let i = 0; i < data_for_txns.length; i++) {
-//    try {
-//      let tx;
-//      data_for_txns[i].asset_id = parseInt(data_for_txns[i].asset_id);
-//      if (data_for_txns[i].receiver.includes(".algo")) {
-//        data_for_txns[i].receiver = nfdDomains[data_for_txns[i].receiver];
-//      }
-//      data_for_txns[i].note = data_for_txns[i].note || "";
-//      if (data_for_txns[i].asset_id === 1) {
-//        tx = makePaymentTxnWithSuggestedParamsFromObject({
-//          from: wallet,
-//          to: data_for_txns[i].receiver.trim(),
-//          amount: algosToMicroalgos(data_for_txns[i].amount * 1),
-//          suggestedParams: params,
-//          note: new TextEncoder().encode(
-//            isHolder
-//              ? data_for_txns[i].note.slice(0, 950) +
-//                  " | via Thurstober Digital Studios  " +
-//                  Math.random().toString(36).substring(2)
-//              : "Sent using The Laboratory - A Thurstober Digital Studios Product! Free Tools for Algorand Creators and Collectors!  " +
-//                  Math.random().toString(36).substring(2)
-//          ),
-//        });
+  const isHolder = await isWalletHolder(wallet);
+  for (let i = 0; i < data_for_txns.length; i++) {
+    try {
+      let tx;
+      data_for_txns[i].asset_id = parseInt(data_for_txns[i].asset_id);
+      if (data_for_txns[i].receiver.includes(".algo")) {
+        data_for_txns[i].receiver = nfdDomains[data_for_txns[i].receiver];
+      }
+      data_for_txns[i].note = data_for_txns[i].note || "";
+      if (data_for_txns[i].asset_id === 1) {
+        tx = makePaymentTxnWithSuggestedParamsFromObject({
+          from: wallet,
+          to: data_for_txns[i].receiver.trim(),
+          amount: algosToMicroalgos(data_for_txns[i].amount * 1),
+          suggestedParams: params,
+          note: new TextEncoder().encode(
+            isHolder
+              ? data_for_txns[i].note.slice(0, 950) +
+                  " | via Thurstober Digital Studios  " +
+                  Math.random().toString(36).substring(2)
+              : "Sent using The Laboratory - A Thurstober Digital Studios Product! Free Tools for Algorand Creators and Collectors!  " +
+                  Math.random().toString(36).substring(2)
+          ),
+        });
       } else {
         data_for_txns[i].decimals = assetDecimals[data_for_txns[i].asset_id];
         tx = makeAssetTransferTxnWithSuggestedParamsFromObject({
