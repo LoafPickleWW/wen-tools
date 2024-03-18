@@ -52,7 +52,7 @@ export function SimpleMint() {
         <input
           type="text"
           id={`category-${id}`}
-          placeholder="Trait Category"
+          placeholder="Property"
           className="w-24 md:w-28 bg-gray-300 text-sm font-medium text-center leading-none text-black placeholder:text-black/30 placeholder:text-xs px-3 py-2 border rounded border-gray-200"
           value={
             formData.metadata.find((metadata) => metadata.id === id).category
@@ -148,7 +148,18 @@ export function SimpleMint() {
           ) {
             metadata[data.category] = data.name;
           } else {
-            metadata.properties[data.category] = data.name;
+            if (
+              data.category.includes("traits_") ||
+              data.category.includes("filters_")
+            ) {
+              const [category, subCategory] = data.category.split("_");
+              if (!metadata.properties[category]) {
+                metadata.properties[category] = {};
+              }
+              metadata.properties[category][subCategory] = data.name;
+            } else {
+              metadata.properties[data.category] = data.name;
+            }
           }
         }
       });
@@ -224,6 +235,7 @@ export function SimpleMint() {
     } catch (error) {
       console.log(error);
       toast.error("Something went wrong!");
+      setProcessStep(0);
     }
   }
 
@@ -627,7 +639,9 @@ export function SimpleMint() {
         )}
       </div>
       <p className="text-sm italic text-slate-200">
-        **It is recommended that any Creator Host their own Files using their own token. Evil Tools will not be held responsible for anything that happens to publicly hosted images. 
+        **It is recommended that any Creator Host their own Files using their
+        own token. Evil Tools will not be held responsible for anything that
+        happens to publicly hosted images.
       </p>
       <p className="text-sm italic text-slate-200">Fee: 0.1A</p>
       <p className="text-center text-xs text-slate-400 py-2">
