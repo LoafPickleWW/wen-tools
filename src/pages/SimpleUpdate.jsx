@@ -42,7 +42,7 @@ export function SimpleUpdate() {
         <input
           type="text"
           id={`category-${id}`}
-          placeholder="Trait Category"
+          placeholder="Property"
           className={`${
             formData.format === "ARC3" ? "w-32" : "w-24 md:w-28"
           } bg-gray-300 text-sm font-medium text-center leading-none text-black placeholder:text-black/30 placeholder:text-xs px-3 py-2 border rounded border-gray-200`}
@@ -171,13 +171,31 @@ export function SimpleUpdate() {
       }
       let metadata = [];
       if (assetMetadata.properties) {
-        metadata = Object.keys(assetMetadata.properties).map((key, index) => {
-          return {
-            id: index,
-            category: key,
-            name: assetMetadata.properties[key],
-          };
-        });
+        for (const key in assetMetadata.properties) {
+          if (typeof assetMetadata.properties[key] === "object") {
+            for (const subKey in assetMetadata.properties[key]) {
+              metadata = [
+                ...metadata,
+                {
+                  id: metadata.length,
+                  category: `${key}_${subKey}`,
+                  name: assetMetadata.properties[key][subKey],
+                },
+              ];
+            }
+          } else {
+            if (!key.includes("image_static")) {
+              metadata = [
+                ...metadata,
+                {
+                  id: metadata.length,
+                  category: key,
+                  name: assetMetadata.properties[key],
+                },
+              ];
+            }
+          }
+        }
       }
       if (assetMetadata.description) {
         metadata = [
@@ -255,7 +273,18 @@ export function SimpleUpdate() {
           ) {
             metadata[data.category] = data.name;
           } else {
-            metadata.properties[data.category] = data.name;
+            if (
+              data.category.includes("traits_") ||
+              data.category.includes("filters_")
+            ) {
+              const [category, subCategory] = data.category.split("_");
+              if (!metadata.properties[category]) {
+                metadata.properties[category] = {};
+              }
+              metadata.properties[category][subCategory] = data.name;
+            } else {
+              metadata.properties[data.category] = data.name;
+            }
           }
         }
       });
@@ -323,6 +352,8 @@ export function SimpleUpdate() {
       toast.info("Please sign the transaction");
       setProcessStep(2);
     } catch (error) {
+      console.log(error);
+      setProcessStep(0);
       toast.error("Something went wrong!");
     }
   }
@@ -703,7 +734,9 @@ export function SimpleUpdate() {
         </div>
       )}
       <p className="text-sm italic text-slate-200">
-        **It is recommended that any Creator Host their own Files using their own token. Evil Tools will not be held responsible for anything that happens to publicly hosted images. 
+        **It is recommended that any Creator Host their own Files using their
+        own token. Evil Tools will not be held responsible for anything that
+        happens to publicly hosted images.
       </p>
       <p className="text-sm italic text-slate-200">Fee: 0.05A</p>
       <p className="text-center text-xs text-slate-400 py-2">
