@@ -77,6 +77,8 @@ export function ARC19UpdateTool() {
         image: ipfs_cid ? "ipfs://" + ipfs_cid : "",
         image_mime_type: item.mime_type,
         description: item.description,
+        animation_url: item.animation_url,
+        animation_mime_type: item.animation_mime_type,
         properties: {
         traits: {},  
         filters: {}
