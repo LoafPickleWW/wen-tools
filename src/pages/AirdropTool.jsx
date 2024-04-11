@@ -145,7 +145,7 @@ export function AirdropTool() {
       <p className="text-sm italic text-slate-400">
         If you have any{" "}
         <a
-          href="https://www.nftexplorer.app/collections?q=thurstober"
+          href="https://www.asalytic.app/collections?search=thurstober"
           target="_blank"
           rel="noopener noreferrer"
           className="text-slate-500 hover:text-slate-300 transition"
