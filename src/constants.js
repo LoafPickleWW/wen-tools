@@ -6,6 +6,10 @@ export const TESTNET_ALGONODE_NODE = "https://testnet-api.algonode.cloud";
 export const MAINNET_ALGONODE_INDEXER = "https://mainnet-idx.algonode.cloud";
 export const TESTNET_ALGONODE_INDEXER = "https://testnet-idx.algonode.cloud";
 
+// NF
+export const MAINNET_NFD_API_BASE_URL = 'https://api.nf.domains'
+export const TESTNET_NFD_API_BASE_URL = 'https://api.testnet.nf.domains'
+
 // DONATION WALLETS
 export const DONATE_WALLET_1 =
   "O2ZPSV6NJC32ZXQ7PZ5ID6PXRKAWQE2XWFZK5NK3UFULPZT6OKIOROEAPU";
@@ -108,6 +112,14 @@ export const TOOLS = [
     description:
       "Easily mass send assets to a single or an asset to multiple wallets.",
     path: "/simple-send",
+    category: "asset",
+  },
+  {
+    id: "vault_send_tool",
+    label: "💼 Vault Send",
+    description:
+      "Easily mass send assets to a single or an asset to multiple NFD vaults.",
+    path: "/vault-send",
     category: "asset",
   },
   {

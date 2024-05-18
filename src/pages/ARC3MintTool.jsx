@@ -77,8 +77,8 @@ export function ARC3MintTool() {
         image_mime_type: item.mime_type,
         description: item.description,
         properties: {
-        traits: {},
-        filters: {}
+          traits: {},
+          filters: {},
         },
         extra: {},
       };
@@ -97,8 +97,7 @@ export function ARC3MintTool() {
           ipfs_data.extra[key.replace("extra_", "")] = item[key];
         }
         if (key.startsWith("filters_")) {
-          ipfs_data.properties.filters[key.replace("filters_", "")] =
-            item[key];
+          ipfs_data.properties.filters[key.replace("filters_", "")] = item[key];
         }
       });
       if (asset_name.length > 32) {
@@ -137,7 +136,7 @@ export function ARC3MintTool() {
       const unsignedAssetTransactions = await createARC3AssetMintArray(
         data_for_txns,
         nodeURL,
-        token,
+        token
       );
       setAssetTransactions(unsignedAssetTransactions);
       setTxSendingInProgress(false);
