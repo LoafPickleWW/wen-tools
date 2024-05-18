@@ -175,7 +175,7 @@ export function VaultSendTool() {
               algosdk.decodeUnsignedTransaction(a)
             )
           );
-          if (i % 50 === 0 && i != 0) {
+          if (i % 50 === 0 && i !== 0) {
             toast.info(
               `Created ${i} of ${receiverDomains.length} transactions`
             );

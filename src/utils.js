@@ -1190,3 +1190,20 @@ export async function pinImageToNFTStorage(token, image) {
     throw new Error("IPFS pinning failed");
   }
 }
+
+export async function getParticipationStatusOfWallet(wallet) {
+  try {
+    const url = getNodeURL() + `/v2/accounts/${wallet}?exclude=all`;
+    const response = await axios.get(url, {
+      headers: { "Cache-Control": "max-age=600" },
+    });
+    if (response.status === 200) {
+      if (response.data.participation && response.data.status === "Online") {
+        return true;
+      }
+    }
+    return false;
+  } catch (error) {
+    return false;
+  }
+}
