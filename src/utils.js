@@ -30,6 +30,8 @@ import {
   CREATOR_WALLETS,
   PREFIXES,
   IPFS_ENDPOINT,
+  MAINNET_NFD_API_BASE_URL,
+  TESTNET_NFD_API_BASE_URL,
 } from "./constants";
 import { DeflyWalletConnect } from "@blockshake/defly-connect";
 import * as mfsha2 from "multiformats/hashes/sha2";
@@ -67,6 +69,15 @@ export function getIndexerURL() {
   }
 }
 
+export function getNfdomainAPIURL() {
+  const networkType = localStorage.getItem("networkType");
+  if (networkType === "mainnet") {
+    return MAINNET_NFD_API_BASE_URL;
+  } else {
+    return TESTNET_NFD_API_BASE_URL;
+  }
+}
+
 export function getAssetPreviewURL(assetID) {
   const networkType = localStorage.getItem("networkType");
   if (networkType === "mainnet") {
@@ -81,7 +92,7 @@ export function getTokenPreviewURL(assetID) {
   if (networkType === "mainnet") {
     return "https://allo.info/asset/" + assetID;
   }
-  return "https://allo.info/asset/" + assetID;
+  return "https://testnet.explorer.perawallet.app/asset/" + assetID;
 }
 
 export async function signGroupTransactions(
@@ -174,6 +185,26 @@ export function SignWithMnemonics(txnsArray, sk) {
     signedTxns.push(signTransaction(txnsArray[i], sk).blob);
   }
   return signedTxns;
+}
+
+export async function signNfdVaultTransactions(
+  transactions,
+  wallet,
+  mnemonic = ""
+) {
+  let signedTransactions = [];
+  if (mnemonic !== "") {
+    if (mnemonic.split(" ").length !== 25) throw new Error("Invalid Mnemonic!");
+    const { sk } = mnemonicToSecretKey(mnemonic);
+    signedTransactions = SignWithMnemonics(transactions.flat(), sk);
+  } else {
+    signedTransactions = await signGroupTransactions(
+      transactions,
+      wallet,
+      true
+    );
+  }
+  return signedTransactions;
 }
 
 export async function createAssetConfigArray(
@@ -291,11 +322,7 @@ export async function createAssetMintArray(
   return txnsToValidate;
 }
 
-export async function createARC3AssetMintArray(
-  data_for_txns,
-  nodeURL,
-  token,
-) {
+export async function createARC3AssetMintArray(data_for_txns, nodeURL, token) {
   const wallet = localStorage.getItem("wallet");
   if (wallet === "" || wallet === undefined) {
     throw new Error("Wallet not found");
@@ -1010,7 +1037,9 @@ export async function isWalletHolder(wallet) {
     );
   }
   createdAssets = createdAssets.filter((asset) => {
-    return PREFIXES.some((prefix) => asset.unit_name && asset.unit_name.startsWith(prefix));
+    return PREFIXES.some(
+      (prefix) => asset.unit_name && asset.unit_name.startsWith(prefix)
+    );
   });
   createdAssets = createdAssets.map((asset) => asset.asset_id);
   const userAssets = await getAssetsFromAddress(wallet);

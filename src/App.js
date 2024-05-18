@@ -25,6 +25,7 @@ import { SimpleMint } from "./pages/SimpleMint";
 import { SimpleUpdate } from "./pages/SimpleUpdate";
 import { BatchClawback } from "./pages/BatchClawback";
 import { BatchFreeze } from "./pages/BatchFreeze";
+import { VaultSendTool } from "./pages/VaultSendTool";
 
 function App() {
   return (
@@ -48,6 +49,7 @@ function App() {
           <Route path="/airdrop" element={<AirdropTool />} />
           <Route path="/simple-airdrop" element={<SimpleAirdropTool />} />
           <Route path="/simple-send" element={<SimpleSendTool />} />
+          <Route path="/vault-send" element={<VaultSendTool />} />
           <Route
             path="/arc69-collection-mint"
             element={<BatchCollectionMint />}
