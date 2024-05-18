@@ -2,15 +2,13 @@ import { useState, useEffect } from "react";
 import { toast } from "react-toastify";
 import axios from "axios";
 import SelectNetworkComponent from "../components/SelectNetworkComponent";
-import {
-  TOOLS,
-  MAINNET_ALGONODE_INDEXER,
-  TESTNET_ALGONODE_INDEXER,
-} from "../constants";
+import { TOOLS } from "../constants";
 import {
   getNfDomainsInBulk,
   isWalletHolder,
   getRandListingAsset,
+  getIndexerURL,
+  getParticipationStatusOfWallet,
 } from "../utils";
 
 export function MultimintAssetHolders() {
@@ -21,6 +19,7 @@ export function MultimintAssetHolders() {
   const [checkOptin, setCheckOptin] = useState(false);
   const [checkNfdOnly, setCheckNfdOnly] = useState(false);
   const [checkVerifiedOnly, setCheckVerifiedOnly] = useState(false);
+  const [checkRunningNode, setCheckRunningNode] = useState(false);
   const [checkRandSupport, setCheckRandSupport] = useState(false);
   const [isHorseHolder, setIsHorseHolder] = useState(false);
 
@@ -40,10 +39,7 @@ export function MultimintAssetHolders() {
 
   async function getAssetOwners(asset_id) {
     const isOptin = checkOptin;
-    const indexerURL =
-      localStorage.getItem("networkType") === "mainnet"
-        ? MAINNET_ALGONODE_INDEXER
-        : TESTNET_ALGONODE_INDEXER;
+    const indexerURL = getIndexerURL();
     let threshold = 1000;
     let assetData = {
       asset_id: asset_id,
@@ -247,6 +243,25 @@ export function MultimintAssetHolders() {
         }
         headers = [...headers, "listed_on_rand"];
       }
+      if (checkRunningNode) {
+        toast.info("Checking participation status of wallets");
+        var uniqueWallets = Array.from(new Set(data.map((a) => a.wallet)));
+        var participatedWallets = [];
+        for (var i = 0; i < uniqueWallets.length; i++) {
+          var participationStatus = await getParticipationStatusOfWallet(
+            uniqueWallets[i]
+          );
+          if (participationStatus) {
+            participatedWallets.push(uniqueWallets[i]);
+          }
+          if (i % 50 === 0 && i !== 0) {
+            toast.info(`Checked ${i}/${uniqueWallets.length} wallets.`);
+          }
+        }
+        console.log(data.length);
+        data = data.filter((item) => participatedWallets.includes(item.wallet));
+        console.log(data.length);
+      }
       exportCSVFile(headers, data, "asset_holders.csv");
       setLoading(false);
       toast.success("Downloaded successfully!");
@@ -284,6 +299,18 @@ export function MultimintAssetHolders() {
           />
           <label htmlFor="check_optin" className="text-slate-300">
             Check Optin (with 0 balances too)
+          </label>
+        </div>
+        <div className="flex items-center justify-center">
+          <input
+            type="checkbox"
+            id="check_running_node"
+            className="mr-2"
+            checked={checkRunningNode}
+            onChange={(e) => setCheckRunningNode(e.target.checked)}
+          />
+          <label htmlFor="check_running_node" className="text-slate-300">
+            Node runners only
           </label>
         </div>
         {!isHorseHolder && (
