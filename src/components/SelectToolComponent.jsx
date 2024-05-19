@@ -13,7 +13,7 @@ export function SelectToolComponent() {
       <div className="container mx-auto grid lg:grid-cols-3 gap-2">
         {TOOLS.filter((tool) => tool.category === "asset").map((tool) => (
           <div
-            className="col-span-3 xl:col-span-1 rounded-lg shadow bg-gray-800 border border-gray-700 hover:bg-gray-700"
+            className="col-span-3 xl:col-span-1 rounded-lg shadow bg-[#2b2a2a] border border-[#201f1f] hover:bg-[#201f1f]"
             key={tool.id}
           >
             <Link to={tool.path} className="block p-4">
@@ -33,7 +33,7 @@ export function SelectToolComponent() {
       <div className="container mx-auto grid lg:grid-cols-3 gap-2">
         {TOOLS.filter((tool) => tool.category === "mint").map((tool) => (
           <div
-            className="col-span-3 xl:col-span-1 rounded-lg shadow bg-gray-800 border border-gray-700 hover:bg-gray-700"
+            className="col-span-3 xl:col-span-1 rounded-lg shadow bg-[#2b2a2a] border border-[#201f1f] hover:bg-[#201f1f]"
             key={tool.id}
           >
             <Link to={tool.path} className="block p-4">
