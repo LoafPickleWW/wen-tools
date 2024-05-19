@@ -29,7 +29,7 @@ import { VaultSendTool } from "./pages/VaultSendTool";
 
 function App() {
   return (
-    <div className="bg-gray-900 flex flex-col min-h-screen font-roboto pb-[100px]">
+    <div className="bg-primary-black flex flex-col min-h-screen font-roboto pb-[100px]">
       <ToastContainer
         pauseOnFocusLoss={false}
         closeOnClick

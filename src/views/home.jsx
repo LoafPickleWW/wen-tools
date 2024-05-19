@@ -4,7 +4,7 @@ import DonationDialog from "../components/DonationDialog";
 export default function Home() {
 
   return (
-    <div className="bg-gray-900 pt-2 pb-24 xl:pb-20 flex justify-center flex-col text-white">
+    <div className="bg-primary-black pt-2 pb-24 xl:pb-20 flex justify-center flex-col text-white">
       <main className="flex flex-col justify-center items-center mx-4 md:mx-40  rounded-lg">
         <SelectToolComponent />
       </main>
