@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-//import Papa from "papaparse";
 import ConnectButton from "../components/ConnectButton";
 import algosdk from "algosdk";
 import { toast } from "react-toastify";
@@ -7,7 +6,7 @@ import { createAssetOptInTransactions, getNodeURL } from "../utils";
 import SelectNetworkComponent from "../components/SelectNetworkComponent";
 import { TOOLS } from "../constants";
 import { AiOutlineInfoCircle } from "react-icons/ai";
-import {useSearchParams} from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 
 export function BatchOptin() {
   const [csvData, setCsvData] = useState(null);
@@ -19,7 +18,7 @@ export function BatchOptin() {
 
   useEffect(() => {
     if (searchParams.has("ids")) {
-        setAssetIds(searchParams.get("ids"));
+      setAssetIds(searchParams.get("ids"));
     }
   }, [searchParams]);
 
@@ -105,39 +104,6 @@ export function BatchOptin() {
       <p>2- Enter Assets</p>
       {csvData == null ? (
         <div>
-          
-          {/* <label
-            htmlFor="dropzone-file"
-            className="flex flex-col justify-center items-center w-[16rem] h-[8rem] px-4  rounded-lg border-2  border-dashed cursor-pointer hover:bg-bray-800 bg-gray-700  border-gray-600 hover:border-gray-500 hover:bg-gray-600"
-          >
-            <div className="flex flex-col justify-center items-center pt-5 pb-6">
-              <p className="mb-1 text-sm text-gray-400 font-bold">
-                Click to upload file
-              </p>
-              <p className="text-xs text-gray-400">(CSV)</p>
-              <p className="text-xs text-gray-300">
-                To be sure there is no empty row at the end of the file
-              </p>
-            </div>
-            <input
-              className="hidden"
-              id="dropzone-file"
-              type="file"
-              accept=".csv"
-              onChange={(e) => {
-                const file = e.target.files[0];
-                Papa.parse(file, {
-                  complete: function (results) {
-                    const filteredData = results.data.filter(
-                      (row) => row[0].length > 1
-                    );
-                    setCsvData(filteredData);
-                  },
-                  skipEmptyLines: true,
-                });
-              }}
-            />
-          </label> */}
           <div>
             {/*<p className="text-center text-xs text-slate-300 py-1">or</p>*/}
             <div className="flex flex-col items-center">
@@ -212,10 +178,14 @@ export function BatchOptin() {
         id="copy-link"
         className="mb-2 bg-green-500 hover:bg-green-700 text-black text-sm font-semibold rounded py-1 w-fit px-4 mx-auto mt-1 hover:scale-95 duration-700"
         onClick={() => {
-          navigator.clipboard.writeText(window.location.href.split("?")[0] + "?ids=" + assetIds.replaceAll("\n", ","));
+          navigator.clipboard.writeText(
+            window.location.href.split("?")[0] +
+              "?ids=" +
+              assetIds.replaceAll("\n", ",")
+          );
           toast.success("Link copied!");
         }}
-        >
+      >
         Copy link 🔗
       </button>
       {/* mnemonic */}

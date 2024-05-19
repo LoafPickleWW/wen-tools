@@ -1,31 +1,55 @@
+import AppBar from "@mui/material/AppBar";
+import Toolbar from "@mui/material/Toolbar";
+import Typography from "@mui/material/Typography";
+import { Link } from "react-router-dom";
 import ConnectButton from "./ConnectButton";
 
-export const Header = () => {
+export function Header() {
   return (
-    <>
-      <header className="flex flex-row items-center justify-between border-gray-200 px-4 md:px-8 py-3 bg-gray-800">
-        <div className="flex items-s">
-          <div className="mt-2">
-            <a href="/">
-              <img
-                src="./TL_large_white.png"
-                className="h-12 hover:scale-95 duration-700"
-                alt="The Laboratory"
-              />
-            </a>
-          </div>
-          <div className="ml-2">
-            <a href="https://thurstober.com" className="flex items-center">
-              <img
-                className="h-[70px] hover:scale-95 duration-700"
-                src="./cherry.png"
-                alt="logo"
-              />
-            </a>
-          </div>
+    <AppBar sx={{ backgroundColor: "#030003" }} position="sticky">
+      <Toolbar>
+        <Link to="/">
+          <img
+            src="/TL_large_white.png"
+            alt="logo"
+            className="mr-2 h-12 p-1 "
+          />
+        </Link>
+        <div className="ml-2">
+          <a
+            href="https://thurstober.com"
+            target="_blank"
+            rel="noreferrer"
+            className="flex items-center"
+          >
+            <img
+              className="h-[70px] hover:scale-95 duration-700"
+              src="./cherry.png"
+              alt="logo"
+            />
+          </a>
         </div>
+        <Typography
+          component="div"
+          sx={{
+            fontFamily: "Josefin Slab",
+            flexGrow: 1,
+            fontWeight: 400,
+            fontSize: {
+              xs: "1rem",
+              sm: "1.25rem",
+              md: "1.5rem",
+              lg: "1.75rem",
+            },
+            ":hover": {
+              cursor: "pointer",
+            },
+            ml: { xs: 2, sm: 0 },
+            visibility: { xs: "hidden", sm: "visible" },
+          }}
+        ></Typography>
         <ConnectButton />
-      </header>
+      </Toolbar>
       <div className="bg-primary-green text-black flex py-1 justify-center items-center">
         <p className="text-center text-sm">
           You can read more about Infinity Mode{" "}
@@ -41,7 +65,7 @@ export const Header = () => {
       </div>
       <div className="bg-secondary-yellow text-black flex py-1 justify-center items-center">
         <p className="text-center text-sm ticker-text">
-          Improve your wallet experience with the: {" "}
+          Improve your wallet experience with the:{" "}
           <a
             href="https://we.thurstober.com/"
             target="_blank"
@@ -52,6 +76,6 @@ export const Header = () => {
           </a>
         </p>
       </div>
-    </>
+    </AppBar>
   );
-};
+}
