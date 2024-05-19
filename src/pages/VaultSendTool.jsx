@@ -80,45 +80,49 @@ export function VaultSendTool() {
     var segments = [];
     const limit = 200;
     var offset = 0;
-    var nfdomainApiUrl = getNfdomainAPIURL();
+    const nfdomainApiUrl = getNfdomainAPIURL();
+    const domainData = await axios.get(
+      `${nfdomainApiUrl}/nfd/${domain}?view=brief&poll=false&nocache=false`
+    );
+    const appId = domainData.data.appID;
     var result = await axios.get(
-      `${nfdomainApiUrl}/nfd/v2/search?name=${domain}&traits=segment&limit=${limit}&offset=${offset}&sort=nameAsc&view=brief&state=owned&state=reserved`,
+      `${nfdomainApiUrl}/nfd/v2/search?parentAppID=${appId}&traits=segment&limit=${limit}&offset=${offset}&sort=nameAsc&view=brief&state=owned&state=reserved`,
       { headers: { "Cache-Control": "max-age=180" } }
     );
     result.data.nfds.forEach((element) => {
-      if (element.properties.internal.ver === "2.11") {
+      if (parseFloat(element.properties.internal.ver) >= 2.11) {
         segments.push(element.name);
       }
     });
     const total = result.data.total;
-    if (total > 10 && mnemonic === "") {
+    if (total >= 10 && mnemonic === "") {
       throw new Error(`Please enter your mnemonics to continue to process`);
     }
     while (offset < total) {
       offset += limit;
       result = await axios.get(
-        `${nfdomainApiUrl}/nfd/v2/search?name=${domain}&traits=segment&limit=${limit}&offset=${offset}&sort=nameAsc&view=brief&state=owned&state=reserved`,
+        `${nfdomainApiUrl}/nfd/v2/search?parentAppID=${appId}&traits=segment&limit=${limit}&offset=${offset}&sort=nameAsc&view=brief&state=owned&state=reserved`,
         { headers: { "Cache-Control": "max-age=180" } }
       );
       result.data.nfds.forEach((element) => {
-        if (element.properties.internal.ver === "2.11") {
+        if (parseFloat(element.properties.internal.ver) >= 2.11) {
           segments.push(element.name);
         }
       });
       await new Promise((resolve) => setTimeout(resolve, 150));
     }
-    toast.info(`Found ${segments.length} segments`);
-
+    toast.info(`Found ${result.length} segments`);
     return segments;
   }
 
   async function createTransactions() {
     try {
       const wallet = localStorage.getItem("wallet");
-      if (wallet === "" || wallet === undefined) {
-        throw new Error(
+      if (!wallet) {
+        toast.warning(
           "You need to connect your wallet first, if using mnemonic too!"
         );
+        return;
       }
 
       if (assetID === "") {
@@ -145,10 +149,8 @@ export function VaultSendTool() {
       var receiverDomains = [];
       if (toolType === "segments") {
         toast.info(`Fetching segments of ${domains}`);
-
         setProcessStep(FETCH_SEGMENTS_PROCESS);
-
-        receiverDomains = await getSegmentsFromDomain(domains[0]);
+        receiverDomains = await getSegmentsFromDomain(domains);
       } else if (toolType === "domains") {
         domains.split(/[\n,]/).forEach((domain) => {
           if (domain.toLowerCase().includes(".algo")) {
@@ -200,11 +202,13 @@ export function VaultSendTool() {
   async function sendTransactions() {
     try {
       const wallet = localStorage.getItem("wallet");
-      if (wallet === "" || wallet === undefined) {
-        throw new Error(
+      if (!wallet) {
+        toast.warning(
           "You need to connect your wallet first, if using mnemonic too!"
         );
+        return;
       }
+
       const nodeURL = getNodeURL();
       if (transactions.length === 0) {
         throw new Error("Please create transactions first!");
