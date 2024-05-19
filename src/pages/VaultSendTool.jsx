@@ -115,10 +115,11 @@ export function VaultSendTool() {
   async function createTransactions() {
     try {
       const wallet = localStorage.getItem("wallet");
-      if (wallet === "" || wallet === undefined) {
-        throw new Error(
+      if (!wallet) {
+        toast.warning(
           "You need to connect your wallet first, if using mnemonic too!"
         );
+        return;
       }
 
       if (assetID === "") {
@@ -200,11 +201,13 @@ export function VaultSendTool() {
   async function sendTransactions() {
     try {
       const wallet = localStorage.getItem("wallet");
-      if (wallet === "" || wallet === undefined) {
-        throw new Error(
+      if (!wallet) {
+        toast.warning(
           "You need to connect your wallet first, if using mnemonic too!"
         );
+        return;
       }
+
       const nodeURL = getNodeURL();
       if (transactions.length === 0) {
         throw new Error("Please create transactions first!");
