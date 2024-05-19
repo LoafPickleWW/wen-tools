@@ -111,7 +111,7 @@ export function VaultSendTool() {
       });
       await new Promise((resolve) => setTimeout(resolve, 150));
     }
-    toast.info(`Found ${result.length} segments`);
+    toast.info(`Found ${segments.length} segments`);
     return segments;
   }
 
