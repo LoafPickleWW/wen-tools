@@ -20,7 +20,7 @@ module.exports = {
         "primary-gray": "#D0D0D1",
         "secondary-gray": "#393C3A",
         "secondary-black": "#000a02",
-        "banner-grey": "#44403c",
+        "banner-grey": "#262626",
         "text-white": "#f9fafb",        
       },
       fontSize: {
