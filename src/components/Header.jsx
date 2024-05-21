@@ -50,7 +50,7 @@ export function Header() {
         ></Typography>
         <ConnectButton />
       </Toolbar>
-      <div className="bg-primary-green text-black flex py-1 justify-center items-center">
+      <div className="bg-secondary-green text-black flex py-1 justify-center items-center">
         <p className="text-center text-sm">
           You can read more about Infinity Mode{" "}
           <a
@@ -63,7 +63,7 @@ export function Header() {
           </a>
         </p>
       </div>
-      <div className="bg-secondary-yellow text-black flex py-1 justify-center items-center">
+      <div className="bg-banner-grey text-white flex py-1 justify-center items-center">
         <p className="text-center text-sm ticker-text">
           Improve your wallet experience with the:{" "}
           <a
