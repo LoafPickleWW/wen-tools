@@ -287,9 +287,9 @@ export function VaultSendTool() {
           rel="noopener noreferrer"
           href="https://api-docs.nf.domains/reference/integrators-guide/using-vaults-2.x+"
         >
-          here. Please note you will need to fund the Opt In for the Vault (0.1A)/Asset.
+          here. 
         </a>{" "}
-        for more details.
+        for more details. Please note you will need to fund the Opt In for the Vault (0.1A)/Asset.
       </span>
       <SelectNetworkComponent />
       <p>1- Connect Sender Wallet</p>
