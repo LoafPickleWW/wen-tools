@@ -36,7 +36,7 @@ export function SimpleUpdate() {
   const [transaction, setTransaction] = useState(null);
   const [assetID, setAssetID] = useState("");
 
-  const TraitMetadatInputField = (id) => {
+  const TraitMetadataInputField = (id) => {
     return (
       <div key={id} id={`metadata-${id}`} className="mb-2">
         <input
@@ -565,7 +565,7 @@ export function SimpleUpdate() {
             </p>
             <div className="mt-4 md:flex flex-col items-center text-start justify-center">
               {formData.metadata.map((metadata) => {
-                return TraitMetadatInputField(metadata.id);
+                return TraitMetadataInputField(metadata.id);
               })}
             </div>
             {formData.format !== "ARC3" && (

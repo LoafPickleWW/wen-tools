@@ -50,7 +50,7 @@ export function SimpleBatchMint() {
   const [assetTransactions, setAssetTransactions] = useState([]);
   const [previewAsset, setPreviewAsset] = useState(null);
 
-  const TraitMetadatInputField = (key) => {
+  const TraitMetadataInputField = (key) => {
     return (
       <div key={key} id={`metadata-${key}`} className="mb-2">
         <input
@@ -690,7 +690,7 @@ export function SimpleBatchMint() {
           "tokenId",
           "royalty",
         ].map((key) => {
-          return TraitMetadatInputField(key);
+          return TraitMetadataInputField(key);
         })}
       </div>
       {formData.collectionFormat !== "ARC69" && (
