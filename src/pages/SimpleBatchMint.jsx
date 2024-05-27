@@ -48,6 +48,7 @@ export function SimpleBatchMint() {
   const [mnemonic, setMnemonic] = useState("");
   const [hasMetadataFile, setHasMetadataFile] = useState(false);
   const [assetTransactions, setAssetTransactions] = useState([]);
+  const [previewAsset, setPreviewAsset] = useState(null);
 
   const TraitMetadatInputField = (key) => {
     return (
@@ -281,6 +282,8 @@ export function SimpleBatchMint() {
         data_for_txns.push(transaction_data);
       });
 
+      setPreviewAsset(data_for_txns[0]);
+
       let unsignedAssetTransaction;
       if (formData.collectionFormat === "ARC3") {
         toast.info("Creating ARC3 transactions...");
@@ -443,6 +446,7 @@ export function SimpleBatchMint() {
               className="bg-gray-300 rounded border-gray-300 font-medium text-center text-black transition px-2 py-1 w-48"
               required
               value={formData.collectionFormat}
+              disabled={processStep !== START_PROCESS}
               onChange={(e) => {
                 setFormData({
                   ...formData,
@@ -469,6 +473,7 @@ export function SimpleBatchMint() {
               className="w-64 bg-gray-300 text-sm font-medium text-center leading-none text-black placeholder:text-black/30 px-3 py-2 border rounded border-gray-200"
               maxLength={32}
               required
+              disabled={processStep !== START_PROCESS}
               value={formData.name}
               onChange={(e) => {
                 setFormData({ ...formData, name: e.target.value });
@@ -485,6 +490,7 @@ export function SimpleBatchMint() {
               className="w-64 bg-gray-300 text-sm font-medium text-center leading-none text-black placeholder:text-black/30 px-3 py-2 border rounded border-gray-200"
               maxLength={8}
               required
+              disabled={processStep !== START_PROCESS}
               value={formData.unitName}
               onChange={(e) => {
                 setFormData({ ...formData, unitName: e.target.value });
@@ -502,6 +508,7 @@ export function SimpleBatchMint() {
               id="select_image"
               placeholder="Enter IPFS CID of media folder"
               type="text"
+              disabled={processStep !== START_PROCESS}
               value={formData.mediaIPFSCID}
               onChange={(e) => {
                 setFormData({ ...formData, mediaIPFSCID: e.target.value });
@@ -518,6 +525,7 @@ export function SimpleBatchMint() {
               className="w-64 bg-gray-300 text-sm font-medium text-center leading-none text-black placeholder:text-black/30 px-3 py-2 border rounded border-gray-200"
               maxLength={8}
               required
+              disabled={processStep !== START_PROCESS}
               value={formData.mediaExtension}
               onChange={(e) => {
                 setFormData({ ...formData, mediaExtension: e.target.value });
@@ -626,6 +634,7 @@ export function SimpleBatchMint() {
                   freeze: e.target.checked,
                 });
               }}
+              disabled={processStep !== START_PROCESS}
               checked={formData.freeze}
             />
             <div className="w-11 h-6 bg-gray-400 peer-focus:outline-none peer-focus:ring-4  rounded-full peer  peer-checked:after:translate-x-full  after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all border-gray-600 peer-checked:bg-blue-600"></div>
@@ -644,6 +653,7 @@ export function SimpleBatchMint() {
                   clawback: e.target.checked,
                 });
               }}
+              disabled={processStep !== START_PROCESS}
               checked={formData.clawback}
             />
             <div className="w-11 h-6 bg-gray-400 peer-focus:outline-none peer-focus:ring-4  rounded-full peer  peer-checked:after:translate-x-full  after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all border-gray-600 peer-checked:bg-blue-600"></div>
@@ -663,6 +673,7 @@ export function SimpleBatchMint() {
                 defaultFrozen: e.target.checked,
               });
             }}
+            disabled={processStep !== START_PROCESS}
             checked={formData.defaultFrozen}
           />
           <div className="w-11 h-6 bg-gray-400 peer-focus:outline-none peer-focus:ring-4  rounded-full peer  peer-checked:after:translate-x-full  after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all border-gray-600 peer-checked:bg-blue-600"></div>
@@ -689,6 +700,7 @@ export function SimpleBatchMint() {
               type="checkbox"
               id="ipfs"
               className="peer"
+              disabled={processStep !== START_PROCESS}
               value={token === process.env.REACT_APP_NFT_STORAGE_KEY}
               onChange={(e) => {
                 if (e.target.checked) {
@@ -732,6 +744,25 @@ export function SimpleBatchMint() {
               </p>{" "}
             </>
           )}
+        </div>
+      )}
+      {previewAsset && (
+        <div className="flex flex-col mt-2 justify-center items-center w-[16rem] bg-secondary-black p-4 rounded-lg">
+          <p className="text-lg font-bold">Preview Asset</p>
+          <div className="flex flex-col items-center mt-2">
+            <img
+              src={previewAsset.ipfs_data.image}
+              alt="preview"
+              className="w-32 h-32 object-cover rounded-lg"
+            />
+            <p className="text-base text-gray-200 mt-2">
+              {previewAsset.asset_name} | {previewAsset.unit_name}
+            </p>
+            {/* metadata like json intended */}
+            <p className="text-sm text-gray-200 mt-1 w-48 overflow-x-auto">
+              {JSON.stringify(previewAsset.ipfs_data, null, 2)}
+            </p>
+          </div>
         </div>
       )}
       <div className="flex flex-col justify-center items-center w-[16rem]">
