@@ -308,7 +308,9 @@ export async function createAssetMintArray(
       asset_create_tx.group = groupID;
       fee_tx.group = groupID;
       txnsArray.push([asset_create_tx, fee_tx]);
-    } catch (error) {}
+    } catch (error) {
+      console.log(error);
+    }
   }
   if (sign === false) {
     return txnsArray;

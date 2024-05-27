@@ -38,7 +38,14 @@ export const PREFIXES = ["HORSE", "PONY", "tiny", "2INY"];
 export const TOOLS = [
   {
     id: "simple_mint",
-    label: "🖨️ Simple Mint",
+    label: "🌿 Simple Batch Mint",
+    description: "Easily Inscribe an collection in bulk.",
+    path: "/simple-batch-mint",
+    category: "mint",
+  },
+  {
+    id: "simple_mint",
+    label: "🌿 Simple Mint",
     description: "Easily Inscribe an Asset on Algorand",
     path: "/simple-mint",
     category: "mint",
@@ -52,7 +59,7 @@ export const TOOLS = [
   },
   {
     id: "batch_mint",
-    label: "🖨️ ARC-69 Collection Mint",
+    label: "🌿 ARC-69 Collection Mint",
     description: "Inscribe an ARC-69 collection in bulk.",
     path: "/arc69-collection-mint",
     category: "mint",
@@ -73,7 +80,7 @@ export const TOOLS = [
   },
   {
     id: "arc19_batch_mint",
-    label: "🖨️ ARC-19 Collection Mint",
+    label: "🌿 ARC-19 Collection Mint",
     description: "Inscribe an ARC-19 collection in bulk.",
     path: "/arc19-collection-mint",
     category: "mint",
@@ -94,7 +101,7 @@ export const TOOLS = [
   },
   {
     id: "arc3_batch_mint",
-    label: "🖨️ ARC-3 Collection Mint",
+    label: "🌿 ARC-3 Collection Mint",
     description: "Inscribe an ARC-3 collection in bulk.",
     path: "/arc3-collection-mint",
     category: "mint",
