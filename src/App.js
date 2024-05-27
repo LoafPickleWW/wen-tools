@@ -26,6 +26,7 @@ import { SimpleUpdate } from "./pages/SimpleUpdate";
 import { BatchClawback } from "./pages/BatchClawback";
 import { BatchFreeze } from "./pages/BatchFreeze";
 import { VaultSendTool } from "./pages/VaultSendTool";
+import { SimpleBatchMint } from "./pages/SimpleBatchMint";
 
 function App() {
   return (
@@ -84,6 +85,7 @@ function App() {
             path="/multimint-asset-holders"
             element={<MultimintAssetHolders />}
           />
+          <Route path="/simple-batch-mint" element={<SimpleBatchMint />} />
           <Route path="/simple-mint" element={<SimpleMint />} />
           <Route path="/simple-update" element={<SimpleUpdate />} />
           <Route path="*" element={<Home />} />
