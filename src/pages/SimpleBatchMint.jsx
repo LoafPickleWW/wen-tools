@@ -422,26 +422,6 @@ export function SimpleBatchMint() {
           </span>
           <AiOutlineInfoCircle />
         </div>
-        <button className="text-center text-lg text-pink-200 mt-2 bg-pink-700 px-4 py-2 rounded">
-          <a
-            className="hover:text-primary-green transition"
-            href="https://loafpickle.medium.com/simple-batch-mint-guide-9f1bbe7882cd"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Check Guide Here
-          </a>
-        </button>
-        <button className="text-center text-lg text-pink-200 mt-2 bg-pink-700 px-4 py-2 rounded">
-          <a
-            className="hover:text-primary-green transition"
-            href="https://docs.google.com/spreadsheets/d/1_hxkAcW2DWgoZ3s0A6jBK3DS7liU5QnA89mbXRttLhw/edit?usp=sharing"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            CSV Template
-          </a>
-        </button>
         <input
           type="text"
           placeholder="25-words mnemonics"
@@ -456,6 +436,26 @@ export function SimpleBatchMint() {
           to the amount of transactions per upload.
         </span>
       </div>
+      <button className="text-center text-lg text-pink-200 mt-2 bg-pink-700 px-4 py-2 rounded">
+        <a
+          className="hover:text-primary-green transition"
+          href="https://loafpickle.medium.com/simple-batch-mint-guide-9f1bbe7882cd"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Check Guide Here
+        </a>
+      </button>
+      <button className="text-center text-lg text-pink-200 mt-2 bg-pink-700 px-4 py-2 rounded">
+        <a
+          className="hover:text-primary-green transition"
+          href="https://docs.google.com/spreadsheets/d/1_hxkAcW2DWgoZ3s0A6jBK3DS7liU5QnA89mbXRttLhw/edit?usp=sharing"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          CSV Template
+        </a>
+      </button>
       <div className="mt-4 md:flex items-center text-start gap-x-4">
         <div className="flex flex-col md:mt-0 mt-2">
           <label className="mb-2 text-sm leading-none text-gray-200">
