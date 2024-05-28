@@ -8,7 +8,7 @@ import {
   getRandCreatorListings,
   getCreatedAssets,
 } from "../utils";
-import SelectNetworkComponent from "../components/SelectNetworkComponent";
+ 
 import { TOOLS } from "../constants";
 
 export function CollectionSnapshot() {
@@ -234,7 +234,6 @@ export function CollectionSnapshot() {
       <p className="text-2xl font-bold mt-1">
         {TOOLS.find((tool) => tool.path === window.location.pathname).label}
       </p>
-      <SelectNetworkComponent />
       <textarea
         type="text"
         rows={creatorWallet.split(",").length > 1 ? 3 : 1}

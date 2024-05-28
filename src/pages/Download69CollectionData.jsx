@@ -2,7 +2,7 @@ import { useState } from "react";
 import { toast } from "react-toastify";
 import axios from "axios";
 import { Arc69 } from "../utils";
-import SelectNetworkComponent from "../components/SelectNetworkComponent";
+ 
 import {
   TOOLS,
   MAINNET_ALGONODE_INDEXER,
@@ -161,7 +161,6 @@ export function Download69CollectionData() {
       <p className="text-2xl font-bold mt-1">
         {TOOLS.find((tool) => tool.path === window.location.pathname).label}
       </p>
-      <SelectNetworkComponent />
       <input
         type="text"
         id="creatorWallet"

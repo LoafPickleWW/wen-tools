@@ -1,12 +1,11 @@
 import { useState } from "react";
 import Papa from "papaparse";
-import ConnectButton from "../components/ConnectButton";
-import SelectNetworkComponent from "../components/SelectNetworkComponent";
 import algosdk from "algosdk";
 import { toast } from "react-toastify";
 import { createClawbackTransactions, getNodeURL } from "../utils";
 import { TOOLS } from "../constants";
-import { AiOutlineInfoCircle } from "react-icons/ai";
+
+import InfinityModeComponent from "../components/InfinityModeComponent";
 
 export function BatchClawback() {
   const [csvData, setCsvData] = useState(null);
@@ -141,36 +140,10 @@ export function BatchClawback() {
           How to Guide
         </a>
       </button>
-      <SelectNetworkComponent />
-      <p>1- Connect Sender Wallet</p>
-      <ConnectButton />
       {/* mnemonic */}
-      <div className="flex flex-col items-center rounded bg-primary-green py-2 px-3 text-sm text-black">
-        <span>Infinity Mode (optional)</span>
-        <div className="has-tooltip my-2">
-          <span className="tooltip rounded shadow-lg p-1 bg-gray-100 text-red-500 -mt-8 max-w-xl">
-            Evil Tools does not store any information on the website. As
-            precautions, you can use burner wallets, rekey to a burner wallet
-            and rekey back, or rekey after using.
-          </span>
-          <AiOutlineInfoCircle />
-        </div>
-        <input
-          type="text"
-          placeholder="25-words mnemonics"
-          className="bg-black/40 text-white border-2 border-black rounded-lg p-2 mt-1 w-64 text-sm mx-auto placeholder:text-center placeholder:text-white/70 placeholder:text-sm"
-          value={mnemonic}
-          onChange={(e) => {
-            setMnemonic(e.target.value.replace(/,/g, " "));
-          }}
-        />
-        <span className="text-xs mt-2 text-black">
-          Infinity Mode allows for no restrictions <br />
-          to the amount of transactions per upload.
-        </span>
-      </div>
+      <InfinityModeComponent mnemonic={mnemonic} setMnemonic={setMnemonic} />
       {/* end mnemonic */}
-      <p>2- Upload CSV file</p>
+      <p>Upload CSV file</p>
       {csvData == null ? (
         <label
           htmlFor="dropzone-file"

@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import Papa from 'papaparse';
-import ConnectButton from './ConnectButton';
 import algosdk from "algosdk";
 import { toast } from "react-toastify";
 import { createAssetConfigArray, sliceIntoChunks } from '../utils';
@@ -87,9 +86,7 @@ export function BatchCollectionMetadataUpdate(props) {
 
     return (
         <div className='mb-4 text-center flex flex-col items-center max-w-[40rem] gap-y-2'>
-            <p>1- Connect Creator Wallet</p>
-            <ConnectButton />
-            <p>2- Upload CSV file</p>
+            <p>Upload CSV file</p>
             {csvData == null ? (
                 <label htmlFor="dropzone-file" className="flex flex-col justify-center items-center w-[16rem] h-[8rem] px-4  rounded-lg border-2  border-dashed cursor-pointer hover:bg-bray-800 bg-gray-700  border-gray-600 hover:border-gray-500 hover:bg-gray-600">
                     <div className="flex flex-col justify-center items-center pt-5 pb-6">

@@ -1,6 +1,5 @@
 import { useState } from "react";
-import ConnectButton from "../components/ConnectButton";
-import SelectNetworkComponent from "../components/SelectNetworkComponent";
+
 import algosdk from "algosdk";
 import { toast } from "react-toastify";
 import {
@@ -13,8 +12,9 @@ import {
   SignWithMnemonics,
 } from "../utils";
 import { MINT_FEE_PER_ASA, TOOLS } from "../constants";
-import { AiOutlineInfoCircle } from "react-icons/ai";
+
 import Papa from "papaparse";
+import InfinityModeComponent from "../components/InfinityModeComponent";
 
 export function SimpleBatchMint() {
   const START_PROCESS = 0;
@@ -409,33 +409,6 @@ export function SimpleBatchMint() {
       <p className="text-2xl font-bold mt-1">
         {TOOLS.find((tool) => tool.path === window.location.pathname).label}
       </p>
-      <SelectNetworkComponent />
-      <p>Connect Creator Wallet</p>
-      <ConnectButton />
-      <div className="flex flex-col items-center rounded bg-primary-green py-2 px-3 text-sm text-black">
-        <span>Infinity Mode - Recommended via Escrow</span>
-        <div className="has-tooltip my-2">
-          <span className="tooltip rounded shadow-lg p-1 bg-gray-100 text-red-500 -mt-8 max-w-xl">
-            Evil Tools does not store any information on the website. As
-            precautions, you can use burner wallets, rekey to a burner wallet
-            and rekey back, or rekey after using.
-          </span>
-          <AiOutlineInfoCircle />
-        </div>
-        <input
-          type="text"
-          placeholder="25-words mnemonics"
-          className="bg-black/40 text-white border-2 border-black rounded-lg p-2 mt-1 w-64 text-sm mx-auto placeholder:text-center placeholder:text-white/70 placeholder:text-sm"
-          value={mnemonic}
-          onChange={(e) => {
-            setMnemonic(e.target.value.replace(/,/g, " "));
-          }}
-        />
-        <span className="text-xs mt-2 text-black">
-          Infinity Mode allows for no restrictions <br />
-          to the amount of transactions per upload.
-        </span>
-      </div>
       <button className="text-center text-lg text-pink-200 mt-2 bg-pink-700 px-4 py-2 rounded">
         <a
           className="hover:text-primary-green transition"
@@ -456,6 +429,9 @@ export function SimpleBatchMint() {
           CSV Template
         </a>
       </button>
+      {/* mnemonic */}
+      <InfinityModeComponent mnemonic={mnemonic} setMnemonic={setMnemonic} />
+      {/* end mnemonic */}
       <div className="mt-4 md:flex items-center text-start gap-x-4">
         <div className="flex flex-col md:mt-0 mt-2">
           <label className="mb-2 text-sm leading-none text-gray-200">
@@ -771,7 +747,7 @@ export function SimpleBatchMint() {
           <p className="text-lg font-bold">Preview Asset</p>
           <div className="flex flex-col items-center mt-2">
             <img
-              src={previewAsset.ipfs_data.image}
+              src={previewAsset.ipfs_data.image.replace("ipfs://", IPFS_ENDPOINT)}
               alt="preview"
               className="w-32 h-32 object-cover rounded-lg"
             />

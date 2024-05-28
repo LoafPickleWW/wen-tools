@@ -1,6 +1,5 @@
 import { useState } from "react";
-import ConnectButton from "../components/ConnectButton";
-import SelectNetworkComponent from "../components/SelectNetworkComponent";
+ 
 import algosdk from "algosdk";
 import { toast } from "react-toastify";
 import axios from "axios";
@@ -399,11 +398,8 @@ export function SimpleUpdate() {
       <p className="text-2xl font-bold mt-1">
         {TOOLS.find((tool) => tool.path === window.location.pathname).label}
       </p>
-      <SelectNetworkComponent />
       {assetID !== "" && formData.name ? (
         <>
-          <p>Connect Creator Wallet</p>
-          <ConnectButton />
           <div className="w-full px-10">
             <div className="flex flex-row justify-between">
               <button

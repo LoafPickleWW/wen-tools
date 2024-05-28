@@ -2,7 +2,7 @@ import { useState } from "react";
 import { toast } from "react-toastify";
 import axios from "axios";
 import { getIndexerURL, getNodeURL } from "../utils";
-import SelectNetworkComponent from "../components/SelectNetworkComponent";
+ 
 import { TOOLS } from "../constants";
 
 export function WalletHoldings() {
@@ -165,7 +165,6 @@ export function WalletHoldings() {
       <p className="text-2xl font-bold mt-1">
         {TOOLS.find((tool) => tool.path === window.location.pathname).label}
       </p>
-      <SelectNetworkComponent />
       <input
         type="text"
         id="userWallet"
