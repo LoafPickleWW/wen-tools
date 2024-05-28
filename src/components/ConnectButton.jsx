@@ -11,11 +11,12 @@ import Tooltip from "@mui/material/Tooltip";
 
 import { FaCopy, FaWallet } from "react-icons/fa";
 import { toast } from "react-toastify";
-
+import axios from "axios";
 // ** Wallet Imports
 import { DeflyWalletConnect } from "@blockshake/defly-connect";
 import { DaffiWalletConnect } from "@daffiwallet/connect";
 import { PeraWalletConnect } from "@perawallet/connect";
+import { getNodeURL } from "../utils";
 
 export default function ConnectButton() {
   const [anchorEl, setAnchorEl] = useState(null);
@@ -25,6 +26,7 @@ export default function ConnectButton() {
   const deflyWallet = new DeflyWalletConnect();
   const daffiWallet = new DaffiWalletConnect();
   const [walletAddress, setWalletAddress] = useState("");
+  const [accountData, setAccountData] = useState();
 
   // handlers
   const handleClick = (event) => {
@@ -77,6 +79,28 @@ export default function ConnectButton() {
     }
   };
 
+  const algoLogo = (
+    <svg
+      className="fill-text-color me-1 mb-1 ml-1"
+      version="1.1"
+      id="Layer_1"
+      xmlns="http://www.w3.org/2000/svg"
+      x="0px"
+      y="0px"
+      viewBox="0 0 200 200"
+      style={{ height: "1.5rem", width: "16px" }}
+    >
+      <path
+        style={{ fill: "white" }}
+        d="M170.7,28.8C151.1,9.6,127.5,0,99.9,0C72.1,0,48.4,9.6,28.8,28.8C9.6,48.4,0,72.1,0,99.9 c0,27.6,9.6,51.2,28.8,70.7C48.4,190.2,72.1,200,99.9,200c27.6,0,51.2-9.7,70.7-29.2c19.5-19.6,29.2-43.3,29.2-70.9 C199.9,72.1,190.1,48.4,170.7,28.8 M106.2,41.9H123l7.2,27h17.1l-11.7,20.7l16.6,61.6H135l-11.2-41.4l-23.9,41.4H81l36.9-63.9 l-6.3-22.5l-49.5,86.4H42.8L106.2,41.9z"
+      ></path>
+      <path
+        style={{ fill: "#FFFFF", fillOpacity: "0" }}
+        d="M123,41.9h-16.7L42.8,151.3h19.3l49.5-86.4l6.3,22.5L81,151.3h18.9l23.9-41.4l11.3,41.4 c33.7-1.3-5.5-51.1,12.2-82.3h-17.1L123,41.9z"
+      ></path>
+    </svg>
+  );
+
   const disconnect = async () => {
     try {
       peraWallet.disconnect();
@@ -98,6 +122,21 @@ export default function ConnectButton() {
       setWalletAddress(userAddressLocal);
     }
   }, []);
+
+  async function getAccountData(walletAddress) {
+    const response = await axios.get(
+      getNodeURL() + `/v2/accounts/${walletAddress}?exclude=all`
+    );
+    return response.data;
+  }
+
+  useEffect(() => {
+    if (walletAddress) {
+      getAccountData(walletAddress).then((data) => {
+        setAccountData(data);
+      });
+    }
+  }, [walletAddress]);
 
   return (
     <div className="flex flex-row justify-center items-center">
@@ -207,6 +246,24 @@ export default function ConnectButton() {
               }}
               onClick={handleClose}
             >
+              <div className="flex flex-col justify-start">
+                <span className="text-sm font-medium">
+                  <div className="flex flex-row items-center">
+                    Balance: {((accountData?.amount || 0) / 10 ** 6).toFixed(2)}
+                    {algoLogo}
+                  </div>
+                </span>
+                <span className="text-sm font-medium">
+                  <div className="flex flex-row items-center">
+                    Min Balance:{" "}
+                    {((accountData?.["min-balance"] || 0) / 10 ** 6).toFixed(2)}
+                    {algoLogo}
+                  </div>
+                </span>
+                <span className="text-sm font-medium">
+                  Asset Count: {accountData?.["total-assets-opted-in"]}
+                </span>
+              </div>
             </MenuItem>
             <MenuItem
               sx={{
