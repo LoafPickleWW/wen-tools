@@ -747,7 +747,7 @@ export function SimpleBatchMint() {
           <p className="text-lg font-bold">Preview Asset</p>
           <div className="flex flex-col items-center mt-2">
             <img
-              src={previewAsset.ipfs_data.image}
+              src={previewAsset.ipfs_data.image.replace("ipfs://", IPFS_ENDPOINT)}
               alt="preview"
               className="w-32 h-32 object-cover rounded-lg"
             />
