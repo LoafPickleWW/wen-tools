@@ -422,6 +422,26 @@ export function SimpleBatchMint() {
           </span>
           <AiOutlineInfoCircle />
         </div>
+        <button className="text-center text-lg text-pink-200 mt-2 bg-pink-700 px-4 py-2 rounded">
+          <a
+            className="hover:text-primary-green transition"
+            href="https://loafpickle.medium.com/simple-batch-mint-guide-9f1bbe7882cd"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Check Guide Here
+          </a>
+        </button>
+        <button className="text-center text-lg text-pink-200 mt-2 bg-pink-700 px-4 py-2 rounded">
+          <a
+            className="hover:text-primary-green transition"
+            href="https://docs.google.com/spreadsheets/d/1_hxkAcW2DWgoZ3s0A6jBK3DS7liU5QnA89mbXRttLhw/edit?usp=sharing"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            CSV Template
+          </a>
+        </button>
         <input
           type="text"
           placeholder="25-words mnemonics"
@@ -454,9 +474,9 @@ export function SimpleBatchMint() {
                 });
               }}
             >
-              <option value="ARC3">ARC3</option>
-              <option value="ARC19">ARC19</option>
-              <option value="ARC69">ARC69</option>
+              <option value="ARC3">ARC3 (Unchangeable)</option>
+              <option value="ARC19">ARC19 (Mutable Images and Data)</option>
+              <option value="ARC69">ARC69 (Mutable Data Only)</option>
             </select>
           </div>
         </div>
