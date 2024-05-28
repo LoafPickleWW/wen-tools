@@ -11,7 +11,7 @@ import {
   sliceIntoChunks,
   SignWithMnemonics,
 } from "../utils";
-import { MINT_FEE_PER_ASA, TOOLS } from "../constants";
+import { IPFS_ENDPOINT, MINT_FEE_PER_ASA, TOOLS } from "../constants";
 
 import Papa from "papaparse";
 import InfinityModeComponent from "../components/InfinityModeComponent";
