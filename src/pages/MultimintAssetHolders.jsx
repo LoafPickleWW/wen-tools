@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { toast } from "react-toastify";
 import axios from "axios";
-import SelectNetworkComponent from "../components/SelectNetworkComponent";
+ 
 import { TOOLS } from "../constants";
 import {
   getNfDomainsInBulk,
@@ -276,7 +276,6 @@ export function MultimintAssetHolders() {
       <p className="text-2xl font-bold mt-1">
         {TOOLS.find((tool) => tool.path === window.location.pathname).label}
       </p>
-      <SelectNetworkComponent />
       <input
         type="text"
         id="asset_id_list"

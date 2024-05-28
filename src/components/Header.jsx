@@ -3,32 +3,15 @@ import Toolbar from "@mui/material/Toolbar";
 import Typography from "@mui/material/Typography";
 import { Link } from "react-router-dom";
 import ConnectButton from "./ConnectButton";
+import SelectNetworkComponent from "./SelectNetworkComponent";
 
 export function Header() {
   return (
-    <AppBar sx={{ backgroundColor: "#030003" }} position="sticky">
+    <AppBar sx={{ backgroundColor: "#1A171A" }} position="sticky">
       <Toolbar>
         <Link to="/">
-          <img
-            src="/TL_large_white.png"
-            alt="logo"
-            className="mr-2 h-12 p-1 "
-          />
+          <img src="/TL_large_white.png" alt="logo" className="mr-2 h-12 p-1" />
         </Link>
-        <div className="ml-2">
-          <a
-            href="https://thurstober.com"
-            target="_blank"
-            rel="noreferrer"
-            className="flex items-center"
-          >
-            <img
-              className="h-[70px] hover:scale-95 duration-700"
-              src="./cherry.png"
-              alt="logo"
-            />
-          </a>
-        </div>
         <Typography
           component="div"
           sx={{
@@ -48,6 +31,7 @@ export function Header() {
             visibility: { xs: "hidden", sm: "visible" },
           }}
         ></Typography>
+        <SelectNetworkComponent />
         <ConnectButton />
       </Toolbar>
       <div className="bg-secondary-green text-black flex py-1 justify-center items-center">

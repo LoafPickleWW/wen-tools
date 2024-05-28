@@ -3,7 +3,7 @@ import FormGroup from "@mui/material/FormGroup";
 import Switch from "@mui/material/Switch";
 import { useState, useEffect } from "react";
 
-export default function SelectNetworkComponent() {
+export default function NetworkSelect() {
   const [selectNetwork, setSelectNetwork] = useState("mainnet");
 
   const updateNetworkType = (networkType) => {
@@ -32,11 +32,7 @@ export default function SelectNetworkComponent() {
         control={
           <Switch
             checked={selectNetwork === "mainnet"}
-            onChange={() =>
-              selectNetwork === "mainnet"
-                ? updateNetworkType("testnet")
-                : updateNetworkType("mainnet")
-            }
+            onChange={updateNetworkType}
             sx={{
               "& .MuiSwitch-thumb": {
                 backgroundColor: "#fff",

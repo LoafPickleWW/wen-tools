@@ -1,6 +1,5 @@
 import { useState } from "react";
-import ConnectButton from "../components/ConnectButton";
-import SelectNetworkComponent from "../components/SelectNetworkComponent";
+
 import algosdk from "algosdk";
 import { toast } from "react-toastify";
 import {
@@ -15,6 +14,7 @@ import {
   getTokenPreviewURL,
 } from "../utils";
 import { TOOLS } from "../constants";
+import FaqSectionComponent from "../components/FaqSectionComponent";
 
 export function SimpleMint() {
   const [formData, setFormData] = useState({
@@ -282,9 +282,6 @@ export function SimpleMint() {
       <p className="text-2xl font-bold mt-1">
         {TOOLS.find((tool) => tool.path === window.location.pathname).label}
       </p>
-      <SelectNetworkComponent />
-      <p>Connect Creator Wallet</p>
-      <ConnectButton />
       <div className="w-full px-10">
         <div className="mt-4 md:flex items-center text-start gap-x-4">
           <div className="flex flex-col">
@@ -649,6 +646,15 @@ export function SimpleMint() {
         <br />
         You can reload the page if you want to stop/restart the process!
       </p>
+      <FaqSectionComponent
+        faqData={[
+          {
+            question: "What is Simple Mint?",
+            answer:
+              "Simple Mint is a tool that allows you to mint NFTs and tokens on the Algorand blockchain.",
+          },
+        ]}
+      />
     </div>
   );
 }

@@ -1,79 +1,38 @@
+// ** React Imports
 import { useEffect, useState } from "react";
-import { BiWallet } from "react-icons/bi";
-import { ImCross } from "react-icons/im";
+
+// ** MUI Imports
+import { Icon, IconButton } from "@mui/material";
+import Button from "@mui/material/Button";
+import Menu from "@mui/material/Menu";
+import MenuItem from "@mui/material/MenuItem";
+import MenuList from "@mui/material/MenuList";
+import Tooltip from "@mui/material/Tooltip";
+
+import { FaCopy, FaWallet } from "react-icons/fa";
 import { toast } from "react-toastify";
-import { PeraWalletConnect } from "@perawallet/connect";
+
+// ** Wallet Imports
 import { DeflyWalletConnect } from "@blockshake/defly-connect";
 import { DaffiWalletConnect } from "@daffiwallet/connect";
+import { PeraWalletConnect } from "@perawallet/connect";
 
-const ConnectButton = () => {
-  const [walletAddress, setWalletAddress] = useState("");
-  const [showConnectPopup, setShowConnectPopup] = useState(false);
+export default function ConnectButton() {
+  const [anchorEl, setAnchorEl] = useState(null);
+  const open = Boolean(anchorEl);
+  // wallet
   const peraWallet = new PeraWalletConnect();
   const deflyWallet = new DeflyWalletConnect();
   const daffiWallet = new DaffiWalletConnect();
+  const [walletAddress, setWalletAddress] = useState("");
 
-  useEffect(() => {
-    const userAddressLocal = localStorage.getItem("wallet");
-    if (userAddressLocal) {
-      setWalletAddress(userAddressLocal);
-    }
-  }, []);
-
-  const connectToPera = async () => {
-    try {
-      const accounts = await peraWallet.connect();
-      setWalletAddress(accounts[0]);
-      localStorage.setItem("wallet", accounts[0]);
-      setShowConnectPopup(false);
-      toast.success("Connected!");
-      window.location.reload();
-    } catch (err) {
-      toast.error("Failed to connect!");
-    }
+  // handlers
+  const handleClick = (event) => {
+    setAnchorEl(event.currentTarget);
   };
 
-  const connectToDefly = async () => {
-    try {
-      const accounts = await deflyWallet.connect();
-      setWalletAddress(accounts[0]);
-      localStorage.setItem("wallet", accounts[0]);
-      setShowConnectPopup(false);
-      toast.success("Connected!");
-      window.location.reload();
-    } catch (err) {
-      toast.error("Failed to connect!");
-    }
-  };
-
-  const handleDisconnect = async () => {
-    try {
-      peraWallet.disconnect();
-    } catch (error) {
-    }
-    try {
-      deflyWallet.disconnect();
-    } catch (error) {
-    }
-    const networkType = localStorage.getItem("networkType");
-    localStorage.clear();
-    localStorage.setItem("networkType", networkType);
-    setWalletAddress("");
-    toast.success("Disconnected!");
-    window.location.reload();
-  };
-
-  const connectToDaffi = async () => {
-    try {
-      const accounts = await daffiWallet.connect();
-      setWalletAddress(accounts[0]);
-      localStorage.setItem("wallet", accounts[0]);
-      setShowConnectPopup(false);
-      toast.success("Connected!");
-      window.location.reload();
-    } catch (err) {
-      toast.error("Failed to connect!");
-    }
+  const handleClose = () => {
+    setAnchorEl(null);
   };
 
   const shortenAddress = (address) => {
@@ -82,89 +41,189 @@ const ConnectButton = () => {
     );
   };
 
-  return (
-    <>
-      {walletAddress === "" ? (
-        <>
-          <div className="flex flex-col">
-            <button
-              id="connect-button"
-              className="bg-secondary-green rounded-md py-3 px-8 w-fit mx-auto hover:scale-102 font-extrabold text-secondary-black transition"
-              onClick={
-                walletAddress
-                  ? () => handleDisconnect()
-                  : () => setShowConnectPopup(true)
-              }
-            >
-              <BiWallet className="w-8 h-8 text-black" />
-            </button>
-          </div>
-        </>
-      ) : (
-        <button
-          className="relative inline-flex items-center overflow-hidden group transition ease-in-out ml-0 bg-primary-green font-semibold text-primary-black
-                rounded-md py-2 md:py-3 px-4 md:px-6 w-fit hover:bg-red-500 hover:text-primary-white"
-          onClick={handleDisconnect}
-        >
-          {shortenAddress(walletAddress)}
-        </button>
-      )}
-      {showConnectPopup && (
-        <>
-          <div
-            className={`bg-black fixed top-0 left-0 h-full w-full transition-all ${
-              showConnectPopup ? "opacity-50" : "opacity-0"
-            }`}
-          ></div>
-          <div
-            className={`fixed top-1/2 left-1/2 bg-primary-green/90 transition-all -translate-x-1/2 -translate-y-[100%] rounded-md ${
-              showConnectPopup ? "opacity-100" : "opacity-0"
-            }`}
-          >
-            <div className="text-right">
-              <button
-                className="p-3 text-black"
-                onClick={() => setShowConnectPopup(false)}
-              >
-                <ImCross />
-              </button>
-            </div>
-            <div className="px-5 pb-5 -mt-7">
-              <p className="text-xl pb-5 text-center font-semibold text-primary-black">
-                Connect Wallet
-              </p>
-              <div className="flex flex-col justify-center gap-2 text-base">
-                <div>
-                  <button
-                    className="bg-[#ffee55] px-5 py-2 rounded-md w-64 text-black font-semibold hover:scale-95 transition"
-                    onClick={connectToPera}
-                  >
-                    Pera
-                  </button>
-                </div>
-                <div>
-                  <button
-                    className="bg-[#131313] px-5 py-2 rounded-md w-64 text-white  hover:scale-95 transition"
-                    onClick={connectToDefly}
-                  >
-                    Defly
-                  </button>
-                </div>
-                <div>
-                  <button
-                    onClick={connectToDaffi}
-                    className="bg-[#00BAA4] px-5 py-2 rounded-md w-64 text-black font-semibold  hover:scale-95 transition"
-                  >
-                    Daffi                
-                    </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </>
-      )}
-    </>
-  );
-};
+  const connectToPera = async () => {
+    handleClose();
+    try {
+      const accounts = await peraWallet.connect();
+      localStorage.setItem("wallet", accounts[0]);
+      setWalletAddress(accounts[0]);
+      toast.success("Connected!");
+    } catch (err) {
+      toast.error("Failed to connect!");
+    }
+  };
 
-export default ConnectButton;
+  const connectToDefly = async () => {
+    handleClose();
+    try {
+      const accounts = await deflyWallet.connect();
+      localStorage.setItem("wallet", accounts[0]);
+      setWalletAddress(accounts[0]);
+      toast.success("Connected!");
+    } catch (err) {
+      toast.error("Failed to connect!");
+    }
+  };
+
+  const connectToDaffi = async () => {
+    handleClose();
+    try {
+      const accounts = await daffiWallet.connect();
+      localStorage.setItem("wallet", accounts[0]);
+      setWalletAddress(accounts[0]);
+      toast.success("Connected!");
+    } catch (err) {
+      toast.error("Failed to connect!");
+    }
+  };
+
+  const disconnect = async () => {
+    try {
+      peraWallet.disconnect();
+    } catch (error) {}
+    try {
+      deflyWallet.disconnect();
+    } catch (error) {}
+    const networkType = localStorage.getItem("networkType");
+    localStorage.clear();
+    localStorage.setItem("networkType", networkType);
+    toast.success("Disconnected!");
+    setWalletAddress("");
+    window.location.reload();
+  };
+
+  useEffect(() => {
+    const userAddressLocal = localStorage.getItem("wallet");
+    if (userAddressLocal) {
+      setWalletAddress(userAddressLocal);
+    }
+  }, []);
+
+  return (
+    <div className="flex flex-row justify-center items-center">
+      {!walletAddress ? (
+        <Button
+          id="connect-button"
+          aria-controls={open ? "connect-menu" : undefined}
+          aria-haspopup="true"
+          aria-expanded={open ? "true" : undefined}
+          onClick={handleClick}
+          color="success"
+          className="hover:bg-primary-green hover:text-white transition"
+        >
+          <span className="font-sans">Connect</span>
+        </Button>
+      ) : (
+        <Tooltip title="Account" placement="bottom-start">
+          <IconButton
+            id="connect-button"
+            aria-controls={open ? "connect-menu" : undefined}
+            aria-haspopup="true"
+            aria-expanded={open ? "true" : undefined}
+            onClick={handleClick}
+            sx={{ fontFamily: "sans", fontWeight: "bold", color: "white" }}
+          >
+            <FaWallet height={50} width={50} />
+          </IconButton>
+        </Tooltip>
+      )}
+      <Menu
+        id="connect-menu"
+        anchorEl={anchorEl}
+        open={open}
+        onClose={handleClose}
+        MenuListProps={{
+          "aria-labelledby": "connect-button",
+        }}
+        sx={{ mt: "1px", "& .MuiMenu-paper": { backgroundColor: "#010002" } }}
+      >
+        {!walletAddress ? (
+          <MenuList sx={{ p: "0px" }}>
+            <MenuItem
+              sx={{
+                backgroundColor: "#ffee55",
+                color: "black",
+                fontWeight: "bold",
+                borderTopLeftRadius: "4px",
+                borderTopRightRadius: "4px",
+                ":hover": { backgroundColor: "#ffee55", opacity: "0.8" },
+              }}
+              onClick={connectToPera}
+            >
+              Pera
+            </MenuItem>
+            <MenuItem
+              sx={{
+                backgroundColor: "#131313",
+                color: "white",
+                fontWeight: "bold",
+                borderBottomLeftRadius: "4px",
+                borderBottomRightRadius: "4px",
+                ":hover": { backgroundColor: "#131313", opacity: "0.8" },
+              }}
+              onClick={connectToDefly}
+            >
+              Defly
+            </MenuItem>
+            <MenuItem
+              sx={{
+                backgroundColor: "#00BAA4",
+                color: "black",
+                fontWeight: "bold",
+                borderBottomLeftRadius: "4px",
+                borderBottomRightRadius: "4px",
+                ":hover": { backgroundColor: "#00BAA4", opacity: "0.8" },
+              }}
+              onClick={connectToDaffi}
+            >
+              Daffi
+            </MenuItem>
+          </MenuList>
+        ) : (
+          <MenuList sx={{ p: "0px" }}>
+            <MenuItem
+              sx={{
+                color: "white",
+                fontWeight: "bold",
+              }}
+              onClick={() => {
+                navigator.clipboard.writeText(walletAddress);
+                toast.success("Copied!");
+              }}
+            >
+              <div className="flex flex-row items-center">
+                <span>{shortenAddress(walletAddress)}</span>
+                <Icon className="ml-2" style={{ fontSize: "1rem" }}>
+                  <FaCopy />
+                </Icon>
+              </div>
+            </MenuItem>
+            <MenuItem
+              sx={{
+                textAlign: "start",
+                color: "white",
+                borderBottomLeftRadius: "4px",
+                borderBottomRightRadius: "4px",
+              }}
+              onClick={handleClose}
+            >
+            </MenuItem>
+            <MenuItem
+              sx={{
+                backgroundColor: "red",
+                color: "white",
+                ":hover": { backgroundColor: "red", opacity: "0.8" },
+                fontWeight: "bold",
+                borderBottomLeftRadius: "4px",
+                borderBottomRightRadius: "4px",
+              }}
+              onClick={disconnect}
+            >
+              Disconnect
+            </MenuItem>
+          </MenuList>
+        )}
+      </Menu>
+    </div>
+  );
+}

@@ -37,7 +37,7 @@ export const PREFIXES = ["HORSE", "PONY", "tiny", "2INY"];
 // TOOLS
 export const TOOLS = [
   {
-    id: "simple_mint",
+    id: "simple_batch_mint",
     label: "🌿 Simple Batch Mint",
     description: "Easily Inscribe an collection in bulk.",
     path: "/simple-batch-mint",
