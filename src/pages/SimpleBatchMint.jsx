@@ -569,7 +569,7 @@ export function SimpleBatchMint() {
                       Papa.parse(file, {
                         complete: function (results) {
                           const filteredData = results.data.filter(
-                            (row) => row[0].length > 1
+                            (row) => row[0].length > 0
                           );
                           setCsvData(filteredData);
                         },
