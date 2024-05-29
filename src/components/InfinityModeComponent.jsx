@@ -41,7 +41,7 @@ const InfinityModeComponent = ({
               setMnemonic(e.target.value.replace(/,/g, " "));
             }}
           />
-          <span className="text-xs mt-2 text-black w-64">{description}</span>
+          <span className="text-xs mt-2 text-white w-64">{description}</span>
         </div>
       )}
     </div>
