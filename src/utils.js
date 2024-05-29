@@ -79,20 +79,22 @@ export function getNfdomainAPIURL() {
 }
 
 export function getAssetPreviewURL(assetID) {
-  const networkType = localStorage.getItem("networkType");
-  if (networkType === "mainnet") {
-    return "https://explorer.perawallet.app/asset/" + assetID;
-  } else {
-    return "https://testnet.explorer.perawallet.app/asset/" + assetID;
-  }
+  return "https://we.thurstober.com/asset/" + assetID;
+  // const networkType = localStorage.getItem("networkType");
+  // if (networkType === "mainnet") {
+  //   return "https://explorer.perawallet.app/asset/" + assetID;
+  // } else {
+  //   return "https://testnet.explorer.perawallet.app/asset/" + assetID;
+  // }
 }
 
 export function getTokenPreviewURL(assetID) {
-  const networkType = localStorage.getItem("networkType");
-  if (networkType === "mainnet") {
-    return "https://allo.info/asset/" + assetID;
-  }
-  return "https://testnet.explorer.perawallet.app/asset/" + assetID;
+  return "https://we.thurstober.com/asset/" + assetID;
+  // const networkType = localStorage.getItem("networkType");
+  // if (networkType === "mainnet") {
+  //   return "https://allo.info/asset/" + assetID;
+  // }
+  // return "https://testnet.explorer.perawallet.app/asset/" + assetID;
 }
 
 export async function signGroupTransactions(
