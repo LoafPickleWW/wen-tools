@@ -221,15 +221,15 @@ export function SimpleBatchMint() {
         }
 
         if (formData.creatorName) {
-          ipfs_data.properties.creator = formData.creatorName;
+          ipfs_data.extra.creator = formData.creatorName;
         }
 
         if (formData.tokenId) {
-          ipfs_data.properties.token_id = formData.tokenId;
+          ipfs_data.extra.token_id = formData.tokenId;
         }
 
         if (formData.royalty) {
-          ipfs_data.properties.royalty = formData.royalty;
+          ipfs_data.extra.royalty = formData.royalty;
         }
 
         Object.keys(ipfs_data).forEach((key) => {
