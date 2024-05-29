@@ -31,7 +31,7 @@ const InfinityModeComponent = ({
         </div>
       </div>
       {isOpen && (
-        <div className="flex flex-col items-center rounded bg-banner-grey py-2 px-3 text-sm text-black">
+        <div className="flex flex-col items-center rounded bg-banner-grey py-2 px-3 text-sm text-white">
           <input
             type="text"
             placeholder="25-words mnemonics"
