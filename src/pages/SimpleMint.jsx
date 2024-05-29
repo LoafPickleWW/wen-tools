@@ -651,7 +651,10 @@ export function SimpleMint() {
           {
             question: "What is Simple Mint?",
             answer:
-              "Simple Mint is a tool that allows you to mint NFTs and tokens on the Algorand blockchain.",
+              "Simple Mint is a tool that allows you to mint NFTs and tokens on the Algorand blockchain in any of the major standards.",
+            question: "How much does it cost to Mint?",
+            answer:
+              "There is a network fee of 0.1A and a Lab fee of 0.1A. In total you need to have at least 0.2A in your wallet before minting.",
           },
         ]}
       />
