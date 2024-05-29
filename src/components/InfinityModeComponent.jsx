@@ -13,7 +13,7 @@ const InfinityModeComponent = ({
   };
 
   return (
-    <div className="accordion-container bg-primary-green rounded text-black p-3">
+    <div className="accordion-container bg-banner-grey rounded text-white p-3">
       <div
         className="accordion-header flex justify-between items-center cursor-pointer"
         onClick={toggleAccordion}
