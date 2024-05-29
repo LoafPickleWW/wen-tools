@@ -2,7 +2,7 @@ import { Tooltip, Typography } from "@mui/material";
 
 export function Footer() {
   return (
-    <footer className="bg-primary-black text-nude w-full bottom-0 fixed">
+    <footer className="bg-primary-black text-nude w-screen bottom-0 fixed">
       <div className="px-4 flex w-full flex-col items-center justify-center border-t border-blue-gray-50 py-4 gap-y-1 md:flex-row md:justify-between">
         <Typography
           variant="caption"

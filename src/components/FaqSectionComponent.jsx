@@ -1,19 +1,19 @@
 import { useState } from "react";
 
 const FAQItem = ({ faq, index, toggleFAQ }) => (
-  <div className="border-b-2 border-gray-200">
+  <div className="border-b-2 py-4 border-gray-200">
     <button
       className="w-full text-left py-4 focus:outline-none"
       onClick={() => toggleFAQ(index)}
     >
-      <h2 className="text-lg font-medium">{faq.question}</h2>
+      <h2 className="text-base font-medium px-4">{faq.question}</h2>
     </button>
     <div
       className={`overflow-hidden transition-all duration-300 ${
         faq.open ? "max-h-40" : "max-h-0"
       }`}
     >
-      <p className="p-4">{faq.answer}</p>
+      <p className="p-4 text-sm">{faq.answer}</p>
     </div>
   </div>
 );
@@ -37,8 +37,8 @@ const FaqSectionComponent = ({faqData}) => {
   };
 
   return (
-    <div className="max-w-2xl mx-auto mt-10">
-      <h1 className="text-3xl font-semibold text-center mb-8">
+    <div className="max-w-xl mx-auto mt-10">
+      <h1 className="text-xl font-semibold text-center">
         Frequently Asked Questions
       </h1>
       {faqs.map((faq, index) => (

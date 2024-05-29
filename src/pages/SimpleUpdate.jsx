@@ -1,5 +1,5 @@
 import { useState } from "react";
- 
+
 import algosdk from "algosdk";
 import { toast } from "react-toastify";
 import axios from "axios";
@@ -400,197 +400,196 @@ export function SimpleUpdate() {
       </p>
       {assetID !== "" && formData.name ? (
         <>
-          <div className="w-full px-10">
-            <div className="flex flex-row justify-between">
-              <button
-                className="rounded bg-secondary-green hover:bg-secondary-green/80  text-white px-4 py-1 mt-2"
-                onClick={() => {
-                  setAssetID("");
-                  setFormData({
-                    name: "",
-                    unitName: "",
-                    totalSupply: 1,
-                    decimals: 0,
-                    image: null,
-                    format: "",
-                    freeze: false,
-                    clawback: false,
-                    image_url: "",
-                    image_mime_type: "",
-                    metadata: [],
-                  });
-                  setProcessStep(0);
-                  setTransaction(null);
-                }}
+          <div className="flex flex-col md:flex-row justify-between">
+            <button
+              className="rounded bg-secondary-green hover:bg-secondary-green/80  text-white px-4 py-1 mt-2"
+              onClick={() => {
+                setAssetID("");
+                setFormData({
+                  name: "",
+                  unitName: "",
+                  totalSupply: 1,
+                  decimals: 0,
+                  image: null,
+                  format: "",
+                  freeze: false,
+                  clawback: false,
+                  image_url: "",
+                  image_mime_type: "",
+                  metadata: [],
+                });
+                setProcessStep(0);
+                setTransaction(null);
+              }}
+            >
+              Back
+            </button>
+            <div className="focus:outline-nonetext-sm font-light leading-tight text-slate-200 mt-4 md:ml-2">
+              Asset:{" "}
+              <a
+                className="font-medium text-slate-300 underline hover:text-slate-400 transition"
+                href={getAssetPreviewURL(assetID)}
+                target="_blank"
+                rel="noreferrer"
               >
-                Back
-              </button>
-              <p className="focus:outline-nonetext-sm font-light leading-tight text-slate-200 mt-4">
-                Asset:{" "}
-                <a
-                  className="font-medium text-slate-300 underline hover:text-slate-400 transition"
-                  href={getAssetPreviewURL(assetID)}
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  {assetID}
-                </a>
-              </p>
+                {assetID}
+              </a>
             </div>
-            <div className="mt-4 md:flex items-center text-start gap-x-4">
-              <div className="flex flex-col">
-                <label className="mb-2 text-sm leading-none text-gray-200">
-                  Name
-                </label>
-                <input
-                  className="w-64 bg-gray-400 text-sm font-medium text-center leading-none text-black placeholder:text-black/30 px-3 py-2 border rounded border-gray-400 disabled:cursor-not-allowed"
-                  value={formData.name}
-                  disabled
-                />
-              </div>
-              <div className="flex flex-col md:mt-0 mt-4">
-                <label className="mb-2 text-sm leading-none text-gray-200">
-                  Unit name
-                </label>
-                <input
-                  className="w-64 bg-gray-400 text-sm font-medium text-center leading-none text-black placeholder:text-black/30 px-3 py-2 border rounded border-gray-400 disabled:cursor-not-allowed"
-                  value={formData.unitName}
-                  disabled
-                />
-              </div>
-            </div>
-            <div className="mt-4 md:flex items-center text-start gap-x-4">
-              <div className="flex flex-col">
-                <label className="mb-2 text-sm leading-none text-gray-200">
-                  Total supply
-                </label>
-                <input
-                  className="w-64 bg-gray-400 text-sm font-medium text-center leading-none text-black placeholder:text-black/30 px-3 py-2 border rounded border-gray-400 disabled:cursor-not-allowed"
-                  value={formData.totalSupply}
-                  disabled
-                />
-              </div>
-              <div className="flex flex-col md:mt-0 mt-4">
-                <label className="mb-2 text-sm leading-none text-gray-200">
-                  Decimals
-                </label>
-                <input
-                  className="w-64 bg-gray-400 text-sm font-medium text-center leading-none text-black placeholder:text-black/30 px-3 py-2 border rounded border-gray-400 disabled:cursor-not-allowed"
-                  value={formData.decimals}
-                  disabled
-                />
-              </div>
-            </div>
-            <div className="mt-4 md:flex items-center text-start gap-x-4">
-              {formData.format === "ARC19" && (
-                <div className="flex flex-col md:mt-0 mt-4">
-                  <label className="mb-2 text-sm leading-none text-gray-200">
-                    New Image <span className="text-xs italic">(optional)</span>
-                  </label>
-                  <input
-                    className="block w-64 text-sm border border-gray-200 rounded cursor-pointer bg-gray-300  focus:outline-none  text-black font-medium"
-                    id="select_image"
-                    type="file"
-                    accept="image/*,video/*"
-                    multiple={false}
-                    required
-                    onChange={(e) => {
-                      setFormData({
-                        ...formData,
-                        image: e.target.files[0],
-                      });
-                    }}
-                  />
-                </div>
-              )}
-              <div className="flex flex-col md:mt-0 mt-4 mx-auto">
-                <label className="mb-2 text-sm leading-none text-gray-200">
-                  ARC format
-                </label>
-                <div className="inline-flex items-center space-x-2">
-                  <input
-                    className="w-64 bg-gray-400 text-sm font-medium text-center leading-none text-black placeholder:text-black/30 px-3 py-2 border rounded border-gray-400 disabled:cursor-not-allowed"
-                    value={formData.format}
-                    disabled
-                  />
-                </div>
-              </div>
-            </div>
-            {formData.image_url && (
-              <img
-                src={
-                  formData.image_url.startsWith("ipfs://")
-                    ? `${IPFS_ENDPOINT}${formData.image_url.replace(
-                        "ipfs://",
-                        ""
-                      )}`
-                    : formData.image_url
-                }
-                className="w-60 mx-auto mt-4 object-contain rounded-md"
-                alt="asset"
-                id="asset_image"
-                onError={(e) => {
-                  e.target.onerror = null;
-                  window.document.getElementById("asset_image").remove();
-                }}
-              />
-            )}
-            {formData.animation_url && (
-              <video
-                src={
-                  formData.animation_url.startsWith("ipfs://")
-                    ? `${IPFS_ENDPOINT}${formData.animation_url.replace(
-                        "ipfs://",
-                        ""
-                      )}`
-                    : formData.animation_url
-                }
-                className="w-60 mx-auto mt-4 object-contain rounded-md"
-                alt="asset_video"
-                id="asset_video"
-                onError={(e) => {
-                  e.target.onerror = null;
-                  window.document.getElementById("asset_video").remove();
-                }}
-                controls
-                autoPlay
-              />
-            )}
-            <p className="focus:outline-nonetext-sm font-light leading-tight text-gray-200 mt-4">
-              Property Metadata
-            </p>
-            <div className="mt-4 md:flex flex-col items-center text-start justify-center">
-              {formData.metadata.map((metadata) => {
-                return TraitMetadataInputField(metadata.id);
-              })}
-            </div>
-            {formData.format !== "ARC3" && (
-              <button
-                className="rounded-md bg-primary-green hover:bg-green-600 transition text-black px-4 py-1"
-                onClick={() => {
-                  let lastId;
-                  try {
-                    lastId = formData.metadata[formData.metadata.length - 1].id;
-                  } catch (error) {
-                    lastId = 0;
-                  }
-                  setFormData({
-                    ...formData,
-                    metadata: [
-                      ...formData.metadata,
-                      {
-                        id: lastId + 1,
-                        category: "",
-                        name: "",
-                      },
-                    ],
-                  });
-                }}
-              >
-                +
-              </button>
-            )}
           </div>
+          <div className="mt-4 md:flex items-center text-start gap-x-4">
+            <div className="flex flex-col">
+              <label className="mb-2 text-sm leading-none text-gray-200">
+                Name
+              </label>
+              <input
+                className="w-64 bg-gray-400 text-sm font-medium text-center leading-none text-black placeholder:text-black/30 px-3 py-2 border rounded border-gray-400 disabled:cursor-not-allowed"
+                value={formData.name}
+                disabled
+              />
+            </div>
+            <div className="flex flex-col md:mt-0 mt-4">
+              <label className="mb-2 text-sm leading-none text-gray-200">
+                Unit name
+              </label>
+              <input
+                className="w-64 bg-gray-400 text-sm font-medium text-center leading-none text-black placeholder:text-black/30 px-3 py-2 border rounded border-gray-400 disabled:cursor-not-allowed"
+                value={formData.unitName}
+                disabled
+              />
+            </div>
+          </div>
+          <div className="mt-4 md:flex items-center text-start gap-x-4">
+            <div className="flex flex-col">
+              <label className="mb-2 text-sm leading-none text-gray-200">
+                Total supply
+              </label>
+              <input
+                className="w-64 bg-gray-400 text-sm font-medium text-center leading-none text-black placeholder:text-black/30 px-3 py-2 border rounded border-gray-400 disabled:cursor-not-allowed"
+                value={formData.totalSupply}
+                disabled
+              />
+            </div>
+            <div className="flex flex-col md:mt-0 mt-4">
+              <label className="mb-2 text-sm leading-none text-gray-200">
+                Decimals
+              </label>
+              <input
+                className="w-64 bg-gray-400 text-sm font-medium text-center leading-none text-black placeholder:text-black/30 px-3 py-2 border rounded border-gray-400 disabled:cursor-not-allowed"
+                value={formData.decimals}
+                disabled
+              />
+            </div>
+          </div>
+          <div className="mt-4 md:flex items-center text-start gap-x-4">
+            {formData.format === "ARC19" && (
+              <div className="flex flex-col md:mt-0 mt-4">
+                <label className="mb-2 text-sm leading-none text-gray-200">
+                  New Image <span className="text-xs italic">(optional)</span>
+                </label>
+                <input
+                  className="block w-64 text-sm border border-gray-200 rounded cursor-pointer bg-gray-300  focus:outline-none  text-black font-medium"
+                  id="select_image"
+                  type="file"
+                  accept="image/*,video/*"
+                  multiple={false}
+                  required
+                  onChange={(e) => {
+                    setFormData({
+                      ...formData,
+                      image: e.target.files[0],
+                    });
+                  }}
+                />
+              </div>
+            )}
+            <div className="flex flex-col md:mt-0 mt-4 mx-auto">
+              <label className="mb-2 text-sm leading-none text-gray-200">
+                ARC format
+              </label>
+              <div className="inline-flex items-center space-x-2">
+                <input
+                  className="w-64 bg-gray-400 text-sm font-medium text-center leading-none text-black placeholder:text-black/30 px-3 py-2 border rounded border-gray-400 disabled:cursor-not-allowed"
+                  value={formData.format}
+                  disabled
+                />
+              </div>
+            </div>
+          </div>
+          {formData.image_url && (
+            <img
+              src={
+                formData.image_url.startsWith("ipfs://")
+                  ? `${IPFS_ENDPOINT}${formData.image_url.replace(
+                      "ipfs://",
+                      ""
+                    )}`
+                  : formData.image_url
+              }
+              className="w-60 mx-auto mt-4 object-contain rounded-md"
+              alt="asset"
+              id="asset_image"
+              onError={(e) => {
+                e.target.onerror = null;
+                window.document.getElementById("asset_image").remove();
+              }}
+            />
+          )}
+          {formData.animation_url && (
+            <video
+              src={
+                formData.animation_url.startsWith("ipfs://")
+                  ? `${IPFS_ENDPOINT}${formData.animation_url.replace(
+                      "ipfs://",
+                      ""
+                    )}`
+                  : formData.animation_url
+              }
+              className="w-60 mx-auto mt-4 object-contain rounded-md"
+              alt="asset_video"
+              id="asset_video"
+              onError={(e) => {
+                e.target.onerror = null;
+                window.document.getElementById("asset_video").remove();
+              }}
+              controls
+              autoPlay
+            />
+          )}
+          <p className="focus:outline-nonetext-sm font-light leading-tight text-gray-200 mt-4">
+            Property Metadata
+          </p>
+          <div className="mt-4 md:flex flex-col items-center text-start justify-center">
+            {formData.metadata.map((metadata) => {
+              return TraitMetadataInputField(metadata.id);
+            })}
+          </div>
+          {formData.format !== "ARC3" && (
+            <button
+              className="rounded-md bg-primary-green hover:bg-green-600 transition text-black px-4 py-1"
+              onClick={() => {
+                let lastId;
+                try {
+                  lastId = formData.metadata[formData.metadata.length - 1].id;
+                } catch (error) {
+                  lastId = 0;
+                }
+                setFormData({
+                  ...formData,
+                  metadata: [
+                    ...formData.metadata,
+                    {
+                      id: lastId + 1,
+                      category: "",
+                      name: "",
+                    },
+                  ],
+                });
+              }}
+            >
+              +
+            </button>
+          )}
+
           {formData.format === "ARC3" ? (
             <p className="text-lg text-red-400 font-roboto">
               ARC3 assets can't be updated
@@ -729,7 +728,7 @@ export function SimpleUpdate() {
           </button>
         </div>
       )}
-      <p className="text-sm italic text-slate-200">
+      <p className="text-sm italic text-slate-200 py-4">
         **It is recommended that any Creator Host their own Files using their
         own token. Evil Tools will not be held responsible for anything that
         happens to publicly hosted images.

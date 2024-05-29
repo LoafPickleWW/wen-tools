@@ -282,246 +282,241 @@ export function SimpleMint() {
       <p className="text-2xl font-bold mt-1">
         {TOOLS.find((tool) => tool.path === window.location.pathname).label}
       </p>
-      <div className="w-full px-10">
-        <div className="mt-4 md:flex items-center text-start gap-x-4">
-          <div className="flex flex-col">
-            <label className="mb-2 text-sm leading-none text-gray-200">
-              Name*
-            </label>
-            <input
-              type="text"
-              placeholder="Ex: STUPIDHORSE 001"
-              className="w-64 bg-gray-300 text-sm font-medium text-center leading-none text-black placeholder:text-black/30 px-3 py-2 border rounded border-gray-200"
-              maxLength={32}
-              required
-              value={formData.name}
-              onChange={(e) => {
-                setFormData({
-                  ...formData,
-                  name: e.target.value,
-                });
-              }}
-            />
-          </div>
-          <div className="flex flex-col md:mt-0 mt-4">
-            <label className="mb-2 text-sm leading-none text-gray-200">
-              Unit name*
-            </label>
-            <input
-              type="text"
-              placeholder="Ex: HORSE001"
-              className="w-64 bg-gray-300 text-sm font-medium text-center leading-none text-black placeholder:text-black/30 px-3 py-2 border rounded border-gray-200"
-              maxLength={8}
-              required
-              value={formData.unitName}
-              onChange={(e) => {
-                setFormData({
-                  ...formData,
-                  unitName: e.target.value,
-                });
-              }}
-            />
-          </div>
-        </div>
-        <div className="mt-4 md:flex items-center text-start gap-x-4">
-          <div className="flex flex-col">
-            <label className="mb-2 text-sm leading-none text-gray-200">
-              Total supply*
-            </label>
-            <input
-              className="w-64 bg-gray-300 text-sm font-medium text-center leading-none text-black placeholder:text-black/30 placeholder:text-sm px-3 py-2 border rounded border-gray-200"
-              type="number"
-              max={18446744073709551615n}
-              min={1}
-              required
-              onChange={(e) => {
-                setFormData({
-                  ...formData,
-                  totalSupply: e.target.value,
-                });
-              }}
-              placeholder="Recommended: 1 for NFTs"
-              value={formData.totalSupply}
-            />
-          </div>
-          <div className="flex flex-col md:mt-0 mt-4">
-            <label className="mb-2 text-sm leading-none text-gray-200">
-              Decimals*
-            </label>
-            <input
-              type="number"
-              className="w-64 bg-gray-300 text-sm font-medium text-center leading-none placeholder:text-sm text-black placeholder:text-black/30 px-3 py-2 border rounded border-gray-200"
-              max={19}
-              min={0}
-              required
-              onChange={(e) => {
-                setFormData({
-                  ...formData,
-                  decimals: e.target.value,
-                });
-              }}
-              value={formData.decimals}
-              placeholder="Recommended: 0 for NFTs"
-            />
-          </div>
-        </div>
-        <div className="mt-4 md:flex items-center text-start gap-x-4">
-          {formData.format !== "Token" ? (
-            <div className="flex flex-col md:mt-0 mt-4">
-              <label className="mb-2 text-sm leading-none text-gray-200">
-                Select Image*
-              </label>
-              <input
-                className="block w-64 text-sm border border-gray-200 rounded cursor-pointer bg-gray-300  focus:outline-none  text-black font-medium"
-                id="select_image"
-                type="file"
-                accept="image/*,video/*"
-                multiple={false}
-                required
-                onChange={(e) => {
-                  setFormData({
-                    ...formData,
-                    image: e.target.files[0],
-                  });
-                }}
-              />
-            </div>
-          ) : (
-            <div className="flex flex-col md:mt-0 mt-4">
-              <label className="mb-2 text-sm leading-none text-gray-200">
-                URL Field
-              </label>
-              <input
-                className="w-64 bg-gray-300 text-sm font-medium text-center leading-none placeholder:text-sm text-black placeholder:text-black/30 px-3 py-1 border rounded border-gray-200"
-                id="select_image"
-                type="text"
-                value={formData.urlField}
-                onChange={(e) => {
-                  setFormData({
-                    ...formData,
-                    urlField: e.target.value,
-                  });
-                }}
-              />
-            </div>
-          )}
-          <div className="flex flex-col md:mt-0 mt-4">
-            <label className="mb-2 text-sm leading-none text-gray-200">
-              Asset format*
-            </label>
-            <div className="inline-flex items-center space-x-2">
-              <select
-                className="bg-gray-300 rounded border-gray-300 font-medium text-center text-black transition px-2 py-1 w-64"
-                required
-                onChange={(e) => {
-                  setFormData({
-                    ...formData,
-                    format: e.target.value,
-                  });
-                }}
-                value={formData.format}
-              >
-                <option value="ARC3">ARC3 - Unchangeable</option>
-                <option value="ARC19">
-                  ARC19 - Changeable Images and Data
-                </option>
-                <option value="ARC69">ARC69- Changeable Data</option>
-                <option value="Token">Token</option>
-              </select>
-            </div>
-          </div>
-        </div>
-        <div className="mt-4 flex flex-row items-center text-start justify-center gap-x-4">
-          <label className="relative inline-flex items-center cursor-pointer">
-            <input
-              type="checkbox"
-              className="sr-only peer"
-              id="freeze"
-              onChange={(e) => {
-                setFormData({
-                  ...formData,
-                  freeze: e.target.checked,
-                });
-              }}
-              checked={formData.freeze}
-            />
-            <div className="w-11 h-6 bg-gray-400 peer-focus:outline-none peer-focus:ring-4  rounded-full peer  peer-checked:after:translate-x-full  after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all border-gray-600 peer-checked:bg-blue-600"></div>
-            <span className="ml-3 text-sm font-medium text-gray-300">
-              Freeze
-            </span>
+      <div className="mt-4 md:flex items-center text-start gap-x-4">
+        <div className="flex flex-col md:mt-0 mt-2">
+          <label className="mb-2 text-sm leading-none text-gray-200">
+            Name*
           </label>
-          <label className="relative inline-flex items-center cursor-pointer">
-            <input
-              type="checkbox"
-              className="sr-only peer"
-              id="clawback"
-              onChange={(e) => {
-                setFormData({
-                  ...formData,
-                  clawback: e.target.checked,
-                });
-              }}
-              checked={formData.clawback}
-            />
-            <div className="w-11 h-6 bg-gray-400 peer-focus:outline-none peer-focus:ring-4  rounded-full peer  peer-checked:after:translate-x-full  after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all border-gray-600 peer-checked:bg-blue-600"></div>
-            <span className="ml-3 text-sm font-medium text-gray-300">
-              Clawback
-            </span>
-          </label>
-        </div>
-        <label className="relative inline-flex items-center cursor-pointer mt-1">
           <input
-            type="checkbox"
-            className="sr-only peer"
-            id="defaultFrozen"
+            type="text"
+            placeholder="Ex: STUPIDHORSE 001"
+            className="w-64 bg-gray-300 text-sm font-medium text-center leading-none text-black placeholder:text-black/30 px-3 py-2 border rounded border-gray-200"
+            maxLength={32}
+            required
+            value={formData.name}
             onChange={(e) => {
               setFormData({
                 ...formData,
-                defaultFrozen: e.target.checked,
+                name: e.target.value,
               });
             }}
-            checked={formData.defaultFrozen}
+          />
+        </div>
+        <div className="flex flex-col md:mt-0 mt-4">
+          <label className="mb-2 text-sm leading-none text-gray-200">
+            Unit name*
+          </label>
+          <input
+            type="text"
+            placeholder="Ex: HORSE001"
+            className="w-64 bg-gray-300 text-sm font-medium text-center leading-none text-black placeholder:text-black/30 px-3 py-2 border rounded border-gray-200"
+            maxLength={8}
+            required
+            value={formData.unitName}
+            onChange={(e) => {
+              setFormData({
+                ...formData,
+                unitName: e.target.value,
+              });
+            }}
+          />
+        </div>
+      </div>
+      <div className="mt-4 md:flex items-center text-start gap-x-4">
+        <div className="flex flex-col">
+          <label className="mb-2 text-sm leading-none text-gray-200">
+            Total supply*
+          </label>
+          <input
+            className="w-64 bg-gray-300 text-sm font-medium text-center leading-none text-black placeholder:text-black/30 placeholder:text-sm px-3 py-2 border rounded border-gray-200"
+            type="number"
+            max={18446744073709551615n}
+            min={1}
+            required
+            onChange={(e) => {
+              setFormData({
+                ...formData,
+                totalSupply: e.target.value,
+              });
+            }}
+            placeholder="Recommended: 1 for NFTs"
+            value={formData.totalSupply}
+          />
+        </div>
+        <div className="flex flex-col md:mt-0 mt-4">
+          <label className="mb-2 text-sm leading-none text-gray-200">
+            Decimals*
+          </label>
+          <input
+            type="number"
+            className="w-64 bg-gray-300 text-sm font-medium text-center leading-none placeholder:text-sm text-black placeholder:text-black/30 px-3 py-2 border rounded border-gray-200"
+            max={19}
+            min={0}
+            required
+            onChange={(e) => {
+              setFormData({
+                ...formData,
+                decimals: e.target.value,
+              });
+            }}
+            value={formData.decimals}
+            placeholder="Recommended: 0 for NFTs"
+          />
+        </div>
+      </div>
+      <div className="mt-4 md:flex items-center text-start gap-x-4">
+        {formData.format !== "Token" ? (
+          <div className="flex flex-col md:mt-0 mt-4">
+            <label className="mb-2 text-sm leading-none text-gray-200">
+              Select Image*
+            </label>
+            <input
+              className="block w-64 text-sm border border-gray-200 rounded cursor-pointer bg-gray-300  focus:outline-none  text-black font-medium"
+              id="select_image"
+              type="file"
+              accept="image/*,video/*"
+              multiple={false}
+              required
+              onChange={(e) => {
+                setFormData({
+                  ...formData,
+                  image: e.target.files[0],
+                });
+              }}
+            />
+          </div>
+        ) : (
+          <div className="flex flex-col md:mt-0 mt-4">
+            <label className="mb-2 text-sm leading-none text-gray-200">
+              URL Field
+            </label>
+            <input
+              className="w-64 bg-gray-300 text-sm font-medium text-center leading-none placeholder:text-sm text-black placeholder:text-black/30 px-3 py-1 border rounded border-gray-200"
+              id="select_image"
+              type="text"
+              value={formData.urlField}
+              onChange={(e) => {
+                setFormData({
+                  ...formData,
+                  urlField: e.target.value,
+                });
+              }}
+            />
+          </div>
+        )}
+        <div className="flex flex-col md:mt-0 mt-4">
+          <label className="mb-2 text-sm leading-none text-gray-200">
+            Asset format*
+          </label>
+          <div className="inline-flex items-center space-x-2">
+            <select
+              className="bg-gray-300 rounded border-gray-300 font-medium text-center text-black transition px-2 py-1 w-64"
+              required
+              onChange={(e) => {
+                setFormData({
+                  ...formData,
+                  format: e.target.value,
+                });
+              }}
+              value={formData.format}
+            >
+              <option value="ARC3">ARC3 - Unchangeable</option>
+              <option value="ARC19">ARC19 - Changeable Images and Data</option>
+              <option value="ARC69">ARC69- Changeable Data</option>
+              <option value="Token">Token</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div className="mt-4 flex flex-row items-center text-start justify-center gap-x-4">
+        <label className="relative inline-flex items-center cursor-pointer">
+          <input
+            type="checkbox"
+            className="sr-only peer"
+            id="freeze"
+            onChange={(e) => {
+              setFormData({
+                ...formData,
+                freeze: e.target.checked,
+              });
+            }}
+            checked={formData.freeze}
           />
           <div className="w-11 h-6 bg-gray-400 peer-focus:outline-none peer-focus:ring-4  rounded-full peer  peer-checked:after:translate-x-full  after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all border-gray-600 peer-checked:bg-blue-600"></div>
-          <span className="ml-2 text-sm font-medium text-gray-300">
-            Default Frozen
+          <span className="ml-3 text-sm font-medium text-gray-300">Freeze</span>
+        </label>
+        <label className="relative inline-flex items-center cursor-pointer">
+          <input
+            type="checkbox"
+            className="sr-only peer"
+            id="clawback"
+            onChange={(e) => {
+              setFormData({
+                ...formData,
+                clawback: e.target.checked,
+              });
+            }}
+            checked={formData.clawback}
+          />
+          <div className="w-11 h-6 bg-gray-400 peer-focus:outline-none peer-focus:ring-4  rounded-full peer  peer-checked:after:translate-x-full  after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all border-gray-600 peer-checked:bg-blue-600"></div>
+          <span className="ml-3 text-sm font-medium text-gray-300">
+            Clawback
           </span>
         </label>
-        <p className="focus:outline-nonetext-sm font-light leading-tight text-gray-200 mt-2">
-          Property Metadata
-          <br />
-          (optional)
-        </p>
-        <div className="mt-4 md:flex flex-col items-center text-start justify-center">
-          {formData.metadata.map((metadata) => {
-            return TraitMetadataInputField(metadata.id);
-          })}
-        </div>
-        <button
-          className="rounded-md bg-primary-green hover:bg-green-600 transition text-black px-4 py-1"
-          onClick={() => {
-            let lastId;
-            try {
-              lastId = formData.metadata[formData.metadata.length - 1].id;
-            } catch (error) {
-              lastId = 0;
-            }
+      </div>
+      <label className="relative inline-flex items-center cursor-pointer mt-1">
+        <input
+          type="checkbox"
+          className="sr-only peer"
+          id="defaultFrozen"
+          onChange={(e) => {
             setFormData({
               ...formData,
-              metadata: [
-                ...formData.metadata,
-                {
-                  id: lastId + 1,
-                  category: "",
-                  name: "",
-                },
-              ],
+              defaultFrozen: e.target.checked,
             });
           }}
-        >
-          +
-        </button>
+          checked={formData.defaultFrozen}
+        />
+        <div className="w-11 h-6 bg-gray-400 peer-focus:outline-none peer-focus:ring-4  rounded-full peer  peer-checked:after:translate-x-full  after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all border-gray-600 peer-checked:bg-blue-600"></div>
+        <span className="ml-2 text-sm font-medium text-gray-300">
+          Default Frozen
+        </span>
+      </label>
+      <p className="focus:outline-nonetext-sm font-light leading-tight text-gray-200 mt-2">
+        Property Metadata
+        <br />
+        (optional)
+      </p>
+      <div className="mt-4 md:flex flex-col items-center text-start justify-center">
+        {formData.metadata.map((metadata) => {
+          return TraitMetadataInputField(metadata.id);
+        })}
       </div>
+      <button
+        className="rounded-md bg-primary-green hover:bg-green-600 transition text-black px-4 py-1"
+        onClick={() => {
+          let lastId;
+          try {
+            lastId = formData.metadata[formData.metadata.length - 1].id;
+          } catch (error) {
+            lastId = 0;
+          }
+          setFormData({
+            ...formData,
+            metadata: [
+              ...formData.metadata,
+              {
+                id: lastId + 1,
+                category: "",
+                name: "",
+              },
+            ],
+          });
+        }}
+      >
+        +
+      </button>
+
       <div className="flex flex-col mt-4">
         <div className="flex flex-row items-center justify-center gap-x-2">
           <input
@@ -635,7 +630,7 @@ export function SimpleMint() {
           </button>
         )}
       </div>
-      <p className="text-sm italic text-slate-200">
+      <p className="text-sm italic text-slate-200 px-4">
         **It is recommended that any Creator Host their own Files using their
         own token. Evil Tools will not be held responsible for anything that
         happens to publicly hosted images.
