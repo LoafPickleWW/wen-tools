@@ -10,7 +10,7 @@ module.exports = {
         "orange-1000": "#C254414B",
         "red-1000": "#801F19",
         "special-red": "#7a0909",
-        "primary-green": "#02AE70",
+        "primary-green": "#327A32",
         "primary-blue": "#6EC1E4",
         "primary-yellow": "#FFC000",
         "primary-red": "#BB000E",
