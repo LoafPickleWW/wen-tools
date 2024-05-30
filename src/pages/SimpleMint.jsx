@@ -524,8 +524,8 @@ export function SimpleMint() {
           </div>
         );
       })}
-      <p className="focus:outline-nonetext-sm font-light leading-tight text-gray-200 mt-2">
-        Traits
+      <p className="focus:outline-nonetext-sm font-semibold text-xl leading-tight text-gray-200 mt-2">
+        Rarity Traits
       </p>
       <div className="md:flex flex-col items-center text-start justify-center">
         {formData.traits.map((metadata) => {
@@ -557,7 +557,7 @@ export function SimpleMint() {
         +
       </button>
       <p className="focus:outline-nonetext-sm font-semibold text-xl leading-tight text-gray-200 mt-2">
-        ARC36 Filters
+        Non-Rarity Traits
       </p>
       <p className="focus:outline-nonetext-sm font-light leading-tight text-gray-200 mt-2">
         Filters
