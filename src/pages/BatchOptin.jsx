@@ -7,6 +7,8 @@ import { TOOLS } from "../constants";
 
 import { useSearchParams } from "react-router-dom";
 import InfinityModeComponent from "../components/InfinityModeComponent";
+import FaqSectionComponent from "../components/FaqSectionComponent";
+
 
 export function BatchOptin() {
   const [csvData, setCsvData] = useState(null);
@@ -193,6 +195,20 @@ export function BatchOptin() {
         <br />
         You can reload the page if you want to stop/restart the process!
       </p>
+      <FaqSectionComponent
+         faqData={[
+           {
+             question: "What is Opting into an Asset?",
+             answer:
+               "On Algorand, you can not receive an Asset unless your wallet gives permission to receive it. This prevents people from sending unwanted assets to your account.",
+           },
+           {
+             question: "How much does it cost to Opt into an Asset?",
+             answer:
+               "There is a Minimum Balance Requirement of 0.1A per Asset and it is locked up until you opt out of an asset.",
+           },
+         ]}
+       />
     </div>
   );
 }
