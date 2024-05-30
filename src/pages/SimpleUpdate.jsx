@@ -308,7 +308,6 @@ export function SimpleUpdate() {
           metadata.animation_mime_type = formData.animation_mime_type;
         }
       }
-      console.log(metadata);
       const nodeURL = getNodeURL();
       if (formData.format === "ARC19") {
         const transaction_data = {
