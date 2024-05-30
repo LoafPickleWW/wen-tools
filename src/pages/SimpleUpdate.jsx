@@ -28,39 +28,39 @@ export function SimpleUpdate() {
     clawback: false,
     image_url: "",
     image_mime_type: "",
-    metadata: [],
+    description: "",
+    external_url: "",
+    traits: [],
+    filters: [],
+    extras: [],
   });
   const [token, setToken] = useState("");
   const [processStep, setProcessStep] = useState(0);
   const [transaction, setTransaction] = useState(null);
   const [assetID, setAssetID] = useState("");
 
-  const TraitMetadataInputField = (id) => {
+  const TraitMetadataInputField = (id, type) => {
     return (
       <div key={id} id={`metadata-${id}`} className="mb-2">
         <input
           type="text"
           id={`category-${id}`}
-          placeholder="Property"
-          className={`${
-            formData.format === "ARC3" ? "w-32" : "w-24 md:w-28"
-          } bg-gray-300 text-sm font-medium text-center leading-none text-black placeholder:text-black/30 placeholder:text-xs px-3 py-2 border rounded border-gray-200`}
-          value={
-            formData.metadata.find((metadata) => metadata.id === id).category
-          }
+          placeholder={type.slice(0, -1)}
+          className="w-24 md:w-28 bg-gray-300 text-sm font-medium text-center leading-none text-black placeholder:text-black/30 placeholder:text-xs px-3 py-2 border rounded border-gray-200"
+          value={formData[type].find((metadata) => metadata.id === id).category}
           onChange={(e) => {
-            const newMetadata = formData.metadata.map((metadata) => {
-              if (metadata.id === id) {
+            const newMetadata = formData[type].map((trait) => {
+              if (trait.id === id) {
                 return {
-                  ...metadata,
+                  ...trait,
                   category: e.target.value,
                 };
               }
-              return metadata;
+              return trait;
             });
             setFormData({
               ...formData,
-              metadata: newMetadata,
+              [type]: newMetadata,
             });
           }}
           readOnly={formData.format === "ARC3"}
@@ -68,44 +68,40 @@ export function SimpleUpdate() {
         <input
           id={`name-${id}`}
           type="text"
-          placeholder="Trait"
-          className={`${
-            formData.format === "ARC3" ? "w-32" : "w-24 md:w-28"
-          } bg-gray-300 text-sm ml-2 font-medium text-center leading-none text-black placeholder:text-black/30 placeholder:text-sm px-3 py-2 border rounded border-gray-200`}
-          value={formData.metadata.find((metadata) => metadata.id === id).name}
+          placeholder="value"
+          className="w-24 md:w-28 bg-gray-300 text-sm ml-2 font-medium text-center leading-none text-black placeholder:text-black/30 placeholder:text-sm px-3 py-2 border rounded border-gray-200"
+          value={formData[type].find((metadata) => metadata.id === id).name}
           onChange={(e) => {
-            const newMetadata = formData.metadata.map((metadata) => {
-              if (metadata.id === id) {
+            const newMetadata = formData[type].map((trait) => {
+              if (trait.id === id) {
                 return {
-                  ...metadata,
+                  ...trait,
                   name: e.target.value,
                 };
               }
-              return metadata;
+              return trait;
             });
             setFormData({
               ...formData,
-              metadata: newMetadata,
+              [type]: newMetadata,
             });
           }}
           readOnly={formData.format === "ARC3"}
         />
-        {formData.format !== "ARC3" && (
-          <button
-            className="rounded bg-primary-red text-lg hover:bg-red-600 transition text-white ml-2 px-4"
-            onClick={() => {
-              const newMetadata = formData.metadata.filter(
-                (metadata) => metadata.id !== id
-              );
-              setFormData({
-                ...formData,
-                metadata: newMetadata,
-              });
-            }}
-          >
-            -
-          </button>
-        )}
+        <button
+          className="rounded bg-primary-red text-lg hover:bg-red-600 transition text-white ml-2 px-4"
+          onClick={() => {
+            const newMetadata = formData[type].filter(
+              (metadata) => metadata.id !== id
+            );
+            setFormData({
+              ...formData,
+              [type]: newMetadata,
+            });
+          }}
+        >
+          -
+        </button>
       </div>
     );
   };
@@ -168,53 +164,24 @@ export function SimpleUpdate() {
             .then((res) => res.data);
         }
       }
-      let metadata = [];
+      let metadata = {
+        filters: [],
+        traits: [],
+        extras: [],
+      };
+
       if (assetMetadata.properties) {
         for (const key in assetMetadata.properties) {
           if (typeof assetMetadata.properties[key] === "object") {
             for (const subKey in assetMetadata.properties[key]) {
-              metadata = [
-                ...metadata,
-                {
-                  id: metadata.length,
-                  category: `${key}_${subKey}`,
-                  name: assetMetadata.properties[key][subKey],
-                },
-              ];
+              metadata[key][subKey] = assetMetadata.properties[key][subKey];
             }
           } else {
             if (!key.includes("image_static")) {
-              metadata = [
-                ...metadata,
-                {
-                  id: metadata.length,
-                  category: key,
-                  name: assetMetadata.properties[key],
-                },
-              ];
+              metadata[key] = assetMetadata.properties[key];
             }
           }
         }
-      }
-      if (assetMetadata.description) {
-        metadata = [
-          ...metadata,
-          {
-            id: metadata.length,
-            category: "description",
-            name: assetMetadata.description,
-          },
-        ];
-      }
-      if (assetMetadata.external_url) {
-        metadata = [
-          ...metadata,
-          {
-            id: metadata.length,
-            category: "external_url",
-            name: assetMetadata.external_url,
-          },
-        ];
       }
       setFormData({
         ...formData,
@@ -225,7 +192,23 @@ export function SimpleUpdate() {
         freeze: assetData.params["freeze"],
         clawback: assetData.params["clawback"],
         format: assetFormat,
-        metadata: metadata,
+        description: assetMetadata.description || "",
+        external_url: assetMetadata.external_url || "",
+        traits: Object.keys(metadata.traits).map((key, index) => ({
+          id: index,
+          category: key,
+          name: metadata.traits[key],
+        })),
+        filters: Object.keys(metadata.filters).map((key, index) => ({
+          id: index,
+          category: key,
+          name: metadata.filters[key],
+        })),
+        extras: Object.keys(metadata.extras).map((key, index) => ({
+          id: index,
+          category: key,
+          name: metadata.extras[key],
+        })),
         image_url: assetMetadata.image || assetData.params["url"],
         image_mime_type: assetMetadata.image_mime_type,
         animation_url: assetMetadata.animation_url || assetData.params["url"],
@@ -264,29 +247,38 @@ export function SimpleUpdate() {
         standard: formData.format.toLocaleLowerCase(),
         properties: {},
       };
-      formData.metadata.forEach((data) => {
-        if (data.category !== "" && data.name !== "") {
-          if (
-            data.category === "description" ||
-            data.category === "external_url"
-          ) {
-            metadata[data.category] = data.name;
-          } else {
-            if (
-              data.category.includes("traits_") ||
-              data.category.includes("filters_")
-            ) {
-              const [category, subCategory] = data.category.split("_");
-              if (!metadata.properties[category]) {
-                metadata.properties[category] = {};
-              }
-              metadata.properties[category][subCategory] = data.name;
-            } else {
-              metadata.properties[data.category] = data.name;
-            }
+
+      if (formData.external_url !== "") {
+        metadata.external_url = formData.external_url;
+      }
+      if (formData.description !== "") {
+        metadata.description = formData.description;
+      }
+      if (formData.traits.length > 0) {
+        metadata.properties.traits = formData.traits.reduce((acc, trait) => {
+          if (trait.category !== "" && trait.name !== "") {
+            acc[trait.category] = trait.name;
           }
-        }
-      });
+          return acc;
+        }, {});
+      }
+      if (formData.filters.length > 0) {
+        metadata.properties.filters = formData.filters.reduce((acc, filter) => {
+          if (filter.category !== "" && filter.name !== "") {
+            acc[filter.category] = filter.name;
+          }
+          return acc;
+        }, {});
+      }
+      if (formData.extras.length > 0) {
+        metadata.properties.extras = formData.extras.reduce((acc, extra) => {
+          if (extra.category !== "" && extra.name !== "") {
+            acc[extra.category] = extra.name;
+          }
+          return acc;
+        }, {});
+      }
+
       if (formData.image && formData.format === "ARC19") {
         toast.info("Uploading the image to IPFS...");
         const imageURL =
@@ -316,6 +308,7 @@ export function SimpleUpdate() {
           metadata.animation_mime_type = formData.animation_mime_type;
         }
       }
+      console.log(metadata);
       const nodeURL = getNodeURL();
       if (formData.format === "ARC19") {
         const transaction_data = {
@@ -404,22 +397,7 @@ export function SimpleUpdate() {
             <button
               className="rounded bg-secondary-green hover:bg-secondary-green/80  text-white px-4 py-1 mt-2"
               onClick={() => {
-                setAssetID("");
-                setFormData({
-                  name: "",
-                  unitName: "",
-                  totalSupply: 1,
-                  decimals: 0,
-                  image: null,
-                  format: "",
-                  freeze: false,
-                  clawback: false,
-                  image_url: "",
-                  image_mime_type: "",
-                  metadata: [],
-                });
-                setProcessStep(0);
-                setTransaction(null);
+                window.location.reload();
               }}
             >
               Back
@@ -558,9 +536,39 @@ export function SimpleUpdate() {
           <p className="focus:outline-nonetext-sm font-light leading-tight text-gray-200 mt-4">
             Property Metadata
           </p>
-          <div className="mt-4 md:flex flex-col items-center text-start justify-center">
-            {formData.metadata.map((metadata) => {
-              return TraitMetadataInputField(metadata.id);
+          <p className="focus:outline-nonetext-sm font-semibold text-lg leading-tight text-gray-200 mt-2">
+            Property Metadata
+          </p>
+          {["external_url", "description"].map((key) => {
+            return (
+              <div className="mb-2">
+                <input
+                  type="text"
+                  disabled
+                  id={key}
+                  className="w-24 md:w-28 bg-gray-300 text-sm font-medium text-center leading-none text-black placeholder:text-black/30 placeholder:text-xs px-3 py-2 border rounded border-gray-200"
+                  value={key}
+                />
+                <input
+                  id={key}
+                  type="text"
+                  placeholder="(optional)"
+                  className="w-24 md:w-28 bg-gray-300 text-sm ml-2 font-medium text-center leading-none text-black placeholder:text-black/30 placeholder:text-sm px-3 py-2 border rounded border-gray-200"
+                  value={formData[key]}
+                  onChange={(e) => {
+                    setFormData({ ...formData, [key]: e.target.value });
+                  }}
+                  readOnly={formData.format === "ARC3"}
+                />
+              </div>
+            );
+          })}
+          <p className="focus:outline-nonetext-sm font-light leading-tight text-gray-200 mt-2">
+            Traits
+          </p>
+          <div className="md:flex flex-col items-center text-start justify-center">
+            {formData.traits.map((metadata) => {
+              return TraitMetadataInputField(metadata.id, "traits");
             })}
           </div>
           {formData.format !== "ARC3" && (
@@ -569,14 +577,14 @@ export function SimpleUpdate() {
               onClick={() => {
                 let lastId;
                 try {
-                  lastId = formData.metadata[formData.metadata.length - 1].id;
+                  lastId = formData.traits[formData.traits.length - 1].id;
                 } catch (error) {
                   lastId = 0;
                 }
                 setFormData({
                   ...formData,
-                  metadata: [
-                    ...formData.metadata,
+                  traits: [
+                    ...formData.traits,
                     {
                       id: lastId + 1,
                       category: "",
@@ -589,7 +597,78 @@ export function SimpleUpdate() {
               +
             </button>
           )}
-
+          <p className="focus:outline-nonetext-sm font-semibold text-xl leading-tight text-gray-200 mt-2">
+            ARC36 Filters
+          </p>
+          <p className="focus:outline-nonetext-sm font-light leading-tight text-gray-200 mt-2">
+            Filters
+          </p>
+          <div className="md:flex flex-col items-center text-start justify-center">
+            {formData.filters.map((metadata) => {
+              return TraitMetadataInputField(metadata.id, "filters");
+            })}
+          </div>
+          {formData.format !== "ARC3" && (
+            <button
+              className="rounded-md bg-primary-green hover:bg-green-600 transition text-black px-4 py-1"
+              onClick={() => {
+                let lastId;
+                try {
+                  lastId = formData.filters[formData.filters.length - 1].id;
+                } catch (error) {
+                  lastId = 0;
+                }
+                setFormData({
+                  ...formData,
+                  filters: [
+                    ...formData.filters,
+                    {
+                      id: lastId + 1,
+                      category: "",
+                      name: "",
+                    },
+                  ],
+                });
+              }}
+            >
+              +
+            </button>
+          )}
+          <div className="border-b-2 border-gray-400 w-1/2 my-4"></div>
+          <p className="focus:outline-nonetext-sm font-light leading-tight text-gray-200">
+            Extras
+          </p>
+          <div className="md:flex flex-col items-center text-start justify-center">
+            {formData.extras.map((metadata) => {
+              return TraitMetadataInputField(metadata.id, "extras");
+            })}
+          </div>
+          {formData.format !== "ARC3" && (
+            <button
+              className="rounded-md bg-primary-green hover:bg-green-600 transition text-black px-4 py-1"
+              onClick={() => {
+                let lastId;
+                try {
+                  lastId = formData.extras[formData.extras.length - 1].id;
+                } catch (error) {
+                  lastId = 0;
+                }
+                setFormData({
+                  ...formData,
+                  extras: [
+                    ...formData.extras,
+                    {
+                      id: lastId + 1,
+                      category: "",
+                      name: "",
+                    },
+                  ],
+                });
+              }}
+            >
+              +
+            </button>
+          )}
           {formData.format === "ARC3" ? (
             <p className="text-lg text-red-400 font-roboto">
               ARC3 assets can't be updated
