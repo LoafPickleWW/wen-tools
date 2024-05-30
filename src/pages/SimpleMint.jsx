@@ -28,15 +28,26 @@ export function SimpleMint() {
     clawback: false,
     defaultFrozen: false,
     urlField: "",
-    metadata: [
+    description: "",
+    external_url: "",
+    traits: [
       {
         id: 1,
-        category: "description",
+        category: "",
         name: "",
       },
+    ],
+    filters: [
       {
-        id: 2,
-        category: "external_url",
+        id: 1,
+        category: "",
+        name: "",
+      },
+    ],
+    extras: [
+      {
+        id: 1,
+        category: "",
         name: "",
       },
     ],
@@ -46,64 +57,62 @@ export function SimpleMint() {
   const [transaction, setTransaction] = useState(null);
   const [createdAssetID, setCreatedAssetID] = useState(null);
 
-  const TraitMetadataInputField = (id) => {
+  const TraitMetadataInputField = (id, type) => {
     return (
       <div key={id} id={`metadata-${id}`} className="mb-2">
         <input
           type="text"
           id={`category-${id}`}
-          placeholder="Property"
+          placeholder={type.slice(0, -1)}
           className="w-24 md:w-28 bg-gray-300 text-sm font-medium text-center leading-none text-black placeholder:text-black/30 placeholder:text-xs px-3 py-2 border rounded border-gray-200"
-          value={
-            formData.metadata.find((metadata) => metadata.id === id).category
-          }
+          value={formData[type].find((metadata) => metadata.id === id).category}
           onChange={(e) => {
-            const newMetadata = formData.metadata.map((metadata) => {
-              if (metadata.id === id) {
+            const newMetadata = formData[type].map((trait) => {
+              if (trait.id === id) {
                 return {
-                  ...metadata,
+                  ...trait,
                   category: e.target.value,
                 };
               }
-              return metadata;
+              return trait;
             });
             setFormData({
               ...formData,
-              metadata: newMetadata,
+              [type]: newMetadata,
             });
           }}
         />
         <input
           id={`name-${id}`}
           type="text"
-          placeholder="Trait"
+          placeholder="value"
           className="w-24 md:w-28 bg-gray-300 text-sm ml-2 font-medium text-center leading-none text-black placeholder:text-black/30 placeholder:text-sm px-3 py-2 border rounded border-gray-200"
-          value={formData.metadata.find((metadata) => metadata.id === id).name}
+          value={formData[type].find((metadata) => metadata.id === id).name}
           onChange={(e) => {
-            const newMetadata = formData.metadata.map((metadata) => {
-              if (metadata.id === id) {
+            const newMetadata = formData[type].map((trait) => {
+              if (trait.id === id) {
                 return {
-                  ...metadata,
+                  ...trait,
                   name: e.target.value,
                 };
               }
-              return metadata;
+              return trait;
             });
             setFormData({
               ...formData,
-              metadata: newMetadata,
+              [type]: newMetadata,
             });
           }}
         />
         <button
           className="rounded bg-primary-red text-lg hover:bg-red-600 transition text-white ml-2 px-4"
           onClick={() => {
-            const newMetadata = formData.metadata.filter(
+            const newMetadata = formData[type].filter(
               (metadata) => metadata.id !== id
             );
             setFormData({
               ...formData,
-              metadata: newMetadata,
+              [type]: newMetadata,
             });
           }}
         >
@@ -140,29 +149,36 @@ export function SimpleMint() {
         standard: formData.format.toLocaleLowerCase(),
         properties: {},
       };
-      formData.metadata.forEach((data) => {
-        if (data.category !== "" && data.name !== "") {
-          if (
-            data.category === "description" ||
-            data.category === "external_url"
-          ) {
-            metadata[data.category] = data.name;
-          } else {
-            if (
-              data.category.includes("traits_") ||
-              data.category.includes("filters_")
-            ) {
-              const [category, subCategory] = data.category.split("_");
-              if (!metadata.properties[category]) {
-                metadata.properties[category] = {};
-              }
-              metadata.properties[category][subCategory] = data.name;
-            } else {
-              metadata.properties[data.category] = data.name;
-            }
+      if (formData.external_url !== "") {
+        metadata.external_url = formData.external_url;
+      }
+      if (formData.description !== "") {
+        metadata.description = formData.description;
+      }
+      if (formData.traits.length > 0) {
+        metadata.properties.traits = formData.traits.reduce((acc, trait) => {
+          if (trait.category !== "" && trait.name !== "") {
+            acc[trait.category] = trait.name;
           }
-        }
-      });
+          return acc;
+        }, {});
+      }
+      if (formData.filters.length > 0) {
+        metadata.properties.filters = formData.filters.reduce((acc, filter) => {
+          if (filter.category !== "" && filter.name !== "") {
+            acc[filter.category] = filter.name;
+          }
+          return acc;
+        }, {});
+      }
+      if (formData.extras.length > 0) {
+        metadata.properties.extras = formData.extras.reduce((acc, extra) => {
+          if (extra.category !== "" && extra.name !== "") {
+            acc[extra.category] = extra.name;
+          }
+          return acc;
+        }, {});
+      }
       let imageURL;
       if (formData.format === "Token") {
         imageURL = formData.urlField;
@@ -482,14 +498,38 @@ export function SimpleMint() {
           Default Frozen
         </span>
       </label>
-      <p className="focus:outline-nonetext-sm font-light leading-tight text-gray-200 mt-2">
+      <p className="focus:outline-nonetext-sm font-semibold text-lg leading-tight text-gray-200 mt-2">
         Property Metadata
-        <br />
-        (optional)
       </p>
-      <div className="mt-4 md:flex flex-col items-center text-start justify-center">
-        {formData.metadata.map((metadata) => {
-          return TraitMetadataInputField(metadata.id);
+      {["external_url", "description"].map((key) => {
+        return (
+          <div className="mb-2">
+            <input
+              type="text"
+              disabled
+              id={key}
+              className="w-24 md:w-28 bg-gray-300 text-sm font-medium text-center leading-none text-black placeholder:text-black/30 placeholder:text-xs px-3 py-2 border rounded border-gray-200"
+              value={key}
+            />
+            <input
+              id={key}
+              type="text"
+              placeholder="(optional)"
+              className="w-24 md:w-28 bg-gray-300 text-sm ml-2 font-medium text-center leading-none text-black placeholder:text-black/30 placeholder:text-sm px-3 py-2 border rounded border-gray-200"
+              value={formData[key]}
+              onChange={(e) => {
+                setFormData({ ...formData, [key]: e.target.value });
+              }}
+            />
+          </div>
+        );
+      })}
+      <p className="focus:outline-nonetext-sm font-light leading-tight text-gray-200 mt-2">
+        Traits
+      </p>
+      <div className="md:flex flex-col items-center text-start justify-center">
+        {formData.traits.map((metadata) => {
+          return TraitMetadataInputField(metadata.id, "traits");
         })}
       </div>
       <button
@@ -497,14 +537,14 @@ export function SimpleMint() {
         onClick={() => {
           let lastId;
           try {
-            lastId = formData.metadata[formData.metadata.length - 1].id;
+            lastId = formData.traits[formData.traits.length - 1].id;
           } catch (error) {
             lastId = 0;
           }
           setFormData({
             ...formData,
-            metadata: [
-              ...formData.metadata,
+            traits: [
+              ...formData.traits,
               {
                 id: lastId + 1,
                 category: "",
@@ -516,7 +556,74 @@ export function SimpleMint() {
       >
         +
       </button>
-
+      <p className="focus:outline-nonetext-sm font-semibold text-xl leading-tight text-gray-200 mt-2">
+        ARC36 Filters
+      </p>
+      <p className="focus:outline-nonetext-sm font-light leading-tight text-gray-200 mt-2">
+        Filters
+      </p>
+      <div className="md:flex flex-col items-center text-start justify-center">
+        {formData.filters.map((metadata) => {
+          return TraitMetadataInputField(metadata.id, "filters");
+        })}
+      </div>
+      <button
+        className="rounded-md bg-primary-green hover:bg-green-600 transition text-black px-4 py-1"
+        onClick={() => {
+          let lastId;
+          try {
+            lastId = formData.filters[formData.filters.length - 1].id;
+          } catch (error) {
+            lastId = 0;
+          }
+          setFormData({
+            ...formData,
+            filters: [
+              ...formData.filters,
+              {
+                id: lastId + 1,
+                category: "",
+                name: "",
+              },
+            ],
+          });
+        }}
+      >
+        +
+      </button>
+      <div className="border-b-2 border-gray-400 w-1/2 my-4"></div>
+      <p className="focus:outline-nonetext-sm font-light leading-tight text-gray-200">
+        Extras
+      </p>
+      <div className="md:flex flex-col items-center text-start justify-center">
+        {formData.extras.map((metadata) => {
+          return TraitMetadataInputField(metadata.id, "extras");
+        })}
+      </div>
+      <button
+        className="rounded-md bg-primary-green hover:bg-green-600 transition text-black px-4 py-1"
+        onClick={() => {
+          let lastId;
+          try {
+            lastId = formData.extras[formData.extras.length - 1].id;
+          } catch (error) {
+            lastId = 0;
+          }
+          setFormData({
+            ...formData,
+            extras: [
+              ...formData.extras,
+              {
+                id: lastId + 1,
+                category: "",
+                name: "",
+              },
+            ],
+          });
+        }}
+      >
+        +
+      </button>
       <div className="flex flex-col mt-4">
         <div className="flex flex-row items-center justify-center gap-x-2">
           <input
