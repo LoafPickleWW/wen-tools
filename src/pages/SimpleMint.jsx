@@ -653,6 +653,11 @@ export function SimpleMint() {
             answer:
               "There is a network fee of 0.1A and a Lab fee of 0.1A. In total you need to have at least 0.2A in your wallet before minting.",
           },
+          {
+            question: "Can I mint a token or memecoin?",
+            answer:
+              "Yes! You can mint a token by selecting the token option on the dropdown.",
+          },
         ]}
       />
     </div>
