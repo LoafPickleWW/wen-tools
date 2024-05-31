@@ -532,9 +532,6 @@ export function SimpleUpdate() {
               autoPlay
             />
           )}
-          <p className="focus:outline-nonetext-sm font-light leading-tight text-gray-200 mt-4">
-            Property Metadata
-          </p>
           <p className="focus:outline-nonetext-sm font-semibold text-lg leading-tight text-gray-200 mt-2">
             Property Metadata
           </p>
@@ -597,7 +594,7 @@ export function SimpleUpdate() {
             </button>
           )}
           <p className="focus:outline-nonetext-sm font-semibold text-xl leading-tight text-gray-200 mt-2">
-            ARC36 Filters
+            Non-Rarity Filters
           </p>
           <p className="focus:outline-nonetext-sm font-light leading-tight text-gray-200 mt-2">
             Filters
