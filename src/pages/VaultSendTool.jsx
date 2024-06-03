@@ -10,6 +10,7 @@ import {
 import { TOOLS } from "../constants";
 import axios from "axios";
 import InfinityModeComponent from "../components/InfinityModeComponent";
+import FaqSectionComponent from "../components/FaqSectionComponent";
 
 export function VaultSendTool() {
   const TOOL_TYPES = [
@@ -458,6 +459,25 @@ export function VaultSendTool() {
         <br />
         You can reload the page if you want to stop/restart the process!
       </p>
+      <FaqSectionComponent
+        faqData={[
+          {
+            question: "What is Vault Send?",
+            answer:
+              "Vault Send is a way to send an NFT to a person with a Non Fungible Domain without them needing to opt in first.",
+          },
+          {
+            question: "How much does it cost to Send?",
+            answer:
+              "Since you are opting into the Asset for the person, you will need at least 0.1A per address to cover the Minimum Balance Requirement.",
+          },
+          {
+            question: "How does Segment Send work?",
+            answer:
+              "This is a powerful feature that lets you enter the root of an NFD and it will automatically pull all the segment holders and send to them.",
+          },
+        ]}
+      />
     </div>
   );
 }
