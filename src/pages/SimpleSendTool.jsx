@@ -6,6 +6,7 @@ import { createAirdropTransactions, getNodeURL } from "../utils";
 import { TOOLS } from "../constants";
 
 import InfinityModeComponent from "../components/InfinityModeComponent";
+import FaqSectionComponent from "../components/FaqSectionComponent";
 
 export function SimpleSendTool() {
   const TOOL_TYPES = [
@@ -322,6 +323,25 @@ export function SimpleSendTool() {
         <br />
         You can reload the page if you want to stop/restart the process!
       </p>
+      <FaqSectionComponent
+         faqData={[
+           {
+             question: "What is Simple Send?",
+             answer:
+               "Simple Send is a tool that allows you to send an ASA to multiple wallet addresses or send multiple ASAs to a single wallet.",
+           },
+           {
+             question: "How much does it cost to Send?",
+             answer:
+               "There is a network transaction fee of 0.001A. If you send 1000 Assets, it will cost only 1A.",
+           },
+           {
+             question: "What happens if the person isn't opted in?",
+             answer:
+               "If the person is not opted in, the transaction will fail. If you want to send to people not opted in, use our Vault Send tool.",
+           },
+         ]}
+       />
     </div>
   );
 }
