@@ -15,6 +15,7 @@ import { IPFS_ENDPOINT, MINT_FEE_PER_ASA, TOOLS } from "../constants";
 
 import Papa from "papaparse";
 import InfinityModeComponent from "../components/InfinityModeComponent";
+import FaqSectionComponent from "../components/FaqSectionComponent";
 
 export function SimpleBatchMint() {
   const START_PROCESS = 0;
@@ -821,6 +822,25 @@ export function SimpleBatchMint() {
         <br />
         You can reload the page if you want to stop/restart the process!
       </p>
+      <FaqSectionComponent
+        faqData={[
+          {
+            question: "What is Simple Batch Mint?",
+            answer:
+              "Simple Batch Mint is a tool that allows you to mint NFT Collections on the Algorand blockchain in any of the major standards.",
+          },
+          {
+            question: "How much does it cost to Mint?",
+            answer:
+              "There is a network fee of 0.1A and a Lab fee of 0.1A. In total you need to have at least 0.2A per Asset in your wallet before minting.",
+          },
+          {
+            question: "How long can the name and Unit Name be?",
+            answer:
+              "Name can be up to 32 characters and Unit Name is up to 8 characters.",
+          },
+        ]}
+      />
     </div>
   );
 }
