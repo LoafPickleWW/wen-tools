@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { TOOLS } from "../constants";
+import CarouselComponent from "./CarouselComponent";
 
 export function SelectToolComponent() {
   return (
@@ -7,6 +8,12 @@ export function SelectToolComponent() {
       <p className="col-span-3 text-center text-3xl font-bold tracking-tight text-white">
         The Laboratory - Enabling Blockchain 
       </p>
+      <CarouselComponent
+        images={[
+          { path: "./tds.png", url: "https://thurstober.com" },
+          { path: "./we.png", url: "https://we.thurstober.com" },
+        ]}
+      />
       <p className="col-span-3 text-center text-2xl font-bold tracking-tight text-white">
         Asset Tools
       </p>
