@@ -1,5 +1,4 @@
 import { useState } from "react";
- 
 import algosdk from "algosdk";
 import { toast } from "react-toastify";
 import {
@@ -16,6 +15,7 @@ import InfinityModeComponent from "../components/InfinityModeComponent";
 export function SimpleAirdropTool() {
   const [creatorWallets, setCreatorWallets] = useState("");
   const [prefixes, setPrefixes] = useState("");
+  const [specifiedAssetIds, setSpecifiedAssetIds] = useState("");
   const [assetID, setAssetID] = useState("");
   const [amount, setAmount] = useState("");
   const [note, setNote] = useState("");
@@ -71,6 +71,7 @@ export function SimpleAirdropTool() {
 
       let splittedCreatorWallets;
       let splittedPrefixes;
+      let splittedSpecifiedAssetIds;
 
       splittedCreatorWallets = creatorWallets.split(/[\n,]/);
       splittedCreatorWallets = splittedCreatorWallets.filter(
@@ -79,13 +80,30 @@ export function SimpleAirdropTool() {
       splittedPrefixes = prefixes.split(/[\n,]/);
       splittedPrefixes = splittedPrefixes.filter((prefix) => prefix !== "");
 
-      splittedCreatorWallets = [...new Set(splittedCreatorWallets)];
       splittedCreatorWallets = splittedCreatorWallets.map((wallet) =>
         wallet.trim()
       );
-      splittedPrefixes = [...new Set(splittedPrefixes)];
-      splittedPrefixes = splittedPrefixes.map((prefix) => prefix.trim());
+      splittedCreatorWallets = [...new Set(splittedCreatorWallets)];
 
+      splittedPrefixes = splittedPrefixes.map((prefix) => prefix.trim());
+      splittedPrefixes = [...new Set(splittedPrefixes)];
+
+      splittedSpecifiedAssetIds = specifiedAssetIds.split(/[\n,]/);
+      splittedSpecifiedAssetIds = splittedSpecifiedAssetIds.filter(
+        (assetId) => assetId !== ""
+      );
+
+      try {
+        splittedSpecifiedAssetIds = splittedSpecifiedAssetIds.map((assetId) =>
+          parseInt(assetId.trim())
+        );
+      } catch (error) {
+        toast.error("Please enter valid specified asset IDs!");
+        setProcessStep(0);
+        return;
+      }
+
+      splittedSpecifiedAssetIds = [...new Set(splittedSpecifiedAssetIds)];
 
       let createdAssets = [];
       for (let i = 0; i < splittedCreatorWallets.length; i++) {
@@ -99,6 +117,13 @@ export function SimpleAirdropTool() {
           splittedPrefixes.some((prefix) => asset.unit_name.startsWith(prefix))
         );
       }
+
+      if (splittedSpecifiedAssetIds.length !== 0) {
+        createdAssets = createdAssets.filter((asset) =>
+          splittedSpecifiedAssetIds.includes(asset.asset_id)
+        );
+      }
+
       setAssetCount(createdAssets.length);
       let holders = {};
       for (let i = 0; i < createdAssets.length; i++) {
@@ -236,9 +261,7 @@ export function SimpleAirdropTool() {
           />
         </div>
         <div className="flex flex-col rounded border-gray-300  dark:border-gray-700">
-          <label className="text-xs text-slate-400">
-            Unit-name Prefix(es)
-          </label>
+          <label className="text-xs text-slate-400">Unit-name Prefix(es)</label>
           <textarea
             id="prefixes_id"
             placeholder="one per line or comma separated (optional)"
@@ -247,6 +270,21 @@ export function SimpleAirdropTool() {
             value={prefixes}
             onChange={(e) => {
               setPrefixes(e.target.value);
+            }}
+          />
+        </div>
+        <div className="flex flex-col rounded border-gray-300  dark:border-gray-700">
+          <label className="text-xs text-slate-400">
+            Specified Asset ID(s)
+          </label>
+          <textarea
+            id="specified_asset_ids_id"
+            placeholder="one per line or comma separated (optional)"
+            className="bg-gray-800 text-white border-2 border-gray-700 rounded-lg p-1 text-sm mx-auto placeholder:text-center placeholder:text-sm"
+            style={{ width: "10rem", height: "5rem" }}
+            value={specifiedAssetIds}
+            onChange={(e) => {
+              setSpecifiedAssetIds(e.target.value);
             }}
           />
         </div>
@@ -277,9 +315,7 @@ export function SimpleAirdropTool() {
         </div>
       </div>
       <div className="flex flex-col rounded border-gray-300  dark:border-gray-700">
-        <label className="text-xs text-slate-400">
-          Note
-        </label>
+        <label className="text-xs text-slate-400">Note</label>
         <input
           type="text"
           placeholder="(optional)"
