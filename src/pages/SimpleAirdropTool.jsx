@@ -123,7 +123,11 @@ export function SimpleAirdropTool() {
           splittedSpecifiedAssetIds.includes(asset.asset_id)
         );
       }
-
+      
+      if (createdAssets.length === 0) {
+        throw new Error("No assets found with the specified filters!");
+      }
+      
       setAssetCount(createdAssets.length);
       let holders = {};
       for (let i = 0; i < createdAssets.length; i++) {
