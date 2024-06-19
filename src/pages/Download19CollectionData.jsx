@@ -132,10 +132,8 @@ export function Download19CollectionData() {
           "unit-name": asset.params["unit-name"],
           reserve: asset.params.reserve,
           image_ipfs_cid: asset_metadata.image,
-          animation_url: asset_metadata.animation_url,
           description: asset_metadata.description,      
-          mime_type: asset_metadata.image_mime_type,      
-          animation_mime_type: asset_metadata.animation_mime_type,          
+          mime_type: asset_metadata.image_mime_type,              
         };
       for (const topLevelKey in asset_metadata) {
         if (topLevelKey === "properties") {
