@@ -2,7 +2,6 @@ import { Route, Routes, BrowserRouter as Router } from "react-router-dom";
 import Home from "./views/home";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.min.css";
-import { UploadCollectionToIPFS } from "./pages/UploadCollectionToIPFS";
 import { Header } from "./components/Header";
 import { Footer } from "./components/Footer";
 import { AirdropTool } from "./pages/AirdropTool";
@@ -77,7 +76,6 @@ function App() {
             path="/download-arc19-collection-data"
             element={<Download19CollectionData />}
           />
-          <Route path="/ipfs-upload" element={<UploadCollectionToIPFS />} />
           <Route path="/arc19-collection-mint" element={<ARC19MintTool />} />
           <Route path="/arc19-metadata-update" element={<ARC19UpdateTool />} />
           <Route path="/wallet-holdings" element={<WalletHoldings />} />

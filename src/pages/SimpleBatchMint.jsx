@@ -270,6 +270,11 @@ export function SimpleBatchMint() {
           );
           return;
         }
+
+        if (formData.collectionFormat === "ARC69") {
+          ipfs_data.properties = ipfs_data.properties.traits;
+        }
+
         const transaction_data = {
           asset_name,
           unit_name,

@@ -230,6 +230,7 @@ export function SimpleMint() {
           true
         );
       } else if (formData.format === "ARC69" || formData.format === "Token") {
+        metadata.properties = metadata.properties.traits;
         metadataForIPFS = {
           ...metadataForIPFS,
           asset_note: metadata,
