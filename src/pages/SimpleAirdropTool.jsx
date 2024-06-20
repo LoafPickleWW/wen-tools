@@ -143,7 +143,7 @@ export function SimpleAirdropTool() {
       for (const holder in holders) {
         const txn = {
           asset_id: parseInt(assetID),
-          amount: parseInt(amount) * holders[holder],
+          amount: Number(amount) * holders[holder],
           receiver: holder,
         };
         if (note !== "") {
