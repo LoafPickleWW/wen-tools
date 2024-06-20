@@ -178,7 +178,7 @@ export function SimpleUpdate() {
             }
           } else {
             if (!key.includes("image_static")) {
-              metadata[key] = assetMetadata.properties[key];
+              metadata.properties[key] = assetMetadata.properties[key];
             }
           }
         }
@@ -194,21 +194,21 @@ export function SimpleUpdate() {
         format: assetFormat,
         description: assetMetadata.description || "",
         external_url: assetMetadata.external_url || "",
-        properties: Object.keys(metadata.properties).map((key, index) => ({
+        traits: Object.keys(metadata.properties).map((key, index) => ({
           id: index,
           category: key,
           name: metadata.properties[key],
         })),
-        filters: Object.keys(metadata.filters).map((key, index) => ({
+        filters: Object.keys(assetMetadata).includes("filters") ? Object.keys(assetMetadata.filters).map((key, index) => ({
           id: index,
           category: key,
-          name: metadata.filters[key],
-        })),
-        extras: Object.keys(metadata.extras).map((key, index) => ({
+          name: assetMetadata.filters[key],
+        })) : [],
+        extras: Object.keys(assetMetadata).includes("extras") ? Object.keys(metadata.extras).map((key, index) => ({
           id: index,
           category: key,
           name: metadata.extras[key],
-        })),
+        })) : [],
         image_url: assetMetadata.image || assetData.params["url"],
         image_mime_type: assetMetadata.image_mime_type,
         animation_url: assetMetadata.animation_url || assetData.params["url"],
