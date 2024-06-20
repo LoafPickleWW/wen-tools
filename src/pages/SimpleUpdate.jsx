@@ -194,10 +194,10 @@ export function SimpleUpdate() {
         format: assetFormat,
         description: assetMetadata.description || "",
         external_url: assetMetadata.external_url || "",
-        traits: Object.keys(metadata.properties).map((key, index) => ({
+        traits: Object.keys(metadata.traits).map((key, index) => ({
           id: index,
           category: key,
-          name: metadata.properties[key],
+          name: metadata.traits[key],
         })),
         filters: Object.keys(metadata.filters).map((key, index) => ({
           id: index,
