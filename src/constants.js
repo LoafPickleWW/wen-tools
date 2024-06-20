@@ -7,8 +7,8 @@ export const MAINNET_ALGONODE_INDEXER = "https://mainnet-idx.algonode.cloud";
 export const TESTNET_ALGONODE_INDEXER = "https://testnet-idx.algonode.cloud";
 
 // NF
-export const MAINNET_NFD_API_BASE_URL = 'https://api.nf.domains'
-export const TESTNET_NFD_API_BASE_URL = 'https://api.testnet.nf.domains'
+export const MAINNET_NFD_API_BASE_URL = "https://api.nf.domains";
+export const TESTNET_NFD_API_BASE_URL = "https://api.testnet.nf.domains";
 
 // DONATION WALLETS
 export const DONATE_WALLET_1 =
@@ -157,7 +157,7 @@ export const TOOLS = [
     description: "Airdrop/Send assets/ALGO to a list of addresses.",
     path: "/airdrop",
     category: "asset",
-  },  
+  },
   {
     id: "batch_clawback",
     label: "🔙 Asset Clawback",
@@ -185,7 +185,7 @@ export const TOOLS = [
     description: "Download all the holders for a collection in CSV format.",
     path: "/find-collection-holders",
     category: "asset",
-  },  
+  },
   {
     id: "multimint_asset_holders",
     label: "🌌 Multimint Asset Holders",
@@ -193,12 +193,4 @@ export const TOOLS = [
     path: "/multimint-asset-holders",
     category: "asset",
   },
-//  {
-//    id: "ipfs_upload",
-//    label: "📁 IPFS Collection Upload",
-//    description: "Upload a collection images to IPFS.",
-//    path: "/ipfs-upload",
-//    category: "asset",
-//  },
 ];
-
