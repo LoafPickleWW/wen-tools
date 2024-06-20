@@ -166,7 +166,7 @@ export function SimpleUpdate() {
       }
       let metadata = {
         filters: [],
-        properties: [],
+        traits: [],
         extras: [],
       };
 
@@ -194,10 +194,10 @@ export function SimpleUpdate() {
         format: assetFormat,
         description: assetMetadata.description || "",
         external_url: assetMetadata.external_url || "",
-        traits: Object.keys(metadata.properties).map((key, index) => ({
+        traits: Object.keys(metadata.traits).map((key, index) => ({
           id: index,
           category: key,
-          name: metadata.properties[key],
+          name: metadata.traits[key],
         })),
         filters: Object.keys(assetMetadata).includes("filters") ? Object.keys(assetMetadata.filters).map((key, index) => ({
           id: index,
@@ -324,6 +324,7 @@ export function SimpleUpdate() {
         );
         setTransaction(unsignedAssetTransactions);
       } else if (formData.format === "ARC69") {
+        metadata.properties = metadata.properties.traits;
         const transaction_data = {
           asset_id: assetID,
           note: metadata,
