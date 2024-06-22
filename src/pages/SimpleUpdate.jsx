@@ -178,7 +178,7 @@ export function SimpleUpdate() {
             }
           } else {
             if (!key.includes("image_static")) {
-              metadata.properties[key] = assetMetadata.properties[key];
+              metadata.traits[key] = assetMetadata.properties[key];
             }
           }
         }
