@@ -1161,7 +1161,7 @@ export async function pinJSONToPinata(token, json) {
       {
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
+          Authorization: `Bearer ${token.trim()}`,
         },
       }
     );
@@ -1181,7 +1181,7 @@ export async function pinImageToPinata(token, image) {
       data,
       {
         headers: {
-          Authorization: `Bearer ${token}`,
+          Authorization: `Bearer ${token.trim()}`,
         },
       }
     );
