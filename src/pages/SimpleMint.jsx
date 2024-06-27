@@ -9,7 +9,7 @@ import {
   createAssetMintArray,
   signGroupTransactions,
   sliceIntoChunks,
-  pinImageToNFTStorage,
+  pinImageToPinata,
   getAssetPreviewURL,
   getTokenPreviewURL,
 } from "../utils";
@@ -189,7 +189,7 @@ export function SimpleMint() {
         }
         toast.info("Uploading the image to IPFS...");
         imageURL =
-          "ipfs://" + (await pinImageToNFTStorage(token, formData.image));
+          "ipfs://" + (await pinImageToPinata(token, formData.image));
       }
       const nodeURL = getNodeURL();
 
@@ -226,8 +226,7 @@ export function SimpleMint() {
         unsignedAssetTransaction = await createARC19AssetMintArray(
           [metadataForIPFS],
           nodeURL,
-          token,
-          true
+          token
         );
       } else if (formData.format === "ARC69" || formData.format === "Token") {
         metadata.properties = metadata.properties.traits;
@@ -626,54 +625,28 @@ export function SimpleMint() {
         +
       </button>
       <div className="flex flex-col mt-4">
-        <div className="flex flex-row items-center justify-center gap-x-2">
-          <input
-            type="checkbox"
-            id="ipfs"
-            className="peer"
-            value={token === process.env.REACT_APP_NFT_STORAGE_KEY}
-            onChange={(e) => {
-              if (e.target.checked) {
-                setToken(process.env.REACT_APP_NFT_STORAGE_KEY);
-              } else {
-                setToken("");
-              }
-            }}
-          />
-          <label
-            htmlFor="ipfs"
-            className="text-sm font-light leading-tight text-gray-200 peer-checked:text-primary-green/80 peer-checked:font-medium cursor-pointer"
+        <label className="mb-1 text-sm leading-none text-gray-200">
+          Pinata JWT***
+        </label>
+        <input
+          type="text"
+          id="ipfs-token"
+          placeholder="token"
+          className="w-48 mx-auto bg-gray-300 text-sm font-medium text-center leading-none text-black placeholder:text-black/30 px-3 py-2 border rounded border-gray-200"
+          value={token}
+          onChange={(e) => setToken(e.target.value)}
+        />
+        <p className="text-xs text-slate-400 font-roboto mt-1">
+          ***You can get your own token{" "}
+          <a
+            href="https://knowledge.pinata.cloud/en/articles/6191471-how-to-create-an-pinata-api-key"
+            target="_blank"
+            className="text-primary-green/70 hover:text-secondary-green/80 transition"
+            rel="noreferrer"
           >
-            Use Public Token - Opt out from hosting your image**
-          </label>
-        </div>
-        {token !== process.env.REACT_APP_NFT_STORAGE_KEY && (
-          <>
-            <p className="text-xs text-slate-400 font-roboto my-2">or</p>
-            <label className="mb-1 text-sm leading-none text-gray-200">
-              NFT Storage Token***
-            </label>
-            <input
-              type="text"
-              id="ipfs-token"
-              placeholder="token"
-              className="w-48 mx-auto bg-gray-300 text-sm font-medium text-center leading-none text-black placeholder:text-black/30 px-3 py-2 border rounded border-gray-200"
-              value={token}
-              onChange={(e) => setToken(e.target.value)}
-            />
-            <p className="text-xs text-slate-400 font-roboto mt-1">
-              ***You can get your own token{" "}
-              <a
-                href="https://nft.storage/docs/#get-an-api-token"
-                target="_blank"
-                className="text-primary-green/70 hover:text-secondary-green/80 transition"
-                rel="noreferrer"
-              >
-                here
-              </a>
-            </p>{" "}
-          </>
-        )}
+            here
+          </a>
+        </p>
       </div>
       <div className="flex flex-col justify-center items-center w-[16rem]">
         {processStep === 4 ? (

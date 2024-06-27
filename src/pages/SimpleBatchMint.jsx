@@ -305,8 +305,7 @@ export function SimpleBatchMint() {
         unsignedAssetTransaction = await createARC19AssetMintArray(
           data_for_txns,
           nodeURL,
-          token,
-          true
+          token        
         );
       } else if (formData.collectionFormat === "ARC69") {
         toast.info("Creating ARC69 transactions...");
@@ -697,33 +696,8 @@ export function SimpleBatchMint() {
       </div>
       {formData.collectionFormat !== "ARC69" && (
         <div className="flex flex-col mt-4">
-          <div className="flex flex-row items-center justify-center gap-x-2">
-            <input
-              type="checkbox"
-              id="ipfs"
-              className="peer"
-              disabled={processStep !== START_PROCESS}
-              value={token === process.env.REACT_APP_NFT_STORAGE_KEY}
-              onChange={(e) => {
-                if (e.target.checked) {
-                  setToken(process.env.REACT_APP_NFT_STORAGE_KEY);
-                } else {
-                  setToken("");
-                }
-              }}
-            />
-            <label
-              htmlFor="ipfs"
-              className="text-sm font-light leading-tight text-gray-200 peer-checked:text-primary-green/80 peer-checked:font-medium cursor-pointer"
-            >
-              Use Public Token - Opt out from hosting your image**
-            </label>
-          </div>
-          {token !== process.env.REACT_APP_NFT_STORAGE_KEY && (
-            <>
-              <p className="text-xs text-slate-400 font-roboto my-2">or</p>
               <label className="mb-1 text-sm leading-none text-gray-200">
-                NFT Storage Token***
+                Pinata JWT***
               </label>
               <input
                 type="text"
@@ -736,16 +710,14 @@ export function SimpleBatchMint() {
               <p className="text-xs text-slate-400 font-roboto mt-1">
                 ***You can get your own token{" "}
                 <a
-                  href="https://nft.storage/docs/#get-an-api-token"
+                  href="https://knowledge.pinata.cloud/en/articles/6191471-how-to-create-an-pinata-api-key"
                   target="_blank"
                   className="text-primary-green/70 hover:text-secondary-green/80 transition"
                   rel="noreferrer"
                 >
                   here
                 </a>
-              </p>{" "}
-            </>
-          )}
+              </p>{" "}          
         </div>
       )}
       {previewAsset && (
