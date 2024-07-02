@@ -339,7 +339,7 @@ export async function createARC3AssetMintArray(data_for_txns, nodeURL, token) {
   for (let i = 0; i < data_for_txns.length; i++) {
     try {
       const jsonString = JSON.stringify(data_for_txns[i].ipfs_data);
-      let cid = await pinJSONToNFTStorage(token, jsonString);
+      let cid = await pinJSONToPinata(token, jsonString);
       data_for_txns[i].asset_url_section = "ipfs://" + cid;
       let asset_create_tx = makeAssetCreateTxnWithSuggestedParamsFromObject({
         from: wallet,
@@ -384,9 +384,7 @@ export async function createARC3AssetMintArray(data_for_txns, nodeURL, token) {
 export async function createARC19AssetMintArray(
   data_for_txns,
   nodeURL,
-  token,
-  isNFTStorage = false
-) {
+  token) {
   const wallet = localStorage.getItem("wallet");
   if (wallet === "" || wallet === undefined) {
     throw new Error("Wallet not found");
@@ -402,7 +400,7 @@ export async function createARC19AssetMintArray(
   for (let i = 0; i < data_for_txns.length; i++) {
     try {
       const jsonString = JSON.stringify(data_for_txns[i].ipfs_data);
-      let cid = await pinJSONToNFTStorage(token, jsonString);
+      let cid = await pinJSONToPinata(token, jsonString);
       const { assetURL, reserveAddress } = createReserveAddressFromIpfsCid(cid);
       let asset_create_tx = makeAssetCreateTxnWithSuggestedParamsFromObject({
         from: wallet,
@@ -449,8 +447,7 @@ export async function createARC19AssetMintArray(
 export async function updateARC19AssetMintArray(
   data_for_txns,
   nodeURL,
-  token,
-  isNFTStorage = false
+  token
 ) {
   const wallet = localStorage.getItem("wallet");
   if (wallet === "" || wallet === undefined) {
@@ -467,7 +464,7 @@ export async function updateARC19AssetMintArray(
   for (let i = 0; i < data_for_txns.length; i++) {
     try {
       const jsonString = JSON.stringify(data_for_txns[i].ipfs_data);
-      let cid = await pinJSONToNFTStorage(token, jsonString);
+      let cid = await pinJSONToPinata(token, jsonString);
       const { reserveAddress } = createReserveAddressFromIpfsCid(cid);
       let update_tx = makeAssetConfigTxnWithSuggestedParamsFromObject({
         from: wallet,
@@ -958,19 +955,6 @@ function codeToCodec(code) {
   }
 }
 
-export async function pinJSONToIPFS(client, json) {
-  try {
-    const cid = await client.put(
-      [new Blob([json])],
-      { wrapWithDirectory: false },
-      { contentType: "application/json" }
-    );
-    return cid;
-  } catch (error) {
-    throw new Error("IPFS pinning failed");
-  }
-}
-
 export function createReserveAddressFromIpfsCid(ipfsCid) {
   const decoded = CID.parse(ipfsCid);
   const version = decoded.version;
@@ -1169,27 +1153,40 @@ export async function getARC19AssetMetadataData(url, reserve) {
   }
 }
 
-export async function pinJSONToNFTStorage(token, json) {
+export async function pinJSONToPinata(token, json) {
   try {
-    const response = await axios.post("https://api.nft.storage/upload", json, {
-      headers: {
-        Authorization: "Bearer " + token,
-      },
-    });
-    return response.data.value.cid;
+    const response = await axios.post(
+      "https://api.pinata.cloud/pinning/pinJSONToIPFS",
+      json,
+      {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token.trim()}`,
+        },
+      }
+    );
+    const cid = CID.parse(response.data.IpfsHash).toV1()
+    return cid;
   } catch (error) {
     throw new Error("IPFS pinning failed");
   }
 }
 
-export async function pinImageToNFTStorage(token, image) {
+export async function pinImageToPinata(token, image) {
   try {
-    const response = await axios.post("https://api.nft.storage/upload", image, {
-      headers: {
-        Authorization: "Bearer " + token,
-      },
-    });
-    return response.data.value.cid;
+    const data = new FormData();
+    data.append("file", image);
+    const response = await axios.post(
+      "https://api.pinata.cloud/pinning/pinFileToIPFS",
+      data,
+      {
+        headers: {
+          Authorization: `Bearer ${token.trim()}`,
+        },
+      }
+    );
+    const cid = CID.parse(response.data.IpfsHash).toV1()
+    return cid;
   } catch (error) {
     throw new Error("IPFS pinning failed");
   }

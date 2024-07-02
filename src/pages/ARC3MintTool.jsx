@@ -245,7 +245,7 @@ export function ARC3MintTool() {
           CSV Template
         </a>
       </button>
-      <p>Enter NFTStorage Token</p>
+      <p>Enter Pinata JWT</p>
       <input
         type="text"
         id="ipfs-token"
@@ -257,7 +257,7 @@ export function ARC3MintTool() {
       <p className="text-xs text-slate-400 font-roboto -mt-2 mb-2">
         you can get your token{" "}
         <a
-          href="https://nft.storage/docs/#get-an-api-token"
+          href="https://knowledge.pinata.cloud/en/articles/6191471-how-to-create-an-pinata-api-key"
           target="_blank"
           className="text-primary-green/70 hover:text-secondary-green/80 transition"
           rel="noreferrer"

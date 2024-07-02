@@ -4,7 +4,7 @@ import algosdk from "algosdk";
 import { toast } from "react-toastify";
 import axios from "axios";
 import {
-  pinImageToNFTStorage,
+  pinImageToPinata,
   getNodeURL,
   updateARC19AssetMintArray,
   createAssetConfigArray,
@@ -199,16 +199,20 @@ export function SimpleUpdate() {
           category: key,
           name: metadata.traits[key],
         })),
-        filters: Object.keys(assetMetadata).includes("filters") ? Object.keys(assetMetadata.filters).map((key, index) => ({
-          id: index,
-          category: key,
-          name: assetMetadata.filters[key],
-        })) : [],
-        extras: Object.keys(assetMetadata).includes("extras") ? Object.keys(metadata.extras).map((key, index) => ({
-          id: index,
-          category: key,
-          name: metadata.extras[key],
-        })) : [],
+        filters: Object.keys(assetMetadata).includes("filters")
+          ? Object.keys(assetMetadata.filters).map((key, index) => ({
+              id: index,
+              category: key,
+              name: assetMetadata.filters[key],
+            }))
+          : [],
+        extras: Object.keys(assetMetadata).includes("extras")
+          ? Object.keys(metadata.extras).map((key, index) => ({
+              id: index,
+              category: key,
+              name: metadata.extras[key],
+            }))
+          : [],
         image_url: assetMetadata.image || assetData.params["url"],
         image_mime_type: assetMetadata.image_mime_type,
         animation_url: assetMetadata.animation_url || assetData.params["url"],
@@ -282,7 +286,7 @@ export function SimpleUpdate() {
       if (formData.image && formData.format === "ARC19") {
         toast.info("Uploading the image to IPFS...");
         const imageURL =
-          "ipfs://" + (await pinImageToNFTStorage(token, formData.image));
+          "ipfs://" + (await pinImageToPinata(token, formData.image));
         if (formData.image && formData.image.type.includes("video")) {
           metadata.animation_url = imageURL;
           metadata.animation_mime_type = formData.image
@@ -319,8 +323,7 @@ export function SimpleUpdate() {
         const unsignedAssetTransactions = await updateARC19AssetMintArray(
           [transaction_data],
           nodeURL,
-          token,
-          true
+          token
         );
         setTransaction(unsignedAssetTransactions);
       } else if (formData.format === "ARC69") {
@@ -674,56 +677,28 @@ export function SimpleUpdate() {
             <>
               {formData.format === "ARC19" && (
                 <div className="flex flex-col mt-4">
-                  <div className="flex flex-row items-center justify-center gap-x-2 mb-2">
-                    <input
-                      type="checkbox"
-                      id="ipfs"
-                      className="peer"
-                      value={token === process.env.REACT_APP_NFT_STORAGE_KEY}
-                      onChange={(e) => {
-                        if (e.target.checked) {
-                          setToken(process.env.REACT_APP_NFT_STORAGE_KEY);
-                        } else {
-                          setToken("");
-                        }
-                      }}
-                    />
-                    <label
-                      htmlFor="ipfs"
-                      className="text-sm font-light leading-tight text-gray-200 peer-checked:text-primary-green/80 peer-checked:font-medium cursor-pointer"
+                  <label className="mb-1 text-sm leading-none text-gray-200">
+                    Pinata JWT***
+                  </label>
+                  <input
+                    type="text"
+                    id="ipfs-token"
+                    placeholder="token"
+                    className="w-48 mx-auto bg-gray-300 text-sm font-medium text-center leading-none text-black placeholder:text-black/30 px-3 py-2 border rounded border-gray-200"
+                    value={token}
+                    onChange={(e) => setToken(e.target.value)}
+                  />
+                  <p className="text-xs text-slate-400 font-roboto mt-1">
+                    ***You can get your own token{" "}
+                    <a
+                      href="https://knowledge.pinata.cloud/en/articles/6191471-how-to-create-an-pinata-api-key"
+                      target="_blank"
+                      className="text-primary-green/70 hover:text-secondary-green/80 transition"
+                      rel="noreferrer"
                     >
-                      Use Public Token - Opt out from hosting your image**
-                    </label>
-                  </div>
-                  {token !== process.env.REACT_APP_NFT_STORAGE_KEY && (
-                    <>
-                      <p className="text-xs text-slate-400 font-roboto my-2">
-                        or
-                      </p>
-                      <label className="mb-1 text-sm leading-none text-gray-200">
-                        NFT Storage Token***
-                      </label>
-                      <input
-                        type="text"
-                        id="ipfs-token"
-                        placeholder="token"
-                        className="w-48 mx-auto bg-gray-300 text-sm font-medium text-center leading-none text-black placeholder:text-black/30 px-3 py-2 border rounded border-gray-200"
-                        value={token}
-                        onChange={(e) => setToken(e.target.value)}
-                      />
-                      <p className="text-xs text-slate-400 font-roboto mt-1">
-                        ***You can get your own token{" "}
-                        <a
-                          href="https://nft.storage/docs/#get-an-api-token"
-                          target="_blank"
-                          className="text-primary-green/70 hover:text-secondary-green/80 transition"
-                          rel="noreferrer"
-                        >
-                          here
-                        </a>
-                      </p>{" "}
-                    </>
-                  )}
+                      here
+                    </a>
+                  </p>{" "}
                 </div>
               )}
               <div className="flex flex-col justify-center items-center w-[16rem]">
