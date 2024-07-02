@@ -956,7 +956,7 @@ function codeToCodec(code) {
 }
 
 export function createReserveAddressFromIpfsCid(ipfsCid) {
-  const decoded = CID.parse(ipfsCid);
+  const decoded = CID.parse(ipfsCid.toString());
   const version = decoded.version;
   const codec = codeToCodec(decoded.code);
 
