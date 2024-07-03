@@ -140,7 +140,7 @@ export function BatchDelete() {
               />
               <button
                 id="confirm-input"
-                className="mb-2 bg-green-500 hover:bg-green-700 text-black text-sm font-semibold rounded py-1 w-fit px-4 mx-auto mt-1 hover:scale-95 duration-700"
+                className="mb-2 bg-primary-green hover:bg-primary-green text-black text-sm font-semibold rounded py-1 w-fit px-4 mx-auto mt-1 hover:scale-95 duration-700"
                 onClick={() => {
                   // split with comma or newline
                   let splittedAssetIds = assetIds.split(/[\n,]/);
@@ -160,7 +160,7 @@ export function BatchDelete() {
         <div className="flex flex-col justify-center items-center w-[16rem]">
           {isTransactionsFinished ? (
             <>
-              <p className="pt-4 text-green-500 animate-pulse text-sm">
+              <p className="pt-4 text-primary-green animate-pulse text-sm">
                 All transactions completed!
                 <br />
               </p>
@@ -177,7 +177,7 @@ export function BatchDelete() {
               {!txSendingInProgress ? (
                 <button
                   id="approve-send"
-                  className="mb-2 bg-green-500 hover:bg-green-700 text-black text-base font-semibold rounded py-2 w-fit px-2 mx-auto mt-1 hover:scale-95 duration-700"
+                  className="mb-2 bg-primary-green hover:bg-primary-green text-black text-base font-semibold rounded py-2 w-fit px-2 mx-auto mt-1 hover:scale-95 duration-700"
                   onClick={handleFileData}
                 >
                   Approve & Send
