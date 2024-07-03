@@ -166,7 +166,7 @@ export function SimpleSendTool() {
       <p>2- Select Tool Type</p>
       <div className="flex flex-col items-center">
         <select
-          className="text-base rounded border-gray-300 text-secondary-green transition focus:ring-secondary-green px-2"
+          className="text-base rounded border-gray-300 text-secondary-black transition focus:ring-secondary-green px-2"
           value={toolType}
           onChange={(e) => {
             setToolType(e.target.value);
@@ -291,7 +291,7 @@ export function SimpleSendTool() {
             {!txSendingInProgress ? (
               <button
                 id="approve-send"
-                className="mb-2 bg-green-500 hover:bg-green-700 text-black text-sm font-semibold rounded py-2 w-fit px-4 mx-auto mt-1 hover:scale-95 duration-700"
+                className="mb-2 bg-primary-green-500 hover:bg-primary-green-700 text-black text-sm font-semibold rounded py-2 w-fit px-4 mx-auto mt-1 hover:scale-95 duration-700"
                 onClick={() => handleNext()}
               >
                 Approve & Send
