@@ -45,7 +45,7 @@ export default function SelectNetworkComponent() {
                 backgroundColor: "#fff",
               },
               "& .Mui-checked": {
-                color: "green",
+                color: "primary-green",
               },
             }}
             color="success"
