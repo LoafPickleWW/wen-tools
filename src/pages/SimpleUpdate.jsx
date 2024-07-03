@@ -772,7 +772,7 @@ export function SimpleUpdate() {
             className="w-48 bg-gray-300 text-sm font-medium text-center leading-none text-black placeholder:text-black/50 px-3 py-2 border rounded border-gray-200"
           ></input>
           <button
-            className="rounded bg-secondary-green hover:bg-secondary-green/80 transition text-white/90 font-semibold px-4 py-1 mt-2"
+            className="rounded bg-secondary-green hover:bg-secondary-green/80 transition text-black/90 font-semibold px-4 py-1 mt-2"
             onClick={getAssetData}
           >
             Next
