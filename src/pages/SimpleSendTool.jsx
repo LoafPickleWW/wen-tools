@@ -291,7 +291,7 @@ export function SimpleSendTool() {
             {!txSendingInProgress ? (
               <button
                 id="approve-send"
-                className="mb-2 bg-primary-green-500 hover:bg-primary-green-700 text-black text-sm font-semibold rounded py-2 w-fit px-4 mx-auto mt-1 hover:scale-95 duration-700"
+                className="mb-2 bg-primary-green hover:bg-primary-green text-black text-sm font-semibold rounded py-2 w-fit px-4 mx-auto mt-1 hover:scale-95 duration-700"
                 onClick={() => handleNext()}
               >
                 Approve & Send
