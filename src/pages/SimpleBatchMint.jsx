@@ -414,7 +414,7 @@ export function SimpleBatchMint() {
       <p className="text-2xl font-bold mt-1">
         {TOOLS.find((tool) => tool.path === window.location.pathname).label}
       </p>
-      <button className="text-center text-lg text-pink-200 mt-2 bg-pink-700 px-4 py-2 rounded">
+      <button className="text-center text-lg text-primary-green mt-2 bg-primary-green px-4 py-2 rounded">
         <a
           className="hover:text-primary-green transition"
           href="https://loafpickle.medium.com/simple-batch-mint-guide-9f1bbe7882cd"
@@ -424,7 +424,7 @@ export function SimpleBatchMint() {
           Check Guide Here
         </a>
       </button>
-      <button className="text-center text-lg text-pink-200 mt-2 bg-pink-700 px-4 py-2 rounded">
+      <button className="text-center text-lg text-primary-green mt-2 bg-primary-green px-4 py-2 rounded">
         <a
           className="hover:text-primary-green transition"
           href="https://docs.google.com/spreadsheets/d/1_hxkAcW2DWgoZ3s0A6jBK3DS7liU5QnA89mbXRttLhw/edit?usp=sharing"
@@ -781,7 +781,7 @@ export function SimpleBatchMint() {
           </div>
         ) : (
           <button
-            className="rounded bg-secondary-green hover:bg-secondary-green/80 transition text-white/90 font-semibold px-4 py-1 mt-2"
+            className="rounded bg-secondary-green hover:bg-secondary-green/80 transition text-black/90 font-semibold px-4 py-1 mt-2"
             onClick={createTransactions}
           >
             Step 1: Create Transactions
