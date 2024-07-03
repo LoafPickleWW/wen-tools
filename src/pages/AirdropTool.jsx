@@ -120,7 +120,7 @@ export function AirdropTool() {
       <p className="text-2xl font-bold mt-1">
         {TOOLS.find((tool) => tool.path === window.location.pathname).label}
       </p>
-      <button className="text-center text-lg text-primary-green mt-2 bg-primary-green px-4 py-2 rounded">
+      <button className="text-center text-lg text-black mt-2 bg-primary-green px-4 py-2 rounded">
         <a
           className="hover:text-primary-green transition"
           href="https://loafpickle.medium.com/evil-tools-custom-mass-airdrop-3d5902dd1c94"
@@ -130,7 +130,7 @@ export function AirdropTool() {
           INSTRUCTIONS
         </a>
       </button>
-      <button className="text-center text-lg text-primary-green mt-2 bg-primary-green px-4 py-2 rounded">
+      <button className="text-center text-lg text-black mt-2 bg-primary-green px-4 py-2 rounded">
         <a
           className="hover:text-primary-green transition"
           href="https://docs.google.com/spreadsheets/d/1YN7NhxXyNmBZ80nopbcu23Pme-xastrobfIu_MnALiA/edit?usp=sharing"
