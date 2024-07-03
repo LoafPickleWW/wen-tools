@@ -282,7 +282,7 @@ export function VaultSendTool() {
         A vault is an Algorand account controlled by an NFD's smart contract
         that can automatically opt-in to assets it receives. Check{" "}
         <a
-          className="hover:text-primary-green text-green-500 transition"
+          className="hover:text-primary-green text-primary-green transition"
           target="_blank"
           rel="noopener noreferrer"
           href="https://api-docs.nf.domains/reference/integrators-guide/using-vaults-2.x+"
@@ -297,7 +297,7 @@ export function VaultSendTool() {
       <p>Select Tool Type</p>
       <div className="flex flex-col items-center">
         <select
-          className="text-base rounded border-gray-300 text-secondary-green transition focus:ring-secondary-green px-2"
+          className="text-base rounded border-gray-300 text-black transition focus:ring-secondary-green px-2"
           value={toolType}
           onChange={(e) => {
             setToolType(e.target.value);
@@ -408,7 +408,7 @@ export function VaultSendTool() {
             </p>
             <button
               id="create_transactions_id"
-              className="mb-2 bg-green-500 hover:bg-green-700 text-black text-sm font-semibold rounded py-2 w-fit px-4 mx-auto mt-1 duration-700"
+              className="mb-2 bg-primary-green hover:bg-primary-green text-black text-sm font-semibold rounded py-2 w-fit px-4 mx-auto mt-1 duration-700"
               onClick={() => {
                 sendTransactions();
               }}
