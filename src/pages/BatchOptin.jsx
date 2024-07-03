@@ -100,6 +100,9 @@ export function BatchOptin() {
       <p className="text-2xl font-bold mt-1">
         {TOOLS.find((tool) => tool.path === window.location.pathname).label}
       </p>
+      {/* mnemonic */}
+      <InfinityModeComponent mnemonic={mnemonic} setMnemonic={setMnemonic} />
+      {/* end mnemonic */}
       <p>Enter Assets</p>
       {csvData == null ? (
         <div>
@@ -155,7 +158,7 @@ export function BatchOptin() {
               {!txSendingInProgress ? (
                 <button
                   id="approve-send"
-                  className="mb-2 bg-green-500 hover:bg-green-700 text-black text-base font-semibold rounded py-2 w-fit px-2 mx-auto mt-1 hover:scale-95 duration-700"
+                  className="mb-2 bg-primary-green hover:bg-primary-green text-black text-base font-semibold rounded py-2 w-fit px-2 mx-auto mt-1 hover:scale-95 duration-700"
                   onClick={handleFileData}
                 >
                   Approve & Send
@@ -175,7 +178,7 @@ export function BatchOptin() {
       )}
       <button
         id="copy-link"
-        className="mb-2 bg-green-500 hover:bg-green-700 text-black text-sm font-semibold rounded py-1 w-fit px-4 mx-auto mt-1 hover:scale-95 duration-700"
+        className="mb-2 bg-primary-green hover:bg-primary-green text-black text-sm font-semibold rounded py-1 w-fit px-4 mx-auto mt-1 hover:scale-95 duration-700"
         onClick={() => {
           navigator.clipboard.writeText(
             window.location.href.split("?")[0] +
@@ -187,9 +190,6 @@ export function BatchOptin() {
       >
         Copy link 🔗
       </button>
-      {/* mnemonic */}
-      <InfinityModeComponent mnemonic={mnemonic} setMnemonic={setMnemonic} />
-      {/* end mnemonic */}
       <p className="text-center text-xs text-slate-400 py-2">
         ⚠️If you reload or close this page, you will lose your progress⚠️
         <br />
