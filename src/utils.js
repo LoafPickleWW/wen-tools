@@ -457,7 +457,10 @@ export async function updateARC19AssetMintArray(data_for_txns, nodeURL, token) {
   for (let i = 0; i < data_for_txns.length; i++) {
     try {
       const jsonString = JSON.stringify(data_for_txns[i].ipfs_data);
-      let cid = await pinJSONToPinata(token, jsonString);
+      const assetURL = await getAssetUrl(parseInt(data_for_txns[i].asset_id))
+      let chunks = assetURL.split("://");
+      const cidVersion = chunks[1].split(":")[1];
+      let cid = await pinJSONToPinata(token, jsonString, cidVersion);
       const { reserveAddress } = createReserveAddressFromIpfsCid(cid);
       let update_tx = makeAssetConfigTxnWithSuggestedParamsFromObject({
         from: wallet,
@@ -1030,7 +1033,7 @@ export async function getNfDomainsInBulk(wallets, bulkSize = 20) {
   for (let i = 0; i < uniqueWallets.length; i += bulkSize) {
     const chunk = uniqueWallets
       .slice(i, i + bulkSize)
-      .map((wallet) => `address=${wallet}`)
+      .map((wallet) => `address=${wallet.toLowerCase()}`)
       .join("&");
     try {
       const nfdLookup = await fetchNFDJSON(
@@ -1060,7 +1063,7 @@ export async function getAddressesFromNFDomain(domains) {
   for (let i = 0; i < uniqueDomains.length; i++) {
     try {
       const response = await axios.get(
-        `https://api.nf.domains/nfd/${uniqueDomains[i]}?view=tiny`
+        `https://api.nf.domains/nfd/${uniqueDomains[i].toLowerCase()}?view=tiny`
       );
       if (response.data.depositAccount) {
         nfdDomains[uniqueDomains[i]] = response.data.depositAccount;
@@ -1132,9 +1135,15 @@ export async function getARC19AssetMetadataData(url, reserve) {
       }
       const addr = decodeAddress(reserve);
       const mhdigest = digest.create(mfsha2.sha256.code, addr.publicKey);
-      const cid = CID.create(parseInt(cidVersion), cidCodecCode, mhdigest);
-      const response = await axios.get(`${IPFS_ENDPOINT}${cid}`);
-      return response.data;
+      if (cidVersion === "1") {
+        const cid = CID.createV1(cidCodecCode, mhdigest);
+        const response = await axios.get(`${IPFS_ENDPOINT}${cid}`);
+        return response.data;
+      } else {
+        const cid = CID.createV0(mhdigest);
+        const response = await axios.get(`${IPFS_ENDPOINT}${cid}`);
+        return response.data;
+      }
     }
     return {};
   } catch (error) {
@@ -1142,15 +1151,15 @@ export async function getARC19AssetMetadataData(url, reserve) {
   }
 }
 
-export async function pinJSONToPinata(token, json) {
+export async function pinJSONToPinata(token, json, version = "") {
   try {
     const blob = new Blob([json], { type: "application/json" });
     const data = new FormData();
     data.append("file", blob);
     const options = JSON.stringify({
-      cidVersion: 1
-    })
-    data.append("pinataOptions", options)
+      cidVersion: version === "" ? 1 : parseInt(version)
+    });
+    data.append("pinataOptions", options);
     const response = await axios.post(
       "https://api.pinata.cloud/pinning/pinFileToIPFS",
       data,
@@ -1203,5 +1212,16 @@ export async function getParticipationStatusOfWallet(wallet) {
     return false;
   } catch (error) {
     return false;
+  }
+}
+
+export async function getAssetUrl(assetId) {
+  try {
+    const nodeUrl = getNodeURL();
+    const response = await axios.get(`${nodeUrl}/v2/assets/${assetId}`);
+    var data = response.data;
+    return data.params.url;
+  } catch (error) {
+    return "";
   }
 }
