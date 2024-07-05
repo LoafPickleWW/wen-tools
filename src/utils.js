@@ -381,10 +381,7 @@ export async function createARC3AssetMintArray(data_for_txns, nodeURL, token) {
   return txnsArray;
 }
 
-export async function createARC19AssetMintArray(
-  data_for_txns,
-  nodeURL,
-  token) {
+export async function createARC19AssetMintArray(data_for_txns, nodeURL, token) {
   const wallet = localStorage.getItem("wallet");
   if (wallet === "" || wallet === undefined) {
     throw new Error("Wallet not found");
@@ -444,11 +441,7 @@ export async function createARC19AssetMintArray(
   return txnsArray;
 }
 
-export async function updateARC19AssetMintArray(
-  data_for_txns,
-  nodeURL,
-  token
-) {
+export async function updateARC19AssetMintArray(data_for_txns, nodeURL, token) {
   const wallet = localStorage.getItem("wallet");
   if (wallet === "" || wallet === undefined) {
     throw new Error("Wallet not found");
@@ -960,10 +953,6 @@ export function createReserveAddressFromIpfsCid(ipfsCid) {
   const version = decoded.version;
   const codec = codeToCodec(decoded.code);
 
-  if (version === 0) {
-    throw new Error("CID version 0 does not support directories");
-  }
-
   const assetURL = `template-ipfs://{ipfscid:${version}:${codec}:reserve:sha2-256}`;
 
   const reserveAddress = encodeAddress(
@@ -1155,9 +1144,16 @@ export async function getARC19AssetMetadataData(url, reserve) {
 
 export async function pinJSONToPinata(token, json) {
   try {
+    const data = JSON.stringify({
+      pinataContent: JSON.parse(json),
+      pinataMetadata: {
+        name: "metadata"
+      },
+      cidVersion: 1,
+    });
     const response = await axios.post(
       "https://api.pinata.cloud/pinning/pinJSONToIPFS",
-      json,
+      data,
       {
         headers: {
           "Content-Type": "application/json",
@@ -1165,8 +1161,7 @@ export async function pinJSONToPinata(token, json) {
         },
       }
     );
-    const cid = CID.parse(response.data.IpfsHash).toV1()
-    return cid;
+    return response.data.IpfsHash;
   } catch (error) {
     throw new Error("IPFS pinning failed");
   }
@@ -1176,6 +1171,10 @@ export async function pinImageToPinata(token, image) {
   try {
     const data = new FormData();
     data.append("file", image);
+    const options = JSON.stringify({
+      cidVersion: 1,
+    });
+    data.append("pinataOptions", options);
     const response = await axios.post(
       "https://api.pinata.cloud/pinning/pinFileToIPFS",
       data,
@@ -1185,8 +1184,7 @@ export async function pinImageToPinata(token, image) {
         },
       }
     );
-    const cid = CID.parse(response.data.IpfsHash).toV1()
-    return cid;
+    return response.data.IpfsHash;
   } catch (error) {
     throw new Error("IPFS pinning failed");
   }

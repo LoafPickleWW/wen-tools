@@ -763,7 +763,7 @@ export function SimpleBatchMint() {
             </p>
             <button
               id="create_transactions_id"
-              className="rounded bg-secondary-green hover:bg-secondary-green/80 transition text-white/90 font-semibold px-4 py-1 mt-2"
+              className="rounded bg-secondary-green hover:bg-secondary-green/80 transition text-black/90 font-semibold px-4 py-1 mt-2"
               onClick={() => {
                 sendTransaction();
               }}

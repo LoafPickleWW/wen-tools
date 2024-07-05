@@ -183,6 +183,8 @@ export function SimpleUpdate() {
           }
         }
       }
+      console.log(Object.keys(metadata).includes("filters"))
+      console.log(Object.keys(metadata).includes("extras"))
       setFormData({
         ...formData,
         name: assetData.params["name"],
@@ -199,14 +201,14 @@ export function SimpleUpdate() {
           category: key,
           name: metadata.traits[key],
         })),
-        filters: Object.keys(assetMetadata).includes("filters")
-          ? Object.keys(assetMetadata.filters).map((key, index) => ({
+        filters: Object.keys(metadata).includes("filters")
+          ? Object.keys(metadata.filters).map((key, index) => ({
               id: index,
               category: key,
-              name: assetMetadata.filters[key],
+              name: metadata.filters[key],
             }))
           : [],
-        extras: Object.keys(assetMetadata).includes("extras")
+        extras: Object.keys(metadata).includes("extras")
           ? Object.keys(metadata.extras).map((key, index) => ({
               id: index,
               category: key,
@@ -398,7 +400,7 @@ export function SimpleUpdate() {
         <>
           <div className="flex flex-col md:flex-row justify-between">
             <button
-              className="rounded bg-secondary-green hover:bg-secondary-green/80  text-white px-4 py-1 mt-2"
+              className="rounded bg-secondary-green hover:bg-secondary-green/80  text-black px-4 py-1 mt-2"
               onClick={() => {
                 window.location.reload();
               }}
@@ -735,7 +737,7 @@ export function SimpleUpdate() {
                     </p>
                     <button
                       id="create_transactions_id"
-                      className="rounded bg-secondary-green hover:bg-secondary-green/80 transition text-white/90 font-semibold px-4 py-1 mt-2"
+                      className="rounded bg-secondary-green hover:bg-secondary-green/80 transition text-black font-semibold px-4 py-1 mt-2"
                       onClick={() => {
                         sendTransaction();
                       }}
@@ -753,7 +755,7 @@ export function SimpleUpdate() {
                   </div>
                 ) : (
                   <button
-                    className="rounded bg-secondary-green hover:bg-secondary-green/80 transition text-white/90 font-semibold px-4 py-1 mt-2"
+                    className="rounded bg-secondary-green hover:bg-secondary-green/80 transition text-black font-semibold px-4 py-1 mt-2"
                     onClick={update}
                   >
                     Update
