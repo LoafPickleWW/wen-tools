@@ -1144,16 +1144,9 @@ export async function getARC19AssetMetadataData(url, reserve) {
 
 export async function pinJSONToPinata(token, json) {
   try {
-    const data = JSON.stringify({
-      pinataContent: JSON.parse(json),
-      pinataMetadata: {
-        name: "metadata"
-      },
-      cidVersion: 1,
-    });
     const response = await axios.post(
       "https://api.pinata.cloud/pinning/pinJSONToIPFS",
-      data,
+      json,
       {
         headers: {
           "Content-Type": "application/json",
