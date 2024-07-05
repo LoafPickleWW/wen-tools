@@ -931,7 +931,7 @@ async function fetchNFDJSON(url) {
 
 export async function getNfdDomain(wallet) {
   const nfdDomain = await fetchNFDJSON(
-    "https://api.nf.domains/nfd/lookup?address=" + wallet.toLowerCase() + "&view=tiny"
+    "https://api.nf.domains/nfd/lookup?address=" + wallet + "&view=tiny"
   );
   if (nfdDomain.status === 200) {
     return nfdDomain.body[wallet].name;
