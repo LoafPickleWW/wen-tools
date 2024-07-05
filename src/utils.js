@@ -456,41 +456,51 @@ export async function updateARC19AssetMintArray(data_for_txns, nodeURL, token) {
   let txnsArray = [];
   for (let i = 0; i < data_for_txns.length; i++) {
     try {
-      const jsonString = JSON.stringify(data_for_txns[i].ipfs_data);
-      const assetURL = await getAssetUrl(parseInt(data_for_txns[i].asset_id))
-      let chunks = assetURL.split("://");
-      const cidVersion = chunks[1].split(":")[1];
-      let cid = await pinJSONToPinata(token, jsonString, cidVersion);
-      const { reserveAddress } = createReserveAddressFromIpfsCid(cid);
-      let update_tx = makeAssetConfigTxnWithSuggestedParamsFromObject({
-        from: wallet,
-        assetIndex: parseInt(data_for_txns[i].asset_id),
-        note: new TextEncoder().encode(JSON.stringify(data_for_txns[i].note)),
-        manager: wallet,
-        reserve: reserveAddress,
-        freeze: data_for_txns[i].freeze || undefined,
-        clawback: data_for_txns[i].clawback || undefined,
-        suggestedParams: params,
-        strictEmptyAddressChecking: false,
-      });
+      const assetURL = await getAssetUrl(parseInt(data_for_txns[i].asset_id));
+      if (assetURL !== "" && assetURL.includes("dag-pb")) {
+        toast.info(
+          "You cannot update this asset because Pinata does not support 'dag-pb' codec: " +
+            data_for_txns[i].asset_id
+        );
+      } else {
+        const jsonString = JSON.stringify(data_for_txns[i].ipfs_data);
+        let chunks = assetURL.split("://");
+        const cidVersion = chunks[1].split(":")[1];
+        let cid = await pinJSONToPinata(token, jsonString, cidVersion);
+        const { reserveAddress } = createReserveAddressFromIpfsCid(cid);
+        let update_tx = makeAssetConfigTxnWithSuggestedParamsFromObject({
+          from: wallet,
+          assetIndex: parseInt(data_for_txns[i].asset_id),
+          note: new TextEncoder().encode(JSON.stringify(data_for_txns[i].note)),
+          manager: wallet,
+          reserve: reserveAddress,
+          freeze: data_for_txns[i].freeze || undefined,
+          clawback: data_for_txns[i].clawback || undefined,
+          suggestedParams: params,
+          strictEmptyAddressChecking: false,
+        });
 
-      let fee_tx = makePaymentTxnWithSuggestedParamsFromObject({
-        from: wallet,
-        to: MINT_FEE_WALLET,
-        amount: algosToMicroalgos(UPDATE_FEE_PER_ASA),
-        suggestedParams: params,
-        note: new TextEncoder().encode(
-          "via Thurstober Digital Studios | " +
-            Math.random().toString(36).substring(2)
-        ),
-      });
-      const groupID = computeGroupID([update_tx, fee_tx]);
-      update_tx.group = groupID;
-      fee_tx.group = groupID;
-      txnsArray.push([update_tx, fee_tx]);
-      toast.info(`Asset ${i + 1} of ${data_for_txns.length} uploaded to IPFS`, {
-        autoClose: 200,
-      });
+        let fee_tx = makePaymentTxnWithSuggestedParamsFromObject({
+          from: wallet,
+          to: MINT_FEE_WALLET,
+          amount: algosToMicroalgos(UPDATE_FEE_PER_ASA),
+          suggestedParams: params,
+          note: new TextEncoder().encode(
+            "via Thurstober Digital Studios | " +
+              Math.random().toString(36).substring(2)
+          ),
+        });
+        const groupID = computeGroupID([update_tx, fee_tx]);
+        update_tx.group = groupID;
+        fee_tx.group = groupID;
+        txnsArray.push([update_tx, fee_tx]);
+        toast.info(
+          `Asset ${i + 1} of ${data_for_txns.length} uploaded to IPFS`,
+          {
+            autoClose: 200,
+          }
+        );
+      }
     } catch (error) {}
     if (i % 100 === 0) {
       params = await algodClient.getTransactionParams().do();
@@ -1157,7 +1167,7 @@ export async function pinJSONToPinata(token, json, version = "") {
     const data = new FormData();
     data.append("file", blob);
     const options = JSON.stringify({
-      cidVersion: version === "" ? 1 : parseInt(version)
+      cidVersion: version === "" ? 1 : parseInt(version),
     });
     data.append("pinataOptions", options);
     const response = await axios.post(
