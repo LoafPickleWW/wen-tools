@@ -327,7 +327,6 @@ export function SimpleUpdate() {
           nodeURL,
           token
         );
-        if (unsignedAssetTransactions.length === 0) throw Error("Something went wrong while creating transaction")
         setTransaction(unsignedAssetTransactions);
       } else if (formData.format === "ARC69") {
         metadata.properties = metadata.properties.traits;

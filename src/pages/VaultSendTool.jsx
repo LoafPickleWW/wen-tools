@@ -82,7 +82,7 @@ export function VaultSendTool() {
     var offset = 0;
     const nfdomainApiUrl = getNfdomainAPIURL();
     const domainData = await axios.get(
-      `${nfdomainApiUrl}/nfd/${domain}?view=brief&poll=false&nocache=false`
+      `${nfdomainApiUrl}/nfd/${domain.toLowerCase()}?view=brief&poll=false&nocache=false`
     );
     const appId = domainData.data.appID;
     var result = await axios.get(
@@ -91,7 +91,7 @@ export function VaultSendTool() {
     );
     result.data.nfds.forEach((element) => {
       if (parseFloat(element.properties.internal.ver) >= 2.11) {
-        segments.push(element.name);
+        segments.push(element.name.toLowerCase());
       }
     });
     const total = result.data.total;
@@ -106,7 +106,7 @@ export function VaultSendTool() {
       );
       result.data.nfds.forEach((element) => {
         if (parseFloat(element.properties.internal.ver) >= 2.11) {
-          segments.push(element.name);
+          segments.push(element.name.toLowerCase());
         }
       });
       await new Promise((resolve) => setTimeout(resolve, 150));
@@ -168,7 +168,7 @@ export function VaultSendTool() {
       for (var i = 0; i < receiverDomains.length; i++) {
         try {
           const response = await axios.post(
-            `${nfdomainApiUrl}/nfd/vault/sendTo/${receiverDomains[i]}`,
+            `${nfdomainApiUrl}/nfd/vault/sendTo/${receiverDomains[i].toLowerCase()}`,
             body
           );
           const transactionsArray = JSON.parse(response.data);

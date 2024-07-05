@@ -160,7 +160,7 @@ export function MultimintAssetHolders() {
     let nfdSocials = {};
     nfdomains = [...new Set(nfdomains)];
     for (let i = 0; i < nfdomains.length; i++) {
-      const nfdomain = nfdomains[i];
+      const nfdomain = nfdomains[i].toLowerCase();
       const url = `https://api.nf.domains/nfd/${nfdomain}?view=full&poll=false&nocache=false`;
       try {
         const response = await axios.get(url);

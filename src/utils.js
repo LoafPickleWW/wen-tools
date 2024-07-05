@@ -931,7 +931,7 @@ async function fetchNFDJSON(url) {
 
 export async function getNfdDomain(wallet) {
   const nfdDomain = await fetchNFDJSON(
-    "https://api.nf.domains/nfd/lookup?address=" + wallet + "&view=tiny"
+    "https://api.nf.domains/nfd/lookup?address=" + wallet.toLowerCase() + "&view=tiny"
   );
   if (nfdDomain.status === 200) {
     return nfdDomain.body[wallet].name;
@@ -1033,7 +1033,7 @@ export async function getNfDomainsInBulk(wallets, bulkSize = 20) {
   for (let i = 0; i < uniqueWallets.length; i += bulkSize) {
     const chunk = uniqueWallets
       .slice(i, i + bulkSize)
-      .map((wallet) => `address=${wallet}`)
+      .map((wallet) => `address=${wallet.toLowerCase()}`)
       .join("&");
     try {
       const nfdLookup = await fetchNFDJSON(
@@ -1063,7 +1063,7 @@ export async function getAddressesFromNFDomain(domains) {
   for (let i = 0; i < uniqueDomains.length; i++) {
     try {
       const response = await axios.get(
-        `https://api.nf.domains/nfd/${uniqueDomains[i]}?view=tiny`
+        `https://api.nf.domains/nfd/${uniqueDomains[i].toLowerCase()}?view=tiny`
       );
       if (response.data.depositAccount) {
         nfdDomains[uniqueDomains[i]] = response.data.depositAccount;
