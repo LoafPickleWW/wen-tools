@@ -188,8 +188,7 @@ export function SimpleMint() {
           return;
         }
         toast.info("Uploading the image to IPFS...");
-        imageURL =
-          "ipfs://" + (await pinImageToPinata(token, formData.image));
+        imageURL = "ipfs://" + (await pinImageToPinata(token, formData.image));
       }
       const nodeURL = getNodeURL();
 
@@ -243,6 +242,10 @@ export function SimpleMint() {
         );
       } else {
         toast.error("Invalid ARC format");
+        return;
+      }
+      if (unsignedAssetTransaction.length === 0) {
+        toast.error("Something went wrong while creating transactions");
         return;
       }
       setTransaction(unsignedAssetTransaction);
@@ -686,7 +689,7 @@ export function SimpleMint() {
             </p>
             <button
               id="create_transactions_id"
-              className="rounded bg-secondary-green hover:bg-secondary-green/80 transition text-white/90 font-semibold px-4 py-1 mt-2"
+              className="rounded bg-secondary-green hover:bg-secondary-green/80 transition text-black/90 font-semibold px-4 py-1 mt-2"
               onClick={() => {
                 sendTransaction();
               }}
