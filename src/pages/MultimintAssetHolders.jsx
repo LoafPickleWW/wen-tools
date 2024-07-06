@@ -258,9 +258,7 @@ export function MultimintAssetHolders() {
             toast.info(`Checked ${i}/${uniqueWallets.length} wallets.`);
           }
         }
-        console.log(data.length);
         data = data.filter((item) => participatedWallets.includes(item.wallet));
-        console.log(data.length);
       }
       exportCSVFile(headers, data, "asset_holders.csv");
       setLoading(false);
