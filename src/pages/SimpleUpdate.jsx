@@ -32,8 +32,7 @@ export function SimpleUpdate() {
     external_url: "",
     traits: [],
     filters: [],
-    extras: [],
-    assetUrl: ""
+    extras: []
   });
   const [token, setToken] = useState("");
   const [processStep, setProcessStep] = useState(0);
@@ -218,8 +217,7 @@ export function SimpleUpdate() {
         image_url: assetMetadata.image || assetData.params["url"],
         image_mime_type: assetMetadata.image_mime_type,
         animation_url: assetMetadata.animation_url || assetData.params["url"],
-        animation_mime_type: assetMetadata.animation_mime_type,
-        assetUrl: assetData.params["url"]
+        animation_mime_type: assetMetadata.animation_mime_type
       });
     } catch (error) {
       if (error.response) {
@@ -246,10 +244,6 @@ export function SimpleUpdate() {
         (token === "" && formData.format === "ARC19")
       ) {
         toast.error("Please fill all the required fields");
-        return;
-      }
-      if (formData.assetUrl.length > 0 && formData.assetUrl.includes("dag-pb")){
-        toast.error("You cannot update this asset because Pinata does not support 'dag-pb' codec.");
         return;
       }
       setProcessStep(1);
@@ -332,6 +326,10 @@ export function SimpleUpdate() {
           nodeURL,
           token
         );
+        if (unsignedAssetTransactions.length === 0) {
+          toast.error("Something went wrong while creating transactions");
+          return;
+        }
         setTransaction(unsignedAssetTransactions);
       } else if (formData.format === "ARC69") {
         metadata.properties = metadata.properties.traits;

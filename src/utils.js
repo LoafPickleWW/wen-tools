@@ -457,50 +457,41 @@ export async function updateARC19AssetMintArray(data_for_txns, nodeURL, token) {
   for (let i = 0; i < data_for_txns.length; i++) {
     try {
       const assetURL = await getAssetUrl(parseInt(data_for_txns[i].asset_id));
-      if (assetURL !== "" && assetURL.includes("dag-pb")) {
-        toast.info(
-          "You cannot update this asset because Pinata does not support 'dag-pb' codec: " +
-            data_for_txns[i].asset_id
-        );
-      } else {
-        const jsonString = JSON.stringify(data_for_txns[i].ipfs_data);
-        let chunks = assetURL.split("://");
-        const cidVersion = chunks[1].split(":")[1];
-        let cid = await pinJSONToPinata(token, jsonString, cidVersion);
-        const { reserveAddress } = createReserveAddressFromIpfsCid(cid);
-        let update_tx = makeAssetConfigTxnWithSuggestedParamsFromObject({
-          from: wallet,
-          assetIndex: parseInt(data_for_txns[i].asset_id),
-          note: new TextEncoder().encode(JSON.stringify(data_for_txns[i].note)),
-          manager: wallet,
-          reserve: reserveAddress,
-          freeze: data_for_txns[i].freeze || undefined,
-          clawback: data_for_txns[i].clawback || undefined,
-          suggestedParams: params,
-          strictEmptyAddressChecking: false,
-        });
+      let chunks = assetURL.split("://");
+      const cidVersion = chunks[1].split(":")[1];
+      const cidCodec = chunks[1].split(":")[2];
+      const jsonString = JSON.stringify(data_for_txns[i].ipfs_data);
+      let cid = await pinJSONToPinata(token, jsonString, cidVersion, cidCodec);
+      const { reserveAddress } = createReserveAddressFromIpfsCid(cid);
+      let update_tx = makeAssetConfigTxnWithSuggestedParamsFromObject({
+        from: wallet,
+        assetIndex: parseInt(data_for_txns[i].asset_id),
+        note: new TextEncoder().encode(JSON.stringify(data_for_txns[i].note)),
+        manager: wallet,
+        reserve: reserveAddress,
+        freeze: data_for_txns[i].freeze || undefined,
+        clawback: data_for_txns[i].clawback || undefined,
+        suggestedParams: params,
+        strictEmptyAddressChecking: false,
+      });
 
-        let fee_tx = makePaymentTxnWithSuggestedParamsFromObject({
-          from: wallet,
-          to: MINT_FEE_WALLET,
-          amount: algosToMicroalgos(UPDATE_FEE_PER_ASA),
-          suggestedParams: params,
-          note: new TextEncoder().encode(
-            "via Thurstober Digital Studios | " +
-              Math.random().toString(36).substring(2)
-          ),
-        });
-        const groupID = computeGroupID([update_tx, fee_tx]);
-        update_tx.group = groupID;
-        fee_tx.group = groupID;
-        txnsArray.push([update_tx, fee_tx]);
-        toast.info(
-          `Asset ${i + 1} of ${data_for_txns.length} uploaded to IPFS`,
-          {
-            autoClose: 200,
-          }
-        );
-      }
+      let fee_tx = makePaymentTxnWithSuggestedParamsFromObject({
+        from: wallet,
+        to: MINT_FEE_WALLET,
+        amount: algosToMicroalgos(UPDATE_FEE_PER_ASA),
+        suggestedParams: params,
+        note: new TextEncoder().encode(
+          "via Thurstober Digital Studios | " +
+            Math.random().toString(36).substring(2)
+        ),
+      });
+      const groupID = computeGroupID([update_tx, fee_tx]);
+      update_tx.group = groupID;
+      fee_tx.group = groupID;
+      txnsArray.push([update_tx, fee_tx]);
+      toast.info(`Asset ${i + 1} of ${data_for_txns.length} uploaded to IPFS`, {
+        autoClose: 200,
+      });
     } catch (error) {}
     if (i % 100 === 0) {
       params = await algodClient.getTransactionParams().do();
@@ -869,7 +860,7 @@ export async function createAssetDeleteTransactions(assets, nodeURL, mnemonic) {
       fee_tx.group = groupID;
       txnsArray.push([asset_create_tx, fee_tx]);
     } catch (error) {
-      //console.log(error);
+      console.log(error);
     }
   }
   if (mnemonic !== "") {
@@ -1161,25 +1152,45 @@ export async function getARC19AssetMetadataData(url, reserve) {
   }
 }
 
-export async function pinJSONToPinata(token, json, version = "") {
+export async function pinJSONToPinata(
+  token,
+  json,
+  version = "",
+  cidCodec = ""
+) {
   try {
-    const blob = new Blob([json], { type: "application/json" });
-    const data = new FormData();
-    data.append("file", blob);
-    const options = JSON.stringify({
-      cidVersion: version === "" ? 1 : parseInt(version),
-    });
-    data.append("pinataOptions", options);
-    const response = await axios.post(
-      "https://api.pinata.cloud/pinning/pinFileToIPFS",
-      data,
-      {
-        headers: {
-          Authorization: `Bearer ${token.trim()}`,
-        },
-      }
-    );
-    return response.data.IpfsHash;
+    let response;
+    if (cidCodec === "raw" || cidCodec === "") {
+      const blob = new Blob([json], { type: "application/json" });
+      const data = new FormData();
+      data.append("file", blob);
+      const options = JSON.stringify({
+        cidVersion: version === "" ? 1 : parseInt(version),
+      });
+      data.append("pinataOptions", options);
+      response = await axios.post(
+        "https://api.pinata.cloud/pinning/pinFileToIPFS",
+        data,
+        {
+          headers: {
+            Authorization: `Bearer ${token.trim()}`,
+          },
+        }
+      );
+      return response.data.IpfsHash;
+    } else {
+      response = await axios.post(
+        "https://api.pinata.cloud/pinning/pinJSONToIPFS",
+        json,
+        {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      return response.data.IpfsHash;
+    }
   } catch (error) {
     throw new Error("IPFS pinning failed");
   }

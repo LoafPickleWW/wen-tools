@@ -30,7 +30,6 @@ export function BatchCollectionMetadataUpdate(props) {
             }
         }
         let data_for_txns = data;
-        //console.log(data_for_txns);
         data_for_txns.forEach((item) => {
             let asset_note = {
                 properties: {

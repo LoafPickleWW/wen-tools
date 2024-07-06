@@ -112,7 +112,6 @@ export function CollectionSnapshot() {
     str += row + "\r";
     if (checkSeparated) {
       for (let i = 0; i < array.length; i++) {
-        console.log(array[i]);
         let line = "";
         line += array[i].asset_id + ",";
         line += array[i].wallet + ",";
@@ -216,7 +215,6 @@ export function CollectionSnapshot() {
             });
           });
         });
-        console.log(newData);
         data = newData;
       }
       exportCSVFile(headers, data, "collection-snapshot.csv");

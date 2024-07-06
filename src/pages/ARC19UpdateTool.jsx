@@ -118,6 +118,10 @@ export function ARC19UpdateTool() {
         nodeURL,
         token
       );
+      if (unsignedAssetTransactions.length === 0) {
+        toast.error("Something went wrong while creating transactions");
+        return;
+      }
       setAssetTransactions(unsignedAssetTransactions);
       setTxSendingInProgress(false);
       toast.info("Please sign the transactions!");
