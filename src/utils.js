@@ -4,6 +4,7 @@ import {
   algosToMicroalgos,
   computeGroupID,
   encodeAddress,
+  encodeUnsignedTransaction,
   makeAssetConfigTxnWithSuggestedParamsFromObject,
   makeAssetCreateTxnWithSuggestedParamsFromObject,
   makeAssetTransferTxnWithSuggestedParamsFromObject,
@@ -37,10 +38,12 @@ import { DeflyWalletConnect } from "@blockshake/defly-connect";
 import * as mfsha2 from "multiformats/hashes/sha2";
 import * as digest from "multiformats/hashes/digest";
 import { DaffiWalletConnect } from "@daffiwallet/connect";
+import LuteConnect from "lute-connect";
 
 const peraWallet = new PeraWalletConnect({ shouldShowSignTxnToast: true });
 const deflyWallet = new DeflyWalletConnect({ shouldShowSignTxnToast: true });
 const daffiWallet = new DaffiWalletConnect({ shouldShowSignTxnToast: true });
+const luteWallet = new LuteConnect("The Laboratory");
 
 export function sliceIntoChunks(arr, chunkSize) {
   const res = [];
@@ -104,75 +107,58 @@ export async function signGroupTransactions(
 ) {
   let signedTxns;
   let txnsToValidate;
+  if (!isMultipleGroup) groups = [groups];
   try {
     if (localStorage.getItem("PeraWallet.Wallet") != null) {
       await peraWallet.reconnectSession();
-      let multipleTxnGroups;
-      if (isMultipleGroup) {
-        multipleTxnGroups = groups.map((group) => {
-          return group.map((txn) => {
-            return { txn: txn, signers: [wallet] };
-          });
-        });
-      } else {
-        multipleTxnGroups = groups.map((txn) => {
+      const multipleTxnGroups = groups.map((group) => {
+        return group.map((txn) => {
           return { txn: txn, signers: [wallet] };
         });
-      }
+      });
       if (multipleTxnGroups.length === 0) {
         throw new Error("Transaction signing failed!");
       }
-      if (isMultipleGroup) {
-        signedTxns = await peraWallet.signTransaction(multipleTxnGroups);
-      } else {
-        signedTxns = await peraWallet.signTransaction([multipleTxnGroups]);
-      }
+      signedTxns = await peraWallet.signTransaction(multipleTxnGroups);
       txnsToValidate = signedTxns.flat();
     } else if (localStorage.getItem("DeflyWallet.Wallet") != null) {
       await deflyWallet.reconnectSession();
-      let multipleTxnGroups;
-      if (isMultipleGroup) {
-        multipleTxnGroups = groups.map((group) => {
-          return group.map((txn) => {
-            return { txn: txn, signers: [wallet] };
-          });
-        });
-      } else {
-        multipleTxnGroups = groups.map((txn) => {
+      const multipleTxnGroups = groups.map((group) => {
+        return group.map((txn) => {
           return { txn: txn, signers: [wallet] };
         });
-      }
+      });
       if (multipleTxnGroups.length === 0) {
         throw new Error("Transaction signing failed!");
       }
-      if (isMultipleGroup) {
-        signedTxns = await deflyWallet.signTransaction(multipleTxnGroups);
-      } else {
-        signedTxns = await deflyWallet.signTransaction([multipleTxnGroups]);
-      }
+      signedTxns = await deflyWallet.signTransaction(multipleTxnGroups);
       txnsToValidate = signedTxns.flat();
+    } else if (localStorage.getItem("LuteWallet.Wallet")) {
+      const multipleTxnGroups = groups.map((group) => {
+        return group.flatMap((txn) => {
+          return {
+            txn: Buffer.from(encodeUnsignedTransaction(txn)).toString("base64"),
+            signers: [wallet],
+          };
+        });
+      });
+      if (multipleTxnGroups.length === 0) {
+        throw new Error("Transaction signing failed!");
+      }
+      signedTxns = await luteWallet.signTxns(multipleTxnGroups.flat());
+      txnsToValidate = signedTxns;
     } else {
       await daffiWallet.reconnectSession();
-      let multipleTxnGroups;
-      if (isMultipleGroup) {
-        multipleTxnGroups = groups.map((group) => {
-          return group.map((txn) => {
-            return { txn: txn, signers: [wallet] };
-          });
-        });
-      } else {
-        multipleTxnGroups = groups.map((txn) => {
+      const multipleTxnGroups = groups.map((group) => {
+        return group.map((txn) => {
           return { txn: txn, signers: [wallet] };
         });
-      }
+      });
       if (multipleTxnGroups.length === 0) {
         throw new Error("Transaction signing failed!");
       }
-      if (isMultipleGroup) {
-        signedTxns = await daffiWallet.signTransaction(multipleTxnGroups);
-      } else {
-        signedTxns = await daffiWallet.signTransaction([multipleTxnGroups]);
-      }
+      signedTxns = await daffiWallet.signTransaction(multipleTxnGroups);
+      txnsToValidate = signedTxns.flat();
     }
     if (txnsToValidate == null) {
       throw new Error("Transaction signing failed");
@@ -612,29 +598,24 @@ export async function createDonationTransaction(amount) {
   for (let i = 0; i < txnsArray.length; i++) txnsArray[i].group = groupID;
   let signedTxns;
   let txnsToValidate;
+  const multipleTxnGroups = [
+    { txn: txnsArray[0], signers: [wallet] },
+    { txn: txnsArray[1], signers: [wallet] },
+  ];
   try {
     if (localStorage.getItem("PeraWallet.Wallet") != null) {
       await peraWallet.reconnectSession();
-      const multipleTxnGroups = [
-        { txn: txnsArray[0], signers: [wallet] },
-        { txn: txnsArray[1], signers: [wallet] },
-      ];
       signedTxns = await peraWallet.signTransaction([multipleTxnGroups]);
       txnsToValidate = signedTxns.flat();
     } else if (localStorage.getItem("DeflyWallet.Wallet") != null) {
       await deflyWallet.reconnectSession();
-      const multipleTxnGroups = [
-        { txn: txnsArray[0], signers: [wallet] },
-        { txn: txnsArray[1], signers: [wallet] },
-      ];
       signedTxns = await deflyWallet.signTransaction([multipleTxnGroups]);
       txnsToValidate = signedTxns.flat();
+    } else if (localStorage.getItem("LuteWallet.Wallet")) {
+      signedTxns = await luteWallet.signTxns(multipleTxnGroups);
+      txnsToValidate = signedTxns;
     } else {
       await daffiWallet.reconnectSession();
-      const multipleTxnGroups = [
-        { txn: txnsArray[0], signers: [wallet] },
-        { txn: txnsArray[1], signers: [wallet] },
-      ];
       signedTxns = await daffiWallet.signTransaction([multipleTxnGroups]);
       txnsToValidate = signedTxns.flat();
     }
