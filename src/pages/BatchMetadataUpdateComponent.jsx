@@ -128,7 +128,7 @@ export function BatchCollectionMetadataUpdate() {
       {/* mnemonic */}
       <InfinityModeComponent mnemonic={mnemonic} setMnemonic={setMnemonic} />
       {/* end mnemonic */}
-      <button className="text-center text-lg text-black mt-2 bg-black px-4 py-2 rounded">
+      <button className="text-center text-lg text-black mt-2 bg-primary-green px-4 py-2 rounded">
         <a
           className="hover:text-black transition"
           href="https://loafpickle.medium.com/evil-tools-arc69-made-easy-c7913885cfd2"
