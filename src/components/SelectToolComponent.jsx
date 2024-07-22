@@ -10,8 +10,8 @@ export function SelectToolComponent() {
       </p>
       <CarouselComponent
         images={[
-          { path: "./tds.png", url: "https://wen.tools" },
-          { path: "./we.png", url: "https://wallet.wen.tools" },
+          { path: "./banner-large.png", url: "https://wen.tools" },
+          { path: "./banner-large.png", url: "https://wallet.wen.tools" },
         ]}
       />
       <p className="col-span-3 text-center text-2xl font-bold tracking-tight text-white">
