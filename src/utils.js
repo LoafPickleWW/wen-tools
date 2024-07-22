@@ -82,7 +82,7 @@ export function getNfdomainAPIURL() {
 }
 
 export function getAssetPreviewURL(assetID) {
-  return "https://we.thurstober.com/asset/" + assetID;
+  return "https://wallet.wen.tools/asset/" + assetID;
   // const networkType = localStorage.getItem("networkType");
   // if (networkType === "mainnet") {
   //   return "https://explorer.perawallet.app/asset/" + assetID;
@@ -92,7 +92,7 @@ export function getAssetPreviewURL(assetID) {
 }
 
 export function getTokenPreviewURL(assetID) {
-  return "https://we.thurstober.com/asset/" + assetID;
+  return "https://wallet.wen.tools/asset/" + assetID;
   // const networkType = localStorage.getItem("networkType");
   // if (networkType === "mainnet") {
   //   return "https://allo.info/asset/" + assetID;
@@ -225,7 +225,7 @@ export async function createAssetConfigArray(
       amount: algosToMicroalgos(UPDATE_FEE_PER_ASA),
       suggestedParams: params,
       note: new TextEncoder().encode(
-        "via Thurstober Digital Studios | " +
+        "via wen.tools | " +
           Math.random().toString(36).substring(2)
       ),
     });
@@ -288,7 +288,7 @@ export async function createAssetMintArray(
         amount: algosToMicroalgos(MINT_FEE_PER_ASA),
         suggestedParams: params,
         note: new TextEncoder().encode(
-          "via Thurstober Digital Studios | " +
+          "via wen.tools | " +
             Math.random().toString(36).substring(2)
         ),
       });
@@ -351,7 +351,7 @@ export async function createARC3AssetMintArray(data_for_txns, nodeURL, token) {
         amount: algosToMicroalgos(MINT_FEE_PER_ASA),
         suggestedParams: params,
         note: new TextEncoder().encode(
-          "via Thurstober Digital Studios | " +
+          "via wen.tools | " +
             Math.random().toString(36).substring(2)
         ),
       });
@@ -409,7 +409,7 @@ export async function createARC19AssetMintArray(data_for_txns, nodeURL, token) {
         amount: algosToMicroalgos(MINT_FEE_PER_ASA),
         suggestedParams: params,
         note: new TextEncoder().encode(
-          "via Thurstober Digital Studios | " +
+          "via wen.tools | " +
             Math.random().toString(36).substring(2)
         ),
       });
@@ -467,7 +467,7 @@ export async function updateARC19AssetMintArray(data_for_txns, nodeURL, token) {
         amount: algosToMicroalgos(UPDATE_FEE_PER_ASA),
         suggestedParams: params,
         note: new TextEncoder().encode(
-          "via Thurstober Digital Studios | " +
+          "via wen.tools | " +
             Math.random().toString(36).substring(2)
         ),
       });
@@ -531,9 +531,9 @@ export async function createAirdropTransactions(
           note: new TextEncoder().encode(
             isHolder
               ? data_for_txns[i].note.slice(0, 950) +
-                  " | via Thurstober Digital Studios  " +
+                  " | via wen.tools  " +
                   Math.random().toString(36).substring(2)
-              : "Sent using The Laboratory - A Thurstober Digital Studios Product! Free Tools for Algorand Creators and Collectors!  " +
+              : "Sent using Wen.Tools! Free Tools for Algorand Creators and Collectors!  " +
                   Math.random().toString(36).substring(2)
           ),
         });
@@ -550,9 +550,9 @@ export async function createAirdropTransactions(
           note: new TextEncoder().encode(
             isHolder
               ? data_for_txns[i].note.slice(0, 950) +
-                  " | via Thurstober Digital Studios  " +
+                  " | via wen.tools  " +
                   Math.random().toString(36).substring(2)
-              : "Sent using The Laboratory - A Thurstober Digital Studios Product! Free Tools for Algorand Creators and Collectors!  " +
+              : "Sent using Wen.Tools! Free Tools for Algorand Creators and Collectors!  " +
                   Math.random().toString(36).substring(2)
           ),
         });
@@ -582,7 +582,7 @@ export async function createDonationTransaction(amount) {
     to: DONATE_WALLET_1,
     amount: algosToMicroalgos(amount / 2),
     suggestedParams: params,
-    note: new TextEncoder().encode("The Laboratory Donation"),
+    note: new TextEncoder().encode("Wen.Tools Donation"),
   });
 
   const tx2 = makePaymentTxnWithSuggestedParamsFromObject({
@@ -590,7 +590,7 @@ export async function createDonationTransaction(amount) {
     to: DONATE_WALLET_2,
     amount: algosToMicroalgos(amount / 2),
     suggestedParams: params,
-    note: new TextEncoder().encode("The Laboratory Donation"),
+    note: new TextEncoder().encode("Wen.Tools Donation"),
   });
 
   const txnsArray = [tx, tx2];
@@ -640,7 +640,7 @@ export async function createAssetOptInTransactions(assets, nodeURL, mnemonic) {
       amount: 0,
       assetIndex: parseInt(assets[i]),
       suggestedParams: params,
-      note: new TextEncoder().encode("via Thurstober Digital Studios"),
+      note: new TextEncoder().encode("via wen.tools"),
     });
     txnsArray.push(tx);
   }
@@ -686,7 +686,7 @@ export async function createClawbackTransactions(
       amount: parseInt(
         data_for_txns[i].amount * 10 ** assetDecimals[data_for_txns[i].asset_id]
       ),
-      note: new TextEncoder().encode("via Thurstober Digital Studios"),
+      note: new TextEncoder().encode("via wen.tools"),
     });
     txnsArray.push(tx);
   }
@@ -728,7 +728,7 @@ export async function createFreezeTransactions(
       assetIndex: parseInt(data_for_txns[i].asset_id),
       freezeState: data_for_txns[i].frozen.trim() === "Y" ? true : false,
       freezeTarget: data_for_txns[i].wallet,
-      note: new TextEncoder().encode("via Thurstober Digital Studios"),
+      note: new TextEncoder().encode("via wen.tools"),
     });
     txnsArray.push(tx);
   }
@@ -784,7 +784,7 @@ export async function createAssetOptoutTransactions(
         assetIndex: parseInt(assets[i]),
         suggestedParams: params,
         closeRemainderTo: creatorAddress.trim(),
-        note: new TextEncoder().encode("via Thurstober Digital Studios"),
+        note: new TextEncoder().encode("via wen.tools"),
       });
       txnsArray.push(tx);
     }
@@ -826,7 +826,7 @@ export async function createAssetDeleteTransactions(assets, nodeURL, mnemonic) {
         suggestedParams: params,
         assetIndex: parseInt(assets[i]),
         note: new TextEncoder().encode(
-          "via Thurstober Digital Studios | " +
+          "via wen.tools | " +
             Math.random().toString(36).substring(2)
         ),
       });
