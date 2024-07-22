@@ -169,7 +169,7 @@ export default function ConnectButton() {
           aria-haspopup="true"
           aria-expanded={open ? "true" : undefined}
           onClick={handleClick}
-          color="success"
+          color="white"
           className="hover:bg-primary-green hover:text-white transition"
         >
           <span className="font-sans">Connect</span>
