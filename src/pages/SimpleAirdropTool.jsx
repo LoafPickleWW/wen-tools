@@ -6,7 +6,6 @@ import {
   getCreatedAssets,
   getOwnerAddressOfAsset,
   getNodeURL,
-  isWalletHolder,
 } from "../utils";
 import { TOOLS } from "../constants";
 
@@ -60,12 +59,6 @@ export function SimpleAirdropTool() {
       }
       if (amount === "") {
         throw new Error("Please enter amount!");
-      }
-      const isHolder = await isWalletHolder(wallet);
-      if (!isHolder) {
-        throw new Error(
-          "This tool is a PREMIUM tool, you need to be a holder!"
-        );
       }
       setProcessStep(1);
 
@@ -224,18 +217,6 @@ export function SimpleAirdropTool() {
         {TOOLS.find((tool) => tool.path === window.location.pathname).label}
       </p>
       <label className="text-xs text-slate-400">
-        <p className="text-sm italic text-slate-400">
-          If you have any{" "}
-          <a
-            href="https://www.asalytic.app/collections?search=thurstober"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-slate-500 hover:text-slate-300 transition"
-          >
-            Horse from Thurstober Digital Studios
-          </a>
-          , you can use this tool.
-        </p>
       </label>
       {/* mnemonic */}
       <InfinityModeComponent mnemonic={mnemonic} setMnemonic={setMnemonic} />
