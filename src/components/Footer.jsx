@@ -11,11 +11,11 @@ export function Footer() {
         >
           &copy; {new Date().getFullYear()}{" "}
           <a
-            href="https://thurstober.com/"
+            href="https://wen.tools/"
             target="_blank"
             rel="noopener noreferrer"
           >
-            Thurstober Digital Studios
+            Wen.Tools
           </a>
         </Typography>
         <div className="flex flex-row items-center justify-center gap-3 sm:absolute sm:left-1/2 sm:-translate-x-1/2">
@@ -45,7 +45,7 @@ export function Footer() {
         </div>
         <div className="flex gap-4 text-blue-gray-900 sm:justify-center">
           <a
-            href="https://twitter.com/thurstobertay"
+            href="https://twitter.com/loafpickle"
             target="_blank"
             className="opacity-80 transition-opacity hover:opacity-100"
             rel="noreferrer"
@@ -60,7 +60,7 @@ export function Footer() {
             </svg>
           </a>
           <a
-            href="https://discord.gg/dNQZbW3bXm"
+            href="https://discord.gg/Mw2p5C6hAT"
             target="_blank"
             className="opacity-80 transition-opacity hover:opacity-100"
             rel="noreferrer"
@@ -76,7 +76,7 @@ export function Footer() {
           </a>
           <a
             className="opacity-80 transition-opacity hover:opacity-100"
-            href="https://github.com/thurstober-digital/evil-tools"
+            href="https://github.com/LoafPickleWW/wen-tools"
             target="_blank"
             rel="noreferrer"
           >
