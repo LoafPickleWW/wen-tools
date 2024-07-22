@@ -5,9 +5,6 @@ import CarouselComponent from "./CarouselComponent";
 export function SelectToolComponent() {
   return (
     <div className="text-center">
-      <p className="col-span-3 text-center text-3xl font-bold tracking-tight text-white">
-        Not if, Wen
-      </p>
       <CarouselComponent
         images={[
           { path: "./banner-large.png", url: "https://wen.tools" },
