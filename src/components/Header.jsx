@@ -51,12 +51,12 @@ export function Header() {
         <p className="text-center text-sm ticker-text">
           Improve your wallet experience with the:{" "}
           <a
-            href="https://we.thurstober.com/"
+            href="https://wallet.wen.tools/"
             target="_blank"
             rel="noreferrer"
             className="font-semibold hover:text-green-800 transition"
           >
-            Wallet Enhancer!
+            Wen Wallet!
           </a>
         </p>
       </div>
