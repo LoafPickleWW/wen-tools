@@ -6,12 +6,12 @@ export function SelectToolComponent() {
   return (
     <div className="text-center">
       <p className="col-span-3 text-center text-3xl font-bold tracking-tight text-white">
-        The Laboratory - Enabling Blockchain 
+        Not if, Wen
       </p>
       <CarouselComponent
         images={[
-          { path: "./tds.png", url: "https://thurstober.com" },
-          { path: "./we.png", url: "https://we.thurstober.com" },
+          { path: "./tds.png", url: "https://wen.tools" },
+          { path: "./we.png", url: "https://wallet.wen.tools" },
         ]}
       />
       <p className="col-span-3 text-center text-2xl font-bold tracking-tight text-white">
