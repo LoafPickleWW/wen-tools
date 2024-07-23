@@ -251,20 +251,6 @@ export function SimpleSendTool() {
           />
         </div>
       </div>
-      <label className="text-xs text-slate-400">
-        <p className="text-sm italic text-slate-400">
-          If you have any{" "}
-          <a
-            href="https://www.asalytic.app/collections?search=thurstober"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-slate-500 hover:text-slate-300 transition"
-          >
-            ASA from Thurstober Digital Studios
-          </a>
-          , you can use note field too.
-        </p>
-      </label>
       <input
         type="text"
         placeholder="Note"
