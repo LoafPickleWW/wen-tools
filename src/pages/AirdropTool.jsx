@@ -140,18 +140,6 @@ export function AirdropTool() {
           CSV Template
         </a>
       </button>
-      <p className="text-sm italic text-slate-400">
-        If you have any{" "}
-        <a
-          href="https://www.asalytic.app/collections?search=thurstober"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-slate-500 hover:text-slate-300 transition"
-        >
-          Horse from Thurstober Digital Studios
-        </a>
-        , you can use note field too.
-      </p>
       {/* mnemonic */}
       <InfinityModeComponent mnemonic={mnemonic} setMnemonic={setMnemonic} />
       {/* end mnemonic */}
