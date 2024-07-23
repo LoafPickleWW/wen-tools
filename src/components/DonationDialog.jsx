@@ -22,6 +22,8 @@ const DonationDialog = () => {
     setOpen(false);
   };
 
+  const info = orange[700]
+
   const handleCopy = () => {
     navigator.clipboard.writeText(
       "VYPDFMVRXCI2Z4FPC2GHB4QC6PSCTEDAS4EU7GE3W4B3MRHXNZO6BB2RZA"
@@ -33,7 +35,7 @@ const DonationDialog = () => {
     <>
       <Button
         variant="outlined"
-        color="orange[700]"
+        color="info"
         size="medium"
         style={{ margin: "0 auto", display: "flex", marginTop: "1rem"}}
         onClick={handleOpen}
