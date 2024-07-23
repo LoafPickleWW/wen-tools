@@ -26,7 +26,7 @@ const DonationDialog = () => {
 const theme = createTheme({
   palette: {
     primary: {
-      info: orange[700],
+      light: orange[700],
     },
   },
 });
@@ -42,7 +42,7 @@ const theme = createTheme({
     <>
       <Button
         variant="outlined"
-        color="info"
+        color="light"
         size="medium"
         style={{ margin: "0 auto", display: "flex", marginTop: "1rem"}}
         onClick={handleOpen}
