@@ -20,21 +20,6 @@ export function CollectionSnapshot() {
   const [checkRandSupport, setCheckRandSupport] = useState(false);
   const [checkSeparated, setCheckSeparated] = useState(false);
   const [randCreatorListings, setRandCreatorListings] = useState([]);
-  const [isHorseHolder, setIsHorseHolder] = useState(false);
-
-  async function checkWalletIsOwner() {
-    const wallet = localStorage.getItem("wallet");
-    if (wallet) {
-      const isHolder = await isWalletHolder(wallet);
-      setIsHorseHolder(isHolder);
-    } else {
-      setIsHorseHolder(false);
-    }
-  }
-
-  useEffect(() => {
-    checkWalletIsOwner();
-  }, []);
 
   async function getCollectionData() {
     if (creatorWallet) {
@@ -262,27 +247,11 @@ export function CollectionSnapshot() {
             Non-aggregated Holder List
           </label>
         </div>
-        {!isHorseHolder && (
-          <span className="text-slate-400 text-xs text-center mx-auto my-2">
-            If you hold any{" "}
-            <a
-              href="https://www.asalytic.app/collections?search=thurstober"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-slate-500 hover:text-slate-300 transition"
-            >
-              ASA from Thurstober Digital Studios
-            </a>
-            <br />
-            You can enjoy these Premium Filters:
-          </span>
-        )}
         <div className="flex items-center justify-center">
           <input
             type="checkbox"
             id="check_rand"
             className="mr-2"
-            disabled={!isHorseHolder}
             checked={checkRandSupport}
             onChange={(e) => setCheckRandSupport(e.target.checked)}
           />
@@ -329,7 +298,7 @@ export function CollectionSnapshot() {
           ) : (
             <button
               onClick={downloadCollectionDataAsCSV}
-              className="mb-2 bg-green-500 hover:bg-green-700 text-black text-base font-semibold rounded py-2 w-fit px-2 mx-auto mt-1 hover:scale-95 duration-700"
+              className="mb-2 bg-primary-green hover:bg-primary-green text-black text-base font-semibold rounded py-2 w-fit px-2 mx-auto mt-1 hover:scale-95 duration-700"
             >
               Download Holders Data
             </button>
