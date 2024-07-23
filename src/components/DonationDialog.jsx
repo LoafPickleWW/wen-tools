@@ -23,13 +23,6 @@ const DonationDialog = () => {
     setOpen(false);
   };
 
-const theme = createTheme({
-  palette: {
-    primary: {
-      light: orange[700],
-    },
-  },
-});
 
   const handleCopy = () => {
     navigator.clipboard.writeText(
@@ -42,7 +35,7 @@ const theme = createTheme({
     <>
       <Button
         variant="outlined"
-        color="light"
+        color="info"
         size="medium"
         style={{ margin: "0 auto", display: "flex", marginTop: "1rem"}}
         onClick={handleOpen}
