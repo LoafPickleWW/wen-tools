@@ -6,6 +6,7 @@ import {
   IconButton,
   TextField,
 } from "@mui/material";
+import { orange } from '@mui/material/colors';
 import { useState } from "react";
 import { FaCopy } from "react-icons/fa";
 import { toast } from "react-toastify";
@@ -32,7 +33,7 @@ const DonationDialog = () => {
     <>
       <Button
         variant="outlined"
-        color="info"
+        color="orange[700]"
         size="medium"
         style={{ margin: "0 auto", display: "flex", marginTop: "1rem"}}
         onClick={handleOpen}
