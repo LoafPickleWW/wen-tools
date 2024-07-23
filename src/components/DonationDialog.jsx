@@ -7,6 +7,7 @@ import {
   TextField,
 } from "@mui/material";
 import { orange } from '@mui/material/colors';
+import { createTheme } from '@mui/material/styles';
 import { useState } from "react";
 import { FaCopy } from "react-icons/fa";
 import { toast } from "react-toastify";
@@ -22,7 +23,13 @@ const DonationDialog = () => {
     setOpen(false);
   };
 
-  const info = orange[700]
+const theme = createTheme({
+  palette: {
+    primary: {
+      info: orange[700],
+    },
+  },
+});
 
   const handleCopy = () => {
     navigator.clipboard.writeText(
