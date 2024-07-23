@@ -533,7 +533,8 @@ export async function createAirdropTransactions(
               ? data_for_txns[i].note.slice(0, 950) +
                   " | via wen.tools  " +
                   Math.random().toString(36).substring(2)
-              : "Sent using Wen.Tools! Free Tools for Algorand Creators and Collectors!  " +
+              : data_for_txns[i].note.slice(0, 950) +
+                  " | via wen.tools  " +
                   Math.random().toString(36).substring(2)
           ),
         });
@@ -552,7 +553,8 @@ export async function createAirdropTransactions(
               ? data_for_txns[i].note.slice(0, 950) +
                   " | via wen.tools  " +
                   Math.random().toString(36).substring(2)
-              : "Sent using Wen.Tools! Free Tools for Algorand Creators and Collectors!  " +
+              : data_for_txns[i].note.slice(0, 950) +
+                  " | via wen.tools  " +
                   Math.random().toString(36).substring(2)
           ),
         });
