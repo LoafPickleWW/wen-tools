@@ -302,7 +302,7 @@ export function MultimintAssetHolders() {
             id="check_optin"
             className="mr-2"
             checked={checkNfdOnly}
-            onChange={(e) => setCheckNfdOnly(e.target.checked)
+            onChange={(e) => setCheckNfdOnly(e.target.checked)}
           />
           <label htmlFor="check_optin" className="text-slate-300">
             NFD wallets only
