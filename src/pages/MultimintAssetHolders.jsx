@@ -21,21 +21,7 @@ export function MultimintAssetHolders() {
   const [checkVerifiedOnly, setCheckVerifiedOnly] = useState(false);
   const [checkRunningNode, setCheckRunningNode] = useState(false);
   const [checkRandSupport, setCheckRandSupport] = useState(false);
-  const [isHorseHolder, setIsHorseHolder] = useState(false);
 
-  async function checkWalletIsOwner() {
-    const wallet = localStorage.getItem("wallet");
-    if (wallet) {
-      const isHolder = await isWalletHolder(wallet);
-      setIsHorseHolder(isHolder);
-    } else {
-      setIsHorseHolder(false);
-    }
-  }
-
-  useEffect(() => {
-    checkWalletIsOwner();
-  }, []);
 
   async function getAssetOwners(asset_id) {
     const isOptin = checkOptin;
@@ -310,28 +296,13 @@ export function MultimintAssetHolders() {
             Node runners only
           </label>
         </div>
-        {!isHorseHolder && (
-          <span className="text-slate-400 text-xs text-center mx-auto mt-2">
-            If you hold any{" "}
-            <a
-              href="https://www.asalytic.app/collections?search=thurstober"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-slate-500 hover:text-slate-300 transition"
-            >
-              ASA from Thurstober Digital Studios
-            </a>
-            , You can enjoy these Premium Filters:
-          </span>
-        )}
         <div className="flex items-center justify-center">
           <input
             type="checkbox"
             id="check_optin"
             className="mr-2"
             checked={checkNfdOnly}
-            onChange={(e) => setCheckNfdOnly(e.target.checked)}
-            disabled={!isHorseHolder}
+            onChange={(e) => setCheckNfdOnly(e.target.checked)
           />
           <label htmlFor="check_optin" className="text-slate-300">
             NFD wallets only
@@ -342,7 +313,6 @@ export function MultimintAssetHolders() {
             type="checkbox"
             id="check_optin"
             className="mr-2"
-            disabled={!isHorseHolder}
             checked={checkVerifiedOnly}
             onChange={(e) => setCheckVerifiedOnly(e.target.checked)}
           />
@@ -355,7 +325,6 @@ export function MultimintAssetHolders() {
             type="checkbox"
             id="check_rand"
             className="mr-2"
-            disabled={!isHorseHolder}
             checked={checkRandSupport}
             onChange={(e) => setCheckRandSupport(e.target.checked)}
           />
