@@ -172,7 +172,7 @@ export default function ConnectButton() {
           color="success"
           className="hover:bg-primary-green hover:text-white transition"
         >
-          <span className="font-sans">Connect</span>
+          <span className="font-sans text-secondary-green">Connect</span>
         </Button>
       ) : (
         <Tooltip title="Account" placement="bottom-start">
