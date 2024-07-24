@@ -48,7 +48,7 @@ export default function SelectNetworkComponent() {
                 color: "primary-green",
               },
             }}
-            color="success"
+            style={{ color: "#f57b14" }}
           />
         }
         classes={{ label: "text-white" }}
