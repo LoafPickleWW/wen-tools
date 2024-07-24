@@ -37,7 +37,7 @@ const DonationDialog = () => {
         variant="outlined"
         color="info"
         size="medium"
-        style={{ margin: "0 auto", display: "flex", marginTop: "1rem"}}
+        style={{ margin: "0 auto", display: "flex", marginTop: "1rem", color: "#f57b14"}}
         onClick={handleOpen}
       >
         Donate
