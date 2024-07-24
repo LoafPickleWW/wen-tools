@@ -45,7 +45,7 @@ export default function SelectNetworkComponent() {
                 backgroundColor: "#fff",
               },
               "& .Mui-checked": {
-                color: "orange",
+                color: "#f57b14",
               },
             }}
             style={{ color: "#f57b14" }}
