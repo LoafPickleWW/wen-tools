@@ -225,7 +225,7 @@ export async function createAssetConfigArray(
       amount: algosToMicroalgos(UPDATE_FEE_PER_ASA),
       suggestedParams: params,
       note: new TextEncoder().encode(
-        "via wen.tools | " +
+        "via wen.tools - free tools for creators and collectors | " +
           Math.random().toString(36).substring(2)
       ),
     });
@@ -288,7 +288,7 @@ export async function createAssetMintArray(
         amount: algosToMicroalgos(MINT_FEE_PER_ASA),
         suggestedParams: params,
         note: new TextEncoder().encode(
-          "via wen.tools | " +
+          "via wen.tools - free tools for creators and collectors | " +
             Math.random().toString(36).substring(2)
         ),
       });
@@ -351,7 +351,7 @@ export async function createARC3AssetMintArray(data_for_txns, nodeURL, token) {
         amount: algosToMicroalgos(MINT_FEE_PER_ASA),
         suggestedParams: params,
         note: new TextEncoder().encode(
-          "via wen.tools | " +
+          "via wen.tools - free tools for creators and collectors | " +
             Math.random().toString(36).substring(2)
         ),
       });
@@ -409,7 +409,7 @@ export async function createARC19AssetMintArray(data_for_txns, nodeURL, token) {
         amount: algosToMicroalgos(MINT_FEE_PER_ASA),
         suggestedParams: params,
         note: new TextEncoder().encode(
-          "via wen.tools | " +
+          "via wen.tools - free tools for creators and collectors | " +
             Math.random().toString(36).substring(2)
         ),
       });
@@ -467,7 +467,7 @@ export async function updateARC19AssetMintArray(data_for_txns, nodeURL, token) {
         amount: algosToMicroalgos(UPDATE_FEE_PER_ASA),
         suggestedParams: params,
         note: new TextEncoder().encode(
-          "via wen.tools | " +
+          "via wen.tools - free tools for creators and collectors | " +
             Math.random().toString(36).substring(2)
         ),
       });
@@ -531,10 +531,10 @@ export async function createAirdropTransactions(
           note: new TextEncoder().encode(
             isHolder
               ? data_for_txns[i].note.slice(0, 950) +
-                  " | via wen.tools  " +
+                  " | via wen.tools - free tools for creators and collectors  " +
                   Math.random().toString(36).substring(2)
               : data_for_txns[i].note.slice(0, 950) +
-                  " | via wen.tools  " +
+                  " | via wen.tools - free tools for creators and collectors  " +
                   Math.random().toString(36).substring(2)
           ),
         });
@@ -551,10 +551,10 @@ export async function createAirdropTransactions(
           note: new TextEncoder().encode(
             isHolder
               ? data_for_txns[i].note.slice(0, 950) +
-                  " | via wen.tools  " +
+                  " | via wen.tools - free tools for creators and collectors  " +
                   Math.random().toString(36).substring(2)
               : data_for_txns[i].note.slice(0, 950) +
-                  " | via wen.tools  " +
+                  " | via wen.tools - free tools for creators and collectors  " +
                   Math.random().toString(36).substring(2)
           ),
         });
@@ -642,7 +642,7 @@ export async function createAssetOptInTransactions(assets, nodeURL, mnemonic) {
       amount: 0,
       assetIndex: parseInt(assets[i]),
       suggestedParams: params,
-      note: new TextEncoder().encode("via wen.tools"),
+      note: new TextEncoder().encode("via wen.tools - free tools for creators and collectors"),
     });
     txnsArray.push(tx);
   }
@@ -688,7 +688,7 @@ export async function createClawbackTransactions(
       amount: parseInt(
         data_for_txns[i].amount * 10 ** assetDecimals[data_for_txns[i].asset_id]
       ),
-      note: new TextEncoder().encode("via wen.tools"),
+      note: new TextEncoder().encode("via wen.tools - free tools for creators and collectors"),
     });
     txnsArray.push(tx);
   }
@@ -730,7 +730,7 @@ export async function createFreezeTransactions(
       assetIndex: parseInt(data_for_txns[i].asset_id),
       freezeState: data_for_txns[i].frozen.trim() === "Y" ? true : false,
       freezeTarget: data_for_txns[i].wallet,
-      note: new TextEncoder().encode("via wen.tools"),
+      note: new TextEncoder().encode("via wen.tools - free tools for creators and collectors"),
     });
     txnsArray.push(tx);
   }
@@ -786,7 +786,7 @@ export async function createAssetOptoutTransactions(
         assetIndex: parseInt(assets[i]),
         suggestedParams: params,
         closeRemainderTo: creatorAddress.trim(),
-        note: new TextEncoder().encode("via wen.tools"),
+        note: new TextEncoder().encode("via wen.tools - free tools for creators and collectors"),
       });
       txnsArray.push(tx);
     }
@@ -828,7 +828,7 @@ export async function createAssetDeleteTransactions(assets, nodeURL, mnemonic) {
         suggestedParams: params,
         assetIndex: parseInt(assets[i]),
         note: new TextEncoder().encode(
-          "via wen.tools | " +
+          "via wen.tools - free tools for creators and collectors | " +
             Math.random().toString(36).substring(2)
         ),
       });
