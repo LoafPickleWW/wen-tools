@@ -39,7 +39,7 @@ export default function SelectNetworkComponent() {
             }
             sx={{
               "& .MuiSwitch-thumb": {
-                backgroundColor: "#fff",
+                backgroundColor: "#f57b14",
               },
               "& .MuiSwitch-track": {
                 backgroundColor: "#fff",
