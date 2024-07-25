@@ -35,16 +35,16 @@ export default function NetworkSelect() {
             onChange={updateNetworkType}
             sx={{
               "& .MuiSwitch-thumb": {
-                backgroundColor: "#fff",
+                backgroundColor: "#f57b14",
               },
               "& .MuiSwitch-track": {
                 backgroundColor: "#fff",
               },
               "& .Mui-checked": {
-                color: "green",
+                color: "#f57b14",
               },
             }}
-            color="success"
+            color="#f57b14"
           />
         }
         classes={{ label: "text-white" }}
