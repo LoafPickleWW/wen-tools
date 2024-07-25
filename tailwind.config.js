@@ -28,7 +28,7 @@ module.exports = {
       },
     },
     fontFamily: {
-      sans: ["Josefin Slab", "sans"],
+      sans: ["Poppins", "sans-serif"],
       roboto: ["Roboto", "sans-serif"],
     },
   },
