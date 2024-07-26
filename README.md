@@ -22,7 +22,8 @@ Changes that are merged to `main` will be deployed automatically.
 ## Contributing
 To contribute, fork this repo and propose changes back via Pull Request.  One of the team members will review and merge your changes.  
 
-
+## Brand Kit
+https://drive.google.com/drive/folders/1__MffzHe_qNcpttT6GjpZHackStN_D4C?usp=sharing
 
 ## Authors
 * **algovado** - *Initial work* - [algovado](https://github.com/algovado)
