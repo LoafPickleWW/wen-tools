@@ -27,7 +27,7 @@ export const IPFS_ENDPOINT = "https://ipfs.algonode.xyz/ipfs/";
 export const CREATOR_WALLETS = [
 ];
 
-export const PREFIXES = ["HORSE", "PONY", "tiny", "2INY"];
+export const PREFIXES = [];
 
 // TOOLS
 export const TOOLS = [
