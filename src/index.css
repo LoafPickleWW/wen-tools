@@ -24,10 +24,10 @@ input[type="number"] {
 
 @keyframes ticker {
   0% {
-    transform: translateX(-150%);
+    transform: translateX(+150%);
   }
   100% {
-    transform: translateX(+150%);
+    transform: translateX(-150%);
   }
 }
 
