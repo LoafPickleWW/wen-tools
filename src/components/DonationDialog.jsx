@@ -26,7 +26,7 @@ const DonationDialog = () => {
 
   const handleCopy = () => {
     navigator.clipboard.writeText(
-      "VYPDFMVRXCI2Z4FPC2GHB4QC6PSCTEDAS4EU7GE3W4B3MRHXNZO6BB2RZA"
+      "RBZ4GUE7FFDZWCN532FFR5AIYJ6K4V2GKJS5B42JPSWOAVWUT4OHWG57YQ"
     );
     toast.success("Copied to clipboard");
   };
@@ -45,7 +45,7 @@ const DonationDialog = () => {
       <Dialog open={open} onClose={handleClose}>
         <DialogTitle sx={{ textAlign: "center" }}>Donate</DialogTitle>
         <DialogContent>
-          <a href="algorand://VYPDFMVRXCI2Z4FPC2GHB4QC6PSCTEDAS4EU7GE3W4B3MRHXNZO6BB2RZA?amount=25000000&note=The%20Laboratory%20Donation">
+          <a href="algorand://RBZ4GUE7FFDZWCN532FFR5AIYJ6K4V2GKJS5B42JPSWOAVWUT4OHWG57YQ?amount=25000000&note=Wen%20Tools%20Donation">
             <img
               src="../qr.svg"
               alt="donate"
@@ -56,12 +56,12 @@ const DonationDialog = () => {
             Click/Scan the QR code or copy the address below 🙏
           </p>
           <TextField
-            value="VYPDFMVRXCI2Z4FPC2GHB4QC6PSCTEDAS4EU7GE3W4B3MRHXNZO6BB2RZA"
+            value="RBZ4GUE7FFDZWCN532FFR5AIYJ6K4V2GKJS5B42JPSWOAVWUT4OHWG57YQ"
             variant="outlined"
             margin="none"
             fullWidth
             size="small"
-            helperText="bykewel.algo"
+            helperText="wentools.algo"
             FormHelperTextProps={{
               style: { textAlign: "center" },
             }}
