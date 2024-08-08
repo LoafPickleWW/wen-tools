@@ -7,7 +7,7 @@ export function SelectToolComponent() {
     <div className="text-center">
       <CarouselComponent
         images={[
-          { path: "./wentools.png", url: "https://wen.tools" },
+          { path: "./wentols.png", url: "https://wen.tools" },
           { path: "./wenwallet.png", url: "https://wallet.wen.tools" },
           { path: "./wenswap.png", url: "https://swap.wen.tools" },
         ]}
