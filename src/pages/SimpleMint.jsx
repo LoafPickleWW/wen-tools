@@ -719,7 +719,7 @@ export function SimpleMint() {
         own token. Evil Tools will not be held responsible for anything that
         happens to publicly hosted images.
       </p>
-      <p className="text-sm italic text-slate-200">Fee: 0.1A</p>
+      <p className="text-sm italic text-slate-200">Fee: Free</p>
       <p className="text-center text-xs text-slate-400 py-2">
         ⚠️If you reload or close this page, you will lose your progress⚠️
         <br />
@@ -735,7 +735,7 @@ export function SimpleMint() {
           {
             question: "How much does it cost to Mint?",
             answer:
-              "There is a network fee of 0.1A and a Lab fee of 0.1A. In total you need to have at least 0.2A in your wallet before minting.",
+              "There is a network fee of 0.1A. In total you need to have at least 0.2A in your wallet before minting.",
           },
           {
             question: "Can I mint a token or memecoin?",
