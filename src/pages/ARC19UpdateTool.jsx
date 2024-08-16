@@ -339,7 +339,7 @@ export function ARC19UpdateTool() {
           )}
         </div>
       )}
-      <p className="text-sm italic text-slate-200">Fee: 0.05A/ASA</p>
+      <p className="text-sm italic text-slate-200">Fee: Free</p>
 
       <p className="text-center text-xs text-slate-400 py-1">
         ⚠️If you reload or close this page, you will lose your progress⚠️
