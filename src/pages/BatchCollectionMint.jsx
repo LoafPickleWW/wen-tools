@@ -251,7 +251,7 @@ export function BatchCollectionMint() {
               </p>
               <p className="text-sm italic py-1">3- Sign Your Transactions</p>
               <p className="text-sm italic py-1 text-slate-200">
-                Fee: 0.1A/ASA
+                Fee: Free
               </p>
               {!txSendingInProgress ? (
                 <button
