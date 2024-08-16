@@ -351,7 +351,7 @@ export function ARC3MintTool() {
               )}
             </>
           )}
-          <p className="text-sm italic py-1 text-slate-200">Fee: 0.1A/ASA</p>
+          <p className="text-sm italic py-1 text-slate-200">Fee: Free</p>
         </div>
       )}
       <p className="text-center text-xs text-slate-400 py-2">
