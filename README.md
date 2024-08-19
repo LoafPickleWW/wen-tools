@@ -31,6 +31,16 @@ https://drive.google.com/drive/folders/1__MffzHe_qNcpttT6GjpZHackStN_D4C?usp=sha
 
 See the list of [contributors](https://github.com/thurstober-digital/evil-tools/contributors) who participated in this project.
 
+## Bounties
+* **Have Slider Track Color and Donate Button outline have Hex Code #f57b14** - 100A
+* **Integrate Crust IPFS Network to all Mint tools w/ Option to opt out and enter own Pinata Key** - 2000A
+* **Add an airdrop to multimint asset holders to Simple Airdrop Tool** - 500A
+* **Add NFD Vault and ARC59 Asset Inbox claims to Wen Wallet** - 1000A 
+* **Add dropdown menu to wen.tools with the links to wallet.wen.tools and swap.wen.tools added** - 250A
+* **Integrate Use-Wallet** - 250A
+* **Create an On-chain Vote Tool under a new Repo. DM for details** - 750A
+
+
 ## License
 This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) file for details
 
