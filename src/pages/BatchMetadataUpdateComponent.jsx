@@ -50,15 +50,11 @@ export function BatchCollectionMetadataUpdate() {
       });
 
       Object.keys(item).forEach((key) => {
-        if (key.startsWith("property_")) {
-          asset_note.properties[key.replace("property_", "")] = item[key];
+        if (key.startsWith("properties_")) {
+          asset_note.properties[key.replace("properties_", "")] = item[key];
         }
         if (key.startsWith("extra_")) {
           asset_note.extra[key.replace("extra_", "")] = item[key];
-        }
-        if (key.startsWith("filters_")) {
-          asset_note.properties.filters[key.replace("filters_", "")] =
-            item[key];
         }
       });
       item.asset_id = parseInt(item.index);
