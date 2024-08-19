@@ -39,6 +39,7 @@ See the list of [contributors](https://github.com/thurstober-digital/evil-tools/
 * **Add dropdown menu to wen.tools with the links to wallet.wen.tools and swap.wen.tools added** - 250A
 * **Integrate Use-Wallet** - 250A
 * **Create an On-chain Vote Tool under a new Repo. DM for details** - 750A
+* **Have a local save state for Simple Mint and Update so if a person needs to leave the page, all the information stays** - 500A
 
 
 ## License
