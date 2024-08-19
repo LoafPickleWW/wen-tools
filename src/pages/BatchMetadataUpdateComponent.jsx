@@ -37,6 +37,7 @@ export function BatchCollectionMetadataUpdate() {
       let asset_note = {
         mime_type: item.mime_type,
         description: item.description,
+        external_url:item.external_url,
         properties: {
         filters: {}
         },
