@@ -38,14 +38,14 @@ export default function SelectNetworkComponent() {
                 : updateNetworkType("mainnet")
             }
             sx={{
-              "& .MuiSwitch-thumb": {
-                backgroundColor: "#f57b14",
-              },
               "& .MuiSwitch-track": {
                 backgroundColor: "#fff",
               },
-              "& .Mui-checked": {
+              '& .MuiSwitch-switchBase.Mui-checked': {
                 color: "#f57b14",
+              },
+              '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
+                backgroundColor: "#f57b14",
               },
             }}
             style={{ color: "#f57b14" }}
