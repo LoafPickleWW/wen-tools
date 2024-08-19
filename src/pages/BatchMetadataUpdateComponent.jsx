@@ -39,7 +39,6 @@ export function BatchCollectionMetadataUpdate() {
         description: item.description,
         external_url: item.external_url,
         properties: {
-        filters: {}
         },
         extra: {},
       };
