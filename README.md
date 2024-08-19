@@ -32,6 +32,8 @@ https://drive.google.com/drive/folders/1__MffzHe_qNcpttT6GjpZHackStN_D4C?usp=sha
 See the list of [contributors](https://github.com/thurstober-digital/evil-tools/contributors) who participated in this project.
 
 ## Bounties
+Bounties will be paid out upon successful merge and approval of the Pull Request. 
+
 * **Have Slider Track Color and Donate Button outline have Hex Code #f57b14** - 100A
 * **Integrate Crust IPFS Network to all Mint tools w/ Option to opt out and enter own Pinata Key** - 2000A
 * **Add an airdrop to multimint asset holders to Simple Airdrop Tool** - 500A
