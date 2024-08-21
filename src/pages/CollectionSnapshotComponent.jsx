@@ -266,7 +266,7 @@ export function CollectionSnapshot() {
         Just works with 1/1 ASAs.
       </p>
       <button
-        className="mb-2 bg-secondary-green/80 hover:bg-secondary-green text-black text-base font-semibold rounded py-2 w-fit px-2 mx-auto mt-1 hover:scale-95 duration-700"
+        className="mb-2 bg-secondary-orange/80 hover:bg-secondary-orange text-black text-base font-semibold rounded py-2 w-fit px-2 mx-auto mt-1 hover:scale-95 duration-700"
         onClick={getCollectionData}
       >
         Get Holders Data
@@ -298,7 +298,7 @@ export function CollectionSnapshot() {
           ) : (
             <button
               onClick={downloadCollectionDataAsCSV}
-              className="mb-2 bg-primary-green hover:bg-primary-green text-black text-base font-semibold rounded py-2 w-fit px-2 mx-auto mt-1 hover:scale-95 duration-700"
+              className="mb-2 bg-primary-orange hover:bg-primary-orange text-black text-base font-semibold rounded py-2 w-fit px-2 mx-auto mt-1 hover:scale-95 duration-700"
             >
               Download Holders Data
             </button>

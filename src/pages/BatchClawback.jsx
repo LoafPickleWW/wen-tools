@@ -120,7 +120,7 @@ export function BatchClawback() {
       <p className="text-2xl font-bold mt-1">
         {TOOLS.find((tool) => tool.path === window.location.pathname).label}
       </p>
-      <button className="text-center text-lg text-black mt-2 bg-primary-green px-4 py-2 rounded">
+      <button className="text-center text-lg text-black mt-2 bg-primary-orange px-4 py-2 rounded">
         <a
           className="hover:text-black transition"
           href="https://docs.google.com/spreadsheets/d/1U_U_5qTIrEETl1I-8pnpwBZ4qDlJKKRIvEIbhZkXTpA/edit?usp=sharing"
@@ -130,7 +130,7 @@ export function BatchClawback() {
           CSV Template
         </a>
       </button>
-      <button className="text-center text-lg text-black mt-2 bg-primary-green px-4 py-2 rounded">
+      <button className="text-center text-lg text-black mt-2 bg-primary-orange px-4 py-2 rounded">
         <a
           className="hover:text-black transition"
           href="https://loafpickle.medium.com/evil-tools-mass-freeze-and-clawback-1e4c677fc574"
@@ -181,7 +181,7 @@ export function BatchClawback() {
         <div className="flex flex-col justify-center items-center w-[16rem]">
           {isTransactionsFinished ? (
             <>
-              <p className="pt-4 text-primary-green animate-pulse text-sm">
+              <p className="pt-4 text-primary-orange animate-pulse text-sm">
                 All transactions completed!
                 <br />
               </p>
@@ -199,7 +199,7 @@ export function BatchClawback() {
               {!txSendingInProgress ? (
                 <button
                   id="approve-send"
-                  className="mb-2 bg-primary-green hover:bg-green-700 text-black text-base font-semibold rounded py-2 w-fit px-2 mx-auto mt-1 hover:scale-95 duration-700"
+                  className="mb-2 bg-primary-orange hover:bg-green-700 text-black text-base font-semibold rounded py-2 w-fit px-2 mx-auto mt-1 hover:scale-95 duration-700"
                   onClick={handleFileData}
                 >
                   Approve & Send

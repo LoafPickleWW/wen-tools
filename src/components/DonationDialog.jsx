@@ -35,9 +35,19 @@ const DonationDialog = () => {
     <>
       <Button
         variant="outlined"
-        color="info"
         size="medium"
-        style={{ margin: "0 auto", display: "flex", marginTop: "1rem", color: "#f57b14"}}
+        sx={{ 
+          margin: "0 auto", 
+          marginTop: "1rem", 
+          color: "#f57b14", 
+          border: "solid 1px #f57b14",
+          transition: "color 0.3s ease, border 0.3s ease, opacity 0.3s ease",
+          opacity: 0.8,
+          '&:hover': {
+            border: "solid 1px #f57b14",
+            opacity: 1,
+          },
+    }}
         onClick={handleOpen}
       >
         Donate
