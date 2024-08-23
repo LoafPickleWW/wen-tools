@@ -2,6 +2,9 @@ import { useState } from "react";
 
 import algosdk from "algosdk";
 import { toast } from "react-toastify";
+import { useAtom } from 'jotai';
+import { atomWithStorage, RESET } from 'jotai/utils';
+import { Button } from "@mui/material";
 import {
   getNodeURL,
   createARC3AssetMintArray,
@@ -16,43 +19,46 @@ import {
 import { TOOLS } from "../constants";
 import FaqSectionComponent from "../components/FaqSectionComponent";
 
+const simpleMintAtom = atomWithStorage('simpleMint', {
+  name: "",
+  unitName: "",
+  totalSupply: 1,
+  decimals: 0,
+  image: null,
+  format: "ARC19",
+  freeze: false,
+  clawback: false,
+  defaultFrozen: false,
+  urlField: "",
+  description: "",
+  external_url: "",
+  traits: [
+    {
+      id: 1,
+      category: "",
+      name: "",
+    },
+  ],
+  filters: [
+    {
+      id: 1,
+      category: "",
+      name: "",
+    },
+  ],
+  extras: [
+    {
+      id: 1,
+      category: "",
+      name: "",
+    },
+  ],
+});
+const smTokenAtom = atomWithStorage('smToken', "");
+
 export function SimpleMint() {
-  const [formData, setFormData] = useState({
-    name: "",
-    unitName: "",
-    totalSupply: 1,
-    decimals: 0,
-    image: null,
-    format: "ARC19",
-    freeze: false,
-    clawback: false,
-    defaultFrozen: false,
-    urlField: "",
-    description: "",
-    external_url: "",
-    traits: [
-      {
-        id: 1,
-        category: "",
-        name: "",
-      },
-    ],
-    filters: [
-      {
-        id: 1,
-        category: "",
-        name: "",
-      },
-    ],
-    extras: [
-      {
-        id: 1,
-        category: "",
-        name: "",
-      },
-    ],
-  });
-  const [token, setToken] = useState("");
+  const [formData, setFormData] = useAtom(simpleMintAtom);
+  const [token, setToken] = useAtom(smTokenAtom);
   const [processStep, setProcessStep] = useState(0);
   const [transaction, setTransaction] = useState(null);
   const [createdAssetID, setCreatedAssetID] = useState(null);
@@ -288,12 +294,19 @@ export function SimpleMint() {
       const { txId } = await algodClient.sendRawTransaction(groups[0]).do();
       const result = await algosdk.waitForConfirmation(algodClient, txId, 3);
       setCreatedAssetID(result["asset-index"]);
+      removeStoredData(); // Remove stored data now that mint is complete
       toast.success("Asset created successfully!");
       setProcessStep(4);
     } catch (error) {
       toast.error("Something went wrong!");
       setProcessStep(2);
     }
+  }
+
+  /** Remove the locally stored data */
+  function removeStoredData() {
+    setFormData(RESET);
+    setToken(RESET);
   }
 
   return (
@@ -719,12 +732,17 @@ export function SimpleMint() {
         own token. Evil Tools will not be held responsible for anything that
         happens to publicly hosted images.
       </p>
-      <p className="text-sm italic text-slate-200">Fee: Free</p>
-      <p className="text-center text-xs text-slate-400 py-2">
-        ⚠️If you reload or close this page, you will lose your progress⚠️
-        <br />
-        You can reload the page if you want to stop/restart the process!
-      </p>
+      <p className="text-sm italic text-slate-200 mb-6">Fee: Free</p>
+      <Button
+        variant="outlined"
+        color="error"
+        onClick={() => {
+          removeStoredData();
+          window.location.reload();
+        }}
+      >
+        Clear &amp; start over
+      </Button>
       <FaqSectionComponent
         faqData={[
           {

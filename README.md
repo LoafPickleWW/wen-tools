@@ -41,7 +41,7 @@ Bounties will be paid out upon successful merge and approval of the Pull Request
 * **Add dropdown menu to wen.tools with the links to wallet.wen.tools and swap.wen.tools added** - 250A
 * **Integrate Use-Wallet** - 250A
 * **Create an On-chain Vote Tool under a new Repo. DM for details** - 750A
-* **Have a local save state for Simple Mint and Update so if a person needs to leave the page, all the information stays** - 500A
+* ~~**Have a local save state for Simple Mint and Update so if a person needs to leave the page, all the information stays** - 500A~~ Completed by [No-Cash](https://github.com/No-Cash-7970)
 
 
 ## License

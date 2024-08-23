@@ -3,6 +3,8 @@ import { useState } from "react";
 import algosdk from "algosdk";
 import { toast } from "react-toastify";
 import axios from "axios";
+import { useAtom } from 'jotai';
+import { atomWithStorage, RESET } from 'jotai/utils';
 import {
   pinImageToPinata,
   getNodeURL,
@@ -16,28 +18,32 @@ import {
 } from "../utils";
 import { TOOLS, IPFS_ENDPOINT } from "../constants";
 
+const simpleUpdateAtom = atomWithStorage('simpleUpdate', {
+  name: "",
+  unitName: "",
+  totalSupply: 1,
+  decimals: 0,
+  image: null,
+  format: "",
+  freeze: false,
+  clawback: false,
+  image_url: "",
+  image_mime_type: "",
+  description: "",
+  external_url: "",
+  traits: [],
+  filters: [],
+  extras: []
+});
+const suAssetIdAtom = atomWithStorage('suAssetId', "");
+const suTokenAtom = atomWithStorage('suToken', "");
+
 export function SimpleUpdate() {
-  const [formData, setFormData] = useState({
-    name: "",
-    unitName: "",
-    totalSupply: 1,
-    decimals: 0,
-    image: null,
-    format: "",
-    freeze: false,
-    clawback: false,
-    image_url: "",
-    image_mime_type: "",
-    description: "",
-    external_url: "",
-    traits: [],
-    filters: [],
-    extras: []
-  });
-  const [token, setToken] = useState("");
+  const [formData, setFormData] = useAtom(simpleUpdateAtom);
+  const [token, setToken] = useAtom(suTokenAtom);
   const [processStep, setProcessStep] = useState(0);
   const [transaction, setTransaction] = useState(null);
-  const [assetID, setAssetID] = useState("");
+  const [assetID, setAssetID] = useAtom(suAssetIdAtom);
 
   const TraitMetadataInputField = (id, type) => {
     return (
@@ -386,12 +392,20 @@ export function SimpleUpdate() {
       }
       const groups = sliceIntoChunks(signedAssetTransaction, 2);
       await algodClient.sendRawTransaction(groups[0]).do();
+      removeStoredData(); // Remove stored data now that update is complete
       toast.success("Asset updated successfully!");
       setProcessStep(4);
     } catch (error) {
       toast.error("Something went wrong!");
       setProcessStep(2);
     }
+  }
+
+  /** Remove the locally stored data */
+  function removeStoredData() {
+    setFormData(RESET);
+    setAssetID(RESET);
+    setToken(RESET);
   }
 
   return (
@@ -405,6 +419,7 @@ export function SimpleUpdate() {
             <button
               className="rounded bg-secondary-orange hover:bg-secondary-orange/80  text-black px-4 py-1 mt-2"
               onClick={() => {
+                removeStoredData();
                 window.location.reload();
               }}
             >
@@ -790,11 +805,6 @@ export function SimpleUpdate() {
         happens to publicly hosted images.
       </p>
       <p className="text-sm italic text-slate-200">Fee: Free</p>
-      <p className="text-center text-xs text-slate-400 py-2">
-        ⚠️If you reload or close this page, you will lose your progress⚠️
-        <br />
-        You can reload the page if you want to stop/restart the process!
-      </p>
     </div>
   );
 }
