@@ -34,7 +34,7 @@ See the list of [contributors](https://github.com/thurstober-digital/evil-tools/
 ## Bounties
 Bounties will be paid out upon successful merge and approval of the Pull Request. 
 
-* **Have Slider Track Color and Donate Button outline have Hex Code #f57b14** - 100A
+* ~~**Have Slider Track Color and Donate Button outline have Hex Code #f57b14** - 100A~~ Completed by [Vince](https://github.com/vincealvare)
 * **Integrate Crust IPFS Network to all Mint tools w/ Option to opt out and enter own Pinata Key** - 2000A
 * **Add an airdrop to multimint asset holders to Simple Airdrop Tool** - 500A
 * **Add NFD Vault and ARC59 Asset Inbox claims to Wen Wallet** - 1000A 
