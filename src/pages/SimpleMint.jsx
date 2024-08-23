@@ -549,7 +549,7 @@ export function SimpleMint() {
         })}
       </div>
       <button
-        className="rounded-md bg-primary-green hover:bg-green-600 transition text-black px-4 py-1"
+        className="rounded-md bg-primary-orange hover:bg-green-600 transition text-black px-4 py-1"
         onClick={() => {
           let lastId;
           try {
@@ -584,7 +584,7 @@ export function SimpleMint() {
         })}
       </div>
       <button
-        className="rounded-md bg-primary-green hover:bg-green-600 transition text-black px-4 py-1"
+        className="rounded-md bg-primary-orange hover:bg-green-600 transition text-black px-4 py-1"
         onClick={() => {
           let lastId;
           try {
@@ -617,7 +617,7 @@ export function SimpleMint() {
         })}
       </div>
       <button
-        className="rounded-md bg-primary-green hover:bg-green-600 transition text-black px-4 py-1"
+        className="rounded-md bg-primary-orange hover:bg-green-600 transition text-black px-4 py-1"
         onClick={() => {
           let lastId;
           try {
@@ -657,7 +657,7 @@ export function SimpleMint() {
           <a
             href="https://knowledge.pinata.cloud/en/articles/6191471-how-to-create-an-pinata-api-key"
             target="_blank"
-            className="text-primary-green/70 hover:text-secondary-green/80 transition"
+            className="text-primary-orange/70 hover:text-secondary-orange/80 transition"
             rel="noreferrer"
           >
             here
@@ -702,7 +702,7 @@ export function SimpleMint() {
             </p>
             <button
               id="create_transactions_id"
-              className="rounded bg-secondary-green hover:bg-secondary-green/80 transition text-black/90 font-semibold px-4 py-1 mt-2"
+              className="rounded bg-secondary-orange hover:bg-secondary-orange/80 transition text-black/90 font-semibold px-4 py-1 mt-2"
               onClick={() => {
                 sendTransaction();
               }}
@@ -718,14 +718,14 @@ export function SimpleMint() {
             ></div>
             Creating transaction...
           </div>
-        ) : (<>
-            <button
-              className="rounded bg-secondary-green hover:bg-secondary-green/80 transition text-black/90 font-semibold px-4 py-1 mt-2"
-              onClick={mint}
-            >
-              Step 1: Mint
-            </button>
-          </>)}
+        ) : (
+          <button
+            className="rounded bg-secondary-orange hover:bg-secondary-orange/80 transition text-black/90 font-semibold px-4 py-1 mt-2"
+            onClick={mint}
+          >
+            Step 1: Mint
+          </button>
+        )}
       </div>
       <p className="text-sm italic text-slate-200 px-4">
         **It is recommended that any Creator Host their own Files using their

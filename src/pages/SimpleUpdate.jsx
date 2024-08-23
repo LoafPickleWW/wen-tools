@@ -417,7 +417,7 @@ export function SimpleUpdate() {
         <>
           <div className="flex flex-col md:flex-row justify-between">
             <button
-              className="rounded bg-secondary-green hover:bg-secondary-green/80  text-black px-4 py-1 mt-2"
+              className="rounded bg-secondary-orange hover:bg-secondary-orange/80  text-black px-4 py-1 mt-2"
               onClick={() => {
                 removeStoredData();
                 window.location.reload();
@@ -593,7 +593,7 @@ export function SimpleUpdate() {
           </div>
           {formData.format !== "ARC3" && (
             <button
-              className="rounded-md bg-primary-green hover:bg-green-600 transition text-black px-4 py-1"
+              className="rounded-md bg-primary-orange hover:bg-green-600 transition text-black px-4 py-1"
               onClick={() => {
                 let lastId;
                 try {
@@ -630,7 +630,7 @@ export function SimpleUpdate() {
           </div>
           {formData.format !== "ARC3" && (
             <button
-              className="rounded-md bg-primary-green hover:bg-green-600 transition text-black px-4 py-1"
+              className="rounded-md bg-primary-orange hover:bg-green-600 transition text-black px-4 py-1"
               onClick={() => {
                 let lastId;
                 try {
@@ -665,7 +665,7 @@ export function SimpleUpdate() {
           </div>
           {formData.format !== "ARC3" && (
             <button
-              className="rounded-md bg-primary-green hover:bg-green-600 transition text-black px-4 py-1"
+              className="rounded-md bg-primary-orange hover:bg-green-600 transition text-black px-4 py-1"
               onClick={() => {
                 let lastId;
                 try {
@@ -713,7 +713,7 @@ export function SimpleUpdate() {
                     <a
                       href="https://knowledge.pinata.cloud/en/articles/6191471-how-to-create-an-pinata-api-key"
                       target="_blank"
-                      className="text-primary-green/70 hover:text-secondary-green/80 transition"
+                      className="text-primary-orange/70 hover:text-secondary-orange/80 transition"
                       rel="noreferrer"
                     >
                       here
@@ -755,7 +755,7 @@ export function SimpleUpdate() {
                     </p>
                     <button
                       id="create_transactions_id"
-                      className="rounded bg-secondary-green hover:bg-secondary-green/80 transition text-black font-semibold px-4 py-1 mt-2"
+                      className="rounded bg-secondary-orange hover:bg-secondary-orange/80 transition text-black font-semibold px-4 py-1 mt-2"
                       onClick={() => {
                         sendTransaction();
                       }}
@@ -773,7 +773,7 @@ export function SimpleUpdate() {
                   </div>
                 ) : (
                   <button
-                    className="rounded bg-secondary-green hover:bg-secondary-green/80 transition text-black font-semibold px-4 py-1 mt-2"
+                    className="rounded bg-secondary-orange hover:bg-secondary-orange/80 transition text-black font-semibold px-4 py-1 mt-2"
                     onClick={update}
                   >
                     Update
@@ -792,7 +792,7 @@ export function SimpleUpdate() {
             className="w-48 bg-gray-300 text-sm font-medium text-center leading-none text-black placeholder:text-black/50 px-3 py-2 border rounded border-gray-200"
           ></input>
           <button
-            className="rounded bg-secondary-green hover:bg-secondary-green/80 transition text-black/90 font-semibold px-4 py-1 mt-2"
+            className="rounded bg-secondary-orange hover:bg-secondary-orange/80 transition text-black/90 font-semibold px-4 py-1 mt-2"
             onClick={getAssetData}
           >
             Next

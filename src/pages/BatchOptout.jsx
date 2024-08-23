@@ -96,7 +96,7 @@ export function BatchOptout() {
         ⚠️ ⚠️ ⚠️ ⚠️ <br />
         You can not opt-out of assets that you created.
         <br />
-        <span className="text-secondary-green font-semibold">
+        <span className="text-secondary-orange font-semibold">
           WARNING: Opting out of assets with a balance greater than 0 will send
           the asset back to the creator wallet and opt you out!
         </span>
@@ -151,7 +151,7 @@ export function BatchOptout() {
               />
               <button
                 id="confirm-input"
-                className="mb-2 bg-primary-green hover:bg-primary-green text-black text-sm font-semibold rounded py-1 w-fit px-4 mx-auto mt-1 hover:scale-95 duration-700"
+                className="mb-2 bg-primary-orange hover:bg-primary-orange text-black text-sm font-semibold rounded py-1 w-fit px-4 mx-auto mt-1 hover:scale-95 duration-700"
                 onClick={() => {
                   // split with comma or newline
                   let splittedAssetIds = assetIds.split(/[\n,]/);
@@ -171,7 +171,7 @@ export function BatchOptout() {
         <div className="flex flex-col justify-center items-center w-[16rem]">
           {isTransactionsFinished ? (
             <>
-              <p className="pt-4 text-primary-green animate-pulse text-sm">
+              <p className="pt-4 text-primary-orange animate-pulse text-sm">
                 All transactions completed!
                 <br />
               </p>
@@ -188,7 +188,7 @@ export function BatchOptout() {
               {!txSendingInProgress ? (
                 <button
                   id="approve-send"
-                  className="mb-2 bg-primary-green hover:bg-primary-green text-black text-base font-semibold rounded py-2 w-fit px-2 mx-auto mt-1 hover:scale-95 duration-700"
+                  className="mb-2 bg-primary-orange hover:bg-primary-orange text-black text-base font-semibold rounded py-2 w-fit px-2 mx-auto mt-1 hover:scale-95 duration-700"
                   onClick={handleFileData}
                 >
                   Approve & Send

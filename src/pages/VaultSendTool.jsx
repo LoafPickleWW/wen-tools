@@ -282,7 +282,7 @@ export function VaultSendTool() {
         A vault is an Algorand account controlled by an NFD's smart contract
         that can automatically opt-in to assets it receives. Check{" "}
         <a
-          className="hover:text-primary-green text-primary-green transition"
+          className="hover:text-primary-orange text-primary-orange transition"
           target="_blank"
           rel="noopener noreferrer"
           href="https://api-docs.nf.domains/reference/integrators-guide/using-vaults-2.x+"
@@ -297,7 +297,7 @@ export function VaultSendTool() {
       <p>Select Tool Type</p>
       <div className="flex flex-col items-center">
         <select
-          className="text-base rounded border-gray-300 text-black transition focus:ring-secondary-green px-2"
+          className="text-base rounded border-gray-300 text-black transition focus:ring-secondary-orange px-2"
           value={toolType}
           onChange={(e) => {
             setToolType(e.target.value);
@@ -387,7 +387,7 @@ export function VaultSendTool() {
       <div className="flex flex-col justify-center items-center w-[16rem]">
         {processStep === TRANSACTIONS_COMPLETED_PROCESS ? (
           <>
-            <p className="pt-4 text-primary-green animate-pulse text-sm">
+            <p className="pt-4 text-primary-orange animate-pulse text-sm">
               All transactions completed!
               <br />
             </p>
@@ -397,7 +397,7 @@ export function VaultSendTool() {
           </>
         ) : processStep === SENDING_TRANSACTIONS_PROCESS ? (
           <>
-            <p className="pt-4 text-primary-green animate-pulse text-sm">
+            <p className="pt-4 text-primary-orange animate-pulse text-sm">
               Sending transactions...
             </p>
           </>
@@ -408,7 +408,7 @@ export function VaultSendTool() {
             </p>
             <button
               id="create_transactions_id"
-              className="mb-2 bg-primary-green hover:bg-primary-green text-black text-sm font-semibold rounded py-2 w-fit px-4 mx-auto mt-1 duration-700"
+              className="mb-2 bg-primary-orange hover:bg-primary-orange text-black text-sm font-semibold rounded py-2 w-fit px-4 mx-auto mt-1 duration-700"
               onClick={() => {
                 sendTransactions();
               }}
@@ -418,7 +418,7 @@ export function VaultSendTool() {
           </>
         ) : processStep === CREATE_TRANSACTIONS_PROCESS ? (
           <>
-            <p className="pt-4 text-primary-green animate-pulse text-sm">
+            <p className="pt-4 text-primary-orange animate-pulse text-sm">
               Creating transactions...
               <br />
             </p>
@@ -428,7 +428,7 @@ export function VaultSendTool() {
           </>
         ) : processStep === FETCH_SEGMENTS_PROCESS ? (
           <>
-            <p className="pt-4 text-primary-green animate-pulse text-sm">
+            <p className="pt-4 text-primary-orange animate-pulse text-sm">
               Fetching segments of {domains}..
               <br />
             </p>
@@ -441,7 +441,7 @@ export function VaultSendTool() {
             {" "}
             <button
               id="create_transactions_id"
-              className="mb-2 bg-primary-green hover:bg-primary-green text-black text-sm font-semibold rounded py-2 w-fit px-4 mx-auto mt-1 duration-700"
+              className="mb-2 bg-primary-orange hover:bg-primary-orange text-black text-sm font-semibold rounded py-2 w-fit px-4 mx-auto mt-1 duration-700"
               onClick={() => {
                 createTransactions();
               }}

@@ -231,7 +231,7 @@ export function ARC19MintTool() {
       {/* mnemonic */}
       <InfinityModeComponent mnemonic={mnemonic} setMnemonic={setMnemonic} />
       {/* end mnemonic */}
-      <button className="text-center text-lg text-black mt-2 bg-primary-green px-4 py-2 rounded">
+      <button className="text-center text-lg text-black mt-2 bg-primary-orange px-4 py-2 rounded">
         <a
           className="hover:text-black transition"
           href="https://loafpickle.medium.com/mass-arc3-19-mint-tool-742b2a595a60"
@@ -241,7 +241,7 @@ export function ARC19MintTool() {
           Check Guide Here
         </a>
       </button>
-      <button className="text-center text-lg text-black mt-2 bg-primary-green px-4 py-2 rounded">
+      <button className="text-center text-lg text-black mt-2 bg-primary-orange px-4 py-2 rounded">
         <a
           className="hover:text-black transition"
           href="https://docs.google.com/spreadsheets/d/1rN4QEcuiXhsh7j6AsAoAe530pdsl2HW0QBHrbIwC6p8/edit?usp=sharing"
@@ -265,7 +265,7 @@ export function ARC19MintTool() {
         <a
           href="https://knowledge.pinata.cloud/en/articles/6191471-how-to-create-an-pinata-api-key"
           target="_blank"
-          className="text-primary-green/70 hover:text-secondary-green/80 transition"
+          className="text-primary-orange/70 hover:text-secondary-orange/80 transition"
           rel="noreferrer"
         >
           here
@@ -308,7 +308,7 @@ export function ARC19MintTool() {
         <div className="flex flex-col justify-center items-center w-[16rem]">
           {isTransactionsFinished ? (
             <>
-              <p className="pt-4 text-primary-green animate-pulse text-sm">
+              <p className="pt-4 text-primary-orange animate-pulse text-sm">
                 All transactions completed!
                 <br />
               </p>
@@ -332,7 +332,7 @@ export function ARC19MintTool() {
               {!txSendingInProgress ? (
                 <button
                   id="approve-send"
-                  className="mb-2 bg-primary-green hover:bg-green-700 text-black text-base font-semibold rounded py-2 w-fit px-2 mx-auto mt-1 hover:scale-95 duration-700"
+                  className="mb-2 bg-primary-orange hover:bg-green-700 text-black text-base font-semibold rounded py-2 w-fit px-2 mx-auto mt-1 hover:scale-95 duration-700"
                   onClick={
                     assetTransactions.length > 0
                       ? sendTransactions

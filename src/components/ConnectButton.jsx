@@ -170,9 +170,9 @@ export default function ConnectButton() {
           aria-expanded={open ? "true" : undefined}
           onClick={handleClick}
           color="success"
-          className="hover:bg-primary-green hover:text-white transition"
+          className="hover:bg-primary-orange hover:text-white transition"
         >
-          <span className="font-sans text-secondary-green">Connect</span>
+          <span className="font-sans text-secondary-orange">Connect</span>
         </Button>
       ) : (
         <Tooltip title="Account" placement="bottom-start">

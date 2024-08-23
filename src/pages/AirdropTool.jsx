@@ -120,9 +120,9 @@ export function AirdropTool() {
       <p className="text-2xl font-bold mt-1">
         {TOOLS.find((tool) => tool.path === window.location.pathname).label}
       </p>
-      <button className="text-center text-lg text-black mt-2 bg-primary-green px-4 py-2 rounded">
+      <button className="text-center text-lg text-black mt-2 bg-primary-orange px-4 py-2 rounded">
         <a
-          className="hover:text-primary-green transition"
+          className="hover:text-primary-orange transition"
           href="https://loafpickle.medium.com/evil-tools-custom-mass-airdrop-3d5902dd1c94"
           target="_blank"
           rel="noopener noreferrer"
@@ -130,9 +130,9 @@ export function AirdropTool() {
           INSTRUCTIONS
         </a>
       </button>
-      <button className="text-center text-lg text-black mt-2 bg-primary-green px-4 py-2 rounded">
+      <button className="text-center text-lg text-black mt-2 bg-primary-orange px-4 py-2 rounded">
         <a
-          className="hover:text-primary-green transition"
+          className="hover:text-primary-orange transition"
           href="https://docs.google.com/spreadsheets/d/1YN7NhxXyNmBZ80nopbcu23Pme-xastrobfIu_MnALiA/edit?usp=sharing"
           target="_blank"
           rel="noopener noreferrer"
@@ -181,7 +181,7 @@ export function AirdropTool() {
         <div className="flex flex-col justify-center items-center w-[16rem]">
           {isTransactionsFinished ? (
             <>
-              <p className="pt-4 text-primary-green animate-pulse text-sm">
+              <p className="pt-4 text-primary-orange animate-pulse text-sm">
                 All transactions completed!
                 <br />
               </p>
@@ -199,7 +199,7 @@ export function AirdropTool() {
               {!txSendingInProgress ? (
                 <button
                   id="approve-send"
-                  className="mb-2 bg-primary-green hover:bg-primary-green text-black text-base font-semibold rounded py-2 w-fit px-2 mx-auto mt-1 hover:scale-95 duration-700"
+                  className="mb-2 bg-primary-orange hover:bg-primary-orange text-black text-base font-semibold rounded py-2 w-fit px-2 mx-auto mt-1 hover:scale-95 duration-700"
                   onClick={handleFileData}
                 >
                   Approve & Send
