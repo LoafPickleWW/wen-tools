@@ -44,11 +44,10 @@ export default function SelectNetworkComponent() {
               "& .MuiSwitch-track": {
                 backgroundColor: "#fff",
               },
-              "& .Mui-checked": {
-                color: "#f57b14",
+              "& .Mui-checked + span.MuiSwitch-track": {
+                backgroundColor: "#f57b14",
               },
             }}
-            style={{ color: "#f57b14" }}
           />
         }
         classes={{ label: "text-white" }}

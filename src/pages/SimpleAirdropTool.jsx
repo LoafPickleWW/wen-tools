@@ -305,7 +305,7 @@ export function SimpleAirdropTool() {
       <div className="flex flex-col justify-center items-center w-[16rem]">
         {processStep === 4 ? (
           <>
-            <p className="pt-4 text-primary-green animate-pulse text-sm">
+            <p className="pt-4 text-primary-orange animate-pulse text-sm">
               All transactions completed!
               <br />
             </p>
@@ -315,7 +315,7 @@ export function SimpleAirdropTool() {
           </>
         ) : processStep === 3 ? (
           <>
-            <p className="pt-4 text-primary-green animate-pulse text-sm">
+            <p className="pt-4 text-primary-orange animate-pulse text-sm">
               Sending transactions...
             </p>
           </>
@@ -326,7 +326,7 @@ export function SimpleAirdropTool() {
             </p>
             <button
               id="create_transactions_id"
-              className="mb-2 bg-primary-green hover:bg-primary-green text-black text-sm font-semibold rounded py-2 w-fit px-4 mx-auto mt-1 duration-700"
+              className="mb-2 bg-primary-orange hover:bg-primary-orange text-black text-sm font-semibold rounded py-2 w-fit px-4 mx-auto mt-1 duration-700"
               onClick={() => {
                 sendTransactions();
               }}
@@ -336,7 +336,7 @@ export function SimpleAirdropTool() {
           </>
         ) : processStep === 1 ? (
           <>
-            <p className="pt-4 text-primary-green animate-pulse text-sm">
+            <p className="pt-4 text-primary-orange animate-pulse text-sm">
               Fetching holders and creating transactions...
               <br />
             </p>
@@ -352,7 +352,7 @@ export function SimpleAirdropTool() {
         ) : (
           <button
             id="create_transactions_id"
-            className="mb-2 bg-primary-green hover:bg-primary-green text-black text-sm font-semibold rounded py-2 w-fit px-4 mx-auto mt-1 duration-700"
+            className="mb-2 bg-primary-orange hover:bg-primary-orange text-black text-sm font-semibold rounded py-2 w-fit px-4 mx-auto mt-1 duration-700"
             onClick={() => {
               createTransactions();
             }}

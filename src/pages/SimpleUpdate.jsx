@@ -3,6 +3,8 @@ import { useState } from "react";
 import algosdk from "algosdk";
 import { toast } from "react-toastify";
 import axios from "axios";
+import { useAtom } from 'jotai';
+import { atomWithStorage, RESET } from 'jotai/utils';
 import {
   pinImageToPinata,
   getNodeURL,
@@ -16,28 +18,32 @@ import {
 } from "../utils";
 import { TOOLS, IPFS_ENDPOINT } from "../constants";
 
+const simpleUpdateAtom = atomWithStorage('simpleUpdate', {
+  name: "",
+  unitName: "",
+  totalSupply: 1,
+  decimals: 0,
+  image: null,
+  format: "",
+  freeze: false,
+  clawback: false,
+  image_url: "",
+  image_mime_type: "",
+  description: "",
+  external_url: "",
+  traits: [],
+  filters: [],
+  extras: []
+});
+const suAssetIdAtom = atomWithStorage('suAssetId', "");
+const suTokenAtom = atomWithStorage('suToken', "");
+
 export function SimpleUpdate() {
-  const [formData, setFormData] = useState({
-    name: "",
-    unitName: "",
-    totalSupply: 1,
-    decimals: 0,
-    image: null,
-    format: "",
-    freeze: false,
-    clawback: false,
-    image_url: "",
-    image_mime_type: "",
-    description: "",
-    external_url: "",
-    traits: [],
-    filters: [],
-    extras: []
-  });
-  const [token, setToken] = useState("");
+  const [formData, setFormData] = useAtom(simpleUpdateAtom);
+  const [token, setToken] = useAtom(suTokenAtom);
   const [processStep, setProcessStep] = useState(0);
   const [transaction, setTransaction] = useState(null);
-  const [assetID, setAssetID] = useState("");
+  const [assetID, setAssetID] = useAtom(suAssetIdAtom);
 
   const TraitMetadataInputField = (id, type) => {
     return (
@@ -386,12 +392,20 @@ export function SimpleUpdate() {
       }
       const groups = sliceIntoChunks(signedAssetTransaction, 2);
       await algodClient.sendRawTransaction(groups[0]).do();
+      removeStoredData(); // Remove stored data now that update is complete
       toast.success("Asset updated successfully!");
       setProcessStep(4);
     } catch (error) {
       toast.error("Something went wrong!");
       setProcessStep(2);
     }
+  }
+
+  /** Remove the locally stored data */
+  function removeStoredData() {
+    setFormData(RESET);
+    setAssetID(RESET);
+    setToken(RESET);
   }
 
   return (
@@ -403,8 +417,9 @@ export function SimpleUpdate() {
         <>
           <div className="flex flex-col md:flex-row justify-between">
             <button
-              className="rounded bg-secondary-green hover:bg-secondary-green/80  text-black px-4 py-1 mt-2"
+              className="rounded bg-secondary-orange hover:bg-secondary-orange/80  text-black px-4 py-1 mt-2"
               onClick={() => {
+                removeStoredData();
                 window.location.reload();
               }}
             >
@@ -578,7 +593,7 @@ export function SimpleUpdate() {
           </div>
           {formData.format !== "ARC3" && (
             <button
-              className="rounded-md bg-primary-green hover:bg-green-600 transition text-black px-4 py-1"
+              className="rounded-md bg-primary-orange hover:bg-green-600 transition text-black px-4 py-1"
               onClick={() => {
                 let lastId;
                 try {
@@ -615,7 +630,7 @@ export function SimpleUpdate() {
           </div>
           {formData.format !== "ARC3" && (
             <button
-              className="rounded-md bg-primary-green hover:bg-green-600 transition text-black px-4 py-1"
+              className="rounded-md bg-primary-orange hover:bg-green-600 transition text-black px-4 py-1"
               onClick={() => {
                 let lastId;
                 try {
@@ -650,7 +665,7 @@ export function SimpleUpdate() {
           </div>
           {formData.format !== "ARC3" && (
             <button
-              className="rounded-md bg-primary-green hover:bg-green-600 transition text-black px-4 py-1"
+              className="rounded-md bg-primary-orange hover:bg-green-600 transition text-black px-4 py-1"
               onClick={() => {
                 let lastId;
                 try {
@@ -698,7 +713,7 @@ export function SimpleUpdate() {
                     <a
                       href="https://knowledge.pinata.cloud/en/articles/6191471-how-to-create-an-pinata-api-key"
                       target="_blank"
-                      className="text-primary-green/70 hover:text-secondary-green/80 transition"
+                      className="text-primary-orange/70 hover:text-secondary-orange/80 transition"
                       rel="noreferrer"
                     >
                       here
@@ -740,7 +755,7 @@ export function SimpleUpdate() {
                     </p>
                     <button
                       id="create_transactions_id"
-                      className="rounded bg-secondary-green hover:bg-secondary-green/80 transition text-black font-semibold px-4 py-1 mt-2"
+                      className="rounded bg-secondary-orange hover:bg-secondary-orange/80 transition text-black font-semibold px-4 py-1 mt-2"
                       onClick={() => {
                         sendTransaction();
                       }}
@@ -758,7 +773,7 @@ export function SimpleUpdate() {
                   </div>
                 ) : (
                   <button
-                    className="rounded bg-secondary-green hover:bg-secondary-green/80 transition text-black font-semibold px-4 py-1 mt-2"
+                    className="rounded bg-secondary-orange hover:bg-secondary-orange/80 transition text-black font-semibold px-4 py-1 mt-2"
                     onClick={update}
                   >
                     Update
@@ -777,7 +792,7 @@ export function SimpleUpdate() {
             className="w-48 bg-gray-300 text-sm font-medium text-center leading-none text-black placeholder:text-black/50 px-3 py-2 border rounded border-gray-200"
           ></input>
           <button
-            className="rounded bg-secondary-green hover:bg-secondary-green/80 transition text-black/90 font-semibold px-4 py-1 mt-2"
+            className="rounded bg-secondary-orange hover:bg-secondary-orange/80 transition text-black/90 font-semibold px-4 py-1 mt-2"
             onClick={getAssetData}
           >
             Next
@@ -790,11 +805,6 @@ export function SimpleUpdate() {
         happens to publicly hosted images.
       </p>
       <p className="text-sm italic text-slate-200">Fee: Free</p>
-      <p className="text-center text-xs text-slate-400 py-2">
-        ⚠️If you reload or close this page, you will lose your progress⚠️
-        <br />
-        You can reload the page if you want to stop/restart the process!
-      </p>
     </div>
   );
 }

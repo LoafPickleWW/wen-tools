@@ -197,7 +197,7 @@ export function Download19CollectionData() {
         onChange={(e) => setCreatorWallet(e.target.value)}
       />
       <button
-        className="mb-2 bg-secondary-green/80 hover:bg-secondary-green text-black text-base font-semibold rounded py-2 w-fit px-2 mx-auto mt-1 hover:scale-95 duration-700"
+        className="mb-2 bg-secondary-orange/80 hover:bg-secondary-orange text-black text-base font-semibold rounded py-2 w-fit px-2 mx-auto mt-1 hover:scale-95 duration-700"
         onClick={getCollectionData}
       >
         Get Collection Data

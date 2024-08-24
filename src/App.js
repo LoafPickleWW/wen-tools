@@ -26,6 +26,7 @@ import { BatchClawback } from "./pages/BatchClawback";
 import { BatchFreeze } from "./pages/BatchFreeze";
 import { VaultSendTool } from "./pages/VaultSendTool";
 import { SimpleBatchMint } from "./pages/SimpleBatchMint";
+import ScrollToTop from "./components/ScrollToTop";
 
 function App() {
   return (
@@ -43,6 +44,7 @@ function App() {
         theme="dark"
       />
       <Router>
+        <ScrollToTop />
         <Header />
         <Routes>
           <Route path="/" element={<Home />} />

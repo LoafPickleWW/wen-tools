@@ -27,7 +27,7 @@ export function Header() {
     setAnchorElUser(null);
   };
   return (
-    <AppBar sx={{ backgroundColor: "#1A171A" }} position="sticky">
+    <AppBar sx={{ backgroundColor: "#1A171A" }} position="sticky" id="site-header">
       <Toolbar>
         <Link to="/">
           <img src="/TL_large_white.png" alt="logo" className="mr-2 h-12 p-1" />
@@ -78,7 +78,7 @@ export function Header() {
         <SelectNetworkComponent />
         <ConnectButton />
       </Toolbar>
-      <div className="bg-secondary-green text-black flex py-1 justify-center items-center">
+      <div className="bg-secondary-orange text-black flex py-1 justify-center items-center">
         <p className="text-center text-sm">
           You can read more about Infinity Mode{" "}
           <a

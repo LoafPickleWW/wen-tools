@@ -414,9 +414,9 @@ export function SimpleBatchMint() {
       <p className="text-2xl font-bold mt-1">
         {TOOLS.find((tool) => tool.path === window.location.pathname).label}
       </p>
-      <button className="text-center text-lg text-black mt-2 bg-primary-green px-4 py-2 rounded">
+      <button className="text-center text-lg text-black mt-2 bg-primary-orange px-4 py-2 rounded">
         <a
-          className="hover:text-primary-green transition"
+          className="hover:text-primary-orange transition"
           href="https://loafpickle.medium.com/simple-batch-mint-guide-9f1bbe7882cd"
           target="_blank"
           rel="noopener noreferrer"
@@ -424,9 +424,9 @@ export function SimpleBatchMint() {
           Check Guide Here
         </a>
       </button>
-      <button className="text-center text-lg text-black mt-2 bg-primary-green px-4 py-2 rounded">
+      <button className="text-center text-lg text-black mt-2 bg-primary-orange px-4 py-2 rounded">
         <a
-          className="hover:text-primary-green transition"
+          className="hover:text-primary-orange transition"
           href="https://docs.google.com/spreadsheets/d/1_hxkAcW2DWgoZ3s0A6jBK3DS7liU5QnA89mbXRttLhw/edit?usp=sharing"
           target="_blank"
           rel="noopener noreferrer"
@@ -712,7 +712,7 @@ export function SimpleBatchMint() {
                 <a
                   href="https://knowledge.pinata.cloud/en/articles/6191471-how-to-create-an-pinata-api-key"
                   target="_blank"
-                  className="text-primary-green/70 hover:text-secondary-green/80 transition"
+                  className="text-primary-orange/70 hover:text-secondary-orange/80 transition"
                   rel="noreferrer"
                 >
                   here
@@ -763,7 +763,7 @@ export function SimpleBatchMint() {
             </p>
             <button
               id="create_transactions_id"
-              className="rounded bg-secondary-green hover:bg-secondary-green/80 transition text-black/90 font-semibold px-4 py-1 mt-2"
+              className="rounded bg-secondary-orange hover:bg-secondary-orange/80 transition text-black/90 font-semibold px-4 py-1 mt-2"
               onClick={() => {
                 sendTransaction();
               }}
@@ -781,7 +781,7 @@ export function SimpleBatchMint() {
           </div>
         ) : (
           <button
-            className="rounded bg-secondary-green hover:bg-secondary-green/80 transition text-black/90 font-semibold px-4 py-1 mt-2"
+            className="rounded bg-secondary-orange hover:bg-secondary-orange/80 transition text-black/90 font-semibold px-4 py-1 mt-2"
             onClick={createTransactions}
           >
             Step 1: Create Transactions
