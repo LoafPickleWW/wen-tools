@@ -1,10 +1,11 @@
 import { useState } from "react";
-
+import { useNavigate } from "react-router-dom";
 import algosdk from "algosdk";
 import { toast } from "react-toastify";
 import axios from "axios";
 import { useAtom } from 'jotai';
 import { atomWithStorage, RESET } from 'jotai/utils';
+import { Button } from "@mui/material";
 import {
   pinImageToPinata,
   getNodeURL,
@@ -44,6 +45,7 @@ export function SimpleUpdate() {
   const [processStep, setProcessStep] = useState(0);
   const [transaction, setTransaction] = useState(null);
   const [assetID, setAssetID] = useAtom(suAssetIdAtom);
+  const navigate = useNavigate();
 
   const TraitMetadataInputField = (id, type) => {
     return (
@@ -392,7 +394,6 @@ export function SimpleUpdate() {
       }
       const groups = sliceIntoChunks(signedAssetTransaction, 2);
       await algodClient.sendRawTransaction(groups[0]).do();
-      removeStoredData(); // Remove stored data now that update is complete
       toast.success("Asset updated successfully!");
       setProcessStep(4);
     } catch (error) {
@@ -738,9 +739,29 @@ export function SimpleUpdate() {
                         View the Updated Asset
                       </a>
                     )}
-                    <p className="pb-2 text-slate-400 text-xs">
-                      You can reload the page if you want to use again.
-                    </p>
+                    <div className="mt-4">
+                    <button
+                        className="rounded bg-secondary-orange hover:bg-secondary-orange/80 transition text-black/90 font-semibold px-4 py-1 mb-3 w-full"
+                        onClick={() => {
+                          removeStoredData();
+                          window.location.reload();
+                        }}
+                      >
+                        Do another update
+                      </button>
+                      <Button
+                        variant="outlined"
+                        color="inherit"
+                        fullWidth={true}
+                        onClick={() => {
+                          removeStoredData();
+                          navigate("/");
+                        }}
+                      >
+                        Go to home
+                      </Button>
+                    </div>
+
                   </>
                 ) : processStep === 3 ? (
                   <>
