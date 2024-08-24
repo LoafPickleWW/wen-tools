@@ -40,7 +40,7 @@ const DropdownMenu = ({ onClose, isOpen }) => {
             fontWeight: "bold",
           }}
         >
-          Useful Links
+          More Tools
         </Typography>
       </Toolbar>
       <Divider color="white" />
