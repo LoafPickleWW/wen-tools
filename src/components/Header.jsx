@@ -41,7 +41,7 @@ export function Header() {
             anchorEl={anchorElUser}
             anchorOrigin={{
               vertical: 'top',
-              horizontal: 'right',
+              horizontal: 'left',
             }}
             open={Boolean(anchorElUser)}
             onClose={handleCloseSettingsMenu}
