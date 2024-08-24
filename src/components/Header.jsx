@@ -7,7 +7,7 @@ import SelectNetworkComponent from "./SelectNetworkComponent";
 
 export function Header() {
   return (
-    <AppBar sx={{ backgroundColor: "#1A171A" }} position="sticky">
+    <AppBar sx={{ backgroundColor: "#1A171A" }} position="sticky" id="site-header">
       <Toolbar>
         <Link to="/">
           <img src="/TL_large_white.png" alt="logo" className="mr-2 h-12 p-1" />
