@@ -40,7 +40,7 @@ Bounties will be paid out upon successful merge and approval of the Pull Request
 * **Add NFD Vault and ARC59 Asset Inbox claims to Wen Wallet. DM for Details** - 1000A 
 * ~~**Add dropdown menu to wen.tools with the links to wallet.wen.tools and swap.wen.tools added** - 250A~~ Completed by [Red](https://github.com/LoafPickleWW/wen-tools/pulls?q=is%3Apr+author%3Abwmx)
 * **Integrate Use-Wallet** - 250A
-* **Create an On-chain Vote Tool under a new Repo. DM for details** - 750A
+* **Create an On-chain Vote Tool under a new Repo. DM for details** - 750A - In progress by Red
 * ~~**Have a local save state for Simple Mint and Update so if a person needs to leave the page, all the information stays** - 500A~~ Completed by [No-Cash](https://github.com/No-Cash-7970)
 * **Fix UI Bugs like scrolling issues (horizonatal and vertical), white screens, and footer being so high on mobile (issues between tailwind and mui maybe?)** - 500A
 
