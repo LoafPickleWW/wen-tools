@@ -1,3 +1,6 @@
+import { FaWallet } from "react-icons/fa";
+import { IoSwapHorizontal } from "react-icons/io5";
+
 // NODE
 export const MAINNET_ALGONODE_NODE = "https://mainnet-api.algonode.cloud";
 export const TESTNET_ALGONODE_NODE = "https://testnet-api.algonode.cloud";
@@ -24,8 +27,7 @@ export const UPDATE_FEE_PER_ASA = 0;
 
 export const IPFS_ENDPOINT = "https://ipfs.algonode.xyz/ipfs/";
 
-export const CREATOR_WALLETS = [
-];
+export const CREATOR_WALLETS = [];
 
 export const PREFIXES = [];
 
@@ -187,5 +189,20 @@ export const TOOLS = [
     description: "View the holders of a multimint asset list in CSV format.",
     path: "/multimint-asset-holders",
     category: "asset",
+  },
+];
+
+// array of external links to be displayed in the dropdown menu
+// icon can be any react element
+export const EXTERNAL_LINKS = [
+  {
+    name: "Wen Wallet",
+    url: "https://wallet.wen.tools",
+    icon: <FaWallet size={20} color="white" />,
+  },
+  {
+    name: "Wen Swap",
+    url: "https://swap.wen.tools",
+    icon: <IoSwapHorizontal size={24} color="white" />,
   },
 ];
