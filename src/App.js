@@ -30,7 +30,7 @@ import ScrollToTop from "./components/ScrollToTop";
 
 function App() {
   return (
-    <div className="bg-primary-black flex flex-col min-h-screen font-roboto pb-[100px]">
+    <div className="bg-primary-black flex flex-col min-h-screen font-roboto pb-6">
       <ToastContainer
         pauseOnFocusLoss={false}
         closeOnClick

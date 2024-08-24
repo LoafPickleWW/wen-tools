@@ -2,13 +2,9 @@ import { Tooltip, Typography } from "@mui/material";
 
 export function Footer() {
   return (
-    <footer className="bg-primary-black text-nude w-screen bottom-0 fixed">
+    <footer className="bg-primary-black text-white">
       <div className="px-4 flex w-full flex-col items-center justify-center border-t border-blue-gray-50 py-4 gap-y-1 md:flex-row md:justify-between">
-        <Typography
-          variant="caption"
-          sx={{ fontFamily: "Josefin Slab", fontWeight: 400 }}
-          className="mb-2 md:mb-0 text-center text-blue-gray-900 text-white"
-        >
+        <span className="text-xs mb-2">
           &copy; {new Date().getFullYear()}{" "}
           <a
             href="https://wen.tools/"
@@ -17,7 +13,7 @@ export function Footer() {
           >
             Wen.Tools
           </a>
-        </Typography>
+        </span>
         <div className="flex flex-row items-center justify-center gap-3 sm:absolute sm:left-1/2 sm:-translate-x-1/2">
           <Tooltip title="supported by xGov">
             <a
