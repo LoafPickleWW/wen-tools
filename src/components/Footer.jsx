@@ -1,4 +1,4 @@
-import { Tooltip, Typography } from "@mui/material";
+import { Tooltip } from "@mui/material";
 
 export function Footer() {
   return (
