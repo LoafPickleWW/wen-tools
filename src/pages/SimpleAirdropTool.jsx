@@ -4,6 +4,7 @@ import { toast } from "react-toastify";
 import {
   createAirdropTransactions,
   getCreatedAssets,
+  getOwnerAddressAmountOfAsset,
   getOwnerAddressOfAsset,
   getNodeURL,
 } from "../utils";
@@ -45,6 +46,7 @@ export function SimpleAirdropTool() {
   async function createTransactions() {
     try {
       const wallet = localStorage.getItem("wallet");
+      const assetCount = 0;
       if (wallet === "" || wallet === undefined) {
         throw new Error(
           "You need to connect your wallet first, if using mnemonic too!"
@@ -116,22 +118,30 @@ export function SimpleAirdropTool() {
           splittedSpecifiedAssetIds.includes(asset.asset_id)
         );
       }
-      
+
       if (createdAssets.length === 0) {
         throw new Error("No assets found with the specified filters!");
       }
-      
-      setAssetCount(createdAssets.length);
+
+      setAssetCount(createdAssets.length);      
       let holders = {};
+
       for (let i = 0; i < createdAssets.length; i++) {
-        const holder = await getOwnerAddressOfAsset(createdAssets[i].asset_id);
-        if (holders[holder] === undefined) {
-          holders[holder] = 0;
-        }
-        holders[holder] += 1;
-        await new Promise((r) => setTimeout(r, 50));
-        setFoundAssetCount(i);
+        const holderObj = await getOwnerAddressAmountOfAsset(createdAssets[i].asset_id);        
+        const currentAssetCount = assetCount+holderObj.data.balances.length;
+        setAssetCount(currentAssetCount);
+        console.log('in multimint assetCount => '+assetCount);
+        for (let i = 0; i < holderObj.data.balances.length; i++) {
+          if (holders[holderObj.data.balances[i].address] === undefined) {
+            holders[holderObj.data.balances[i].address] = 0;
+          }
+          holders[holderObj.data.balances[i].address] += holderObj.data.balances[i].amount;
+          await new Promise((r) => setTimeout(r, 50));
+          setFoundAssetCount(i);
+        }        
       }
+      console.log('holders => '+JSON.stringify(holders));
+
       let txns = [];
       for (const holder in holders) {
         const txn = {
@@ -332,7 +342,7 @@ export function SimpleAirdropTool() {
               }}
             >
               Sign & Send
-            </button>
+            </button>    
           </>
         ) : processStep === 1 ? (
           <>
@@ -350,15 +360,17 @@ export function SimpleAirdropTool() {
             </p>
           </>
         ) : (
-          <button
-            id="create_transactions_id"
-            className="mb-2 bg-primary-orange hover:bg-primary-orange text-black text-sm font-semibold rounded py-2 w-fit px-4 mx-auto mt-1 duration-700"
-            onClick={() => {
-              createTransactions();
-            }}
-          >
-            Create Transactions
-          </button>
+          <>
+            <button
+              id="create_transactions_id"
+              className="mb-2 bg-primary-orange hover:bg-primary-orange text-black text-sm font-semibold rounded py-2 w-fit px-4 mx-auto mt-1 duration-700"
+              onClick={() => {
+                createTransactions();
+              }}
+            >
+              Create Transactions
+            </button>
+          </>
         )}
       </div>
       <p className="text-center text-xs text-slate-400 py-2">

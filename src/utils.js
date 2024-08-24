@@ -164,7 +164,7 @@ export async function signGroupTransactions(
       throw new Error("Transaction signing failed");
     }
     return txnsToValidate;
-  } catch (error) {}
+  } catch (error) { }
 }
 
 export function SignWithMnemonics(txnsArray, sk) {
@@ -226,7 +226,7 @@ export async function createAssetConfigArray(
       suggestedParams: params,
       note: new TextEncoder().encode(
         "via wen.tools - free tools for creators and collectors | " +
-          Math.random().toString(36).substring(2)
+        Math.random().toString(36).substring(2)
       ),
     });
     const groupID = computeGroupID([asset_update_tx, fee_tx]);
@@ -289,7 +289,7 @@ export async function createAssetMintArray(
         suggestedParams: params,
         note: new TextEncoder().encode(
           "via wen.tools - free tools for creators and collectors | " +
-            Math.random().toString(36).substring(2)
+          Math.random().toString(36).substring(2)
         ),
       });
       const groupID = computeGroupID([asset_create_tx, fee_tx]);
@@ -352,7 +352,7 @@ export async function createARC3AssetMintArray(data_for_txns, nodeURL, token) {
         suggestedParams: params,
         note: new TextEncoder().encode(
           "via wen.tools - free tools for creators and collectors | " +
-            Math.random().toString(36).substring(2)
+          Math.random().toString(36).substring(2)
         ),
       });
       const groupID = computeGroupID([asset_create_tx, fee_tx]);
@@ -362,7 +362,7 @@ export async function createARC3AssetMintArray(data_for_txns, nodeURL, token) {
       toast.info(`Asset ${i + 1} of ${data_for_txns.length} uploaded to IPFS`, {
         autoClose: 200,
       });
-    } catch (error) {}
+    } catch (error) { }
   }
   return txnsArray;
 }
@@ -410,7 +410,7 @@ export async function createARC19AssetMintArray(data_for_txns, nodeURL, token) {
         suggestedParams: params,
         note: new TextEncoder().encode(
           "via wen.tools - free tools for creators and collectors | " +
-            Math.random().toString(36).substring(2)
+          Math.random().toString(36).substring(2)
         ),
       });
       const groupID = computeGroupID([asset_create_tx, fee_tx]);
@@ -468,7 +468,7 @@ export async function updateARC19AssetMintArray(data_for_txns, nodeURL, token) {
         suggestedParams: params,
         note: new TextEncoder().encode(
           "via wen.tools - free tools for creators and collectors | " +
-            Math.random().toString(36).substring(2)
+          Math.random().toString(36).substring(2)
         ),
       });
       const groupID = computeGroupID([update_tx, fee_tx]);
@@ -478,7 +478,7 @@ export async function updateARC19AssetMintArray(data_for_txns, nodeURL, token) {
       toast.info(`Asset ${i + 1} of ${data_for_txns.length} uploaded to IPFS`, {
         autoClose: 200,
       });
-    } catch (error) {}
+    } catch (error) { }
     if (i % 100 === 0) {
       params = await algodClient.getTransactionParams().do();
     }
@@ -531,11 +531,11 @@ export async function createAirdropTransactions(
           note: new TextEncoder().encode(
             isHolder
               ? data_for_txns[i].note.slice(0, 950) +
-                  " | via wen.tools - free tools for creators and collectors  " +
-                  Math.random().toString(36).substring(2)
+              " | via wen.tools - free tools for creators and collectors  " +
+              Math.random().toString(36).substring(2)
               : data_for_txns[i].note.slice(0, 950) +
-                  " | via wen.tools - free tools for creators and collectors  " +
-                  Math.random().toString(36).substring(2)
+              " | via wen.tools - free tools for creators and collectors  " +
+              Math.random().toString(36).substring(2)
           ),
         });
       } else {
@@ -551,11 +551,11 @@ export async function createAirdropTransactions(
           note: new TextEncoder().encode(
             isHolder
               ? data_for_txns[i].note.slice(0, 950) +
-                  " | via wen.tools - free tools for creators and collectors  " +
-                  Math.random().toString(36).substring(2)
+              " | via wen.tools - free tools for creators and collectors  " +
+              Math.random().toString(36).substring(2)
               : data_for_txns[i].note.slice(0, 950) +
-                  " | via wen.tools - free tools for creators and collectors  " +
-                  Math.random().toString(36).substring(2)
+              " | via wen.tools - free tools for creators and collectors  " +
+              Math.random().toString(36).substring(2)
           ),
         });
       }
@@ -625,7 +625,7 @@ export async function createDonationTransaction(amount) {
       throw new Error("Transaction signing failed");
     }
     return txnsToValidate;
-  } catch (error) {}
+  } catch (error) { }
 }
 
 export async function createAssetOptInTransactions(assets, nodeURL, mnemonic) {
@@ -829,7 +829,7 @@ export async function createAssetDeleteTransactions(assets, nodeURL, mnemonic) {
         assetIndex: parseInt(assets[i]),
         note: new TextEncoder().encode(
           "via wen.tools - free tools for creators and collectors | " +
-            Math.random().toString(36).substring(2)
+          Math.random().toString(36).substring(2)
         ),
       });
       let fee_tx = makePaymentTxnWithSuggestedParamsFromObject({
@@ -884,7 +884,7 @@ export class Arc69 {
         if (noteObject.standard === "arc69") {
           return noteObject;
         }
-      } catch (err) {}
+      } catch (err) { }
     }
     return {
       metadata_description: "",
@@ -956,8 +956,7 @@ export async function getAssetsFromAddress(address) {
   );
   while (userAssets.data.assets.length === threshold) {
     const nextAssets = await axios.get(
-      `${getIndexerURL()}/v2/accounts/${address}/assets?next=${
-        userAssets.data["next-token"]
+      `${getIndexerURL()}/v2/accounts/${address}/assets?next=${userAssets.data["next-token"]
       }`
     );
     userAssets.data.assets = userAssets.data.assets.concat(
@@ -978,8 +977,7 @@ export async function getCreatedAssets(address) {
   );
   while (createdAssets.data.assets.length === threshold) {
     const nextAssets = await axios.get(
-      `${getIndexerURL()}/v2/accounts/${address}/created-assets?limit=1000&next=${
-        createdAssets.data["next-token"]
+      `${getIndexerURL()}/v2/accounts/${address}/created-assets?limit=1000&next=${createdAssets.data["next-token"]
       }`
     );
     createdAssets.data.assets = createdAssets.data.assets.concat(
@@ -1065,9 +1063,22 @@ export async function getOwnerAddressOfAsset(assetId) {
     const url =
       getIndexerURL() +
       `/v2/assets/${assetId}/balances?currency-greater-than=0`;
-    const response = await axios.get(url);
+    const response = await axios.get(url);    
     return response.data.balances[0].address;
   } catch (err) {
+    return "";
+  }
+}
+
+export async function getOwnerAddressAmountOfAsset(assetId) {
+  try {
+    const url =
+      getIndexerURL() +
+      `/v2/assets/${assetId}/balances?currency-greater-than=0`;
+    const response = await axios.get(url);
+    return response;
+  } catch (err) {
+    console.log(err);
     return "";
   }
 }
