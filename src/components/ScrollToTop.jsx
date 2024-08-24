@@ -5,7 +5,7 @@ export default function ScrollToTop() {
   const { pathname } = useLocation();
 
   useEffect(() => {
-    document.querySelector("#site-header").scrollIntoView();
+    document.querySelector("#root").scrollIntoView();
   }, [pathname]);
 
   return null;
