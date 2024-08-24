@@ -18,7 +18,7 @@ export function Header() {
   };
 
   return (
-    <AppBar sx={{ backgroundColor: "#1A171A" }} position="sticky">
+    <AppBar sx={{ backgroundColor: "#1A171A" }} position="sticky" id="site-header"> 
       <DropdownMenu isOpen={isSidesheetOpen} onClose={handleDrawerToggle} />
 
       <Toolbar>
