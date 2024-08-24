@@ -4,14 +4,58 @@ import Typography from "@mui/material/Typography";
 import { Link } from "react-router-dom";
 import ConnectButton from "./ConnectButton";
 import SelectNetworkComponent from "./SelectNetworkComponent";
+import { useState } from 'react';
+import * as React from 'react';
+import Box from '@mui/material/Box';
+// import IconButton from '@mui/material/IconButton';
+import Menu from '@mui/material/Menu';
+import MenuIcon from '@mui/icons-material/Menu';
+import MenuItem from '@mui/material/MenuItem';
+import Avatar from '@mui/material/Avatar';
+import Button from '@mui/material/Button';
+import Tooltip from '@mui/material/Tooltip';
+
 
 export function Header() {
+  const [anchorElUser, setAnchorElUser] = useState(null);
+
+  const handleOpenSettingsMenu = (event) => {
+    setAnchorElUser(event.currentTarget);
+  };
+
+  const handleCloseSettingsMenu = () => {
+    setAnchorElUser(null);
+  };
   return (
     <AppBar sx={{ backgroundColor: "#1A171A" }} position="sticky">
       <Toolbar>
         <Link to="/">
           <img src="/TL_large_white.png" alt="logo" className="mr-2 h-12 p-1" />
         </Link>
+
+        <Box sx={{ flexGrow: 0 }}>
+          <Tooltip title="Other Tools">
+            <Button variant="outlined" fontSize="inherit" sx={{ borderColor: '#f57b14', color: '#f57b14' }} onClick={handleOpenSettingsMenu}>Other Tools</Button>
+          </Tooltip>
+          <Menu
+            sx={{ mt: '55px' }}
+            id="menu-appbar"
+            anchorEl={anchorElUser}
+            anchorOrigin={{
+              vertical: 'top',
+              horizontal: 'right',
+            }}
+            open={Boolean(anchorElUser)}
+            onClose={handleCloseSettingsMenu}
+          >
+            <MenuItem component={"a"} href="https://wallet.wen.tools/" >
+              <Typography textAlign="center">wen.wallet</Typography>
+            </MenuItem>
+            <MenuItem component={"a"} href="https://swap.wen.tools/" >
+              <Typography textAlign="center">wen.swap</Typography>
+            </MenuItem>
+          </Menu>
+        </Box>
         <Typography
           component="div"
           sx={{
