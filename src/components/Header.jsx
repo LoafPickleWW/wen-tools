@@ -18,7 +18,7 @@ export function Header() {
   };
 
   return (
-    <AppBar sx={{ backgroundColor: "#1A171A" }} position="sticky" id="site-header"> 
+    <AppBar sx={{ backgroundColor: "#1A171A" }} position="sticky">
       <DropdownMenu isOpen={isSidesheetOpen} onClose={handleDrawerToggle} />
 
       <Toolbar>
@@ -68,7 +68,7 @@ export function Header() {
           </a>
         </p>
       </div>
-      <div className="bg-banner-grey text-white flex py-1 justify-center items-center">
+      <div className="bg-banner-grey text-white overflow-hidden text-center">
         <p className="text-center text-sm ticker-text">
           Improve your wallet experience with the:{" "}
           <a
