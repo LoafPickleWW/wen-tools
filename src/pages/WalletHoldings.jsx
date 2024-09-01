@@ -2,7 +2,6 @@ import { useState } from "react";
 import { toast } from "react-toastify";
 import axios from "axios";
 import { getIndexerURL, getNodeURL } from "../utils";
- 
 import { TOOLS } from "../constants";
 
 export function WalletHoldings() {
@@ -161,7 +160,7 @@ export function WalletHoldings() {
   }
 
   return (
-    <div className="mx-auto text-white mb-4 text-center flex flex-col items-center">
+    <div className="mx-auto text-white mb-4 text-center flex flex-col items-center min-h-screen">
       <p className="text-2xl font-bold mt-1">
         {TOOLS.find((tool) => tool.path === window.location.pathname).label}
       </p>

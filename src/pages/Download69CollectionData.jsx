@@ -2,7 +2,6 @@ import { useState } from "react";
 import { toast } from "react-toastify";
 import axios from "axios";
 import { Arc69 } from "../utils";
- 
 import {
   TOOLS,
   MAINNET_ALGONODE_INDEXER,
@@ -75,7 +74,7 @@ export function Download69CollectionData() {
               asset_data_csv[`${topLevelKey}_${secondLevelKey}`] = metadata[topLevelKey][secondLevelKey];
             }
           }
-        }  
+        }
       }
       return asset_data_csv;
     } catch (error) {
@@ -157,7 +156,7 @@ export function Download69CollectionData() {
   }
 
   return (
-    <div className="mx-auto text-white mb-4 text-center flex flex-col items-center">
+    <div className="mx-auto text-white mb-4 text-center flex flex-col items-center min-h-screen">
       <p className="text-2xl font-bold mt-1">
         {TOOLS.find((tool) => tool.path === window.location.pathname).label}
       </p>

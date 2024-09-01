@@ -1,5 +1,4 @@
 import { useState } from "react";
- 
 import algosdk from "algosdk";
 import { toast } from "react-toastify";
 import {
@@ -274,7 +273,7 @@ export function VaultSendTool() {
   }
 
   return (
-    <div className="mx-auto text-white mb-4 text-center flex flex-col items-center max-w-[40rem] gap-y-2">
+    <div className="mx-auto text-white mb-4 text-center flex flex-col items-center max-w-[40rem] gap-y-2 min-h-screen">
       <p className="text-2xl font-bold mt-1">
         {TOOLS.find((tool) => tool.path === window.location.pathname).label}
       </p>
@@ -287,7 +286,7 @@ export function VaultSendTool() {
           rel="noopener noreferrer"
           href="https://api-docs.nf.domains/reference/integrators-guide/using-vaults-2.x+"
         >
-          here. 
+          here.
         </a>{" "}
         for more details. Please note you will need to fund the Opt In for the Vault (0.1A)/Asset.
       </span>

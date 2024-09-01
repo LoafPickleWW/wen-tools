@@ -70,9 +70,9 @@ export function BatchCollectionMint() {
           asset_note.extra[key.replace("extra_", "")] = item[key];
         }
         if (key.startsWith("filters_")) {
-          asset_note.properties.filters[key.replace("filters_", "")] = 
+          asset_note.properties.filters[key.replace("filters_", "")] =
             item[key];
-        }        
+        }
       });
       const asset_name = item.name;
       const unit_name = item.unit_name;
@@ -169,7 +169,7 @@ export function BatchCollectionMint() {
   };
 
   return (
-    <div className="mb-4 text-center flex flex-col items-center max-w-[40rem] gap-y-2 mx-auto text-white">
+    <div className="mb-4 text-center flex flex-col items-center max-w-[40rem] gap-y-2 mx-auto text-white min-h-screen">
       <p className="text-2xl font-bold mt-1">
         {TOOLS.find((tool) => tool.path === window.location.pathname).label}
       </p>
@@ -193,7 +193,7 @@ export function BatchCollectionMint() {
           target="_blank"
           rel="noopener noreferrer"
         >
-          CSV Template 
+          CSV Template
         </a>
       </button>
       <p>Upload CSV file</p>

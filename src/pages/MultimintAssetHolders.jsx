@@ -1,11 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { toast } from "react-toastify";
 import axios from "axios";
- 
 import { TOOLS } from "../constants";
 import {
   getNfDomainsInBulk,
-  isWalletHolder,
   getRandListingAsset,
   getIndexerURL,
   getParticipationStatusOfWallet,
@@ -256,7 +254,7 @@ export function MultimintAssetHolders() {
   }
 
   return (
-    <div className="mx-auto text-white mb-4 text-center flex flex-col items-center">
+    <div className="mx-auto text-white mb-4 text-center flex flex-col items-center min-h-screen">
       <p className="text-2xl font-bold mt-1">
         {TOOLS.find((tool) => tool.path === window.location.pathname).label}
       </p>

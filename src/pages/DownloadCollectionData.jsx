@@ -2,7 +2,6 @@ import { useState } from "react";
 import { toast } from "react-toastify";
 import axios from "axios";
 import { Arc69 } from "../utils";
- 
 import { TOOLS, MAINNET_ALGONODE_INDEXER, TESTNET_ALGONODE_INDEXER } from "../constants";
 
 export function DownloadCollectionData() {
@@ -72,11 +71,11 @@ export function DownloadCollectionData() {
     for (let i = 0; i < array.length; i++) {
       let line = "";
       for (let index in array[i]) {
-        if (line != "") line += ",";
+        if (line !== "") line += ",";
         line += '"' + array[i][index] + '"';
       }
       // don't put '\r\n' at the end of the last line
-      if (i != array.length - 1) {
+      if (i !== array.length - 1) {
         str += line + "\r\n";
       } else {
         str += line;
@@ -140,7 +139,7 @@ export function DownloadCollectionData() {
   }
 
   return (
-    <div className="mx-auto text-white mb-4 text-center flex flex-col items-center">
+    <div className="mx-auto text-white mb-4 text-center flex flex-col items-center min-h-screen">
       <p className="text-2xl font-bold mt-1">
         {TOOLS.find((tool) => tool.path === window.location.pathname).label}
       </p>
@@ -161,7 +160,7 @@ export function DownloadCollectionData() {
       </button>
       {collectionData.length > 0 && (
         <>
-          {creatorWallet.length == 58 && collectionData && (
+          {creatorWallet.length === 58 && collectionData && (
             <div className="flex flex-col justify-center items-center">
               <p className="text-center text-sm text-slate-300">
                 {creatorWallet.substring(0, 4)}...
