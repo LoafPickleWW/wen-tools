@@ -347,7 +347,7 @@ export function SimpleAirdropTool() {
           </label>
           <textarea
             id="specified_asset_ids_id"
-            placeholder="one asset id"
+            placeholder="Multimint Aasset ID"
             className="bg-gray-800 text-white border-2 border-gray-700 rounded-lg p-1 text-sm mx-auto placeholder:text-center placeholder:text-sm"
             style={{ width: "10rem" }}
             value={specifiedAssetIds}
@@ -357,7 +357,7 @@ export function SimpleAirdropTool() {
           />
         </div>)}
         <div className="flex flex-col rounded border-gray-300  dark:border-gray-700">
-          <label className="text-xs text-slate-400">Amount per holder/asset*</label>
+          <label className="text-xs text-slate-400">Amount per asset held*</label>
           <input
             type="number"
             className="bg-gray-800 text-white border-2 text-center border-gray-700 rounded-lg p-1 text-sm mx-auto placeholder:text-center placeholder:text-sm"
