@@ -754,12 +754,16 @@ export async function createFreezeTransactions(
   }
 }
 
-async function getAssetCreatorWallet(assetId, selectNetwork) {
+export async function getAssetCreatorWallet(assetId) {
   try {
-    const url = getNodeURL(selectNetwork) + `/v2/assets/${assetId}`;
+    const nodeUrl = getNodeURL();
+    const url = `${nodeUrl}/v2/assets/${assetId}`;
     const response = await axios.get(url);
+    console.log('getAssetCreatorWallet '+JSON.stringify(response));
+    console.log('getAssetCreatorWallet '+response.data.params.creator);
     return response.data.params.creator;
   } catch (err) {
+    console.log('error '+err);
     return "";
   }
 }
@@ -777,7 +781,7 @@ export async function createAssetOptoutTransactions(
   let txnsArray = [];
   const wallet = localStorage.getItem("wallet");
   for (let i = 0; i < assets.length; i++) {
-    const creatorAddress = await getAssetCreatorWallet(assets[i], networkType);
+    const creatorAddress = await getAssetCreatorWallet(assets[i]);
     if (creatorAddress !== "") {
       const tx = makeAssetTransferTxnWithSuggestedParamsFromObject({
         from: wallet,
@@ -1071,7 +1075,18 @@ export async function getOwnerAddressOfAsset(assetId) {
     return "";
   }
 }
-
+export async function getOwnerAddressAmountOfAsset(assetId) {
+  try {
+    const url =
+      getIndexerURL() +
+      `/v2/assets/${assetId}/balances?currency-greater-than=0`;
+    const response = await axios.get(url);
+    return response;
+  } catch (err) {
+    console.log(err);
+    return "";
+  }
+}
 export async function getRandListingAsset(assetId) {
   try {
     const url = `https://www.randswap.com/v1/listings/asset/${assetId}`;

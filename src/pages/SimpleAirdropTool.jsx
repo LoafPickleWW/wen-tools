@@ -5,7 +5,9 @@ import {
   createAirdropTransactions,
   getCreatedAssets,
   getOwnerAddressOfAsset,
+  getOwnerAddressAmountOfAsset,
   getNodeURL,
+  getAssetCreatorWallet,
 } from "../utils";
 import { TOOLS } from "../constants";
 
@@ -26,6 +28,18 @@ export function SimpleAirdropTool() {
 
   const [processStep, setProcessStep] = useState(0);
   const [mnemonic, setMnemonic] = useState("");
+
+  const TOOL_TYPES = [
+    {
+      label: "Creator Wallet",
+      value: "creatorWallet",
+    },
+    {
+      label: "Multi-Mint Asset",
+      value: "multiMintAsset",
+    },
+  ];
+  const [toolType, setToolType] = useState(TOOL_TYPES[0].value);
 
   async function getAssetDecimals(assetId) {
     try {
@@ -51,7 +65,7 @@ export function SimpleAirdropTool() {
         );
       }
 
-      if (creatorWallets === "") {
+      if (toolType === "creatorWallet" && creatorWallets === "") {
         throw new Error("Please enter creator wallet(s)!");
       }
       if (assetID === "") {
@@ -90,19 +104,28 @@ export function SimpleAirdropTool() {
         splittedSpecifiedAssetIds = splittedSpecifiedAssetIds.map((assetId) =>
           parseInt(assetId.trim())
         );
+        console.log('splittedSpecifiedAssetIds ' + splittedSpecifiedAssetIds)
       } catch (error) {
         toast.error("Please enter valid specified asset IDs!");
         setProcessStep(0);
         return;
       }
-
       splittedSpecifiedAssetIds = [...new Set(splittedSpecifiedAssetIds)];
 
-      let createdAssets = [];
+      if (toolType === 'multiMintAsset') {
+        if (splittedSpecifiedAssetIds.length !== 0) {
+          splittedCreatorWallets.push(await getAssetCreatorWallet(splittedSpecifiedAssetIds));
+          console.log('multiMintAsset splittedCreatorWallets ' +splittedCreatorWallets)
+        }
+      }
+      let createdAssets = [];      
       for (let i = 0; i < splittedCreatorWallets.length; i++) {
+        console.log('splittedCreatorWallets ' +splittedCreatorWallets.length)
+
         createdAssets = createdAssets.concat(
           await getCreatedAssets(splittedCreatorWallets[i])
         );
+        console.log('splittedCreatorWallets createdAssets' +JSON.stringify(createdAssets))
       }
 
       if (splittedPrefixes.length !== 0) {
@@ -116,22 +139,51 @@ export function SimpleAirdropTool() {
           splittedSpecifiedAssetIds.includes(asset.asset_id)
         );
       }
-      
+
       if (createdAssets.length === 0) {
         throw new Error("No assets found with the specified filters!");
       }
-      
+
       setAssetCount(createdAssets.length);
+
       let holders = {};
-      for (let i = 0; i < createdAssets.length; i++) {
-        const holder = await getOwnerAddressOfAsset(createdAssets[i].asset_id);
-        if (holders[holder] === undefined) {
-          holders[holder] = 0;
+
+      if (toolType === "creatorWallet") {
+        //original
+        for (let i = 0; i < createdAssets.length; i++) {
+          const holder = await getOwnerAddressOfAsset(createdAssets[i].asset_id);
+          if (holders[holder] === undefined) {
+            holders[holder] = 0;
+          }
+          holders[holder] += 1;
+          await new Promise((r) => setTimeout(r, 50));
+          setFoundAssetCount(i);
         }
-        holders[holder] += 1;
-        await new Promise((r) => setTimeout(r, 50));
-        setFoundAssetCount(i);
+        console.log('holders '+JSON.stringify(holders));
+      } else {
+        console.log('running getOwnerAddressAmountOfAsset createdAssets.length =>' + createdAssets.length)
+        //multimint
+        for (let i = 0; i < createdAssets.length; i++) {
+          const holderObj = await getOwnerAddressAmountOfAsset(createdAssets[i].asset_id);
+          const currentAssetCount = assetCount + holderObj.data.balances.length;
+          setAssetCount(currentAssetCount);
+          console.log('in multimint assetCount => ' + assetCount);
+          for (let i = 0; i < holderObj.data.balances.length; i++) {
+            if(holderObj.data.balances[i].address === splittedCreatorWallets[0]){
+              continue;
+            }
+            if (holders[holderObj.data.balances[i].address] === undefined) {
+              holders[holderObj.data.balances[i].address] = 0;
+            }
+            holders[holderObj.data.balances[i].address] += holderObj.data.balances[i].amount;
+            await new Promise((r) => setTimeout(r, 50));
+            setFoundAssetCount(i);
+          }
+        }
       }
+
+      console.log('holders => ' + JSON.stringify(holders));
+      //restart
       let txns = [];
       for (const holder in holders) {
         const txn = {
@@ -212,6 +264,8 @@ export function SimpleAirdropTool() {
   }
 
   return (
+
+
     <div className="mx-auto text-white mb-4 text-center flex flex-col items-center max-w-[40rem] gap-y-2">
       <p className="text-2xl font-bold mt-1">
         {TOOLS.find((tool) => tool.path === window.location.pathname).label}
@@ -221,40 +275,79 @@ export function SimpleAirdropTool() {
       {/* mnemonic */}
       <InfinityModeComponent mnemonic={mnemonic} setMnemonic={setMnemonic} />
       {/* end mnemonic */}
+      <p>Select Tool Type</p>
+      <div className="flex flex-col items-center">
+        <select
+          className="text-base rounded border-gray-300 text-secondary-black transition focus:ring-secondary-orange px-2"
+          value={toolType}
+          onChange={(e) => {
+            setToolType(e.target.value);
+            setCreatorWallets("");
+            setPrefixes("");
+            setAssetCount("");
+          }}
+        >
+          {TOOL_TYPES.map((toolType) => (
+            <option key={toolType.value} value={toolType.value}>
+              {toolType.label}
+            </option>
+          ))}
+        </select>
+      </div>
       <div className="container flex flex-col pt-2 gap-y-2">
-        <div className="flex flex-col rounded border-gray-300  dark:border-gray-700">
-          <label className="text-xs text-slate-400">Creator Wallet(s)*</label>
-          <textarea
-            id="creator_wallets_id"
-            placeholder="one per line or comma separated"
-            className="bg-gray-800 text-white border-2 border-gray-700 rounded-lg p-1 text-sm mx-auto placeholder:text-center placeholder:text-sm"
-            style={{ width: "10rem", height: "5rem" }}
-            value={creatorWallets}
-            onChange={(e) => {
-              setCreatorWallets(e.target.value);
-            }}
-          />
-        </div>
-        <div className="flex flex-col rounded border-gray-300  dark:border-gray-700">
-          <label className="text-xs text-slate-400">Unit-name Prefix(es)</label>
-          <textarea
-            id="prefixes_id"
-            placeholder="one per line or comma separated (optional)"
-            className="bg-gray-800 text-white border-2 border-gray-700 rounded-lg p-1 text-sm mx-auto placeholder:text-center placeholder:text-sm"
-            style={{ width: "10rem", height: "5rem" }}
-            value={prefixes}
-            onChange={(e) => {
-              setPrefixes(e.target.value);
-            }}
-          />
-        </div>
-        <div className="flex flex-col rounded border-gray-300  dark:border-gray-700">
+        {toolType === "creatorWallet" ? (
+          <div className="flex flex-col rounded border-gray-300  dark:border-gray-700">
+            <label className="text-xs text-slate-400">Creator Wallet(s)*</label>
+            <textarea
+              id="creator_wallets_id"
+              placeholder="one per line or comma separated"
+              className="bg-gray-800 text-white border-2 border-gray-700 rounded-lg p-1 text-sm mx-auto placeholder:text-center placeholder:text-sm"
+              style={{ width: "10rem", height: "5rem" }}
+              value={creatorWallets}
+              onChange={(e) => {
+                setCreatorWallets(e.target.value);
+              }}
+            />
+          </div>
+        ) : (<p></p>)}
+        {toolType === "creatorWallet" ? (
+          <div className="flex flex-col rounded border-gray-300  dark:border-gray-700">
+            <label className="text-xs text-slate-400">Unit-name Prefix(es)</label>
+            <textarea
+              id="prefixes_id"
+              placeholder="one per line or comma separated (optional)"
+              className="bg-gray-800 text-white border-2 border-gray-700 rounded-lg p-1 text-sm mx-auto placeholder:text-center placeholder:text-sm"
+              style={{ width: "10rem", height: "5rem" }}
+              value={prefixes}
+              onChange={(e) => {
+                setPrefixes(e.target.value);
+              }}
+            />
+          </div>
+        ) : (<p></p>)}
+        {toolType === "creatorWallet" ? (
+          <div className="flex flex-col rounded border-gray-300  dark:border-gray-700">
+            <label className="text-xs text-slate-400">
+              Specified Asset ID(s)
+            </label>
+            <textarea
+              id="specified_asset_ids_id"
+              placeholder="one per line or comma separated (optional)"
+              className="bg-gray-800 text-white border-2 border-gray-700 rounded-lg p-1 text-sm mx-auto placeholder:text-center placeholder:text-sm"
+              style={{ width: "10rem", height: "5rem" }}
+              value={specifiedAssetIds}
+              onChange={(e) => {
+                setSpecifiedAssetIds(e.target.value);
+              }}
+            />
+          </div>
+        ) : (<div className="flex flex-col rounded border-gray-300  dark:border-gray-700">
           <label className="text-xs text-slate-400">
-            Specified Asset ID(s)
+            Specified Multi-Mint Asset ID*
           </label>
           <textarea
             id="specified_asset_ids_id"
-            placeholder="one per line or comma separated (optional)"
+            placeholder="one asset id"
             className="bg-gray-800 text-white border-2 border-gray-700 rounded-lg p-1 text-sm mx-auto placeholder:text-center placeholder:text-sm"
             style={{ width: "10rem", height: "5rem" }}
             value={specifiedAssetIds}
@@ -262,7 +355,7 @@ export function SimpleAirdropTool() {
               setSpecifiedAssetIds(e.target.value);
             }}
           />
-        </div>
+        </div>)}
         <div className="flex flex-col rounded border-gray-300  dark:border-gray-700">
           <label className="text-xs text-slate-400">Amount*</label>
           <input
