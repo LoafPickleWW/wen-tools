@@ -305,7 +305,7 @@ export function SimpleBatchMint() {
         unsignedAssetTransaction = await createARC19AssetMintArray(
           data_for_txns,
           nodeURL,
-          token        
+          token
         );
       } else if (formData.collectionFormat === "ARC69") {
         toast.info("Creating ARC69 transactions...");
@@ -410,7 +410,7 @@ export function SimpleBatchMint() {
   }
 
   return (
-    <div className="mx-auto text-white mb-4 text-center flex flex-col items-center max-w-[40rem] gap-y-2">
+    <div className="mx-auto text-white mb-4 text-center flex flex-col items-center max-w-[40rem] gap-y-2 min-h-screen">
       <p className="text-2xl font-bold mt-1">
         {TOOLS.find((tool) => tool.path === window.location.pathname).label}
       </p>
@@ -717,7 +717,7 @@ export function SimpleBatchMint() {
                 >
                   here
                 </a>
-              </p>{" "}          
+              </p>{" "}
         </div>
       )}
       {previewAsset && (

@@ -118,7 +118,7 @@ export function SimpleAirdropTool() {
           console.log('multiMintAsset splittedCreatorWallets ' +splittedCreatorWallets)
         }
       }
-      let createdAssets = [];      
+      let createdAssets = [];
       for (let i = 0; i < splittedCreatorWallets.length; i++) {
         console.log('splittedCreatorWallets ' +splittedCreatorWallets.length)
 
@@ -266,7 +266,7 @@ export function SimpleAirdropTool() {
   return (
 
 
-    <div className="mx-auto text-white mb-4 text-center flex flex-col items-center max-w-[40rem] gap-y-2">
+    <div className="mx-auto text-white mb-4 text-center flex flex-col items-center max-w-[40rem] gap-y-2 min-h-screen">
       <p className="text-2xl font-bold mt-1">
         {TOOLS.find((tool) => tool.path === window.location.pathname).label}
       </p>

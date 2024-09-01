@@ -2,7 +2,6 @@ import { useState } from "react";
 import { toast } from "react-toastify";
 import axios from "axios";
 import algosdk from "algosdk";
- 
 import {
   TOOLS,
   MAINNET_ALGONODE_INDEXER,
@@ -132,8 +131,8 @@ export function Download19CollectionData() {
           "unit-name": asset.params["unit-name"],
           reserve: asset.params.reserve,
           image_ipfs_cid: asset_metadata.image,
-          description: asset_metadata.description,      
-          mime_type: asset_metadata.image_mime_type,              
+          description: asset_metadata.description,
+          mime_type: asset_metadata.image_mime_type,
         };
       for (const topLevelKey in asset_metadata) {
         if (topLevelKey === "properties") {
@@ -156,7 +155,7 @@ export function Download19CollectionData() {
               asset_data[`${topLevelKey}_${secondLevelKey}`] = asset_metadata[topLevelKey][secondLevelKey];
             }
           }
-        }  
+        }
       }
         count++;
         setCounter(count);
@@ -183,7 +182,7 @@ export function Download19CollectionData() {
   }
 
   return (
-    <div className="mx-auto text-white mb-4 text-center flex flex-col items-center">
+    <div className="mx-auto text-white mb-4 text-center flex flex-col items-center min-h-screen">
       <p className="text-2xl font-bold mt-1">
         {TOOLS.find((tool) => tool.path === window.location.pathname).label}
       </p>

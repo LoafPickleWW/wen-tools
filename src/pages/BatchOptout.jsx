@@ -3,7 +3,7 @@ import { useState } from "react";
 import algosdk from "algosdk";
 import { toast } from "react-toastify";
 import { createAssetOptoutTransactions, getNodeURL } from "../utils";
- 
+
 import { TOOLS } from "../constants";
 
 import InfinityModeComponent from "../components/InfinityModeComponent";
@@ -88,7 +88,7 @@ export function BatchOptout() {
   };
 
   return (
-    <div className="mb-4 text-center flex flex-col items-center max-w-[40rem] gap-y-2 mx-auto text-white">
+    <div className="mb-4 text-center flex flex-col items-center max-w-[40rem] gap-y-2 mx-auto text-white min-h-screen">
       <p className="text-2xl font-bold mt-1">
         {TOOLS.find((tool) => tool.path === window.location.pathname).label}
       </p>

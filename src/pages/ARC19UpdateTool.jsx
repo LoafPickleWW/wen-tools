@@ -79,7 +79,7 @@ export function ARC19UpdateTool() {
         animation_url: item.animation_url,
         animation_mime_type: item.animation_mime_type,
         properties: {
-        traits: {},  
+        traits: {},
         filters: {}
         },
         extra: {},
@@ -201,7 +201,7 @@ export function ARC19UpdateTool() {
   };
 
   return (
-    <div className="mb-4 text-center flex flex-col items-center max-w-[40rem] gap-y-2 mx-auto text-white">
+    <div className="mb-4 text-center flex flex-col items-center max-w-[40rem] gap-y-2 mx-auto text-white min-h-screen">
       <p className="text-2xl font-bold mt-1">
         {TOOLS.find((tool) => tool.path === window.location.pathname).label}
       </p>
