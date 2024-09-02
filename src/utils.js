@@ -1021,7 +1021,7 @@ export async function getNfDomainsInBulk(wallets, bulkSize = 20) {
   for (let i = 0; i < uniqueWallets.length; i += bulkSize) {
     const chunk = uniqueWallets
       .slice(i, i + bulkSize)
-      .map((wallet) => `address=${wallet.toLowerCase()}`)
+      .map((wallet) => `address=${wallet}`)
       .join("&");
     try {
       const nfdLookup = await fetchNFDJSON(
