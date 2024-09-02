@@ -43,8 +43,9 @@ Bounties will be paid out upon successful merge and approval of the Pull Request
 * **Create an On-chain Vote Tool under a new Repo. DM for details** - 750A - In progress by Red
 * ~~**Have a local save state for Simple Mint and Update so if a person needs to leave the page, all the information stays** - 500A~~ Completed by [No-Cash](https://github.com/No-Cash-7970)
 * ~~**Fix UI Bugs like scrolling issues (horizonatal and vertical), white screens, and footer being so high on mobile (issues between tailwind and mui maybe?)** - 500A~~ Completed by [No-Cash](https://github.com/No-Cash-7970)
-* **Fix UI Display Error for Multimint Asset Holder tool when filters are being used. Correct number is not displayed** - 150A
+* **Fix UI Display Error for Multimint Asset Holder tool when filters are being used. Correct number is not displayed** - 150A - Claimed by Twirtle
 * **Remove the need to claim when using Wen Swap. Have transfer execute when TX is signed** - 350A
+* **Add send to Asset Inbox (arc59) check box to Simple Send, Simple Airdrop, and Airdrop Tools. When a user checks this option, upon compiling of the tx, Algo balance will be checked to make sure sender has enough to cover MBR Requirements. Total Algo gas fee to be displayed as well.** - 800A
 
 ## License
 This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) file for details
