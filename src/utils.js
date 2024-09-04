@@ -1,4 +1,5 @@
 import { PeraWalletConnect } from "@perawallet/connect";
+import * as algosdk from "algosdk";
 import {
   Algodv2,
   algosToMicroalgos,
@@ -13,7 +14,7 @@ import {
   signTransaction,
   makeAssetDestroyTxnWithSuggestedParamsFromObject,
   makeAssetFreezeTxnWithSuggestedParamsFromObject,
-  decodeAddress,
+  decodeAddress, createDryrun, generateAccount,
 } from "algosdk";
 import axios from "axios";
 import { CID } from "multiformats/cid";
@@ -39,6 +40,7 @@ import * as mfsha2 from "multiformats/hashes/sha2";
 import * as digest from "multiformats/hashes/digest";
 import { DaffiWalletConnect } from "@daffiwallet/connect";
 import LuteConnect from "lute-connect";
+import {appId, getPrice, getRandomNode} from "./crust";
 
 const peraWallet = new PeraWalletConnect({ shouldShowSignTxnToast: true });
 const deflyWallet = new DeflyWalletConnect({ shouldShowSignTxnToast: true });
@@ -246,6 +248,8 @@ export async function createAssetConfigArray(
   return txnsToValidate;
 }
 
+
+
 export async function createAssetMintArray(
   data_for_txns,
   nodeURL,
@@ -326,6 +330,41 @@ export async function createARC3AssetMintArray(data_for_txns, nodeURL, token) {
     try {
       const jsonString = JSON.stringify(data_for_txns[i].ipfs_data);
       let cid = await pinJSONToPinata(token, jsonString);
+      const price = await getPrice(algodClient, 10000)
+      const node = await getRandomNode(algodClient)
+
+      let suggestedParams = await algodClient.getTransactionParams().do();
+      suggestedParams.flatFee = true;
+      suggestedParams.fee = 2000 * 4; // 设置固定费用
+
+      const paymentTxn = algosdk.makePaymentTxnWithSuggestedParams(
+          wallet,
+          algosdk.getApplicationAddress(appId),
+          price,
+          undefined,
+          undefined,
+          suggestedParams
+      );
+
+      const args = [new TextEncoder().encode("place_order"), algosdk.encodeUnsignedTransaction(paymentTxn), algosdk.decodeAddress(node).publicKey, algosdk.encodeObj(cid), algosdk.encodeUint64(10000), new Uint8Array([1])]
+      console.log(args)
+      const appCallTxn = algosdk.makeApplicationNoOpTxn(
+          wallet,
+          suggestedParams,
+          appId,
+          args,
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+          undefined,
+          [
+            {appIndex: appId, name: algosdk.decodeAddress(node).publicKey},
+            {appIndex: appId, name: new TextEncoder().encode("nodes")}
+          ]
+      );
+
       data_for_txns[i].asset_url_section = "ipfs://" + cid;
       let asset_create_tx = makeAssetCreateTxnWithSuggestedParamsFromObject({
         from: wallet,
@@ -355,14 +394,18 @@ export async function createARC3AssetMintArray(data_for_txns, nodeURL, token) {
             Math.random().toString(36).substring(2)
         ),
       });
-      const groupID = computeGroupID([asset_create_tx, fee_tx]);
+      const groupID = computeGroupID([asset_create_tx, fee_tx, paymentTxn, appCallTxn]);
       asset_create_tx.group = groupID;
       fee_tx.group = groupID;
-      txnsArray.push([asset_create_tx, fee_tx]);
+      paymentTxn.group = groupID;
+      appCallTxn.group = groupID;
+      txnsArray.push([asset_create_tx, fee_tx, paymentTxn, appCallTxn]);
       toast.info(`Asset ${i + 1} of ${data_for_txns.length} uploaded to IPFS`, {
         autoClose: 200,
       });
-    } catch (error) {}
+    } catch (error) {
+      console.error(error)
+    }
   }
   return txnsArray;
 }

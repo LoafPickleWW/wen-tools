@@ -16,6 +16,7 @@ import { IPFS_ENDPOINT, MINT_FEE_PER_ASA, TOOLS } from "../constants";
 import Papa from "papaparse";
 import InfinityModeComponent from "../components/InfinityModeComponent";
 import FaqSectionComponent from "../components/FaqSectionComponent";
+import {PeraWalletConnect} from "@perawallet/connect";
 
 export function SimpleBatchMint() {
   const START_PROCESS = 0;
@@ -291,14 +292,15 @@ export function SimpleBatchMint() {
       setPreviewAsset(data_for_txns[0]);
 
       let unsignedAssetTransaction;
+      console.log(formData.collectionFormat)
       if (formData.collectionFormat === "ARC3") {
         toast.info("Creating ARC3 transactions...");
-        setProcessStep(CREATE_TRANSACTIONS_PROCESS);
         unsignedAssetTransaction = await createARC3AssetMintArray(
           data_for_txns,
           nodeURL,
           token
         );
+        setProcessStep(CREATE_TRANSACTIONS_PROCESS);
       } else if (formData.collectionFormat === "ARC19") {
         toast.info("Creating ARC19 transactions...");
         setProcessStep(CREATE_TRANSACTIONS_PROCESS);
