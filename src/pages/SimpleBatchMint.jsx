@@ -7,8 +7,9 @@ import {
   createARC3AssetMintArray,
   createARC19AssetMintArray,
   createAssetMintArray,
-  signGroupTransactions,
+  createARC3AssetMintArrayV2,
   sliceIntoChunks,
+  signGroupTransactions,
   SignWithMnemonics,
 } from "../utils";
 import { IPFS_ENDPOINT, MINT_FEE_PER_ASA, TOOLS } from "../constants";
@@ -16,7 +17,6 @@ import { IPFS_ENDPOINT, MINT_FEE_PER_ASA, TOOLS } from "../constants";
 import Papa from "papaparse";
 import InfinityModeComponent from "../components/InfinityModeComponent";
 import FaqSectionComponent from "../components/FaqSectionComponent";
-import {PeraWalletConnect} from "@perawallet/connect";
 
 export function SimpleBatchMint() {
   const START_PROCESS = 0;
@@ -42,6 +42,9 @@ export function SimpleBatchMint() {
     tokenId: "",
     royalty: "",
   });
+
+  // batchATC is a AtomicTransactionComposer to batch and send all transactions
+  const [batchATC, setBatchATC] = useState(null);
 
   const [csvData, setCsvData] = useState(null);
 
@@ -295,11 +298,16 @@ export function SimpleBatchMint() {
       console.log(formData.collectionFormat)
       if (formData.collectionFormat === "ARC3") {
         toast.info("Creating ARC3 transactions...");
-        unsignedAssetTransaction = await createARC3AssetMintArray(
-          data_for_txns,
-          nodeURL,
-          token
-        );
+        // V1 here, will be removed in V2
+        // unsignedAssetTransaction = await createARC3AssetMintArray(
+        //   data_for_txns,
+        //   nodeURL,
+        //   token
+        // );
+
+        // V2 here, AtomicTransactionComposer will be used
+        const batchATC = await createARC3AssetMintArrayV2(data_for_txns, nodeURL, token);
+        setBatchATC(batchATC);
         setProcessStep(CREATE_TRANSACTIONS_PROCESS);
       } else if (formData.collectionFormat === "ARC19") {
         toast.info("Creating ARC19 transactions...");
@@ -346,11 +354,14 @@ export function SimpleBatchMint() {
         toast.error("Please connect your wallet first!");
         return;
       }
-      if (assetTransactions.length === 0) {
+
+      // assetTransactions(V1) or batchATC(V2) should not be empty
+      if (assetTransactions && assetTransactions.length === 0 && !batchATC) {
         toast.error("Please create transactions first!");
         return;
       }
-      if (assetTransactions.length > 7 && mnemonic === "") {
+
+      if (assetTransactions && assetTransactions.length > 7 && mnemonic === "") {
         toast.error("Please enter your mnemonic!");
         return;
       }
@@ -360,48 +371,56 @@ export function SimpleBatchMint() {
         "User-Agent": "evil-tools",
       });
 
-      let signedAssetTransactions;
-      if (mnemonic !== "") {
-        if (mnemonic.split(" ").length !== 25)
-          throw new Error("Invalid Mnemonic!");
-        const { sk } = algosdk.mnemonicToSecretKey(mnemonic);
-        signedAssetTransactions = SignWithMnemonics(
-          assetTransactions.flat(),
-          sk
-        );
-      } else {
-        signedAssetTransactions = await signGroupTransactions(
-          assetTransactions,
-          wallet,
-          true
-        );
-      }
 
-      signedAssetTransactions = sliceIntoChunks(signedAssetTransactions, 2);
+      if (formData.collectionFormat === "ARC3") { // send ARC3 transactions by batchATC.execute
+        const result = await batchATC.execute(algodClient, 4);
+        for (const mr of result.methodResults) {
+          console.log(`${mr.returnValue}`);
+        }
+      } else { // Others
+        let signedAssetTransactions;
+        if (mnemonic !== "") {
+          if (mnemonic.split(" ").length !== 25)
+            throw new Error("Invalid Mnemonic!");
+          const { sk } = algosdk.mnemonicToSecretKey(mnemonic);
+          signedAssetTransactions = SignWithMnemonics(
+            assetTransactions.flat(),
+            sk
+          );
+        } else {
+          signedAssetTransactions = await signGroupTransactions(
+            assetTransactions,
+            wallet,
+            true
+          );
+        }
 
-      for (let i = 0; i < signedAssetTransactions.length; i++) {
-        try {
-          await algodClient.sendRawTransaction(signedAssetTransactions[i]).do();
-          if (i % 5 === 0) {
-            toast.success(
-              `Transaction ${i + 1} of ${
-                signedAssetTransactions.length
-              } confirmed!`,
+        signedAssetTransactions = sliceIntoChunks(signedAssetTransactions, 2);
+
+        for (let i = 0; i < signedAssetTransactions.length; i++) {
+          try {
+            await algodClient.sendRawTransaction(signedAssetTransactions[i]).do();
+            if (i % 5 === 0) {
+              toast.success(
+                `Transaction ${i + 1} of ${signedAssetTransactions.length
+                } confirmed!`,
+                {
+                  autoClose: 1000,
+                }
+              );
+            }
+          } catch (error) {
+            toast.error(
+              `Transaction ${i + 1} of ${signedAssetTransactions.length} failed!`,
               {
                 autoClose: 1000,
               }
             );
           }
-        } catch (error) {
-          toast.error(
-            `Transaction ${i + 1} of ${signedAssetTransactions.length} failed!`,
-            {
-              autoClose: 1000,
-            }
-          );
+          await new Promise((resolve) => setTimeout(resolve, 20));
         }
-        await new Promise((resolve) => setTimeout(resolve, 20));
       }
+
       setProcessStep(COMPLETED);
       toast.success("All transactions confirmed!");
       toast.info("You can support by donating :)");
@@ -698,28 +717,28 @@ export function SimpleBatchMint() {
       </div>
       {formData.collectionFormat !== "ARC69" && (
         <div className="flex flex-col mt-4">
-              <label className="mb-1 text-sm leading-none text-gray-200">
-                Pinata JWT***
-              </label>
-              <input
-                type="text"
-                id="ipfs-token"
-                placeholder="token"
-                className="w-48 mx-auto bg-gray-300 text-sm font-medium text-center leading-none text-black placeholder:text-black/30 px-3 py-2 border rounded border-gray-200"
-                value={token}
-                onChange={(e) => setToken(e.target.value)}
-              />
-              <p className="text-xs text-slate-400 font-roboto mt-1">
-                ***You can get your own token{" "}
-                <a
-                  href="https://knowledge.pinata.cloud/en/articles/6191471-how-to-create-an-pinata-api-key"
-                  target="_blank"
-                  className="text-primary-orange/70 hover:text-secondary-orange/80 transition"
-                  rel="noreferrer"
-                >
-                  here
-                </a>
-              </p>{" "}
+          <label className="mb-1 text-sm leading-none text-gray-200">
+            Pinata JWT***
+          </label>
+          <input
+            type="text"
+            id="ipfs-token"
+            placeholder="token"
+            className="w-48 mx-auto bg-gray-300 text-sm font-medium text-center leading-none text-black placeholder:text-black/30 px-3 py-2 border rounded border-gray-200"
+            value={token}
+            onChange={(e) => setToken(e.target.value)}
+          />
+          <p className="text-xs text-slate-400 font-roboto mt-1">
+            ***You can get your own token{" "}
+            <a
+              href="https://knowledge.pinata.cloud/en/articles/6191471-how-to-create-an-pinata-api-key"
+              target="_blank"
+              className="text-primary-orange/70 hover:text-secondary-orange/80 transition"
+              rel="noreferrer"
+            >
+              here
+            </a>
+          </p>{" "}
         </div>
       )}
       {previewAsset && (
