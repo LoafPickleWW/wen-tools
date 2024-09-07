@@ -1,4 +1,5 @@
 import { PeraWalletConnect } from "@perawallet/connect";
+import * as algosdk from "algosdk";
 import {
   Algodv2,
   algosToMicroalgos,
@@ -13,7 +14,7 @@ import {
   signTransaction,
   makeAssetDestroyTxnWithSuggestedParamsFromObject,
   makeAssetFreezeTxnWithSuggestedParamsFromObject,
-  decodeAddress,
+  decodeAddress, createDryrun, generateAccount,
 } from "algosdk";
 import axios from "axios";
 import { CID } from "multiformats/cid";
@@ -39,6 +40,7 @@ import * as mfsha2 from "multiformats/hashes/sha2";
 import * as digest from "multiformats/hashes/digest";
 import { DaffiWalletConnect } from "@daffiwallet/connect";
 import LuteConnect from "lute-connect";
+import { appId, buildAssetMintAtomicTransactionComposer, getPrice, getRandomNode, peraWalletSignerCreator } from "./crust";
 
 const peraWallet = new PeraWalletConnect({ shouldShowSignTxnToast: true });
 const deflyWallet = new DeflyWalletConnect({ shouldShowSignTxnToast: true });
@@ -226,7 +228,7 @@ export async function createAssetConfigArray(
       suggestedParams: params,
       note: new TextEncoder().encode(
         "via wen.tools - free tools for creators and collectors | " +
-          Math.random().toString(36).substring(2)
+        Math.random().toString(36).substring(2)
       ),
     });
     const groupID = computeGroupID([asset_update_tx, fee_tx]);
@@ -289,7 +291,7 @@ export async function createAssetMintArray(
         suggestedParams: params,
         note: new TextEncoder().encode(
           "via wen.tools - free tools for creators and collectors | " +
-            Math.random().toString(36).substring(2)
+          Math.random().toString(36).substring(2)
         ),
       });
       const groupID = computeGroupID([asset_create_tx, fee_tx]);
@@ -312,6 +314,55 @@ export async function createAssetMintArray(
   return txnsToValidate;
 }
 
+/**
+ * createARC3AssetMintArrayV2 create array of transactions for minting
+ * @param {*} data_for_txns 
+ * @param {*} nodeURL 
+ * @param {*} token 
+ * @returns AtomicTransactionComposer
+ */
+export async function createARC3AssetMintArrayV2(data_for_txns, nodeURL, token) {
+  const wallet = localStorage.getItem("wallet");
+  if (wallet === "" || wallet === undefined) {
+    throw new Error("Wallet not found");
+  }
+  const algodClient = new Algodv2(token, nodeURL, {
+    "User-Agent": "evil-tools",
+  });
+
+  // create atomic transaction composer
+  const atc = new algosdk.AtomicTransactionComposer();
+
+  // create a new peraWalletSigner
+  const peraWalletSigner = peraWalletSignerCreator(peraWallet, wallet);
+
+  for (let i = 0; i < data_for_txns.length; i++) {
+    try {
+      const jsonString = JSON.stringify(data_for_txns[i].ipfs_data);
+      let cid = await pinJSONToPinata(token, jsonString);
+      const price = await getPrice(algodClient, 10000)
+      const node = await getRandomNode(algodClient)
+      if (typeof node !== "string") {
+        throw new Error("Invalid Node!");
+      }
+
+      let suggestedParams = await algodClient.getTransactionParams().do();
+      suggestedParams.flatFee = true;
+      suggestedParams.fee = 2000 * 4; // set fee
+
+      // build ATC
+      await buildAssetMintAtomicTransactionComposer(atc, peraWalletSigner, data_for_txns[i], price, node, suggestedParams, cid)
+
+      toast.info(`Asset ${i + 1} of ${data_for_txns.length} uploaded to IPFS`, {
+        autoClose: 200,
+      });
+    } catch (error) {
+      console.error(error)
+    }
+  }
+  return atc;
+}
+
 export async function createARC3AssetMintArray(data_for_txns, nodeURL, token) {
   const wallet = localStorage.getItem("wallet");
   if (wallet === "" || wallet === undefined) {
@@ -326,6 +377,50 @@ export async function createARC3AssetMintArray(data_for_txns, nodeURL, token) {
     try {
       const jsonString = JSON.stringify(data_for_txns[i].ipfs_data);
       let cid = await pinJSONToPinata(token, jsonString);
+      const price = await getPrice(algodClient, 10000)
+      const node = await getRandomNode(algodClient)
+      if (typeof node !== "string") {
+        throw new Error("Invalid Node!");
+      }
+
+      let suggestedParams = await algodClient.getTransactionParams().do();
+      suggestedParams.flatFee = true;
+      suggestedParams.fee = 2000 * 4; // 设置固定费用
+
+      const paymentTxn = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
+        type: 'pay',
+        from: wallet,
+        to: algosdk.getApplicationAddress(appId),
+        receiver: algosdk.getApplicationAddress(appId),
+        amount: price,
+        closeRemainderTo: undefined,
+        note: undefined,
+        suggestedParams
+      });
+
+      const method = algosdk.ABIMethod.fromSignature('place_order(pay,account,string,uint64,bool)void');
+
+      const args = [method.getSelector(), algosdk.encodeUnsignedTransaction(paymentTxn), algosdk.decodeAddress(node).publicKey, algosdk.encodeObj(cid), algosdk.encodeUint64(10000), new Uint8Array([1])]
+      console.log(args)
+      
+      const appCallTxn = algosdk.makeApplicationCallTxnFromObject({
+        accounts: [wallet, node],
+        from: wallet,
+        appIndex: appId,
+        appArgs: [
+          method.getSelector(),
+          algosdk.decodeAddress(node).publicKey,
+          algosdk.encodeObj(cid),
+          algosdk.encodeUint64(10000),
+          new Uint8Array([1]),
+        ],
+        suggestedParams,
+        boxes: [
+          { appIndex: appId, name: algosdk.decodeAddress(node).publicKey },
+          { appIndex: appId, name: new TextEncoder().encode("nodes") }
+        ]
+      });
+
       data_for_txns[i].asset_url_section = "ipfs://" + cid;
       let asset_create_tx = makeAssetCreateTxnWithSuggestedParamsFromObject({
         from: wallet,
@@ -352,17 +447,21 @@ export async function createARC3AssetMintArray(data_for_txns, nodeURL, token) {
         suggestedParams: params,
         note: new TextEncoder().encode(
           "via wen.tools - free tools for creators and collectors | " +
-            Math.random().toString(36).substring(2)
+          Math.random().toString(36).substring(2)
         ),
-      });
-      const groupID = computeGroupID([asset_create_tx, fee_tx]);
+      })
+      const groupID = computeGroupID([asset_create_tx, fee_tx, paymentTxn, appCallTxn]);
       asset_create_tx.group = groupID;
       fee_tx.group = groupID;
-      txnsArray.push([asset_create_tx, fee_tx]);
+      paymentTxn.group = groupID;
+      appCallTxn.group = groupID;
+      txnsArray.push([asset_create_tx, fee_tx, paymentTxn, appCallTxn]);
       toast.info(`Asset ${i + 1} of ${data_for_txns.length} uploaded to IPFS`, {
         autoClose: 200,
       });
-    } catch (error) {}
+    } catch (error) {
+      console.error(error)
+    }
   }
   return txnsArray;
 }
@@ -410,7 +509,7 @@ export async function createARC19AssetMintArray(data_for_txns, nodeURL, token) {
         suggestedParams: params,
         note: new TextEncoder().encode(
           "via wen.tools - free tools for creators and collectors | " +
-            Math.random().toString(36).substring(2)
+          Math.random().toString(36).substring(2)
         ),
       });
       const groupID = computeGroupID([asset_create_tx, fee_tx]);
@@ -468,7 +567,7 @@ export async function updateARC19AssetMintArray(data_for_txns, nodeURL, token) {
         suggestedParams: params,
         note: new TextEncoder().encode(
           "via wen.tools - free tools for creators and collectors | " +
-            Math.random().toString(36).substring(2)
+          Math.random().toString(36).substring(2)
         ),
       });
       const groupID = computeGroupID([update_tx, fee_tx]);
@@ -531,11 +630,11 @@ export async function createAirdropTransactions(
           note: new TextEncoder().encode(
             isHolder
               ? data_for_txns[i].note.slice(0, 950) +
-                  " | via wen.tools - free tools for creators and collectors  " +
-                  Math.random().toString(36).substring(2)
+              " | via wen.tools - free tools for creators and collectors  " +
+              Math.random().toString(36).substring(2)
               : data_for_txns[i].note.slice(0, 950) +
-                  " | via wen.tools - free tools for creators and collectors  " +
-                  Math.random().toString(36).substring(2)
+              " | via wen.tools - free tools for creators and collectors  " +
+              Math.random().toString(36).substring(2)
           ),
         });
       } else {
@@ -551,11 +650,11 @@ export async function createAirdropTransactions(
           note: new TextEncoder().encode(
             isHolder
               ? data_for_txns[i].note.slice(0, 950) +
-                  " | via wen.tools - free tools for creators and collectors  " +
-                  Math.random().toString(36).substring(2)
+              " | via wen.tools - free tools for creators and collectors  " +
+              Math.random().toString(36).substring(2)
               : data_for_txns[i].note.slice(0, 950) +
-                  " | via wen.tools - free tools for creators and collectors  " +
-                  Math.random().toString(36).substring(2)
+              " | via wen.tools - free tools for creators and collectors  " +
+              Math.random().toString(36).substring(2)
           ),
         });
       }
@@ -833,7 +932,7 @@ export async function createAssetDeleteTransactions(assets, nodeURL, mnemonic) {
         assetIndex: parseInt(assets[i]),
         note: new TextEncoder().encode(
           "via wen.tools - free tools for creators and collectors | " +
-            Math.random().toString(36).substring(2)
+          Math.random().toString(36).substring(2)
         ),
       });
       let fee_tx = makePaymentTxnWithSuggestedParamsFromObject({
