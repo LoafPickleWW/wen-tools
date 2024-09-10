@@ -89,7 +89,7 @@ export function SimpleBatchMint() {
         toast.error("Please connect your wallet");
         return;
       }
-      if (formData.collectionFormat !== "ARC69" && !token) {
+      if (formData.collectionFormat !== "ARC69" && formData.collectionFormat !== "ARC3" && !token) {
         toast.error("Please enter a token");
         return;
       }
