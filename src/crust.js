@@ -1,5 +1,6 @@
 import * as algosdk from "algosdk";
 import { MINT_FEE_PER_ASA, MINT_FEE_WALLET } from "./constants";
+import axios from "axios";
 
 export const appId = 1275319623;
 
@@ -198,4 +199,122 @@ export async function buildAssetMintAtomicTransactionComposer(
       { appIndex: appId, name: new TextEncoder().encode("nodes") }
     ]
   });
+}
+
+export async function pinJSONToCrust(token, json, endpoint = "") {
+  if(token === "" || token === undefined || token === null) {
+    throw new Error("Crust: authBasic Token not found, please login and try again.");
+  }
+  if (endpoint === "") {
+    endpoint = getDefaultCrustAuthIpfsEndpoint();
+  }
+  const blob = new Blob([json], { type: "application/json" });
+  const data = new FormData();
+  data.append("file", blob);
+  const response = await axios.post(
+    `${endpoint}/api/v0/add`,
+    data,
+    {
+      headers: {
+        Authorization: `Bearer ${token.trim()}`,
+      },
+      params: { pin: true, 'cid-version': 1, },
+    },
+  );
+
+  if (response.status === 200 && response.data && response.data.Hash) {
+    return response.data.Hash;    
+  } else {
+    throw new Error(response.data ? response.data.Error : "pinJSONToCrust post failed");
+  }
+}
+
+// Returns the default Crust Auth IPFS endpoint
+export function getDefaultCrustAuthIpfsEndpoint() {
+  return createCrustAuthIpfsEndpoints()[0].value;
+}
+
+// Definitions here are with the following values -
+//   info: the name of a logo as defined in ../ui/logos, specifically in namedLogos
+//   text: the IPFS endpoint name
+//   value: the IPFS endpoint domain
+//   location: IPFS gateway location
+// Returns an array of objects
+// {
+//   text?: string;
+//   value: string;
+//   location?: string;
+//   group?: string
+// }
+export function createCrustAuthIpfsEndpoints() {
+  return [
+    {
+      location: '️Shanghai',
+      text: '️⚡ Thunder Gateway',
+      value: 'https://gw.crustfiles.net',
+      // group: "Thunder Gateway"
+    },
+    {
+      location: 'Singapore',
+      text: 'DCF',
+      value: 'https://crustipfs.xyz',
+      // group: "Public Gateway"
+    },
+    {
+      location: 'United States',
+      text: 'Crust Network',
+      value: 'https://ipfs-gw.decloud.foundation',
+      // group: "Public Gateway"
+    },
+    {
+      location: 'Henan',
+      text: '️Crust IPFS GW',
+      value: 'https://gw.w3ipfs.cn:10443'
+    },
+    {
+      location: 'Los Angeles',
+      text: '️Crust IPFS GW',
+      value: 'https://gw.smallwolf.me'
+    },
+    {
+      location: 'Henan',
+      text: '️Crust IPFS GW',
+      value: 'https://gw.w3ipfs.com:7443'
+    },  
+    {
+      location: 'Henan Unicom',
+      text: '️Crust IPFS GW',
+      value: 'https://gw.w3ipfs.net:7443'
+    },
+    {
+      location: 'Helsinki',
+      text: '️crust-fans',
+      value: 'https://crust.fans'
+    },
+    {
+      location: 'Phoenix',
+      text: '️crustgateway',
+      value: 'https://crustgateway.com'
+    },
+    {
+      location: 'Germany',
+      text: '️crustgateway-de',
+      value: 'https://crustgateway.online'
+    },
+    {
+      location: 'Los Angeles',
+      text: '️Crust IPFS GW',
+      value: 'https://gw.w3ipfs.org.cn'
+    },
+    {
+      location: 'Shanghai',
+      text: 'Area51-GW',
+      value: 'https://223.111.148.195'
+    },
+    {
+      location: 'Shanghai',
+      text: 'Crato-GW',
+      value: 'https://223.111.148.196'
+    }
+  ];
 }
