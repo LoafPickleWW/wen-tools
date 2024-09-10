@@ -40,9 +40,9 @@ import * as mfsha2 from "multiformats/hashes/sha2";
 import * as digest from "multiformats/hashes/digest";
 import { DaffiWalletConnect } from "@daffiwallet/connect";
 import LuteConnect from "lute-connect";
-import { appId, buildAssetMintAtomicTransactionComposer, getPrice, getRandomNode, peraWalletSignerCreator } from "./crust";
+import { appId, buildAssetMintAtomicTransactionComposer, getPrice, getRandomNode, peraWalletSignerCreator, pinJSONToCrust } from "./crust";
 
-const peraWallet = new PeraWalletConnect({ shouldShowSignTxnToast: true });
+export const peraWallet = new PeraWalletConnect({ shouldShowSignTxnToast: true });
 const deflyWallet = new DeflyWalletConnect({ shouldShowSignTxnToast: true });
 const daffiWallet = new DaffiWalletConnect({ shouldShowSignTxnToast: true });
 const luteWallet = new LuteConnect("The Laboratory");
@@ -326,7 +326,7 @@ export async function createARC3AssetMintArrayV2(data_for_txns, nodeURL, token) 
   if (wallet === "" || wallet === undefined) {
     throw new Error("Wallet not found");
   }
-  const algodClient = new Algodv2(token, nodeURL, {
+  const algodClient = new Algodv2("", nodeURL, {
     "User-Agent": "evil-tools",
   });
 
@@ -339,7 +339,14 @@ export async function createARC3AssetMintArrayV2(data_for_txns, nodeURL, token) 
   for (let i = 0; i < data_for_txns.length; i++) {
     try {
       const jsonString = JSON.stringify(data_for_txns[i].ipfs_data);
-      let cid = await pinJSONToPinata(token, jsonString);
+
+      // upload to Pinata
+      // let cid = await pinJSONToPinata(token, jsonString);
+
+      const authBasic = localStorage.getItem("authBasic");
+      // upload to Crust
+      const cid = await pinJSONToCrust(authBasic, jsonString)
+
       const price = await getPrice(algodClient, 10000)
       const node = await getRandomNode(algodClient)
       if (typeof node !== "string") {

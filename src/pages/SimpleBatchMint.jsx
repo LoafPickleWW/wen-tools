@@ -89,7 +89,7 @@ export function SimpleBatchMint() {
         toast.error("Please connect your wallet");
         return;
       }
-      if (formData.collectionFormat !== "ARC69" && !token) {
+      if (formData.collectionFormat !== "ARC69" && formData.collectionFormat !== "ARC3" && !token) {
         toast.error("Please enter a token");
         return;
       }
@@ -715,7 +715,7 @@ export function SimpleBatchMint() {
           return TraitMetadataInputField(key);
         })}
       </div>
-      {formData.collectionFormat !== "ARC69" && (
+      {/*formData.collectionFormat !== "ARC69" && (
         <div className="flex flex-col mt-4">
           <label className="mb-1 text-sm leading-none text-gray-200">
             Pinata JWT***
@@ -740,7 +740,7 @@ export function SimpleBatchMint() {
             </a>
           </p>{" "}
         </div>
-      )}
+      )*/}
       {previewAsset && (
         <div className="flex flex-col mt-2 justify-center items-center w-[16rem] bg-secondary-black p-4 rounded-lg">
           <p className="text-lg font-bold">Preview Asset</p>

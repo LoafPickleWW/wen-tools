@@ -19,6 +19,7 @@ import { DaffiWalletConnect } from "@daffiwallet/connect";
 import { PeraWalletConnect } from "@perawallet/connect";
 import LuteConnect from "lute-connect";
 import { getNodeURL } from "../utils";
+import { signLoginAlgorandForCrustIpfsEndpoint } from "../crust-auth";
 
 export default function ConnectButton() {
   const [anchorEl, setAnchorEl] = useState(null);
@@ -52,6 +53,11 @@ export default function ConnectButton() {
       const accounts = await peraWallet.connect();
       localStorage.setItem("wallet", accounts[0]);
       setWalletAddress(accounts[0]);
+
+      const authBasic = await signLoginAlgorandForCrustIpfsEndpoint(accounts[0]);
+      localStorage.setItem("authBasic", authBasic);
+      console.log("------------crust auth success: ", authBasic);
+
       toast.success("Connected!");
     } catch (err) {
       toast.error("Failed to connect!");
