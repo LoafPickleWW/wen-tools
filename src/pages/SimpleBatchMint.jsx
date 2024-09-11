@@ -17,6 +17,7 @@ import { IPFS_ENDPOINT, MINT_FEE_PER_ASA, TOOLS } from "../constants";
 import Papa from "papaparse";
 import InfinityModeComponent from "../components/InfinityModeComponent";
 import FaqSectionComponent from "../components/FaqSectionComponent";
+import { isCrustAuth } from "../crust-auth";
 
 export function SimpleBatchMint() {
   const START_PROCESS = 0;
@@ -85,7 +86,7 @@ export function SimpleBatchMint() {
   async function createTransactions() {
     try {
       const wallet = localStorage.getItem("wallet");
-      if (!wallet) {
+      if (!wallet || !isCrustAuth()) {
         toast.error("Please connect your wallet");
         return;
       }
