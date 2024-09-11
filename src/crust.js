@@ -1,6 +1,7 @@
 import * as algosdk from "algosdk";
 import { MINT_FEE_PER_ASA, MINT_FEE_WALLET } from "./constants";
 import axios from "axios";
+import { isCrustAuth } from "./crust-auth";
 
 export const appId = 1275319623;
 
@@ -29,59 +30,59 @@ export const appId = 1275319623;
  * @returns {Promise<number>}
  */
 export async function getPrice(client, size) {
-    const appInfo = await client.getApplicationByID(appId).do()
-    const state = appInfo.params['global-state'];
+  const appInfo = await client.getApplicationByID(appId).do()
+  const state = appInfo.params['global-state'];
 
-    console.log(state)
-    const getStateValue = function(key) {
-        const item = state.find((item) => Buffer.from(item.key, 'base64').toString() === key);
-        return item ? item.value.uint : 0;
-    };
+  console.log(state)
+  const getStateValue = function (key) {
+    const item = state.find((item) => Buffer.from(item.key, 'base64').toString() === key);
+    return item ? item.value.uint : 0;
+  };
 
-    const basePrice = getStateValue('base_price');
-    const bytePrice = getStateValue('byte_price');
-    const serviceRate = getStateValue('service_rate');
-    const cruPrice = getStateValue('cru_price');
-    const algoPrice = getStateValue('algo_price');
+  const basePrice = getStateValue('base_price');
+  const bytePrice = getStateValue('byte_price');
+  const serviceRate = getStateValue('service_rate');
+  const cruPrice = getStateValue('cru_price');
+  const algoPrice = getStateValue('algo_price');
 
-    console.table(basePrice, bytePrice, serviceRate, cruPrice, algoPrice)
+  console.table(basePrice, bytePrice, serviceRate, cruPrice, algoPrice)
 
-    let price = (basePrice + size * bytePrice / (1024) / (1024))
-        * (serviceRate + (100)) / (100)
-        * cruPrice / algoPrice / (10**12);
+  let price = (basePrice + size * bytePrice / (1024) / (1024))
+    * (serviceRate + (100)) / (100)
+    * cruPrice / algoPrice / (10 ** 12);
 
-    price *= 200;
+  price *= 200;
 
-    return Math.round(price);
+  return Math.round(price);
 }
 
 export async function getRandomNode(client) {
-    try {
-        const boxesResponse = await client.getApplicationBoxes(appId).do();
-        const boxNames = boxesResponse.boxes.map(box => box.name);
+  try {
+    const boxesResponse = await client.getApplicationBoxes(appId).do();
+    const boxNames = boxesResponse.boxes.map(box => box.name);
 
-        const nodesBoxName = boxNames.find(name =>
-            Buffer.from(name, 'base64').toString() === 'nodes'
-        );
+    const nodesBoxName = boxNames.find(name =>
+      Buffer.from(name, 'base64').toString() === 'nodes'
+    );
 
-        if (!nodesBoxName) {
-            console.log("Nodes box not found");
-            return [];
-        }
-
-        const nodesBoxResponse = await client.getApplicationBoxByName(appId, nodesBoxName).do();
-        const nodesData = nodesBoxResponse.value;
-
-        const nodes = [];
-        for (let i = 0; i < nodesData.length; i += 32) {
-            const address = algosdk.encodeAddress(nodesData.slice(i, i + 32));
-            nodes.push(address);
-        }
-        return nodes.filter((node, index) => nodes.indexOf(node) === index)[0];
-    } catch (error) {
-        console.error("Error fetching nodes:", error);
-        return [];
+    if (!nodesBoxName) {
+      console.log("Nodes box not found");
+      return [];
     }
+
+    const nodesBoxResponse = await client.getApplicationBoxByName(appId, nodesBoxName).do();
+    const nodesData = nodesBoxResponse.value;
+
+    const nodes = [];
+    for (let i = 0; i < nodesData.length; i += 32) {
+      const address = algosdk.encodeAddress(nodesData.slice(i, i + 32));
+      nodes.push(address);
+    }
+    return nodes.filter((node, index) => nodes.indexOf(node) === index)[0];
+  } catch (error) {
+    console.error("Error fetching nodes:", error);
+    return [];
+  }
 }
 
 /**
@@ -91,26 +92,26 @@ export async function getRandomNode(client) {
  * @returns 
  */
 export const peraWalletSignerCreator = (peraWallet, wallet) => {
-    return async (txnGroup, indexesToSign) => {
-      await peraWallet.reconnectSession();
-    
-      const groups = [txnGroup];
-    
-      const multipleTxnGroups = groups.map((group) => {
-        return group.map((txn) => {
-          return { txn: txn, signers: [wallet] };
-        });
+  return async (txnGroup, indexesToSign) => {
+    await peraWallet.reconnectSession();
+
+    const groups = [txnGroup];
+
+    const multipleTxnGroups = groups.map((group) => {
+      return group.map((txn) => {
+        return { txn: txn, signers: [wallet] };
       });
-      if (multipleTxnGroups.length === 0) {
-        throw new Error("Transaction signing failed!");
-      }
-    
-      const signedTxns = await peraWallet.signTransaction(multipleTxnGroups);
-    
-      return Promise.resolve(signedTxns);
-    };
+    });
+    if (multipleTxnGroups.length === 0) {
+      throw new Error("Transaction signing failed!");
+    }
+
+    const signedTxns = await peraWallet.signTransaction(multipleTxnGroups);
+
+    return Promise.resolve(signedTxns);
   };
-  
+};
+
 /**
  * buildAssetMintAtomicTransactionComposer
  * @param {*} atc The AtomicTransactionComposer will be used to build the transaction
@@ -122,13 +123,13 @@ export const peraWalletSignerCreator = (peraWallet, wallet) => {
  * @param {*} cid ipfs cid
  */
 export async function buildAssetMintAtomicTransactionComposer(
-    atc,
-    txSigner,
-    data_for_txn,
-    price,
-    node,
-    suggestedParams,
-    cid,
+  atc,
+  txSigner,
+  data_for_txn,
+  price,
+  node,
+  suggestedParams,
+  cid,
 ) {
   const wallet = localStorage.getItem("wallet");
   if (wallet === "" || wallet === undefined) {
@@ -144,7 +145,7 @@ export async function buildAssetMintAtomicTransactionComposer(
     closeRemainderTo: undefined,
     note: undefined,
     suggestedParams
-});
+  });
 
   const method = algosdk.ABIMethod.fromSignature('place_order(pay,account,string,uint64,bool)void');
 
@@ -185,10 +186,10 @@ export async function buildAssetMintAtomicTransactionComposer(
     method,
     note: new TextEncoder().encode("via wen.tools - free tools for creators and collectors | " + Math.random().toString(36).substring(2)),
     methodArgs: [
-      {txn: paymentTxn, signer: txSigner}, 
-      node, 
-      cid, 
-      10000, 
+      { txn: paymentTxn, signer: txSigner },
+      node,
+      cid,
+      10000,
       true
     ],
     sender: wallet,
@@ -202,7 +203,7 @@ export async function buildAssetMintAtomicTransactionComposer(
 }
 
 export async function pinJSONToCrust(token, json, endpoint = "") {
-  if(token === "" || token === undefined || token === null) {
+  if (!isCrustAuth()) {
     throw new Error("Crust: authBasic Token not found, please login and try again.");
   }
   if (endpoint === "") {
@@ -223,7 +224,7 @@ export async function pinJSONToCrust(token, json, endpoint = "") {
   );
 
   if (response.status === 200 && response.data && response.data.Hash) {
-    return response.data.Hash;    
+    return response.data.Hash;
   } else {
     throw new Error(response.data ? response.data.Error : "pinJSONToCrust post failed");
   }
@@ -280,7 +281,7 @@ export function createCrustAuthIpfsEndpoints() {
       location: 'Henan',
       text: '️Crust IPFS GW',
       value: 'https://gw.w3ipfs.com:7443'
-    },  
+    },
     {
       location: 'Henan Unicom',
       text: '️Crust IPFS GW',

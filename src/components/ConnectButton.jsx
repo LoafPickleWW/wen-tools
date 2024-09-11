@@ -51,16 +51,22 @@ export default function ConnectButton() {
     handleClose();
     try {
       const accounts = await peraWallet.connect();
-      localStorage.setItem("wallet", accounts[0]);
-      setWalletAddress(accounts[0]);
 
       const authBasic = await signLoginAlgorandForCrustIpfsEndpoint(accounts[0]);
+
+      // continue when connect & signLoginAlgorandForCrustIpfsEndpoint sucess
+
+      setWalletAddress(accounts[0]);
+
+      localStorage.setItem("wallet", accounts[0]);
       localStorage.setItem("authBasic", authBasic);
+
       console.log("------------crust auth success: ", authBasic);
 
       toast.success("Connected!");
     } catch (err) {
       toast.error("Failed to connect!");
+      disconnect(); // clear when crust auth fail
     }
   };
 
@@ -132,10 +138,10 @@ export default function ConnectButton() {
   const disconnect = async () => {
     try {
       peraWallet.disconnect();
-    } catch (error) {}
+    } catch (error) { }
     try {
       deflyWallet.disconnect();
-    } catch (error) {}
+    } catch (error) { }
     const networkType = localStorage.getItem("networkType");
     localStorage.clear();
     localStorage.setItem("networkType", networkType);
