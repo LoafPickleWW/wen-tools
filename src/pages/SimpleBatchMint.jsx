@@ -308,7 +308,7 @@ export function SimpleBatchMint() {
         // );
 
         // V2 here, AtomicTransactionComposer will be used
-        const batchATC = await createARC3AssetMintArrayV2(data_for_txns, nodeURL, token);
+        const batchATC = await createARC3AssetMintArrayV2(data_for_txns, nodeURL);
         setBatchATC(batchATC);
         setProcessStep(CREATE_TRANSACTIONS_PROCESS);
       } else if (formData.collectionFormat === "ARC19") {
@@ -321,7 +321,7 @@ export function SimpleBatchMint() {
         // );
 
         // V2 here, AtomicTransactionComposer will be used
-        const batchATC = await createARC19AssetMintArrayV2(data_for_txns, nodeURL, token);
+        const batchATC = await createARC19AssetMintArrayV2(data_for_txns, nodeURL);
         setBatchATC(batchATC);
       } else if (formData.collectionFormat === "ARC69") {
         toast.info("Creating ARC69 transactions...");
@@ -385,7 +385,7 @@ export function SimpleBatchMint() {
         }
       } else { // Others
         let signedAssetTransactions;
-        if (mnemonic !== "") {
+        if (mnemonic !== "") { // TODO support mnemonic signner
           if (mnemonic.split(" ").length !== 25)
             throw new Error("Invalid Mnemonic!");
           const { sk } = algosdk.mnemonicToSecretKey(mnemonic);

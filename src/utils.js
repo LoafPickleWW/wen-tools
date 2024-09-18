@@ -321,7 +321,7 @@ export async function createAssetMintArray(
  * @param {*} token 
  * @returns AtomicTransactionComposer
  */
-export async function createARC3AssetMintArrayV2(data_for_txns, nodeURL, token) {
+export async function createARC3AssetMintArrayV2(data_for_txns, nodeURL) {
   const wallet = localStorage.getItem("wallet");
   if (wallet === "" || wallet === undefined) {
     throw new Error("Wallet not found");
@@ -473,7 +473,7 @@ export async function createARC3AssetMintArray(data_for_txns, nodeURL, token) {
   return txnsArray;
 }
 
-export async function createARC19AssetMintArrayV2(data_for_txns, nodeURL, token) {
+export async function createARC19AssetMintArrayV2(data_for_txns, nodeURL) {
   const wallet = localStorage.getItem("wallet");
   if (wallet === "" || wallet === undefined) {
     throw new Error("Wallet not found");
