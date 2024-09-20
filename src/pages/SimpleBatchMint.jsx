@@ -308,7 +308,7 @@ export function SimpleBatchMint() {
         // );
 
         // V2 here, AtomicTransactionComposer will be used
-        const batchATC = await createARC3AssetMintArrayV2(data_for_txns, nodeURL);
+        const batchATC = await createARC3AssetMintArrayV2(data_for_txns, nodeURL, mnemonic);
         setBatchATC(batchATC);
         setProcessStep(CREATE_TRANSACTIONS_PROCESS);
       } else if (formData.collectionFormat === "ARC19") {
@@ -321,7 +321,7 @@ export function SimpleBatchMint() {
         // );
 
         // V2 here, AtomicTransactionComposer will be used
-        const batchATC = await createARC19AssetMintArrayV2(data_for_txns, nodeURL);
+        const batchATC = await createARC19AssetMintArrayV2(data_for_txns, nodeURL, mnemonic);
         setBatchATC(batchATC);
       } else if (formData.collectionFormat === "ARC69") {
         toast.info("Creating ARC69 transactions...");

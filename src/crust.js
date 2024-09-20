@@ -2,6 +2,7 @@ import * as algosdk from "algosdk";
 import { MINT_FEE_PER_ASA, MINT_FEE_WALLET } from "./constants";
 import axios from "axios";
 import { isCrustAuth } from "./crust-auth";
+import { SignWithMnemonics } from "./utils";
 
 export const appId = 1275319623;
 
@@ -84,6 +85,18 @@ export async function getRandomNode(client) {
     return [];
   }
 }
+
+export const mnemonicSignerCreator = (mnemonic) => {
+  return async (txnGroup, indexesToSign) => {
+    const { sk } = algosdk.mnemonicToSecretKey(mnemonic);
+    const signedTxns = SignWithMnemonics(
+      txnGroup,
+      sk
+    );
+
+    return Promise.resolve(signedTxns);
+  };
+};
 
 /**
  * peraWalletSignerCreator return a peraWallet signer

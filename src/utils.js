@@ -40,7 +40,7 @@ import * as mfsha2 from "multiformats/hashes/sha2";
 import * as digest from "multiformats/hashes/digest";
 import { DaffiWalletConnect } from "@daffiwallet/connect";
 import LuteConnect from "lute-connect";
-import { appId, buildAssetMintAtomicTransactionComposer, getPrice, getRandomNode, peraWalletSignerCreator, pinJSONToCrust } from "./crust";
+import { appId, buildAssetMintAtomicTransactionComposer, getPrice, getRandomNode, mnemonicSignerCreator, peraWalletSignerCreator, pinJSONToCrust } from "./crust";
 
 export const peraWallet = new PeraWalletConnect({ shouldShowSignTxnToast: true });
 const deflyWallet = new DeflyWalletConnect({ shouldShowSignTxnToast: true });
@@ -321,7 +321,7 @@ export async function createAssetMintArray(
  * @param {*} token 
  * @returns AtomicTransactionComposer
  */
-export async function createARC3AssetMintArrayV2(data_for_txns, nodeURL) {
+export async function createARC3AssetMintArrayV2(data_for_txns, nodeURL, mnemonic) {
   const wallet = localStorage.getItem("wallet");
   if (wallet === "" || wallet === undefined) {
     throw new Error("Wallet not found");
@@ -333,8 +333,18 @@ export async function createARC3AssetMintArrayV2(data_for_txns, nodeURL) {
   // create atomic transaction composer
   const atc = new algosdk.AtomicTransactionComposer();
 
-  // create a new peraWalletSigner
-  const peraWalletSigner = peraWalletSignerCreator(peraWallet, wallet);
+  const txSigner = null;
+  if (mnemonic !== undefined && mnemonic !== null && mnemonic !== "") {
+    // create a mnemonic signer
+    txSigner = mnemonicSignerCreator(mnemonic);
+  } else {
+    // create a new peraWalletSigner
+    txSigner = peraWalletSignerCreator(peraWallet, wallet);
+  }
+
+  if (txSigner === null) {
+    throw new Error("txSigner is not defined");
+  }
 
   for (let i = 0; i < data_for_txns.length; i++) {
     try {
@@ -358,7 +368,7 @@ export async function createARC3AssetMintArrayV2(data_for_txns, nodeURL) {
       suggestedParams.fee = 2000 * 4; // set fee
 
       // build ATC
-      await buildAssetMintAtomicTransactionComposer(atc, peraWalletSigner, data_for_txns[i], price, node, suggestedParams, cid)
+      await buildAssetMintAtomicTransactionComposer(atc, txSigner, data_for_txns[i], price, node, suggestedParams, cid)
 
       toast.info(`Asset ${i + 1} of ${data_for_txns.length} uploaded to IPFS`, {
         autoClose: 200,
@@ -473,7 +483,7 @@ export async function createARC3AssetMintArray(data_for_txns, nodeURL, token) {
   return txnsArray;
 }
 
-export async function createARC19AssetMintArrayV2(data_for_txns, nodeURL) {
+export async function createARC19AssetMintArrayV2(data_for_txns, nodeURL, mnemonic) {
   const wallet = localStorage.getItem("wallet");
   if (wallet === "" || wallet === undefined) {
     throw new Error("Wallet not found");
@@ -487,8 +497,18 @@ export async function createARC19AssetMintArrayV2(data_for_txns, nodeURL) {
 
   const params = await algodClient.getTransactionParams().do();
 
-  // create a new peraWalletSigner
-  const peraWalletSigner = peraWalletSignerCreator(peraWallet, wallet);
+  const txSigner = null;
+  if (mnemonic !== undefined && mnemonic !== null && mnemonic !== "") {
+    // create a mnemonic signer
+    txSigner = mnemonicSignerCreator(mnemonic);
+  } else {
+    // create a new peraWalletSigner
+    txSigner = peraWalletSignerCreator(peraWallet, wallet);
+  }
+
+  if (txSigner === null) {
+    throw new Error("txSigner is not defined");
+  }
 
   for (let i = 0; i < data_for_txns.length; i++) {
     try {
@@ -509,7 +529,7 @@ export async function createARC19AssetMintArrayV2(data_for_txns, nodeURL) {
       suggestedParams.fee = 2000 * 4; // set fee
 
       // build ATC
-      await buildAssetMintAtomicTransactionComposer(atc, peraWalletSigner, data_for_txns[i], price, node, suggestedParams, cid)
+      await buildAssetMintAtomicTransactionComposer(atc, txSigner, data_for_txns[i], price, node, suggestedParams, cid)
 
       toast.info(`Asset ${i + 1} of ${data_for_txns.length} uploaded to IPFS`, {
         autoClose: 200,
