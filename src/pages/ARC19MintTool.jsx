@@ -324,7 +324,7 @@ export function ARC19MintTool() {
                 {csvData.length - 1} assets found!
               </p>
               <p className="text-sm italic py-1">
-                {assetTransactions.length > 0
+                {batchATC
                   ? "4- Approve & Send"
                   : "3- Create Transactions"}
               </p>
@@ -333,12 +333,12 @@ export function ARC19MintTool() {
                   id="approve-send"
                   className="mb-2 bg-primary-orange hover:bg-green-700 text-black text-base font-semibold rounded py-2 w-fit px-2 mx-auto mt-1 hover:scale-95 duration-700"
                   onClick={
-                    assetTransactions.length > 0
+                    batchATC
                       ? sendTransactions
                       : handleFileData
                   }
                 >
-                  {assetTransactions.length > 0
+                  {batchATC
                     ? "Approve & Send"
                     : "Create Transactions"}
                 </button>
@@ -349,7 +349,7 @@ export function ARC19MintTool() {
                     role="status"
                   ></div>
                   Please wait...{" "}
-                  {assetTransactions.length > 0
+                  {batchATC
                     ? "Sending transactions to network.."
                     : "Creating transactions..."}
                 </div>
