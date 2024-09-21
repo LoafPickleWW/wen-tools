@@ -177,7 +177,7 @@ export function ARC3MintTool() {
       });
 
       // let signedAssetTransactions;
-      // if (mnemonic !== "") { // TODO support mnemonic signner
+      // if (mnemonic !== "") {
       //   if (mnemonic.split(" ").length !== 25)
       //     throw new Error("Invalid Mnemonic!");
       //   const { sk } = algosdk.mnemonicToSecretKey(mnemonic);

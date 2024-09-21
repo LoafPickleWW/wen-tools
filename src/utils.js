@@ -333,7 +333,7 @@ export async function createARC3AssetMintArrayV2(data_for_txns, nodeURL, mnemoni
   // create atomic transaction composer
   const atc = new algosdk.AtomicTransactionComposer();
 
-  const txSigner = null;
+  let txSigner = null;
   if (mnemonic !== undefined && mnemonic !== null && mnemonic !== "") {
     // create a mnemonic signer
     txSigner = mnemonicSignerCreator(mnemonic);
@@ -497,7 +497,7 @@ export async function createARC19AssetMintArrayV2(data_for_txns, nodeURL, mnemon
 
   const params = await algodClient.getTransactionParams().do();
 
-  const txSigner = null;
+  let txSigner = null;
   if (mnemonic !== undefined && mnemonic !== null && mnemonic !== "") {
     // create a mnemonic signer
     txSigner = mnemonicSignerCreator(mnemonic);

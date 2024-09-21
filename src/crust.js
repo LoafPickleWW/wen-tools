@@ -215,31 +215,95 @@ export async function buildAssetMintAtomicTransactionComposer(
   });
 }
 
-export async function pinJSONToCrust(token, json, endpoint = "") {
+export async function pinJSONToCrust(
+  token,
+  json,
+  version = "",
+  cidCodec = "",
+  endpoint = ""
+) {
   if (!isCrustAuth()) {
     throw new Error("Crust: authBasic Token not found, please login and try again.");
   }
   if (endpoint === "") {
     endpoint = getDefaultCrustAuthIpfsEndpoint();
   }
-  const blob = new Blob([json], { type: "application/json" });
-  const data = new FormData();
-  data.append("file", blob);
-  const response = await axios.post(
-    `${endpoint}/api/v0/add`,
-    data,
-    {
-      headers: {
-        Authorization: `Bearer ${token.trim()}`,
-      },
-      params: { pin: true, 'cid-version': 1, },
-    },
-  );
 
-  if (response.status === 200 && response.data && response.data.Hash) {
-    return response.data.Hash;
-  } else {
-    throw new Error(response.data ? response.data.Error : "pinJSONToCrust post failed");
+  try {
+    let response;
+    if (cidCodec === "raw" || cidCodec === "") {
+      const blob = new Blob([json], { type: "application/json" });
+      const data = new FormData();
+      data.append("file", blob);
+      const response = await axios.post(
+        `${endpoint}/api/v0/add`,
+        data,
+        {
+          headers: {
+            Authorization: `Bearer ${token.trim()}`,
+          },
+          params: { pin: true, 'cid-version': version === "" ? 1 : parseInt(version), },
+        },
+      );
+
+      if (response.status === 200 && response.data && response.data.Hash) {
+        return response.data.Hash;
+      } else {
+        throw new Error(response.data ? response.data.Error : `pinJSONToCrust post failed, cidCodec=${cidCodec}`);
+      }
+    } else {
+      response = await axios.post(
+        `${endpoint}/api/v0/add`,
+        json,
+        {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token.trim()}`,
+          },
+        }
+      );
+      if (response.status === 200 && response.data && response.data.Hash) {
+        return response.data.Hash;
+      } else {
+        throw new Error(response.data ? response.data.Error : `pinJSONToCrust post failed, cidCodec=${cidCodec}`);
+      }
+    }
+  } catch (error) {
+    throw new Error("IPFS pinning failed");
+  }
+}
+
+// TODO pin imagel逻辑的理解是否正确？
+export async function pinImageToCrust(token, image, endpoint = "") {
+  if (!isCrustAuth()) {
+    throw new Error("Crust: authBasic Token not found, please login and try again.");
+  }
+
+  if (endpoint === "") {
+    endpoint = getDefaultCrustAuthIpfsEndpoint();
+  }
+
+  try {
+    const data = new FormData();
+    data.append("file", image);
+    const response = await axios.post(
+      `${endpoint}/api/v0/add`,
+      data,
+      {
+        headers: {
+          Authorization: `Bearer ${token.trim()}`,
+        },
+        params: { pin: true, 'cid-version': 1, },
+      },
+    );
+
+    if (response.status === 200 && response.data && response.data.Hash) {
+      return response.data.Hash;
+    } else {
+      throw new Error(response.data ? response.data.Error : `pinJSONToCrust post failed`);
+    }
+  } catch (error) {
+    throw new Error("IPFS pinning failed");
   }
 }
 
