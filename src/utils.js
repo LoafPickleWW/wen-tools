@@ -40,7 +40,7 @@ import * as mfsha2 from "multiformats/hashes/sha2";
 import * as digest from "multiformats/hashes/digest";
 import { DaffiWalletConnect } from "@daffiwallet/connect";
 import LuteConnect from "lute-connect";
-import { appId, buildAssetMintAtomicTransactionComposer, getPrice, getRandomNode, mnemonicSignerCreator, peraWalletSignerCreator, pinJSONToCrust } from "./crust";
+import { appId, buildAssetMintAtomicTransactionComposer, getPrice, getRandomNode, peraWalletSignerCreator, pinJSONToCrust } from "./crust";
 
 export const peraWallet = new PeraWalletConnect({ shouldShowSignTxnToast: true });
 const deflyWallet = new DeflyWalletConnect({ shouldShowSignTxnToast: true });
@@ -166,7 +166,7 @@ export async function signGroupTransactions(
       throw new Error("Transaction signing failed");
     }
     return txnsToValidate;
-  } catch (error) { }
+  } catch (error) {}
 }
 
 export function SignWithMnemonics(txnsArray, sk) {
@@ -321,7 +321,7 @@ export async function createAssetMintArray(
  * @param {*} token 
  * @returns AtomicTransactionComposer
  */
-export async function createARC3AssetMintArrayV2(data_for_txns, nodeURL, mnemonic) {
+export async function createARC3AssetMintArrayV2(data_for_txns, nodeURL, token) {
   const wallet = localStorage.getItem("wallet");
   if (wallet === "" || wallet === undefined) {
     throw new Error("Wallet not found");
@@ -333,18 +333,8 @@ export async function createARC3AssetMintArrayV2(data_for_txns, nodeURL, mnemoni
   // create atomic transaction composer
   const atc = new algosdk.AtomicTransactionComposer();
 
-  let txSigner = null;
-  if (mnemonic !== undefined && mnemonic !== null && mnemonic !== "") {
-    // create a mnemonic signer
-    txSigner = mnemonicSignerCreator(mnemonic);
-  } else {
-    // create a new peraWalletSigner
-    txSigner = peraWalletSignerCreator(peraWallet, wallet);
-  }
-
-  if (txSigner === null) {
-    throw new Error("txSigner is not defined");
-  }
+  // create a new peraWalletSigner
+  const peraWalletSigner = peraWalletSignerCreator(peraWallet, wallet);
 
   for (let i = 0; i < data_for_txns.length; i++) {
     try {
@@ -368,7 +358,7 @@ export async function createARC3AssetMintArrayV2(data_for_txns, nodeURL, mnemoni
       suggestedParams.fee = 2000 * 4; // set fee
 
       // build ATC
-      await buildAssetMintAtomicTransactionComposer(atc, txSigner, data_for_txns[i], price, node, suggestedParams, cid)
+      await buildAssetMintAtomicTransactionComposer(atc, peraWalletSigner, data_for_txns[i], price, node, suggestedParams, cid)
 
       toast.info(`Asset ${i + 1} of ${data_for_txns.length} uploaded to IPFS`, {
         autoClose: 200,
@@ -419,7 +409,7 @@ export async function createARC3AssetMintArray(data_for_txns, nodeURL, token) {
 
       const args = [method.getSelector(), algosdk.encodeUnsignedTransaction(paymentTxn), algosdk.decodeAddress(node).publicKey, algosdk.encodeObj(cid), algosdk.encodeUint64(10000), new Uint8Array([1])]
       console.log(args)
-
+      
       const appCallTxn = algosdk.makeApplicationCallTxnFromObject({
         accounts: [wallet, node],
         from: wallet,
@@ -481,65 +471,6 @@ export async function createARC3AssetMintArray(data_for_txns, nodeURL, token) {
     }
   }
   return txnsArray;
-}
-
-export async function createARC19AssetMintArrayV2(data_for_txns, nodeURL, mnemonic) {
-  const wallet = localStorage.getItem("wallet");
-  if (wallet === "" || wallet === undefined) {
-    throw new Error("Wallet not found");
-  }
-  const algodClient = new Algodv2("", nodeURL, {
-    "User-Agent": "evil-tools",
-  });
-
-  // create atomic transaction composer
-  const atc = new algosdk.AtomicTransactionComposer();
-
-  const params = await algodClient.getTransactionParams().do();
-
-  let txSigner = null;
-  if (mnemonic !== undefined && mnemonic !== null && mnemonic !== "") {
-    // create a mnemonic signer
-    txSigner = mnemonicSignerCreator(mnemonic);
-  } else {
-    // create a new peraWalletSigner
-    txSigner = peraWalletSignerCreator(peraWallet, wallet);
-  }
-
-  if (txSigner === null) {
-    throw new Error("txSigner is not defined");
-  }
-
-  for (let i = 0; i < data_for_txns.length; i++) {
-    try {
-      const jsonString = JSON.stringify(data_for_txns[i].ipfs_data);
-
-      const authBasic = localStorage.getItem("authBasic");
-      // upload to Crust
-      const cid = await pinJSONToCrust(authBasic, jsonString)
-
-      const price = await getPrice(algodClient, 10000)
-      const node = await getRandomNode(algodClient)
-      if (typeof node !== "string") {
-        throw new Error("Invalid Node!");
-      }
-
-      let suggestedParams = await algodClient.getTransactionParams().do();
-      suggestedParams.flatFee = true;
-      suggestedParams.fee = 2000 * 4; // set fee
-
-      // build ATC
-      await buildAssetMintAtomicTransactionComposer(atc, txSigner, data_for_txns[i], price, node, suggestedParams, cid)
-
-      toast.info(`Asset ${i + 1} of ${data_for_txns.length} uploaded to IPFS`, {
-        autoClose: 200,
-      });
-    } catch (error) {
-      console.log(error);
-    }
-  }
-
-  return atc;
 }
 
 export async function createARC19AssetMintArray(data_for_txns, nodeURL, token) {
@@ -653,7 +584,7 @@ export async function updateARC19AssetMintArray(data_for_txns, nodeURL, token) {
       toast.info(`Asset ${i + 1} of ${data_for_txns.length} uploaded to IPFS`, {
         autoClose: 200,
       });
-    } catch (error) { }
+    } catch (error) {}
     if (i % 100 === 0) {
       params = await algodClient.getTransactionParams().do();
     }
@@ -800,7 +731,7 @@ export async function createDonationTransaction(amount) {
       throw new Error("Transaction signing failed");
     }
     return txnsToValidate;
-  } catch (error) { }
+  } catch (error) {}
 }
 
 export async function createAssetOptInTransactions(assets, nodeURL, mnemonic) {
@@ -934,11 +865,11 @@ export async function getAssetCreatorWallet(assetId) {
     const nodeUrl = getNodeURL();
     const url = `${nodeUrl}/v2/assets/${assetId}`;
     const response = await axios.get(url);
-    console.log('getAssetCreatorWallet ' + JSON.stringify(response));
-    console.log('getAssetCreatorWallet ' + response.data.params.creator);
+    console.log('getAssetCreatorWallet '+JSON.stringify(response));
+    console.log('getAssetCreatorWallet '+response.data.params.creator);
     return response.data.params.creator;
   } catch (err) {
-    console.log('error ' + err);
+    console.log('error '+err);
     return "";
   }
 }
@@ -1063,7 +994,7 @@ export class Arc69 {
         if (noteObject.standard === "arc69") {
           return noteObject;
         }
-      } catch (err) { }
+      } catch (err) {}
     }
     return {
       metadata_description: "",
@@ -1135,7 +1066,8 @@ export async function getAssetsFromAddress(address) {
   );
   while (userAssets.data.assets.length === threshold) {
     const nextAssets = await axios.get(
-      `${getIndexerURL()}/v2/accounts/${address}/assets?next=${userAssets.data["next-token"]
+      `${getIndexerURL()}/v2/accounts/${address}/assets?next=${
+        userAssets.data["next-token"]
       }`
     );
     userAssets.data.assets = userAssets.data.assets.concat(
@@ -1156,7 +1088,8 @@ export async function getCreatedAssets(address) {
   );
   while (createdAssets.data.assets.length === threshold) {
     const nextAssets = await axios.get(
-      `${getIndexerURL()}/v2/accounts/${address}/created-assets?limit=1000&next=${createdAssets.data["next-token"]
+      `${getIndexerURL()}/v2/accounts/${address}/created-assets?limit=1000&next=${
+        createdAssets.data["next-token"]
       }`
     );
     createdAssets.data.assets = createdAssets.data.assets.concat(
