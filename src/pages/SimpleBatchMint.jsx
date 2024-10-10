@@ -11,6 +11,7 @@ import {
   sliceIntoChunks,
   signGroupTransactions,
   SignWithMnemonics,
+  createARC19AssetMintArrayV2,
 } from "../utils";
 import { IPFS_ENDPOINT, MINT_FEE_PER_ASA, TOOLS } from "../constants";
 
@@ -90,7 +91,7 @@ export function SimpleBatchMint() {
         toast.error("Please connect your wallet");
         return;
       }
-      if (formData.collectionFormat !== "ARC69" && formData.collectionFormat !== "ARC3" && !token) {
+      if (formData.collectionFormat !== "ARC69" && formData.collectionFormat !== "ARC3" && formData.collectionFormat !== "ARC19" && !token) {
         toast.error("Please enter a token");
         return;
       }
@@ -307,17 +308,21 @@ export function SimpleBatchMint() {
         // );
 
         // V2 here, AtomicTransactionComposer will be used
-        const batchATC = await createARC3AssetMintArrayV2(data_for_txns, nodeURL, token);
+        const batchATC = await createARC3AssetMintArrayV2(data_for_txns, nodeURL, mnemonic);
         setBatchATC(batchATC);
         setProcessStep(CREATE_TRANSACTIONS_PROCESS);
       } else if (formData.collectionFormat === "ARC19") {
         toast.info("Creating ARC19 transactions...");
         setProcessStep(CREATE_TRANSACTIONS_PROCESS);
-        unsignedAssetTransaction = await createARC19AssetMintArray(
-          data_for_txns,
-          nodeURL,
-          token
-        );
+        // unsignedAssetTransaction = await createARC19AssetMintArray(
+        //   data_for_txns,
+        //   nodeURL,
+        //   token
+        // );
+
+        // V2 here, AtomicTransactionComposer will be used
+        const batchATC = await createARC19AssetMintArrayV2(data_for_txns, nodeURL, mnemonic);
+        setBatchATC(batchATC);
       } else if (formData.collectionFormat === "ARC69") {
         toast.info("Creating ARC69 transactions...");
         setProcessStep(CREATE_TRANSACTIONS_PROCESS);
@@ -373,7 +378,7 @@ export function SimpleBatchMint() {
       });
 
 
-      if (formData.collectionFormat === "ARC3") { // send ARC3 transactions by batchATC.execute
+      if (formData.collectionFormat === "ARC3" || formData.collectionFormat === "ARC19") { // send ARC3 or ARC19 transactions by batchATC.execute
         const result = await batchATC.execute(algodClient, 4);
         for (const mr of result.methodResults) {
           console.log(`${mr.returnValue}`);
