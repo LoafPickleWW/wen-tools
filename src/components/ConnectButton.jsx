@@ -33,14 +33,12 @@ export default function ConnectButton() {
   const [accountData, setAccountData] = useState();
 
   // handlers
-  const handleClick = (event) => {
-    try {
+  const handleClick = async (event) => {
     if (peraWallet.isPeraDiscoverBrowser) {
       const accounts = await peraWallet.connect();
     } else {  
     setAnchorEl(event.currentTarget);
     } 
-    }  
   };
 
   const handleClose = () => {
