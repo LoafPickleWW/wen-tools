@@ -36,6 +36,8 @@ export default function ConnectButton() {
   const handleClick = async (event) => {
     if (peraWallet.isPeraDiscoverBrowser) {
       const accounts = await peraWallet.connect();
+      
+      setWalletAddress(accounts[0]); // <-- set the first address
     } else {  
     setAnchorEl(event.currentTarget);
     } 
