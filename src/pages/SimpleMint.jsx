@@ -12,14 +12,12 @@ import {
   createAssetMintArray,
   signGroupTransactions,
   sliceIntoChunks,
+  pinImageToPinata,
   getAssetPreviewURL,
   getTokenPreviewURL,
-  createARC3AssetMintArrayV2,
-  createARC19AssetMintArrayV2,
 } from "../utils";
 import { TOOLS } from "../constants";
 import FaqSectionComponent from "../components/FaqSectionComponent";
-import { pinImageToCrust } from "../crust";
 
 const simpleMintAtom = atomWithStorage('simpleMint', {
   name: "",
@@ -56,17 +54,14 @@ const simpleMintAtom = atomWithStorage('simpleMint', {
     },
   ],
 });
+const smTokenAtom = atomWithStorage('smToken', "");
 
 export function SimpleMint() {
   const [formData, setFormData] = useAtom(simpleMintAtom);
+  const [token, setToken] = useAtom(smTokenAtom);
   const [processStep, setProcessStep] = useState(0);
   const [transaction, setTransaction] = useState(null);
-
-  // just for ARC69
   const [createdAssetID, setCreatedAssetID] = useState(null);
-
-  // batchATC is a AtomicTransactionComposer to batch and send all transactions
-  const [batchATC, setBatchATC] = useState(null);
 
   const TraitMetadataInputField = (id, type) => {
     return (
@@ -144,7 +139,8 @@ export function SimpleMint() {
         formData.name === "" ||
         formData.unitName === "" ||
         formData.totalSupply === "" ||
-        formData.decimals === ""
+        formData.decimals === "" ||
+        token === ""
       ) {
         toast.error("Please fill all the required fields");
         return;
@@ -198,8 +194,7 @@ export function SimpleMint() {
           return;
         }
         toast.info("Uploading the image to IPFS...");
-        const authBasic = localStorage.getItem("authBasic");
-        imageURL = "ipfs://" + (await pinImageToCrust(authBasic, formData.image));
+        imageURL = "ipfs://" + (await pinImageToPinata(token, formData.image));
       }
       const nodeURL = getNodeURL();
 
@@ -227,26 +222,17 @@ export function SimpleMint() {
       };
       let unsignedAssetTransaction;
       if (formData.format === "ARC3") {
-        // V1
-        // unsignedAssetTransaction = await createARC3AssetMintArray(
-        //   [metadataForIPFS],
-        //   nodeURL,
-        //   token
-        // );
-
-        // V2 here, AtomicTransactionComposer will be used
-        const batchATC = await createARC3AssetMintArrayV2([metadataForIPFS], nodeURL);
-        setBatchATC(batchATC);
+        unsignedAssetTransaction = await createARC3AssetMintArray(
+          [metadataForIPFS],
+          nodeURL,
+          token
+        );
       } else if (formData.format === "ARC19") {
-        // unsignedAssetTransaction = await createARC19AssetMintArray(
-        //   [metadataForIPFS],
-        //   nodeURL,
-        //   token
-        // );
-
-        // V2 here, AtomicTransactionComposer will be used
-        const batchATC = await createARC19AssetMintArrayV2([metadataForIPFS], nodeURL);
-        setBatchATC(batchATC);
+        unsignedAssetTransaction = await createARC19AssetMintArray(
+          [metadataForIPFS],
+          nodeURL,
+          token
+        );
       } else if (formData.format === "ARC69" || formData.format === "Token") {
         metadata.properties = metadata.properties.traits;
         metadataForIPFS = {
@@ -264,13 +250,11 @@ export function SimpleMint() {
         toast.error("Invalid ARC format");
         return;
       }
-      if (formData.format === "ARC69" && unsignedAssetTransaction && unsignedAssetTransaction.length === 0) {
+      if (unsignedAssetTransaction.length === 0) {
         toast.error("Something went wrong while creating transactions");
         return;
       }
-      if (formData.format === "ARC69") {
-        setTransaction(unsignedAssetTransaction);
-      }
+      setTransaction(unsignedAssetTransaction);
       toast.info("Please sign the transaction");
       setProcessStep(2);
     } catch (error) {
@@ -287,7 +271,7 @@ export function SimpleMint() {
         toast.error("Please connect your wallet");
         return;
       }
-      if (!batchATC) {
+      if (!transaction) {
         toast.error("Please create the transaction first");
         return;
       }
@@ -296,46 +280,24 @@ export function SimpleMint() {
       const algodClient = new algosdk.Algodv2("", nodeURL, {
         "User-Agent": "evil-tools",
       });
-
-      // ARC69 format use V1
-      if (formData.format === "ARC69") {
-        const signedAssetTransaction = await signGroupTransactions(
-          transaction,
-          wallet,
-          true
-        );
-        if (!signedAssetTransaction) {
-          setProcessStep(2);
-          toast.error("Transaction not signed!");
-          return;
-        }
-        const groups = sliceIntoChunks(signedAssetTransaction, 2);
-        const { txId } = await algodClient.sendRawTransaction(groups[0]).do();
-        const result = await algosdk.waitForConfirmation(algodClient, txId, 3);
-
-        setCreatedAssetID(result["asset-index"]);
-      } else { // Others V2 : ARC3 ARC19
-        const txres = await batchATC.execute(algodClient, 4);
-
-        if (!txres || !txres.txIDs || txres.txIDs.length === 0) {
-          // err tx
-          console.error("transaction submit error, batchATC.execute return : ", txres);
-          toast.error("transaction submit error");
-          return
-        }
-
-        const assetCreateTxID = txres.txIDs[0];
-
-        const result = await algosdk.waitForConfirmation(algodClient, assetCreateTxID, 3);
-
-        setCreatedAssetID(result["asset-index"]);
+      const signedAssetTransaction = await signGroupTransactions(
+        transaction,
+        wallet,
+        true
+      );
+      if (!signedAssetTransaction) {
+        setProcessStep(2);
+        toast.error("Transaction not signed!");
+        return;
       }
-
+      const groups = sliceIntoChunks(signedAssetTransaction, 2);
+      const { txId } = await algodClient.sendRawTransaction(groups[0]).do();
+      const result = await algosdk.waitForConfirmation(algodClient, txId, 3);
+      setCreatedAssetID(result["asset-index"]);
       removeStoredData(); // Remove stored data now that mint is complete
       toast.success("Asset created successfully!");
       setProcessStep(4);
     } catch (error) {
-      console.log("Something went wrong: ", error);
       toast.error("Something went wrong!");
       setProcessStep(2);
     }
@@ -344,7 +306,7 @@ export function SimpleMint() {
   /** Remove the locally stored data */
   function removeStoredData() {
     setFormData(RESET);
-    // setToken(RESET);
+    setToken(RESET);
   }
 
   return (
@@ -678,7 +640,7 @@ export function SimpleMint() {
       >
         +
       </button>
-      {/* <div className="flex flex-col mt-4">
+      <div className="flex flex-col mt-4">
         <label className="mb-1 text-sm leading-none text-gray-200">
           Pinata JWT***
         </label>
@@ -701,7 +663,7 @@ export function SimpleMint() {
             here
           </a>
         </p>
-      </div> */}
+      </div>
       <div className="flex flex-col justify-center items-center w-[16rem]">
         {processStep === 4 ? (
           <>

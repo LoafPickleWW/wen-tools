@@ -2,7 +2,6 @@ import * as algosdk from "algosdk";
 import { MINT_FEE_PER_ASA, MINT_FEE_WALLET } from "./constants";
 import axios from "axios";
 import { isCrustAuth } from "./crust-auth";
-import { createReserveAddressFromIpfsCid, getNodeURL, SignWithMnemonics } from "./utils";
 
 export const appId = 1275319623;
 
@@ -86,18 +85,6 @@ export async function getRandomNode(client) {
   }
 }
 
-export const mnemonicSignerCreator = (mnemonic) => {
-  return async (txnGroup, indexesToSign) => {
-    const { sk } = algosdk.mnemonicToSecretKey(mnemonic);
-    const signedTxns = SignWithMnemonics(
-      txnGroup,
-      sk
-    );
-
-    return Promise.resolve(signedTxns);
-  };
-};
-
 /**
  * peraWalletSignerCreator return a peraWallet signer
  * @param {*} peraWallet 
@@ -128,17 +115,19 @@ export const peraWalletSignerCreator = (peraWallet, wallet) => {
 /**
  * buildAssetMintAtomicTransactionComposer
  * @param {*} atc The AtomicTransactionComposer will be used to build the transaction
- * @param {*} type type is the type of transaction, 'arc3' | 'arc19'
  * @param {*} txSigner  txSigner is the transaction signer, maybe peraWallet/deflyWallet or others?
  * @param {*} data_for_txn data for each transaction
+ * @param {*} price 
+ * @param {*} node RandomNode
  * @param {*} suggestedParams 
  * @param {*} cid ipfs cid
  */
 export async function buildAssetMintAtomicTransactionComposer(
   atc,
-  type,
   txSigner,
   data_for_txn,
+  price,
+  node,
   suggestedParams,
   cid,
 ) {
@@ -147,17 +136,20 @@ export async function buildAssetMintAtomicTransactionComposer(
     throw new Error("Wallet not found");
   }
 
-  data_for_txn.asset_url_section = "ipfs://" + cid;
-  let assetURL = "", reserveAddress = "";
-  if (type === "ARC3") {
-    assetURL = data_for_txn.asset_url_section + "#arc3";
-    reserveAddress = wallet;
-  } else if (type === "ARC19") {
-    const ret = createReserveAddressFromIpfsCid(cid);
-    assetURL = ret.assetURL;
-    reserveAddress = ret.reserveAddress;
-  }
+  const paymentTxn = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
+    type: 'pay',
+    from: wallet,
+    to: algosdk.getApplicationAddress(appId),
+    receiver: algosdk.getApplicationAddress(appId),
+    amount: price,
+    closeRemainderTo: undefined,
+    note: undefined,
+    suggestedParams
+  });
 
+  const method = algosdk.ABIMethod.fromSignature('place_order(pay,account,string,uint64,bool)void');
+
+  data_for_txn.asset_url_section = "ipfs://" + cid;
   let asset_create_tx = algosdk.makeAssetCreateTxnWithSuggestedParamsFromObject({
     from: wallet,
     manager: wallet,
@@ -167,9 +159,9 @@ export async function buildAssetMintAtomicTransactionComposer(
       parseInt(data_for_txn.total_supply) *
       10 ** parseInt(data_for_txn.decimals),
     decimals: parseInt(data_for_txn.decimals),
-    reserve: reserveAddress,
+    reserve: wallet,
     freeze: data_for_txn.has_freeze === "Y" ? wallet : undefined,
-    assetURL,
+    assetURL: data_for_txn.asset_url_section + "#arc3",
     suggestedParams,
     clawback: data_for_txn.has_clawback === "Y" ? wallet : undefined,
     defaultFrozen: data_for_txn.default_frozen === "Y" ? true : false,
@@ -189,141 +181,7 @@ export async function buildAssetMintAtomicTransactionComposer(
 
   atc.addTransaction({ txn: asset_create_tx, signer: txSigner });
   atc.addTransaction({ txn: fee_tx, signer: txSigner });
-  atc.addMethodCall(await makeCrustPinTx(cid, txSigner));
-}
-
-export async function pinJSONToCrust(
-  token,
-  json,
-  version = "",
-  cidCodec = "",
-  endpoint = ""
-) {
-  if (!isCrustAuth()) {
-    throw new Error("Crust: authBasic Token not found, please login and try again.");
-  }
-  if (endpoint === "") {
-    endpoint = getDefaultCrustAuthIpfsEndpoint();
-  }
-
-  try {
-    let response;
-    if (cidCodec === "raw" || cidCodec === "") {
-      const blob = new Blob([json], { type: "application/json" });
-      const data = new FormData();
-      data.append("file", blob);
-      const response = await axios.post(
-        `${endpoint}/api/v0/add`,
-        data,
-        {
-          headers: {
-            Authorization: `Bearer ${token.trim()}`,
-          },
-          params: { pin: true, 'cid-version': version === "" ? 1 : parseInt(version), },
-        },
-      );
-
-      if (response.status === 200 && response.data && response.data.Hash) {
-        return response.data.Hash;
-      } else {
-        throw new Error(response.data ? response.data.Error : `pinJSONToCrust post failed, cidCodec=${cidCodec}`);
-      }
-    } else {
-      response = await axios.post(
-        `${endpoint}/api/v0/add`,
-        json,
-        {
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token.trim()}`,
-          },
-        }
-      );
-      if (response.status === 200 && response.data && response.data.Hash) {
-        return response.data.Hash;
-      } else {
-        throw new Error(response.data ? response.data.Error : `pinJSONToCrust post failed, cidCodec=${cidCodec}`);
-      }
-    }
-  } catch (error) {
-    throw new Error("IPFS pinning failed");
-  }
-}
-
-export async function pinImageToCrust(token, image, endpoint = "") {
-  if (!isCrustAuth()) {
-    throw new Error("Crust: authBasic Token not found, please login and try again.");
-  }
-
-  if (endpoint === "") {
-    endpoint = getDefaultCrustAuthIpfsEndpoint();
-  }
-
-  try {
-    const data = new FormData();
-    data.append("file", image);
-    const response = await axios.post(
-      `${endpoint}/api/v0/add`,
-      data,
-      {
-        headers: {
-          Authorization: `Bearer ${token.trim()}`,
-        },
-        params: { pin: true, 'cid-version': 1, },
-      },
-    );
-
-    if (response.status === 200 && response.data && response.data.Hash) {
-      return response.data.Hash;
-    } else {
-      throw new Error(response.data ? response.data.Error : `pinJSONToCrust post failed`);
-    }
-  } catch (error) {
-    console.log("pinImageToCrust fail: ", error)
-    throw new Error("IPFS pinning failed");
-  }
-}
-
-export async function makeCrustPinTx(cid, signer) {
-  const wallet = localStorage.getItem("wallet");
-  if (wallet === "" || wallet === undefined) {
-    throw new Error("Wallet not found");
-  }
-
-  const nodeURL = getNodeURL();
-
-  const algodClient = new algosdk.Algodv2("", nodeURL, {
-    "User-Agent": "evil-tools",
-  });
-
-  const price = await getPrice(algodClient, 10000)
-  let suggestedParams = await algodClient.getTransactionParams().do();
-  suggestedParams.flatFee = true;
-  suggestedParams.fee = 2000 * 4; // set fee
-
-  const node = await getRandomNode(algodClient);
-
-  const paymentTxn = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
-    type: 'pay',
-    from: wallet,
-    to: algosdk.getApplicationAddress(appId),
-    receiver: algosdk.getApplicationAddress(appId),
-    amount: price,
-    closeRemainderTo: undefined,
-    note: undefined,
-    suggestedParams
-  });
-
-  const method = algosdk.ABIMethod.fromSignature('place_order(pay,account,string,uint64,bool)void');
-
-  let txSigner = null;
-  if (signer) {
-    txSigner = signer;
-  } else {
-    throw new Error("makeCrustPinTx: txSigner is not defined");
-  }
-
-  return {
+  atc.addMethodCall({
     appID: appId,
     method,
     note: new TextEncoder().encode("via wen.tools - free tools for creators and collectors | " + Math.random().toString(36).substring(2)),
@@ -341,6 +199,34 @@ export async function makeCrustPinTx(cid, signer) {
       { appIndex: appId, name: algosdk.decodeAddress(node).publicKey },
       { appIndex: appId, name: new TextEncoder().encode("nodes") }
     ]
+  });
+}
+
+export async function pinJSONToCrust(token, json, endpoint = "") {
+  if (!isCrustAuth()) {
+    throw new Error("Crust: authBasic Token not found, please login and try again.");
+  }
+  if (endpoint === "") {
+    endpoint = getDefaultCrustAuthIpfsEndpoint();
+  }
+  const blob = new Blob([json], { type: "application/json" });
+  const data = new FormData();
+  data.append("file", blob);
+  const response = await axios.post(
+    `${endpoint}/api/v0/add`,
+    data,
+    {
+      headers: {
+        Authorization: `Bearer ${token.trim()}`,
+      },
+      params: { pin: true, 'cid-version': 1, },
+    },
+  );
+
+  if (response.status === 200 && response.data && response.data.Hash) {
+    return response.data.Hash;
+  } else {
+    throw new Error(response.data ? response.data.Error : "pinJSONToCrust post failed");
   }
 }
 
