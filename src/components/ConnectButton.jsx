@@ -34,10 +34,12 @@ export default function ConnectButton() {
 
   // handlers
   const handleClick = (event) => {
+    try {
     if (peraWallet.isPeraDiscoverBrowser) {
       const accounts = await peraWallet.connect();
     } else {  
     setAnchorEl(event.currentTarget);
+    } 
     }  
   };
 
