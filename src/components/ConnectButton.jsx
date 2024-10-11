@@ -70,7 +70,7 @@ export default function ConnectButton() {
       toast.success("Connected!");
     } catch (err) {
       toast.error("Failed to connect!");
-      disconnect(); // clear when crust auth fail
+      clearLoginState(); // clear when crust auth fail
     }
   };
 
@@ -138,6 +138,18 @@ export default function ConnectButton() {
       ></path>
     </svg>
   );
+
+  const clearLoginState = async () => {
+    try {
+      peraWallet.disconnect();
+    } catch (error) { }
+    try {
+      deflyWallet.disconnect();
+    } catch (error) { }
+    const networkType = localStorage.getItem("networkType");
+    localStorage.clear();
+    localStorage.setItem("networkType", networkType);
+  }
 
   const disconnect = async () => {
     try {
