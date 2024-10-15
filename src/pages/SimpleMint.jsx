@@ -716,12 +716,7 @@ export function SimpleMint() {
           </button>
         )}
       </div>
-      <p className="text-sm italic text-slate-200 px-4">
-        **It is recommended that any Creator Host their own Files using their
-        own token. Evil Tools will not be held responsible for anything that
-        happens to publicly hosted images.
-      </p>
-      <p className="text-sm italic text-slate-200 mb-6">Fee: Free</p>
+      <p className="text-sm italic text-slate-200 mb-6">Site Fee: Free/Pin Fee: Variable</p>
       <Button
         variant="outlined"
         color="error"
