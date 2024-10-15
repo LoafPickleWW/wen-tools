@@ -307,7 +307,7 @@ export function SimpleBatchMint() {
         // );
 
         // V2 here, AtomicTransactionComposer will be used
-        const batchATC = await createARC3AssetMintArrayV2(data_for_txns, nodeURL, token);
+        const batchATC = await createARC3AssetMintArrayV2(data_for_txns, nodeURL);
         setBatchATC(batchATC);
         setProcessStep(CREATE_TRANSACTIONS_PROCESS);
       } else if (formData.collectionFormat === "ARC19") {
