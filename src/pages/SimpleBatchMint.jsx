@@ -810,12 +810,7 @@ export function SimpleBatchMint() {
           </button>
         )}
       </div>
-      <p className="text-sm italic text-slate-200 px-4">
-        **It is recommended that any Creator Host their own Files using their
-        own token. Evil Tools will not be held responsible for anything that
-        happens to publicly hosted images.
-      </p>
-      <p className="text-sm italic text-slate-200">Fee: Free</p>
+      <p className="text-sm italic text-slate-200">Site Fee: Free/Pinning Fee: Variable </p>
       <p className="text-center text-xs text-slate-400 py-2">
         ⚠️If you reload or close this page, you will lose your progress⚠️
         <br />
