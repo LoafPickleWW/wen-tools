@@ -200,7 +200,7 @@ export function SimpleMint() {
       const nodeURL = getNodeURL();
 
       if (formData.image) {
-        if (formData.image.type.includes("video")) {
+        if (formData.image.type && formData.image.type.includes("video")) {
           metadata.animation_url = imageURL;
           metadata.animation_url_mime_type = formData.image
             ? formData.image.type
@@ -259,8 +259,13 @@ export function SimpleMint() {
         // );
         
         // V2
-        const batchATC = await createAssetMintArrayV2([metadataForIPFS], nodeURL, [imageCID]);
-        setBatchATC(batchATC);
+        if (formData.format === "ARC69") {
+          const batchATC = await createAssetMintArrayV2([metadataForIPFS], nodeURL, [imageCID]);
+          setBatchATC(batchATC);
+        } else {
+          const batchATC = await createAssetMintArrayV2([metadataForIPFS], nodeURL);
+          setBatchATC(batchATC);
+        }
       } else {
         toast.error("Invalid ARC format");
         return;
