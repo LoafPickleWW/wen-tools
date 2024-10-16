@@ -351,8 +351,8 @@ export function SimpleBatchMint() {
         toast.error("Please create transactions first!");
         return;
       }
-      if (assetTransactions.length > 7 && mnemonic === "") {
-        toast.error("Please enter your mnemonic!");
+      if (assetTransactions.length > 200 && mnemonic === "") {
+        toast.error("Please enter your mnemonic using Infinity Mode!");
         return;
       }
       setProcessStep(SENDING_TRANSACTIONS_PROCESS);
