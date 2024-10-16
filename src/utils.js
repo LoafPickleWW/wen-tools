@@ -461,6 +461,64 @@ export async function createARC3AssetMintArrayV2(data_for_txns, nodeURL, extraPi
   return atc;
 }
 
+function getTxnGroupFromATC(atc) {
+  const txnsWithSigners = atc.buildGroup();
+  return txnsWithSigners.map((txnWithSigner) => txnWithSigner.txn);
+}
+
+export async function createARC3AssetMintArrayV2Batch(data_for_txns, nodeURL, mnemonic) {
+  const wallet = localStorage.getItem("wallet");
+  if (wallet === "" || wallet === undefined) {
+    throw new Error("Wallet not found");
+  }
+  const algodClient = new Algodv2("", nodeURL, {
+    "User-Agent": "evil-tools",
+  });
+
+  let txSigner = null;
+  if (mnemonic !== undefined && mnemonic !== null && mnemonic !== "") {
+    // create a mnemonic signer
+    txSigner = mnemonicSignerCreator(mnemonic);
+  } else {
+    // create a new peraWalletSigner
+    txSigner = peraWalletSignerCreator(peraWallet, wallet);
+  }
+
+  if (txSigner === null) {
+    throw new Error("txSigner is not defined");
+  }
+
+  let txnsArray = [];
+  for (let i = 0; i < data_for_txns.length; i++) {
+    // create new atomic transaction composer
+    const atc = new algosdk.AtomicTransactionComposer();
+
+    try {
+      const jsonString = JSON.stringify(data_for_txns[i].ipfs_data);
+
+      const authBasic = localStorage.getItem("authBasic");
+      // upload to Crust
+      const cid = await pinJSONToCrust(authBasic, jsonString)
+
+      let suggestedParams = await algodClient.getTransactionParams().do();
+      suggestedParams.flatFee = true;
+      suggestedParams.fee = 2000 * 4; // set fee
+
+      // build ATC
+      await buildAssetMintAtomicTransactionComposer(atc, 'ARC3', txSigner, data_for_txns[i], suggestedParams, cid)
+
+      txnsArray.push(getTxnGroupFromATC(atc));
+      toast.info(`Asset ${i + 1} of ${data_for_txns.length} uploaded to IPFS`, {
+        autoClose: 200,
+      });
+    } catch (error) {
+      console.error(error)
+    }
+  }
+  
+  return txnsArray;
+}
+
 export async function createARC3AssetMintArray(data_for_txns, nodeURL, token) {
   const wallet = localStorage.getItem("wallet");
   if (wallet === "" || wallet === undefined) {
@@ -620,6 +678,59 @@ export async function createARC19AssetMintArrayV2(data_for_txns, nodeURL, extraP
   }
 
   return atc;
+}
+
+export async function createARC19AssetMintArrayV2Batch(data_for_txns, nodeURL, mnemonic) {
+  const wallet = localStorage.getItem("wallet");
+  if (wallet === "" || wallet === undefined) {
+    throw new Error("Wallet not found");
+  }
+  const algodClient = new Algodv2("", nodeURL, {
+    "User-Agent": "evil-tools",
+  });
+
+  let txSigner = null;
+  if (mnemonic !== undefined && mnemonic !== null && mnemonic !== "") {
+    // create a mnemonic signer
+    txSigner = mnemonicSignerCreator(mnemonic);
+  } else {
+    // create a new peraWalletSigner
+    txSigner = peraWalletSignerCreator(peraWallet, wallet);
+  }
+
+  if (txSigner === null) {
+    throw new Error("txSigner is not defined");
+  }
+
+  let txnsArray = [];
+  for (let i = 0; i < data_for_txns.length; i++) {
+    // create atomic transaction composer
+    const atc = new algosdk.AtomicTransactionComposer();
+
+    try {
+      const jsonString = JSON.stringify(data_for_txns[i].ipfs_data);
+
+      const authBasic = localStorage.getItem("authBasic");
+      // upload to Crust
+      const cid = await pinJSONToCrust(authBasic, jsonString);
+
+      let suggestedParams = await algodClient.getTransactionParams().do();
+      suggestedParams.flatFee = true;
+      suggestedParams.fee = 2000 * 4; // set fee
+
+      // build ATC
+      await buildAssetMintAtomicTransactionComposer(atc, 'ARC19', txSigner, data_for_txns[i], suggestedParams, cid);
+
+      txnsArray.push(getTxnGroupFromATC(atc));
+      toast.info(`Asset ${i + 1} of ${data_for_txns.length} uploaded to IPFS`, {
+        autoClose: 200,
+      });
+    } catch (error) {
+      console.log(error);
+    }
+  }
+
+  return txnsArray;
 }
 
 export async function createARC19AssetMintArray(data_for_txns, nodeURL, token) {
