@@ -378,7 +378,13 @@ export function SimpleBatchMint() {
         );
       }
 
-      signedAssetTransactions = sliceIntoChunks(signedAssetTransactions, 4);
+      if(formData.collectionFormat === "ARC69") {
+        // 2 txs per asset, for ARC69
+        signedAssetTransactions = sliceIntoChunks(signedAssetTransactions, 2);
+      } else {
+        // 4 txs per asset, for ARC3 & ARC19
+        signedAssetTransactions = sliceIntoChunks(signedAssetTransactions, 4);
+      }
 
       for (let i = 0; i < signedAssetTransactions.length; i++) {
         try {
