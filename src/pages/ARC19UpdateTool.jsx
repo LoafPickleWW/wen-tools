@@ -9,6 +9,7 @@ import {
   sliceIntoChunks,
   updateARC19AssetMintArray,
   SignWithMnemonics,
+  updateARC19AssetMintArrayV2,
 } from "../utils";
 
 import InfinityModeComponent from "../components/InfinityModeComponent";
@@ -17,7 +18,11 @@ export function ARC19UpdateTool() {
   const [csvData, setCsvData] = useState(null);
   const [isTransactionsFinished, setIsTransactionsFinished] = useState(false);
   const [txSendingInProgress, setTxSendingInProgress] = useState(false);
-  const [token, setToken] = useState("");
+  // const [token, setToken] = useState("");
+
+    // batchATC is a AtomicTransactionComposer to batch and send all transactions
+    const [batchATC, setBatchATC] = useState(null);
+
   const [assetTransactions, setAssetTransactions] = useState([]);
   const [mnemonic, setMnemonic] = useState("");
 
@@ -25,10 +30,6 @@ export function ARC19UpdateTool() {
     const wallet = localStorage.getItem("wallet");
     if (wallet === null || wallet === undefined) {
       toast.error("Please connect your wallet first!");
-      return;
-    }
-    if (token === "") {
-      toast.error("Please enter a token!");
       return;
     }
     let headers;
@@ -113,16 +114,23 @@ export function ARC19UpdateTool() {
       const nodeURL = getNodeURL();
       toast.info("Uploading metadata to IPFS...");
       setTxSendingInProgress(true);
-      const unsignedAssetTransactions = await updateARC19AssetMintArray(
-        data_for_txns,
-        nodeURL,
-        token
-      );
-      if (unsignedAssetTransactions.length === 0) {
-        toast.error("Something went wrong while creating transactions");
-        return;
-      }
-      setAssetTransactions(unsignedAssetTransactions);
+
+      // V1
+      // const unsignedAssetTransactions = await updateARC19AssetMintArray(
+      //   data_for_txns,
+      //   nodeURL,
+      //   token
+      // );
+      // if (unsignedAssetTransactions.length === 0) {
+      //   toast.error("Something went wrong while creating transactions");
+      //   return;
+      // }
+      // setAssetTransactions(unsignedAssetTransactions);
+
+      // V2 create ATC
+      const batchATC = await updateARC19AssetMintArrayV2(data_for_txns, nodeURL, mnemonic);
+      setBatchATC(batchATC);
+
       setTxSendingInProgress(false);
       toast.info("Please sign the transactions!");
     } catch (error) {
@@ -138,7 +146,7 @@ export function ARC19UpdateTool() {
         toast.error("Please connect your wallet first!");
         return;
       }
-      if (assetTransactions.length === 0) {
+      if (!batchATC) {
         toast.error("Please create transactions first!");
         return;
       }
@@ -148,48 +156,9 @@ export function ARC19UpdateTool() {
         "User-Agent": "evil-tools",
       });
 
-      let signedAssetTransactions;
-      if (mnemonic !== "") {
-        if (mnemonic.split(" ").length !== 25)
-          throw new Error("Invalid Mnemonic!");
-        const { sk } = algosdk.mnemonicToSecretKey(mnemonic);
-        signedAssetTransactions = SignWithMnemonics(
-          assetTransactions.flat(),
-          sk
-        );
-      } else {
-        signedAssetTransactions = await signGroupTransactions(
-          assetTransactions,
-          wallet,
-          true
-        );
-      }
+      // execute ATC
+      await batchATC.execute(algodClient, 4);
 
-      signedAssetTransactions = sliceIntoChunks(signedAssetTransactions, 2);
-
-      for (let i = 0; i < signedAssetTransactions.length; i++) {
-        try {
-          await algodClient.sendRawTransaction(signedAssetTransactions[i]).do();
-          if (i % 5 === 0) {
-            toast.success(
-              `Transaction ${i + 1} of ${
-                signedAssetTransactions.length
-              } confirmed!`,
-              {
-                autoClose: 1000,
-              }
-            );
-          }
-        } catch (error) {
-          toast.error(
-            `Transaction ${i + 1} of ${signedAssetTransactions.length} failed!`,
-            {
-              autoClose: 1000,
-            }
-          );
-        }
-        await new Promise((resolve) => setTimeout(resolve, 50));
-      }
       setIsTransactionsFinished(true);
       setTxSendingInProgress(false);
       toast.success("All transactions confirmed!");
@@ -228,26 +197,6 @@ export function ARC19UpdateTool() {
           CSV Template
         </a>
       </button>
-      <p>Enter Pinata JWT</p>
-      <input
-        type="text"
-        id="ipfs-token"
-        placeholder="token"
-        className="text-center bg-gray-800 text-white border-2 border-gray-700 rounded-lg p-2 mb-2 w-48 mx-auto placeholder:text-center placeholder:text-sm"
-        value={token}
-        onChange={(e) => setToken(e.target.value)}
-      />
-      <p className="text-xs text-slate-400 font-roboto -mt-2 mb-2">
-        you can get your token{" "}
-        <a
-          href="https://knowledge.pinata.cloud/en/articles/6191471-how-to-create-an-pinata-api-key"
-          target="_blank"
-          className="text-primary-orange/70 hover:text-secondary-orange/80 transition"
-          rel="noreferrer"
-        >
-          here
-        </a>
-      </p>
       <p className="text-xl text-red font-roboto -mt-2 mb-2">
         ⚠️This tool is not compatible with NFTs minted from algonfts.art⚠️
       </p>
