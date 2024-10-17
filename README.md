@@ -35,7 +35,7 @@ See the list of [contributors](https://github.com/thurstober-digital/evil-tools/
 Bounties will be paid out upon successful merge and approval of the Pull Request. 
 
 * ~~**Have Slider Track Color and Donate Button outline have Hex Code #f57b14** - 100A~~ Completed by [Vince](https://github.com/vincealvare)
-* **Integrate Crust IPFS Network to all Mint tools w/ Option to opt out and enter own Pinata Key** - 2000A - In progress by crust team
+* ~~**Integrate Crust IPFS Network to all Mint tools w/ Option to opt out and enter own Pinata Key** - 2000A~~ - Completed by [Crust](https://github.com/x-wagmi)
 * ~~**Add an airdrop to multimint asset holders to Simple Airdrop Tool** - 500A~~ Completed by [Twrtl](https://github.com/twirtle2)
 * **Add NFD Vault and ARC59 Asset Inbox claims to Wen Wallet. DM for Details** - 1000A - In progress by Lute wallet
 * ~~**Add dropdown menu to wen.tools with the links to wallet.wen.tools and swap.wen.tools added** - 250A~~ Completed by [Red](https://github.com/LoafPickleWW/wen-tools/pulls?q=is%3Apr+author%3Abwmx)
