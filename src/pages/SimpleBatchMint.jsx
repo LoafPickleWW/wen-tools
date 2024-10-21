@@ -787,7 +787,7 @@ export function SimpleBatchMint() {
           {
             question: "How much does it cost to Mint?",
             answer:
-              "There is a network fee of 0.1A. In total you need to have at least 0.2A per Asset in your wallet before minting.",
+              "There is a network fee of 0.1A and a pinning fee of 1.4A per Pin. In total you need to have at least 3A per Asset in your wallet before minting.",
           },
           {
             question: "How long can the name and Unit Name be?",
