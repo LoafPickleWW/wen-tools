@@ -658,6 +658,25 @@ export function SimpleMint() {
       >
         +
       </button>
+      {previewAsset && (
+        <div className="flex flex-col mt-2 justify-center items-center w-[16rem] bg-secondary-black p-4 rounded-lg">
+          <p className="text-lg font-bold">Preview Asset</p>
+          <div className="flex flex-col items-center mt-2">
+            <img
+              src={previewAsset.ipfs_data.image.replace("ipfs://", IPFS_ENDPOINT)}
+              alt="preview"
+              className="w-32 h-32 object-cover rounded-lg"
+            />
+            <p className="text-base text-gray-200 mt-2">
+              {previewAsset.asset_name} | {previewAsset.unit_name}
+            </p>
+            {/* metadata like json intended */}
+            <p className="text-sm text-gray-200 mt-1 w-48 overflow-x-auto">
+              {JSON.stringify(previewAsset.ipfs_data, null, 2)}
+            </p>
+          </div>
+        </div>
+      )}
       <div className="flex flex-col justify-center items-center w-[16rem]">
         {processStep === 4 ? (
           <>
