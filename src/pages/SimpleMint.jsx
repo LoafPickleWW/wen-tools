@@ -58,6 +58,7 @@ export function SimpleMint() {
   const [processStep, setProcessStep] = useState(0);
 
   const [createdAssetID, setCreatedAssetID] = useState(null);
+  const [previewAsset, setPreviewAsset] = useState(null);
 
   // batchATC is a AtomicTransactionComposer to batch and send all transactions
   const [batchATC, setBatchATC] = useState(null);
