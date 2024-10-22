@@ -39,7 +39,7 @@ const simpleUpdateAtom = atomWithStorage('simpleUpdate', {
 const suAssetIdAtom = atomWithStorage('suAssetId', "");
 const suTokenAtom = atomWithStorage('suToken', "");
 
-export function SimpleUpdate() {
+export function SimpleUpdateClassic() {
   const [formData, setFormData] = useAtom(simpleUpdateAtom);
   const [token, setToken] = useAtom(suTokenAtom);
   const [processStep, setProcessStep] = useState(0);
