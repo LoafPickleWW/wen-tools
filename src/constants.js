@@ -36,21 +36,21 @@ export const TOOLS = [
   {
     id: "simple_batch_mint",
     label: "🌿 Simple Batch Mint",
-    description: "Easily Inscribe an collection in bulk.",
+    description: "Easily Inscribe an collection in bulk using Crust Network.",
     path: "/simple-batch-mint",
     category: "mint",
   },
   {
     id: "simple_mint",
     label: "🌿 Simple Mint",
-    description: "Easily Inscribe an Asset on Algorand",
+    description: "Easily Inscribe an Asset on Algorand using Crust Network",
     path: "/simple-mint",
     category: "mint",
   },
   {
     id: "simple_update",
     label: "⬆️ Simple Update",
-    description: "Easily update your Mutable Inscriptions",
+    description: "Easily update your Mutable Inscriptions using Crust Network",
     path: "/simple-update",
     category: "mint",
   },
@@ -189,6 +189,20 @@ export const TOOLS = [
     description: "View the holders of a multimint asset list in CSV format.",
     path: "/multimint-asset-holders",
     category: "asset",
+  },
+  {
+    id: "simple_mint_classic",
+    label: "🌿 Simple Mint Classic",
+    description: "Easily Inscribe an Asset on Algorand using Pinata",
+    path: "/simple-mint-classic",
+    category: "mint",
+  },
+  {
+    id: "simple_update_classic",
+    label: "⬆️ Simple Update Classic",
+    description: "Easily update your Mutable Inscriptions using Pinata",
+    path: "/simple-update-classic",
+    category: "mint",
   },
 ];
 
