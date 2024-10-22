@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import algosdk from "algosdk";
 import { toast } from "react-toastify";
@@ -7,7 +7,6 @@ import { useAtom } from 'jotai';
 import { atomWithStorage, RESET } from 'jotai/utils';
 import { Button } from "@mui/material";
 import {
-  pinImageToPinata,
   getNodeURL,
   updateARC19AssetMintArray,
   createAssetConfigArray,
@@ -16,8 +15,11 @@ import {
   Arc69,
   getARC19AssetMetadataData,
   getAssetPreviewURL,
+  updateARC19AssetMintArrayV2,
 } from "../utils";
 import { TOOLS, IPFS_ENDPOINT } from "../constants";
+import { isCrustAuth } from "../crust-auth";
+import { makeCrustPinTx, pinImageToCrust } from "../crust";
 
 const simpleUpdateAtom = atomWithStorage('simpleUpdate', {
   name: "",
@@ -37,15 +39,17 @@ const simpleUpdateAtom = atomWithStorage('simpleUpdate', {
   extras: []
 });
 const suAssetIdAtom = atomWithStorage('suAssetId', "");
-const suTokenAtom = atomWithStorage('suToken', "");
 
 export function SimpleUpdate() {
   const [formData, setFormData] = useAtom(simpleUpdateAtom);
-  const [token, setToken] = useAtom(suTokenAtom);
+
   const [processStep, setProcessStep] = useState(0);
   const [transaction, setTransaction] = useState(null);
   const [assetID, setAssetID] = useAtom(suAssetIdAtom);
   const navigate = useNavigate();
+
+  // batchATC is a AtomicTransactionComposer to batch and send all transactions
+  const [batchATC, setBatchATC] = useState(null);
 
   const TraitMetadataInputField = (id, type) => {
     return (
@@ -210,17 +214,17 @@ export function SimpleUpdate() {
         })),
         filters: Object.keys(metadata).includes("filters")
           ? Object.keys(metadata.filters).map((key, index) => ({
-              id: index,
-              category: key,
-              name: metadata.filters[key],
-            }))
+            id: index,
+            category: key,
+            name: metadata.filters[key],
+          }))
           : [],
         extras: Object.keys(metadata).includes("extras")
           ? Object.keys(metadata.extras).map((key, index) => ({
-              id: index,
-              category: key,
-              name: metadata.extras[key],
-            }))
+            id: index,
+            category: key,
+            name: metadata.extras[key],
+          }))
           : [],
         image_url: assetMetadata.image || assetData.params["url"],
         image_mime_type: assetMetadata.image_mime_type,
@@ -238,6 +242,7 @@ export function SimpleUpdate() {
   }
 
   async function update() {
+    let imageCid = null;
     try {
       const wallet = localStorage.getItem("wallet");
       if (!wallet) {
@@ -249,7 +254,7 @@ export function SimpleUpdate() {
         formData.unitName === "" ||
         formData.totalSupply === "" ||
         formData.decimals === "" ||
-        (token === "" && formData.format === "ARC19")
+        (!isCrustAuth() && formData.format === "ARC19")
       ) {
         toast.error("Please fill all the required fields");
         return;
@@ -294,8 +299,10 @@ export function SimpleUpdate() {
 
       if (formData.image && formData.format === "ARC19") {
         toast.info("Uploading the image to IPFS...");
-        const imageURL =
-          "ipfs://" + (await pinImageToPinata(token, formData.image));
+
+        const atoken = localStorage.getItem("authBasic");
+        imageCid = await pinImageToCrust(atoken, formData.image)
+        const imageURL = "ipfs://" + imageCid;
         if (formData.image && formData.image.type.includes("video")) {
           metadata.animation_url = imageURL;
           metadata.animation_mime_type = formData.image
@@ -329,16 +336,25 @@ export function SimpleUpdate() {
           freeze: formData.freeze,
           clawback: formData.clawback,
         };
-        const unsignedAssetTransactions = await updateARC19AssetMintArray(
-          [transaction_data],
-          nodeURL,
-          token
-        );
-        if (unsignedAssetTransactions.length === 0) {
-          toast.error("Something went wrong while creating transactions");
-          return;
-        }
-        setTransaction(unsignedAssetTransactions);
+
+        // V1
+        // const unsignedAssetTransactions = await updateARC19AssetMintArray(
+        //   [transaction_data],
+        //   nodeURL,
+        //   token
+        // );
+        // if (unsignedAssetTransactions.length === 0) {
+        //   toast.error("Something went wrong while creating transactions");
+        //   return;
+        // }
+        // setTransaction(unsignedAssetTransactions);
+
+        // V2
+        // add basic tx
+        const batchATC = await updateARC19AssetMintArrayV2([transaction_data], nodeURL, [imageCid]);
+
+        setBatchATC(batchATC);
+
       } else if (formData.format === "ARC69") {
         metadata.properties = metadata.properties.traits;
         const transaction_data = {
@@ -373,7 +389,7 @@ export function SimpleUpdate() {
         toast.error("Please connect your wallet");
         return;
       }
-      if (!transaction) {
+      if ((formData.format === "ARC19" && !batchATC) && !transaction) {
         toast.error("Please create the transaction first");
         return;
       }
@@ -382,21 +398,30 @@ export function SimpleUpdate() {
       const algodClient = new algosdk.Algodv2("", nodeURL, {
         "User-Agent": "evil-tools",
       });
-      const signedAssetTransaction = await signGroupTransactions(
-        transaction,
-        wallet,
-        true
-      );
-      if (!signedAssetTransaction) {
-        setProcessStep(2);
-        toast.error("Transaction not signed!");
-        return;
+
+      // use ATC batch, test asset ID: 2315438437 
+      if (formData.format === "ARC19") { // ARC19 use ATC batch transactions
+        await batchATC.execute(algodClient, 4);
+      } else { // other formats
+        const signedAssetTransaction = await signGroupTransactions(
+          transaction,
+          wallet,
+          true
+        );
+        if (!signedAssetTransaction) {
+          setProcessStep(2);
+          toast.error("Transaction not signed!");
+          return;
+        }
+        const groups = sliceIntoChunks(signedAssetTransaction, 2);
+
+        await algodClient.sendRawTransaction(groups[0]).do();
       }
-      const groups = sliceIntoChunks(signedAssetTransaction, 2);
-      await algodClient.sendRawTransaction(groups[0]).do();
+
       toast.success("Asset updated successfully!");
       setProcessStep(4);
     } catch (error) {
+      console.log("----> sign: ", error)
       toast.error("Something went wrong!");
       setProcessStep(2);
     }
@@ -406,7 +431,6 @@ export function SimpleUpdate() {
   function removeStoredData() {
     setFormData(RESET);
     setAssetID(RESET);
-    setToken(RESET);
   }
 
   return (
@@ -522,9 +546,9 @@ export function SimpleUpdate() {
               src={
                 formData.image_url.startsWith("ipfs://")
                   ? `${IPFS_ENDPOINT}${formData.image_url.replace(
-                      "ipfs://",
-                      ""
-                    )}`
+                    "ipfs://",
+                    ""
+                  )}`
                   : formData.image_url
               }
               className="w-60 mx-auto mt-4 object-contain rounded-md"
@@ -541,9 +565,9 @@ export function SimpleUpdate() {
               src={
                 formData.animation_url.startsWith("ipfs://")
                   ? `${IPFS_ENDPOINT}${formData.animation_url.replace(
-                      "ipfs://",
-                      ""
-                    )}`
+                    "ipfs://",
+                    ""
+                  )}`
                   : formData.animation_url
               }
               className="w-60 mx-auto mt-4 object-contain rounded-md"
@@ -696,32 +720,6 @@ export function SimpleUpdate() {
             </p>
           ) : (
             <>
-              {formData.format === "ARC19" && (
-                <div className="flex flex-col mt-4">
-                  <label className="mb-1 text-sm leading-none text-gray-200">
-                    Pinata JWT***
-                  </label>
-                  <input
-                    type="text"
-                    id="ipfs-token"
-                    placeholder="token"
-                    className="w-48 mx-auto bg-gray-300 text-sm font-medium text-center leading-none text-black placeholder:text-black/30 px-3 py-2 border rounded border-gray-200"
-                    value={token}
-                    onChange={(e) => setToken(e.target.value)}
-                  />
-                  <p className="text-xs text-slate-400 font-roboto mt-1">
-                    ***You can get your own token{" "}
-                    <a
-                      href="https://knowledge.pinata.cloud/en/articles/6191471-how-to-create-an-pinata-api-key"
-                      target="_blank"
-                      className="text-primary-orange/70 hover:text-secondary-orange/80 transition"
-                      rel="noreferrer"
-                    >
-                      here
-                    </a>
-                  </p>{" "}
-                </div>
-              )}
               <div className="flex flex-col justify-center items-center w-[16rem]">
                 {processStep === 4 ? (
                   <>
@@ -740,7 +738,7 @@ export function SimpleUpdate() {
                       </a>
                     )}
                     <div className="mt-4">
-                    <button
+                      <button
                         className="rounded bg-secondary-orange hover:bg-secondary-orange/80 transition text-black/90 font-semibold px-4 py-1 mb-3 w-full"
                         onClick={() => {
                           removeStoredData();

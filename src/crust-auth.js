@@ -1,5 +1,7 @@
 import { peraWallet } from "./utils";
 
+export const CRUST_DEBUG = false;
+
 // Algorand wallet
 export async function signLoginAlgorandForCrustIpfsEndpoint(address) {
   const u = {
