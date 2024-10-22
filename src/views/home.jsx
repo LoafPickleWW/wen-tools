@@ -64,6 +64,17 @@ export default function Home() {
               className="w-24 h-20 md:w-32 md:h-32"
             />
           </a>
+          <a
+            href="https://apps.crust.network/?rpc=wss%3A%2F%2Frpc.crust.network#/explorer"
+            className="flex justify-center opacity-80 hover:opacity-100 transition"
+            target="_blank noreferrer"
+          >
+            <img
+              src="./crust.png"
+              alt="crust"
+              className="w-24 h-20 md:w-32 md:h-32"
+            />
+          </a>
         </div>
       </div>
       <DonationDialog />
