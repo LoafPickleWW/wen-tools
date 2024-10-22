@@ -26,8 +26,8 @@ import { BatchClawback } from "./pages/BatchClawback";
 import { BatchFreeze } from "./pages/BatchFreeze";
 import { VaultSendTool } from "./pages/VaultSendTool";
 import { SimpleBatchMint } from "./pages/SimpleBatchMint";
-import { SimpleMintClassic } from "./pages/SimplehMintClassic";
-import { SimpleUpdateClassic } from "./pages/SimplehUpdateClassic";
+import { SimpleMintClassic } from "./pages/SimpleMintClassic";
+import { SimpleUpdateClassic } from "./pages/SimpleUpdateClassic";
 import ScrollToTop from "./components/ScrollToTop";
 
 function App() {
