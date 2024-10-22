@@ -19,7 +19,7 @@ import {
 import { TOOLS } from "../constants";
 import FaqSectionComponent from "../components/FaqSectionComponent";
 
-const simpleMintAtom = atomWithStorage('simpleMint', {
+const simpleMintClassicAtom = atomWithStorage('simpleMintClassic', {
   name: "",
   unitName: "",
   totalSupply: 1,
@@ -57,7 +57,7 @@ const simpleMintAtom = atomWithStorage('simpleMint', {
 const smTokenAtom = atomWithStorage('smToken', "");
 
 export function SimpleMintClassic() {
-  const [formData, setFormData] = useAtom(simpleMintAtom);
+  const [formData, setFormData] = useAtom(simpleMintClassicAtom);
   const [token, setToken] = useAtom(smTokenAtom);
   const [processStep, setProcessStep] = useState(0);
   const [transaction, setTransaction] = useState(null);
