@@ -72,7 +72,7 @@ export default function Home() {
             <img
               src="./crust.png"
               alt="crust"
-              className="w-24 h-20 md:w-45 md:h-18"
+              className="w-24 h-20 md:w-75 md:h-18"
             />
           </a>
         </div>
