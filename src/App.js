@@ -26,6 +26,8 @@ import { BatchClawback } from "./pages/BatchClawback";
 import { BatchFreeze } from "./pages/BatchFreeze";
 import { VaultSendTool } from "./pages/VaultSendTool";
 import { SimpleBatchMint } from "./pages/SimpleBatchMint";
+import { SimpleMintClassic } from "./pages/SimplehMintClassic";
+import { SimpleUpdateClassic } from "./pages/SimplehUpdateClassic";
 import ScrollToTop from "./components/ScrollToTop";
 
 function App() {
@@ -88,6 +90,8 @@ function App() {
           <Route path="/simple-batch-mint" element={<SimpleBatchMint />} />
           <Route path="/simple-mint" element={<SimpleMint />} />
           <Route path="/simple-update" element={<SimpleUpdate />} />
+          <Route path="/simple-mint-classic" element={<SimpleMintClassic />} />
+          <Route path="/simple-update-classic" element={<SimpleUpdateClassic />} />
           <Route path="*" element={<Home />} />
         </Routes>
         <Footer />
