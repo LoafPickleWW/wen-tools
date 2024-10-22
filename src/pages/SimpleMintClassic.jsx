@@ -56,7 +56,7 @@ const simpleMintAtom = atomWithStorage('simpleMint', {
 });
 const smTokenAtom = atomWithStorage('smToken', "");
 
-export function SimpleMint() {
+export function SimpleMintClassic() {
   const [formData, setFormData] = useAtom(simpleMintAtom);
   const [token, setToken] = useAtom(smTokenAtom);
   const [processStep, setProcessStep] = useState(0);
