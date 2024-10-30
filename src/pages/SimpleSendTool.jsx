@@ -306,6 +306,11 @@ export function SimpleSendTool() {
                "Simple Send is a tool that allows you to send an ASA to multiple wallet addresses or send multiple ASAs to a single wallet.",
            },
            {
+             question: "Can I send Algo? ",
+             answer:
+               "Yes! Use 1 for the Asset ID",
+           },
+           {
              question: "How much does it cost to Send?",
              answer:
                "There is a network transaction fee of 0.001A. If you send 1000 Assets, it will cost only 1A.",
