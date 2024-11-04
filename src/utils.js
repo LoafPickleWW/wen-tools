@@ -1645,6 +1645,7 @@ export async function pinJSONToPinata(
   } catch (error) {
     throw new Error("IPFS pinning failed");
   }
+  await new Promise((resolve) => setTimeout(resolve, 100));
 }
 
 export async function pinImageToPinata(token, image) {
