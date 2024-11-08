@@ -288,8 +288,8 @@ export async function createAssetMintArrayV2(
         assetName: data_for_txns[i].asset_name,
         unitName: data_for_txns[i].unit_name,
         total:
-          BigInt(data_for_txns[i].total_supply *
-          10n ** parseInt(data_for_txns[i].decimals)),
+          BigInt(data_for_txns[i].total_supply) *
+          10n ** BigInt(data_for_txns[i].decimals),
         decimals: parseInt(data_for_txns[i].decimals),
         reserve: wallet,
         freeze: data_for_txns[i].has_freeze === "Y" ? wallet : undefined,
