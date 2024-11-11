@@ -138,8 +138,8 @@ export async function buildAssetMintAtomicTransactionComposer(
     reserveAddress = ret.reserveAddress;
   }
 
-  let asset_create_tx = algosdk.makeAssetCreateTxnWithSuggestedParamsFromObject(
-    {
+  const asset_create_tx =
+    algosdk.makeAssetCreateTxnWithSuggestedParamsFromObject({
       from: wallet,
       manager: wallet,
       assetName: data_for_txn.asset_name,
@@ -155,10 +155,9 @@ export async function buildAssetMintAtomicTransactionComposer(
       clawback: data_for_txn.has_clawback === "Y" ? wallet : undefined,
       defaultFrozen: data_for_txn.default_frozen === "Y" ? true : false,
       strictEmptyAddressChecking: false,
-    }
-  );
+    });
 
-  let fee_tx = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
+  const fee_tx = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
     from: wallet,
     to: MINT_FEE_WALLET,
     amount: algosdk.algosToMicroalgos(MINT_FEE_PER_ASA),
@@ -273,7 +272,7 @@ export async function pinImageToCrust(token, image, endpoint = "") {
 
 export async function makeCrustPinTx(
   cid,
-  signer,
+  signer: algosdk.TransactionSigner,
   address: string,
   algodClient: algosdk.Algodv2
 ) {
@@ -283,7 +282,7 @@ export async function makeCrustPinTx(
   }
 
   const price = await getPrice(algodClient, 10000);
-  let suggestedParams = await algodClient.getTransactionParams().do();
+  const suggestedParams = await algodClient.getTransactionParams().do();
   suggestedParams.flatFee = true;
   suggestedParams.fee = 2000 * 4; // set fee
 

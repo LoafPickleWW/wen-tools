@@ -8,7 +8,6 @@ import {
   makeAssetCreateTxnWithSuggestedParamsFromObject,
   makeAssetTransferTxnWithSuggestedParamsFromObject,
   makePaymentTxnWithSuggestedParamsFromObject,
-  signTransaction,
   makeAssetDestroyTxnWithSuggestedParamsFromObject,
   makeAssetFreezeTxnWithSuggestedParamsFromObject,
   decodeAddress,
@@ -45,7 +44,7 @@ export const peraWallet = new PeraWalletConnect({
   shouldShowSignTxnToast: true,
 });
 
-export function sliceIntoChunks(arr, chunkSize) {
+export function sliceIntoChunks(arr: any[], chunkSize: number) {
   const res = [];
   for (let i = 0; i < arr.length; i += chunkSize) {
     const chunk = arr.slice(i, i + chunkSize);
@@ -54,7 +53,10 @@ export function sliceIntoChunks(arr, chunkSize) {
   return res;
 }
 
-export async function walletSign(txns, signer) {
+export async function walletSign(
+  txns: algosdk.Transaction[] | algosdk.Transaction[][],
+  signer: algosdk.TransactionSigner
+) {
   const all = Array.from(Array(txns.flat().length).keys());
   return signer(txns.flat(), all);
 }
@@ -75,42 +77,44 @@ export function getNfdomainAPIURL(activeNetwork: NetworkId) {
   }
 }
 
-export function SignWithSk(txnsArray, sk) {
-  let signedTxns = [];
+export function SignWithSk(txnsArray: algosdk.Transaction[], sk: Uint8Array) {
+  const signedTxns = [];
   for (let i = 0; i < txnsArray.length; i++) {
-    signedTxns.push(signTransaction(txnsArray[i], sk).blob);
+    signedTxns.push(algosdk.signTransaction(txnsArray[i], sk).blob);
   }
   return signedTxns;
 }
 
-export function SignWithMnemonic(txnsArray, mnemonic) {
-  if (mnemonic.split(" ").length !== 25) throw new Error("Invalid Mnemonic!");
+export function SignWithMnemonic(
+  txnsArray: algosdk.Transaction[],
+  mnemonic: string
+) {
+  if (mnemonic.split(" ").length !== 25) throw Error("Invalid Mnemonic!");
   const { sk } = algosdk.mnemonicToSecretKey(mnemonic);
   return SignWithSk(txnsArray.flat(), sk);
 }
 
 export async function createAssetConfigArray(
-  data_for_txns,
+  data_for_txns: any[],
   address: string,
   algodClient: algosdk.Algodv2
 ) {
   const params = await algodClient.getTransactionParams().do();
   const txnsArray = [];
-  const wallet = address;
   for (let i = 0; i < data_for_txns.length; i++) {
-    let asset_update_tx = makeAssetConfigTxnWithSuggestedParamsFromObject({
-      from: wallet,
+    const asset_update_tx = makeAssetConfigTxnWithSuggestedParamsFromObject({
+      from: address,
       assetIndex: parseInt(data_for_txns[i].asset_id),
       note: new TextEncoder().encode(JSON.stringify(data_for_txns[i].note)),
-      manager: wallet,
-      reserve: wallet,
+      manager: address,
+      reserve: address,
       freeze: data_for_txns[i].freeze || undefined,
       clawback: data_for_txns[i].clawback || undefined,
       suggestedParams: params,
       strictEmptyAddressChecking: false,
     });
     const fee_tx = makePaymentTxnWithSuggestedParamsFromObject({
-      from: wallet,
+      from: address,
       to: MINT_FEE_WALLET,
       amount: algosToMicroalgos(UPDATE_FEE_PER_ASA),
       suggestedParams: params,
@@ -128,20 +132,19 @@ export async function createAssetConfigArray(
 }
 
 export async function createAssetMintArrayV2(
-  data_for_txns,
+  data_for_txns: any[],
   address: string,
   algodClient: algosdk.Algodv2,
-  transactionSigner,
-  extraPinCids // cid array
+  transactionSigner: algosdk.TransactionSigner,
+  extraPinCids?: any[] // cid array
 ) {
   // create atomic transaction composer
   const atc = new algosdk.AtomicTransactionComposer();
 
   const params = await algodClient.getTransactionParams().do();
 
-  const wallet = address;
-  if (wallet === "" || wallet === undefined) {
-    throw new Error("Wallet not found");
+  if (!address) {
+    throw Error("Wallet not found");
   }
 
   for (let i = 0; i < data_for_txns.length; i++) {
@@ -149,27 +152,26 @@ export async function createAssetMintArrayV2(
       const note = new TextEncoder().encode(
         JSON.stringify(data_for_txns[i].asset_note)
       );
-      let asset_create_tx = makeAssetCreateTxnWithSuggestedParamsFromObject({
-        from: wallet,
-        manager: wallet,
+      const asset_create_tx = makeAssetCreateTxnWithSuggestedParamsFromObject({
+        from: address,
+        manager: address,
         assetName: data_for_txns[i].asset_name,
         unitName: data_for_txns[i].unit_name,
         total:
           BigInt(data_for_txns[i].total_supply) *
           10n ** BigInt(data_for_txns[i].decimals),
         decimals: parseInt(data_for_txns[i].decimals),
-        reserve: wallet,
-        freeze: data_for_txns[i].has_freeze === "Y" ? wallet : undefined,
+        reserve: address,
+        freeze: data_for_txns[i].has_freeze === "Y" ? address : undefined,
         assetURL: data_for_txns[i].asset_url,
         suggestedParams: params,
         note: note,
-        clawback: data_for_txns[i].has_clawback === "Y" ? wallet : undefined,
-        strictEmptyAddressChecking: false,
+        clawback: data_for_txns[i].has_clawback === "Y" ? address : undefined,
         defaultFrozen: data_for_txns[i].default_frozen === "Y" ? true : false,
       });
 
-      let fee_tx = makePaymentTxnWithSuggestedParamsFromObject({
-        from: wallet,
+      const fee_tx = makePaymentTxnWithSuggestedParamsFromObject({
+        from: address,
         to: MINT_FEE_WALLET,
         amount: algosToMicroalgos(MINT_FEE_PER_ASA),
         suggestedParams: params,
@@ -204,39 +206,37 @@ export async function createAssetMintArrayV2(
 }
 
 export async function createAssetMintArray(
-  data_for_txns,
+  data_for_txns: any[],
   address: string,
   algodClient: algosdk.Algodv2
 ) {
   const params = await algodClient.getTransactionParams().do();
-  let txnsArray = [];
-  const wallet = address;
+  const txnsArray = [];
   for (let i = 0; i < data_for_txns.length; i++) {
     try {
       const note = new TextEncoder().encode(
         JSON.stringify(data_for_txns[i].asset_note)
       );
-      let asset_create_tx = makeAssetCreateTxnWithSuggestedParamsFromObject({
-        from: wallet,
-        manager: wallet,
+      const asset_create_tx = makeAssetCreateTxnWithSuggestedParamsFromObject({
+        from: address,
+        manager: address,
         assetName: data_for_txns[i].asset_name,
         unitName: data_for_txns[i].unit_name,
         total:
           BigInt(data_for_txns[i].total_supply) *
           10n ** BigInt(data_for_txns[i].decimals),
         decimals: parseInt(data_for_txns[i].decimals),
-        reserve: wallet,
-        freeze: data_for_txns[i].has_freeze === "Y" ? wallet : undefined,
+        reserve: address,
+        freeze: data_for_txns[i].has_freeze === "Y" ? address : undefined,
         assetURL: data_for_txns[i].asset_url,
         suggestedParams: params,
         note: note,
-        clawback: data_for_txns[i].has_clawback === "Y" ? wallet : undefined,
-        strictEmptyAddressChecking: false,
+        clawback: data_for_txns[i].has_clawback === "Y" ? address : undefined,
         defaultFrozen: data_for_txns[i].default_frozen === "Y" ? true : false,
       });
 
-      let fee_tx = makePaymentTxnWithSuggestedParamsFromObject({
-        from: wallet,
+      const fee_tx = makePaymentTxnWithSuggestedParamsFromObject({
+        from: address,
         to: MINT_FEE_WALLET,
         amount: algosToMicroalgos(MINT_FEE_PER_ASA),
         suggestedParams: params,
@@ -264,23 +264,22 @@ export async function createAssetMintArray(
  * @returns AtomicTransactionComposer
  */
 export async function createARC3AssetMintArrayV2(
-  data_for_txns,
+  data_for_txns: any[],
   address: string,
   algodClient: algosdk.Algodv2,
-  transactionSigner,
-  extraPinCids,
-  mnemonic
+  transactionSigner: algosdk.TransactionSigner,
+  extraPinCids?: any[],
+  mnemonic?: string
 ) {
-  const wallet = address;
-  if (wallet === "" || wallet === undefined) {
-    throw new Error("Wallet not found");
+  if (!address) {
+    throw Error("Wallet not found");
   }
 
   // create atomic transaction composer
   const atc = new algosdk.AtomicTransactionComposer();
 
   let txSigner = null;
-  if (mnemonic !== undefined && mnemonic !== null && mnemonic !== "") {
+  if (mnemonic) {
     // create a mnemonic signer
     txSigner = mnemonicSignerCreator(mnemonic);
   } else {
@@ -288,7 +287,7 @@ export async function createARC3AssetMintArrayV2(
   }
 
   if (txSigner === null) {
-    throw new Error("txSigner is not defined");
+    throw Error("txSigner is not defined");
   }
 
   for (let i = 0; i < data_for_txns.length; i++) {
@@ -299,7 +298,7 @@ export async function createARC3AssetMintArrayV2(
       // upload to Crust
       const cid = await pinJSONToCrust(authBasic, jsonString);
 
-      let suggestedParams = await algodClient.getTransactionParams().do();
+      const suggestedParams = await algodClient.getTransactionParams().do();
       suggestedParams.flatFee = true;
       suggestedParams.fee = 2000 * 4; // set fee
 
@@ -335,25 +334,24 @@ export async function createARC3AssetMintArrayV2(
   return atc;
 }
 
-function getTxnGroupFromATC(atc) {
+function getTxnGroupFromATC(atc: algosdk.AtomicTransactionComposer) {
   const txnsWithSigners = atc.buildGroup();
   return txnsWithSigners.map((txnWithSigner) => txnWithSigner.txn);
 }
 
 export async function createARC3AssetMintArrayV2Batch(
-  data_for_txns,
+  data_for_txns: any[],
   address: string,
   algodClient: algosdk.Algodv2,
-  transactionSigner,
-  mnemonic
+  transactionSigner: algosdk.TransactionSigner,
+  mnemonic?: string
 ) {
-  const wallet = address;
-  if (wallet === "" || wallet === undefined) {
-    throw new Error("Wallet not found");
+  if (!address) {
+    throw Error("Wallet not found");
   }
 
   let txSigner = null;
-  if (mnemonic !== undefined && mnemonic !== null && mnemonic !== "") {
+  if (mnemonic) {
     // create a mnemonic signer
     txSigner = mnemonicSignerCreator(mnemonic);
   } else {
@@ -361,10 +359,10 @@ export async function createARC3AssetMintArrayV2Batch(
   }
 
   if (txSigner === null) {
-    throw new Error("txSigner is not defined");
+    throw Error("txSigner is not defined");
   }
 
-  let txnsArray = [];
+  const txnsArray = [];
   for (let i = 0; i < data_for_txns.length; i++) {
     // create new atomic transaction composer
     const atc = new algosdk.AtomicTransactionComposer();
@@ -376,7 +374,7 @@ export async function createARC3AssetMintArrayV2Batch(
       // upload to Crust
       const cid = await pinJSONToCrust(authBasic, jsonString);
 
-      let suggestedParams = await algodClient.getTransactionParams().do();
+      const suggestedParams = await algodClient.getTransactionParams().do();
       suggestedParams.flatFee = true;
       suggestedParams.fee = 2000 * 4; // set fee
 
@@ -405,36 +403,33 @@ export async function createARC3AssetMintArrayV2Batch(
 }
 
 export async function createARC3AssetMintArray(
-  data_for_txns,
+  data_for_txns: any[],
   address: string,
   algodClient: algosdk.Algodv2,
-  token
+  token: string
 ) {
-  const wallet = address;
-  if (wallet === "" || wallet === undefined) {
-    throw new Error("Wallet not found");
+  if (!address) {
+    throw Error("Wallet not found");
   }
   const params = await algodClient.getTransactionParams().do();
-  let txnsArray = [];
+  const txnsArray = [];
   for (let i = 0; i < data_for_txns.length; i++) {
     try {
       const jsonString = JSON.stringify(data_for_txns[i].ipfs_data);
-      let cid = await pinJSONToPinata(token, jsonString);
+      const cid = await pinJSONToPinata(token, jsonString);
       const price = await getPrice(algodClient, 10000);
       const node = await getRandomNode(algodClient);
       if (typeof node !== "string") {
-        throw new Error("Invalid Node!");
+        throw Error("Invalid Node!");
       }
 
-      let suggestedParams = await algodClient.getTransactionParams().do();
+      const suggestedParams = await algodClient.getTransactionParams().do();
       suggestedParams.flatFee = true;
       suggestedParams.fee = 2000 * 4; // 设置固定费用
 
       const paymentTxn = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
-        type: "pay",
-        from: wallet,
+        from: address,
         to: algosdk.getApplicationAddress(appId),
-        receiver: algosdk.getApplicationAddress(appId),
         amount: price,
         closeRemainderTo: undefined,
         note: undefined,
@@ -456,8 +451,9 @@ export async function createARC3AssetMintArray(
       console.log(args);
 
       const appCallTxn = algosdk.makeApplicationCallTxnFromObject({
-        accounts: [wallet, node],
-        from: wallet,
+        onComplete: algosdk.OnApplicationComplete.NoOpOC,
+        accounts: [address, node],
+        from: address,
         appIndex: appId,
         appArgs: [
           method.getSelector(),
@@ -474,26 +470,25 @@ export async function createARC3AssetMintArray(
       });
 
       data_for_txns[i].asset_url_section = "ipfs://" + cid;
-      let asset_create_tx = makeAssetCreateTxnWithSuggestedParamsFromObject({
-        from: wallet,
-        manager: wallet,
+      const asset_create_tx = makeAssetCreateTxnWithSuggestedParamsFromObject({
+        from: address,
+        manager: address,
         assetName: data_for_txns[i].asset_name,
         unitName: data_for_txns[i].unit_name,
         total:
           BigInt(data_for_txns[i].total_supply) *
           10n ** BigInt(data_for_txns[i].decimals),
         decimals: parseInt(data_for_txns[i].decimals),
-        reserve: wallet,
-        freeze: data_for_txns[i].has_freeze === "Y" ? wallet : undefined,
+        reserve: address,
+        freeze: data_for_txns[i].has_freeze === "Y" ? address : undefined,
         assetURL: data_for_txns[i].asset_url_section + "#arc3",
         suggestedParams: params,
-        clawback: data_for_txns[i].has_clawback === "Y" ? wallet : undefined,
+        clawback: data_for_txns[i].has_clawback === "Y" ? address : undefined,
         defaultFrozen: data_for_txns[i].default_frozen === "Y" ? true : false,
-        strictEmptyAddressChecking: false,
       });
 
-      let fee_tx = makePaymentTxnWithSuggestedParamsFromObject({
-        from: wallet,
+      const fee_tx = makePaymentTxnWithSuggestedParamsFromObject({
+        from: address,
         to: MINT_FEE_WALLET,
         amount: algosToMicroalgos(MINT_FEE_PER_ASA),
         suggestedParams: params,
@@ -524,23 +519,22 @@ export async function createARC3AssetMintArray(
 }
 
 export async function createARC19AssetMintArrayV2(
-  data_for_txns,
+  data_for_txns: any[],
   address: string,
   algodClient: algosdk.Algodv2,
-  transactionSigner,
-  extraPinCids,
-  mnemonic
+  transactionSigner: algosdk.TransactionSigner,
+  extraPinCids?: any[],
+  mnemonic?: string
 ) {
-  const wallet = address;
-  if (wallet === "" || wallet === undefined) {
-    throw new Error("Wallet not found");
+  if (!address) {
+    throw Error("Wallet not found");
   }
 
   // create atomic transaction composer
   const atc = new algosdk.AtomicTransactionComposer();
 
   let txSigner = null;
-  if (mnemonic !== undefined && mnemonic !== null && mnemonic !== "") {
+  if (mnemonic) {
     // create a mnemonic signer
     txSigner = mnemonicSignerCreator(mnemonic);
   } else {
@@ -548,7 +542,7 @@ export async function createARC19AssetMintArrayV2(
   }
 
   if (txSigner === null) {
-    throw new Error("txSigner is not defined");
+    throw Error("txSigner is not defined");
   }
 
   for (let i = 0; i < data_for_txns.length; i++) {
@@ -559,7 +553,7 @@ export async function createARC19AssetMintArrayV2(
       // upload to Crust
       const cid = await pinJSONToCrust(authBasic, jsonString);
 
-      let suggestedParams = await algodClient.getTransactionParams().do();
+      const suggestedParams = await algodClient.getTransactionParams().do();
       suggestedParams.flatFee = true;
       suggestedParams.fee = 2000 * 4; // set fee
 
@@ -596,19 +590,17 @@ export async function createARC19AssetMintArrayV2(
 }
 
 export async function createARC19AssetMintArrayV2Batch(
-  data_for_txns,
+  data_for_txns: any[],
   address: string,
   algodClient: algosdk.Algodv2,
-  transactionSigner,
-  mnemonic
+  transactionSigner: algosdk.TransactionSigner,
+  mnemonic?: string
 ) {
-  const wallet = address;
-  if (wallet === "" || wallet === undefined) {
-    throw new Error("Wallet not found");
+  if (!address) {
+    throw Error("Wallet not found");
   }
-
   let txSigner = null;
-  if (mnemonic !== undefined && mnemonic !== null && mnemonic !== "") {
+  if (mnemonic) {
     // create a mnemonic signer
     txSigner = mnemonicSignerCreator(mnemonic);
   } else {
@@ -616,10 +608,10 @@ export async function createARC19AssetMintArrayV2Batch(
   }
 
   if (txSigner === null) {
-    throw new Error("txSigner is not defined");
+    throw Error("txSigner is not defined");
   }
 
-  let txnsArray = [];
+  const txnsArray = [];
   for (let i = 0; i < data_for_txns.length; i++) {
     // create atomic transaction composer
     const atc = new algosdk.AtomicTransactionComposer();
@@ -631,7 +623,7 @@ export async function createARC19AssetMintArrayV2Batch(
       // upload to Crust
       const cid = await pinJSONToCrust(authBasic, jsonString);
 
-      let suggestedParams = await algodClient.getTransactionParams().do();
+      const suggestedParams = await algodClient.getTransactionParams().do();
       suggestedParams.flatFee = true;
       suggestedParams.fee = 2000 * 4; // set fee
 
@@ -660,28 +652,27 @@ export async function createARC19AssetMintArrayV2Batch(
 }
 
 export async function createARC19AssetMintArray(
-  data_for_txns,
+  data_for_txns: any[],
   address: string,
   algodClient: algosdk.Algodv2,
-  token
+  token?: string
 ) {
-  const wallet = address;
-  if (wallet === "" || wallet === undefined) {
-    throw new Error("Wallet not found");
+  if (!address) {
+    throw Error("Wallet not found");
   }
-  if (token === "" || token === undefined) {
-    throw new Error("IPFS token not found");
+  if (!token) {
+    throw Error("IPFS token not found");
   }
   const params = await algodClient.getTransactionParams().do();
-  let txnsArray = [];
+  const txnsArray = [];
   for (let i = 0; i < data_for_txns.length; i++) {
     try {
       const jsonString = JSON.stringify(data_for_txns[i].ipfs_data);
-      let cid = await pinJSONToPinata(token, jsonString);
+      const cid = await pinJSONToPinata(token, jsonString);
       const { assetURL, reserveAddress } = createReserveAddressFromIpfsCid(cid);
-      let asset_create_tx = makeAssetCreateTxnWithSuggestedParamsFromObject({
-        from: wallet,
-        manager: wallet,
+      const asset_create_tx = makeAssetCreateTxnWithSuggestedParamsFromObject({
+        from: address,
+        manager: address,
         assetName: data_for_txns[i].asset_name,
         unitName: data_for_txns[i].unit_name,
         total:
@@ -689,16 +680,15 @@ export async function createARC19AssetMintArray(
           10n ** BigInt(data_for_txns[i].decimals),
         decimals: parseInt(data_for_txns[i].decimals),
         reserve: reserveAddress,
-        freeze: data_for_txns[i].has_freeze === "Y" ? wallet : undefined,
+        freeze: data_for_txns[i].has_freeze === "Y" ? address : undefined,
         assetURL: assetURL,
         suggestedParams: params,
-        clawback: data_for_txns[i].has_clawback === "Y" ? wallet : undefined,
-        strictEmptyAddressChecking: false,
+        clawback: data_for_txns[i].has_clawback === "Y" ? address : undefined,
         defaultFrozen: data_for_txns[i].default_frozen === "Y" ? true : false,
       });
 
-      let fee_tx = makePaymentTxnWithSuggestedParamsFromObject({
-        from: wallet,
+      const fee_tx = makePaymentTxnWithSuggestedParamsFromObject({
+        from: address,
         to: MINT_FEE_WALLET,
         amount: algosToMicroalgos(MINT_FEE_PER_ASA),
         suggestedParams: params,
@@ -714,8 +704,8 @@ export async function createARC19AssetMintArray(
       toast.info(`Asset ${i + 1} of ${data_for_txns.length} uploaded to IPFS`, {
         autoClose: 200,
       });
-    } catch (error) {
-      console.log(error);
+    } catch (err) {
+      console.log(err);
     }
   }
   return txnsArray;
@@ -727,16 +717,15 @@ export async function createARC19AssetMintArray(
  * @returns
  */
 export async function updateARC19AssetMintArrayV2(
-  data_for_txns,
+  data_for_txns: any[],
   address: string,
   algodClient: algosdk.Algodv2,
-  transactionSigner,
-  extraPinCids,
-  mnemonic
+  transactionSigner: algosdk.TransactionSigner,
+  extraPinCids?: any[],
+  mnemonic?: string
 ) {
-  const wallet = address;
-  if (wallet === "" || wallet === undefined) {
-    throw new Error("Wallet not found");
+  if (!address) {
+    throw Error("Wallet not found");
   }
 
   // create atomic transaction composer
@@ -745,7 +734,7 @@ export async function updateARC19AssetMintArrayV2(
   let params = await algodClient.getTransactionParams().do();
 
   let txSigner = null;
-  if (mnemonic !== undefined && mnemonic !== null && mnemonic !== "") {
+  if (mnemonic) {
     // create a mnemonic signer
     txSigner = mnemonicSignerCreator(mnemonic);
   } else {
@@ -758,14 +747,14 @@ export async function updateARC19AssetMintArrayV2(
         parseInt(data_for_txns[i].asset_id),
         algodClient
       );
-      let chunks = assetURL.split("://");
+      const chunks = assetURL.split("://");
       const cidVersion = chunks[1].split(":")[1];
       const cidCodec = chunks[1].split(":")[2];
       const jsonString = JSON.stringify(data_for_txns[i].ipfs_data);
 
       const authBasic = localStorage.getItem("authBasic");
       // upload to Crust
-      let cid = await pinJSONToCrust(
+      const cid = await pinJSONToCrust(
         authBasic,
         jsonString,
         cidVersion,
@@ -774,11 +763,11 @@ export async function updateARC19AssetMintArrayV2(
 
       const { reserveAddress } = createReserveAddressFromIpfsCid(cid);
 
-      let update_tx = makeAssetConfigTxnWithSuggestedParamsFromObject({
-        from: wallet,
+      const update_tx = makeAssetConfigTxnWithSuggestedParamsFromObject({
+        from: address,
         assetIndex: parseInt(data_for_txns[i].asset_id),
         note: new TextEncoder().encode(JSON.stringify(data_for_txns[i].note)),
-        manager: wallet,
+        manager: address,
         reserve: reserveAddress,
         freeze: data_for_txns[i].freeze || undefined,
         clawback: data_for_txns[i].clawback || undefined,
@@ -786,8 +775,8 @@ export async function updateARC19AssetMintArrayV2(
         strictEmptyAddressChecking: false,
       });
 
-      let fee_tx = makePaymentTxnWithSuggestedParamsFromObject({
-        from: wallet,
+      const fee_tx = makePaymentTxnWithSuggestedParamsFromObject({
+        from: address,
         to: MINT_FEE_WALLET,
         amount: algosToMicroalgos(UPDATE_FEE_PER_ASA),
         suggestedParams: params,
@@ -806,7 +795,9 @@ export async function updateARC19AssetMintArrayV2(
       toast.info(`Asset ${i + 1} of ${data_for_txns.length} uploaded to IPFS`, {
         autoClose: 200,
       });
-    } catch (error) {}
+    } catch (err) {
+      console.error(err);
+    }
     if (i % 100 === 0) {
       params = await algodClient.getTransactionParams().do();
     }
@@ -825,37 +816,41 @@ export async function updateARC19AssetMintArrayV2(
 }
 
 export async function updateARC19AssetMintArray(
-  data_for_txns,
+  data_for_txns: any[],
   address: string,
   algodClient: algosdk.Algodv2,
-  token
+  token?: string
 ) {
-  const wallet = address;
-  if (wallet === "" || wallet === undefined) {
-    throw new Error("Wallet not found");
+  if (!address) {
+    throw Error("Wallet not found");
   }
-  if (token === "" || token === undefined) {
-    throw new Error("IPFS token not found");
+  if (!token) {
+    throw Error("IPFS token not found");
   }
   let params = await algodClient.getTransactionParams().do();
-  let txnsArray = [];
+  const txnsArray = [];
   for (let i = 0; i < data_for_txns.length; i++) {
     try {
       const assetURL = await getAssetUrl(
         parseInt(data_for_txns[i].asset_id),
         algodClient
       );
-      let chunks = assetURL.split("://");
+      const chunks = assetURL.split("://");
       const cidVersion = chunks[1].split(":")[1];
       const cidCodec = chunks[1].split(":")[2];
       const jsonString = JSON.stringify(data_for_txns[i].ipfs_data);
-      let cid = await pinJSONToPinata(token, jsonString, cidVersion, cidCodec);
+      const cid = await pinJSONToPinata(
+        token,
+        jsonString,
+        cidVersion,
+        cidCodec
+      );
       const { reserveAddress } = createReserveAddressFromIpfsCid(cid);
-      let update_tx = makeAssetConfigTxnWithSuggestedParamsFromObject({
-        from: wallet,
+      const update_tx = makeAssetConfigTxnWithSuggestedParamsFromObject({
+        from: address,
         assetIndex: parseInt(data_for_txns[i].asset_id),
         note: new TextEncoder().encode(JSON.stringify(data_for_txns[i].note)),
-        manager: wallet,
+        manager: address,
         reserve: reserveAddress,
         freeze: data_for_txns[i].freeze || undefined,
         clawback: data_for_txns[i].clawback || undefined,
@@ -863,8 +858,8 @@ export async function updateARC19AssetMintArray(
         strictEmptyAddressChecking: false,
       });
 
-      let fee_tx = makePaymentTxnWithSuggestedParamsFromObject({
-        from: wallet,
+      const fee_tx = makePaymentTxnWithSuggestedParamsFromObject({
+        from: address,
         to: MINT_FEE_WALLET,
         amount: algosToMicroalgos(UPDATE_FEE_PER_ASA),
         suggestedParams: params,
@@ -880,7 +875,9 @@ export async function updateARC19AssetMintArray(
       toast.info(`Asset ${i + 1} of ${data_for_txns.length} uploaded to IPFS`, {
         autoClose: 200,
       });
-    } catch (error) {}
+    } catch (err) {
+      console.log(err);
+    }
     if (i % 100 === 0) {
       params = await algodClient.getTransactionParams().do();
     }
@@ -889,22 +886,21 @@ export async function updateARC19AssetMintArray(
 }
 
 export async function createAirdropTransactions(
-  data_for_txns,
-  assetDecimals,
+  data_for_txns: any[],
+  assetDecimals: any,
   address: string,
   algodClient: algosdk.Algodv2,
   activeNetwork: NetworkId
 ) {
-  const wallet = address;
   const params = await algodClient.getTransactionParams().do();
-  let txnsArray = [];
-  if (wallet === "" || wallet === undefined) {
-    throw new Error(
+  const txnsArray = [];
+  if (!address) {
+    throw Error(
       "You need to connect your wallet first, if using mnemonic too!"
     );
   }
-  let nfd_wallets = [];
-  let nfdDomains = {};
+  const nfd_wallets = [];
+  let nfdDomains: any = {};
   for (let i = 0; i < data_for_txns.length; i++) {
     if (data_for_txns[i].receiver.includes(".algo")) {
       nfd_wallets.push(data_for_txns[i].receiver);
@@ -913,7 +909,7 @@ export async function createAirdropTransactions(
   if (nfd_wallets.length > 0) {
     nfdDomains = await getAddressesFromNFDomain(nfd_wallets);
   }
-  const isHolder = await isWalletHolder(wallet, activeNetwork);
+  const isHolder = await isWalletHolder(address, activeNetwork);
   for (let i = 0; i < data_for_txns.length; i++) {
     try {
       let tx;
@@ -924,7 +920,7 @@ export async function createAirdropTransactions(
       data_for_txns[i].note = data_for_txns[i].note || "";
       if (data_for_txns[i].asset_id === 1) {
         tx = makePaymentTxnWithSuggestedParamsFromObject({
-          from: wallet,
+          from: address,
           to: data_for_txns[i].receiver.trim(),
           amount: algosToMicroalgos(data_for_txns[i].amount * 1),
           suggestedParams: params,
@@ -941,7 +937,7 @@ export async function createAirdropTransactions(
       } else {
         data_for_txns[i].decimals = assetDecimals[data_for_txns[i].asset_id];
         tx = makeAssetTransferTxnWithSuggestedParamsFromObject({
-          from: wallet,
+          from: address,
           to: data_for_txns[i].receiver.trim(),
           amount:
             BigInt(data_for_txns[i].amount) *
@@ -960,7 +956,8 @@ export async function createAirdropTransactions(
         });
       }
       txnsArray.push(tx);
-    } catch (error) {
+    } catch (err) {
+      console.error(err);
       toast.error("Error in creating transaction " + (i + 1));
     }
   }
@@ -968,19 +965,18 @@ export async function createAirdropTransactions(
 }
 
 export async function createAssetOptInTransactions(
-  assets,
+  assets: number[],
   address: string,
   algodClient: algosdk.Algodv2
 ) {
-  const wallet = address;
   const params = await algodClient.getTransactionParams().do();
-  let txnsArray = [];
+  const txnsArray = [];
   for (let i = 0; i < assets.length; i++) {
     const tx = makeAssetTransferTxnWithSuggestedParamsFromObject({
-      from: wallet,
-      to: wallet.trim(),
+      from: address,
+      to: address.trim(),
       amount: 0,
-      assetIndex: parseInt(assets[i]),
+      assetIndex: assets[i],
       suggestedParams: params,
       note: new TextEncoder().encode(
         "via wen.tools - free tools for creators and collectors"
@@ -999,17 +995,16 @@ export async function createAssetOptInTransactions(
 }
 
 export async function createClawbackTransactions(
-  data_for_txns,
-  assetDecimals,
+  data_for_txns: any[],
+  assetDecimals: any,
   address: string,
   algodClient: algosdk.Algodv2
 ) {
-  const wallet = address;
   const params = await algodClient.getTransactionParams().do();
-  let txnsArray = [];
+  const txnsArray = [];
   for (let i = 0; i < data_for_txns.length; i++) {
     const tx = makeAssetTransferTxnWithSuggestedParamsFromObject({
-      from: wallet.trim(),
+      from: address.trim(),
       revocationTarget: data_for_txns[i].clawback_from,
       to: data_for_txns[i].receiver,
       suggestedParams: params,
@@ -1034,16 +1029,15 @@ export async function createClawbackTransactions(
 }
 
 export async function createFreezeTransactions(
-  data_for_txns,
+  data_for_txns: any[],
   address: string,
   algodClient: algosdk.Algodv2
 ) {
-  const wallet = address;
   const params = await algodClient.getTransactionParams().do();
-  let txnsArray = [];
+  const txnsArray = [];
   for (let i = 0; i < data_for_txns.length; i++) {
     const tx = makeAssetFreezeTxnWithSuggestedParamsFromObject({
-      from: wallet.trim(),
+      from: address.trim(),
       suggestedParams: params,
       assetIndex: parseInt(data_for_txns[i].asset_id),
       freezeState: data_for_txns[i].frozen.trim() === "Y" ? true : false,
@@ -1065,7 +1059,7 @@ export async function createFreezeTransactions(
 }
 
 export async function getAssetCreatorWallet(
-  assetId,
+  assetId: number,
   algodClient: algosdk.Algodv2
 ) {
   try {
@@ -1080,21 +1074,20 @@ export async function getAssetCreatorWallet(
 }
 
 export async function createAssetOptoutTransactions(
-  assets,
+  assets: number[],
   address: string,
   algodClient: algosdk.Algodv2
 ) {
-  const wallet = address;
   const params = await algodClient.getTransactionParams().do();
-  let txnsArray = [];
+  const txnsArray = [];
   for (let i = 0; i < assets.length; i++) {
     const creatorAddress = await getAssetCreatorWallet(assets[i], algodClient);
     if (creatorAddress !== "") {
       const tx = makeAssetTransferTxnWithSuggestedParamsFromObject({
-        from: wallet,
+        from: address,
         to: creatorAddress.trim(),
         amount: 0,
-        assetIndex: parseInt(assets[i]),
+        assetIndex: assets[i],
         suggestedParams: params,
         closeRemainderTo: creatorAddress.trim(),
         note: new TextEncoder().encode(
@@ -1115,29 +1108,28 @@ export async function createAssetOptoutTransactions(
 }
 
 export async function createAssetDeleteTransactions(
-  assets,
+  assets: number[],
   address: string,
   algodClient: algosdk.Algodv2
 ) {
-  const wallet = address;
-  if (wallet === "" || wallet === undefined) {
-    throw new Error("Wallet not found");
+  if (!address) {
+    throw Error("Wallet not found");
   }
   const params = await algodClient.getTransactionParams().do();
-  let txnsArray = [];
+  const txnsArray = [];
   for (let i = 0; i < assets.length; i++) {
     try {
-      let asset_create_tx = makeAssetDestroyTxnWithSuggestedParamsFromObject({
-        from: wallet,
+      const asset_create_tx = makeAssetDestroyTxnWithSuggestedParamsFromObject({
+        from: address,
         suggestedParams: params,
-        assetIndex: parseInt(assets[i]),
+        assetIndex: assets[i],
         note: new TextEncoder().encode(
           "via wen.tools - free tools for creators and collectors | " +
             Math.random().toString(36).substring(2)
         ),
       });
-      let fee_tx = makePaymentTxnWithSuggestedParamsFromObject({
-        from: wallet,
+      const fee_tx = makePaymentTxnWithSuggestedParamsFromObject({
+        from: address,
         to: MINT_FEE_WALLET,
         amount: algosToMicroalgos(UPDATE_FEE_PER_ASA),
         suggestedParams: params,
@@ -1154,7 +1146,7 @@ export async function createAssetDeleteTransactions(
 }
 
 export class Arc69 {
-  async fetch(assetId, activeNetwork: NetworkId) {
+  async fetch(assetId: number, activeNetwork: NetworkId) {
     const idx = getIndexerURL(activeNetwork);
     const url = `${idx}/v2/assets/${assetId}/transactions?tx-type=acfg`;
 
@@ -1163,10 +1155,11 @@ export class Arc69 {
     try {
       transactions = (await fetch(url).then((res) => res.json())).transactions;
     } catch (err) {
+      console.error(err);
       return null;
     }
 
-    transactions.sort((a, b) => b["round-time"] - a["round-time"]);
+    transactions.sort((a: any, b: any) => b["round-time"] - a["round-time"]);
 
     for (const transaction of transactions) {
       try {
@@ -1178,7 +1171,9 @@ export class Arc69 {
         if (noteObject.standard === "arc69") {
           return noteObject;
         }
-      } catch (err) {}
+      } catch (err) {
+        console.error(err);
+      }
     }
     return {
       metadata_description: "",
@@ -1188,7 +1183,7 @@ export class Arc69 {
   }
 }
 
-async function fetchNFDJSON(url) {
+async function fetchNFDJSON(url: string) {
   while (true) {
     const response = await fetch(url);
     if (response.status === 404) {
@@ -1207,29 +1202,29 @@ async function fetchNFDJSON(url) {
   }
 }
 
-export async function getNfdDomain(wallet) {
+export async function getNfdDomain(address: string) {
   const nfdDomain = await fetchNFDJSON(
-    "https://api.nf.domains/nfd/lookup?address=" + wallet + "&view=tiny"
+    "https://api.nf.domains/nfd/lookup?address=" + address + "&view=tiny"
   );
   if (nfdDomain.status === 200) {
-    return nfdDomain.body[wallet].name;
+    return nfdDomain.body[address].name;
   } else {
     return "";
   }
 }
 
-function codeToCodec(code) {
+function codeToCodec(code: any) {
   switch (code.toString(16)) {
     case "55":
       return "raw";
     case "70":
       return "dag-pb";
     default:
-      throw new Error("Unknown codec");
+      throw Error("Unknown codec");
   }
 }
 
-export function createReserveAddressFromIpfsCid(ipfsCid) {
+export function createReserveAddressFromIpfsCid(ipfsCid: any) {
   const decoded = CID.parse(ipfsCid.toString());
   const version = decoded.version;
   const codec = codeToCodec(decoded.code);
@@ -1243,9 +1238,12 @@ export function createReserveAddressFromIpfsCid(ipfsCid) {
   return { assetURL, reserveAddress };
 }
 
-export async function getAssetsFromAddress(address, activeNetwork: NetworkId) {
+export async function getAssetsFromAddress(
+  address: string,
+  activeNetwork: NetworkId
+) {
   let threshold = 1000;
-  let userAssets = await axios.get(
+  const userAssets = await axios.get(
     `${getIndexerURL(activeNetwork)}/v2/accounts/${address}/assets`
   );
   while (userAssets.data.assets.length === threshold) {
@@ -1261,13 +1259,16 @@ export async function getAssetsFromAddress(address, activeNetwork: NetworkId) {
     threshold += 1000;
   }
   return userAssets.data.assets
-    .filter((asset) => asset.amount > 0)
-    .map((asset) => asset["asset-id"]);
+    .filter((asset: any) => asset.amount > 0)
+    .map((asset: any) => asset["asset-id"]);
 }
 
-export async function getCreatedAssets(address, activeNetwork: NetworkId) {
+export async function getCreatedAssets(
+  address: string,
+  activeNetwork: NetworkId
+) {
   let threshold = 1000;
-  let createdAssets = await axios.get(
+  const createdAssets = await axios.get(
     `${getIndexerURL(
       activeNetwork
     )}/v2/accounts/${address}/created-assets?limit=${threshold}`
@@ -1286,13 +1287,16 @@ export async function getCreatedAssets(address, activeNetwork: NetworkId) {
     createdAssets.data["next-token"] = nextAssets.data["next-token"];
     threshold += 1000;
   }
-  return createdAssets.data.assets.map((asset) => {
+  return createdAssets.data.assets.map((asset: any) => {
     return { asset_id: asset["index"], unit_name: asset.params["unit-name"] };
   });
 }
 
-export async function isWalletHolder(wallet, activeNetwork: NetworkId) {
-  let createdAssets = [];
+export async function isWalletHolder(
+  address: string,
+  activeNetwork: NetworkId
+) {
+  let createdAssets: any[] = [];
   for (let i = 0; i < CREATOR_WALLETS.length; i++) {
     createdAssets = createdAssets.concat(
       await getCreatedAssets(CREATOR_WALLETS[i], activeNetwork)
@@ -1304,25 +1308,28 @@ export async function isWalletHolder(wallet, activeNetwork: NetworkId) {
     );
   });
   createdAssets = createdAssets.map((asset) => asset.asset_id);
-  const userAssets = await getAssetsFromAddress(wallet, activeNetwork);
-  return userAssets.some((asset) => createdAssets.includes(asset));
+  const userAssets = await getAssetsFromAddress(address, activeNetwork);
+  return userAssets.some((asset: any) => createdAssets.includes(asset));
 }
 
-export async function getNfDomainsInBulk(wallets, bulkSize = 20) {
-  const uniqueWallets = [...new Set(wallets)];
-  let nfdDomains = {};
+export async function getNfDomainsInBulk(addrs: string[], bulkSize = 20) {
+  const uniqueWallets = [...new Set(addrs)];
+  const nfdDomains: any = {};
   let counter = 0;
   for (let i = 0; i < uniqueWallets.length; i += bulkSize) {
     const chunk = uniqueWallets
       .slice(i, i + bulkSize)
-      .map((wallet) => `address=${wallet}`)
+      .map((address) => `address=${address}`)
       .join("&");
     try {
       const nfdLookup = await fetchNFDJSON(
         `https://api.nf.domains/nfd/lookup?view=tiny&${chunk}`
       );
       if (nfdLookup.status === 200) {
-        for (const [account, domain] of Object.entries(nfdLookup.body)) {
+        for (const [account, domain] of Object.entries(nfdLookup.body) as [
+          string,
+          any
+        ][]) {
           nfdDomains[account] = domain.name;
         }
       }
@@ -1338,10 +1345,10 @@ export async function getNfDomainsInBulk(wallets, bulkSize = 20) {
   return nfdDomains;
 }
 
-export async function getAddressesFromNFDomain(domains) {
+export async function getAddressesFromNFDomain(domains: string[]) {
   toast.info("Fetching NFDomain addresses", { autoClose: 1000 });
   const uniqueDomains = [...new Set(domains)];
-  let nfdDomains = {};
+  const nfdDomains: any = {};
   for (let i = 0; i < uniqueDomains.length; i++) {
     try {
       const response = await axios.get(
@@ -1359,7 +1366,7 @@ export async function getAddressesFromNFDomain(domains) {
 }
 
 export async function getOwnerAddressOfAsset(
-  assetId,
+  assetId: number,
   activeNetwork: NetworkId
 ) {
   try {
@@ -1369,11 +1376,12 @@ export async function getOwnerAddressOfAsset(
     const response = await axios.get(url);
     return response.data.balances[0].address;
   } catch (err) {
+    console.error(err);
     return "";
   }
 }
 export async function getOwnerAddressAmountOfAsset(
-  assetId,
+  assetId: number,
   activeNetwork: NetworkId
 ) {
   try {
@@ -1387,11 +1395,11 @@ export async function getOwnerAddressAmountOfAsset(
     return "";
   }
 }
-export async function getRandListingAsset(assetId) {
+export async function getRandListingAsset(assetId: number) {
   try {
     const url = `https://www.randswap.com/v1/listings/asset/${assetId}`;
     const response = await axios.get(url);
-    const assetData = response.data.map((listing) => {
+    const assetData = response.data.map((listing: any) => {
       return {
         sellerAddress: listing.sellerAddress,
         escrowAddress: listing.escrowAddress,
@@ -1399,15 +1407,16 @@ export async function getRandListingAsset(assetId) {
     });
     return assetData;
   } catch (err) {
+    console.error(err);
     return [];
   }
 }
 
-export async function getRandCreatorListings(creatorWallet) {
+export async function getRandCreatorListings(creatorWallet: string) {
   try {
     const url = `https://www.randswap.com/v1/listings/creator/${creatorWallet}`;
     const response = await axios.get(url);
-    const assetData = response.data.map((listing) => {
+    const assetData = response.data.map((listing: any) => {
       return {
         assetId: listing.assetId,
         sellerAddress: listing.sellerAddress,
@@ -1415,13 +1424,14 @@ export async function getRandCreatorListings(creatorWallet) {
     });
     return assetData;
   } catch (err) {
+    console.error(err);
     return "";
   }
 }
 
-export async function getARC19AssetMetadataData(url, reserve) {
+export async function getARC19AssetMetadataData(url: string, reserve: string) {
   try {
-    let chunks = url.split("://");
+    const chunks = url.split("://");
     if (chunks[0] === "template-ipfs" && chunks[1].startsWith("{ipfscid:")) {
       const cidComponents = chunks[1].split(":");
       const cidVersion = cidComponents[1];
@@ -1432,6 +1442,7 @@ export async function getARC19AssetMetadataData(url, reserve) {
       } else if (cidCodec === "dag-pb") {
         cidCodecCode = 0x70;
       }
+      if (!cidCodecCode) throw Error("Invalid cidCodec!");
       const addr = decodeAddress(reserve);
       const mhdigest = digest.create(mfsha2.sha256.code, addr.publicKey);
       if (cidVersion === "1") {
@@ -1445,14 +1456,15 @@ export async function getARC19AssetMetadataData(url, reserve) {
       }
     }
     return {};
-  } catch (error) {
+  } catch (err) {
+    console.error(err);
     return {};
   }
 }
 
 export async function pinJSONToPinata(
-  token,
-  json,
+  token: string,
+  json: any,
   version = "",
   cidCodec = ""
 ) {
@@ -1489,13 +1501,13 @@ export async function pinJSONToPinata(
       );
       return response.data.IpfsHash;
     }
-  } catch (error) {
-    throw new Error("IPFS pinning failed");
+  } catch (err) {
+    console.error(err);
+    throw Error("IPFS pinning failed");
   }
-  await new Promise((resolve) => setTimeout(resolve, 100));
 }
 
-export async function pinImageToPinata(token, image) {
+export async function pinImageToPinata(token: string, image: any) {
   try {
     const data = new FormData();
     data.append("file", image);
@@ -1513,17 +1525,18 @@ export async function pinImageToPinata(token, image) {
       }
     );
     return response.data.IpfsHash;
-  } catch (error) {
-    throw new Error("IPFS pinning failed");
+  } catch (err) {
+    console.error(err);
+    throw Error("IPFS pinning failed");
   }
 }
 
 export async function getParticipationStatusOfWallet(
-  wallet,
+  address: string,
   algodClient: algosdk.Algodv2
 ) {
   try {
-    const resp = await algodClient.accountInformation(wallet).do();
+    const resp = await algodClient.accountInformation(address).do();
     if (resp.participation && resp.status === "Online") {
       return true;
     }
@@ -1533,7 +1546,10 @@ export async function getParticipationStatusOfWallet(
   }
 }
 
-export async function getAssetUrl(assetId, algodClient: algosdk.Algodv2) {
+export async function getAssetUrl(
+  assetId: number,
+  algodClient: algosdk.Algodv2
+) {
   try {
     const assetData = await algodClient.getAssetByID(assetId).do();
     return assetData.params.url;

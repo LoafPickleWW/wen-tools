@@ -29,7 +29,7 @@ export function BatchOptin() {
   }, [searchParams]);
 
   const handleFileData = async () => {
-    let assets = [];
+    const assets: number[] = [];
     for (let i = 0; i < csvData.length; i++) {
       if (i !== 0) {
         assets.push(parseInt(csvData[i][0]));
@@ -126,7 +126,7 @@ export function BatchOptin() {
                 className="mb-2 bg-primary-orange hover:bg-primary-orange text-black text-sm font-semibold rounded py-1 w-fit px-4 mx-auto mt-1 hover:scale-95 duration-700"
                 onClick={() => {
                   // split with comma or newline
-                  let splittedAssetIds = assetIds.split(/[\n,]/);
+                  const splittedAssetIds = assetIds.split(/[\n,]/);
                   for (let i = 0; i < splittedAssetIds.length; i++) {
                     splittedAssetIds[i] = [splittedAssetIds[i].trim()];
                   }

@@ -18,11 +18,12 @@ export function AirdropTool() {
   const { activeAddress, activeNetwork, algodClient, transactionSigner } =
     useWallet();
 
-  async function getAssetDecimals(assetId) {
+  async function getAssetDecimals(assetId: number) {
     try {
       const assetInfo = await algodClient.getAssetByID(assetId).do();
       return assetInfo.params.decimals;
-    } catch (error) {
+    } catch (err) {
+      console.error(err);
       toast.error(
         "Something went wrong! Please check your file and network type."
       );
@@ -91,7 +92,8 @@ export function AirdropTool() {
                 }
               );
             }
-          } catch (error) {
+          } catch (err) {
+            console.error(err);
             toast.error(
               `Transaction ${i + 1} of ${signedTransactions.length} failed!`,
               {
@@ -111,8 +113,9 @@ export function AirdropTool() {
         toast.error("Something went wrong! Please check your file!");
         return;
       }
-    } catch (error) {
-      toast.error(error.message);
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err.message);
       setTxSendingInProgress(false);
     }
   };

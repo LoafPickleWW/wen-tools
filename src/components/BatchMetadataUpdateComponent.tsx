@@ -5,7 +5,7 @@ import { toast } from "react-toastify";
 import { createAssetConfigArray, sliceIntoChunks, walletSign } from "../utils";
 import { useWallet } from "@txnlab/use-wallet-react";
 
-export function BatchCollectionMetadataUpdate(props) {
+export function BatchCollectionMetadataUpdate() {
   const [csvData, setCsvData] = useState(null);
   const [isTransactionsFinished, setIsTransactionsFinished] = useState(false);
   const [txSendingInProgress, setTxSendingInProgress] = useState(false);
@@ -90,8 +90,8 @@ export function BatchCollectionMetadataUpdate(props) {
       setTxSendingInProgress(false);
       toast.success("All transactions confirmed!");
       toast.info("You can support by donating :)");
-    } catch (error) {
-      //console.log(error);
+    } catch (err) {
+      console.error(err);
     }
   };
 

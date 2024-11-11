@@ -18,7 +18,9 @@ export function ARC3MintTool() {
   const [isTransactionsFinished, setIsTransactionsFinished] = useState(false);
   const [txSendingInProgress, setTxSendingInProgress] = useState(false);
   const [token, setToken] = useState("");
-  const [assetTransactions, setAssetTransactions] = useState([]);
+  const [assetTransactions, setAssetTransactions] = useState(
+    [] as algosdk.Transaction[][]
+  );
   const [mnemonic, setMnemonic] = useState("");
   const { activeAddress, algodClient, transactionSigner } = useWallet();
 
@@ -33,13 +35,13 @@ export function ARC3MintTool() {
       return;
     }
     let headers;
-    let data = [];
+    const data = [];
     for (let i = 0; i < csvData.length; i++) {
       if (csvData[i].length === 1) continue;
       if (i === 0) {
         headers = csvData[i];
       } else {
-        let obj = {};
+        const obj = {};
         for (let j = 0; j < headers.length; j++) {
           if (headers[j].startsWith("metadata_")) {
             obj[headers[j].replace("metadata_", "")] = csvData[i][j];
@@ -58,7 +60,7 @@ export function ARC3MintTool() {
       return;
     }
 
-    let data_for_txns = [];
+    const data_for_txns: any[] = [];
     data.forEach((item) => {
       const asset_name = item.name;
       const unit_name = item.unit_name;
@@ -67,7 +69,7 @@ export function ARC3MintTool() {
       const decimals = item.decimals;
       const total_supply = item.total_supply;
 
-      let ipfs_data = {
+      const ipfs_data = {
         name: asset_name,
         standard: "arc3",
         image: item.image_ipfs_cid ? "ipfs://" + item.image_ipfs_cid : "",
@@ -138,8 +140,9 @@ export function ARC3MintTool() {
       setAssetTransactions(unsignedAssetTransactions);
       setTxSendingInProgress(false);
       toast.info("Please sign the transactions!");
-    } catch (error) {
-      toast.error(error.message);
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err.message);
       setTxSendingInProgress(false);
     }
   };
@@ -201,8 +204,9 @@ export function ARC3MintTool() {
       setTxSendingInProgress(false);
       toast.success("All transactions confirmed!");
       toast.info("You can support by donating :)");
-    } catch (error) {
-      toast.error(error.message);
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err.message);
       setTxSendingInProgress(false);
     }
   };
