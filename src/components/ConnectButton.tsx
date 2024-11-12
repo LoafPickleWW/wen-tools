@@ -17,13 +17,12 @@ import { PeraWalletConnect } from "@perawallet/connect";
 import { signLoginAlgorandForCrustIpfsEndpoint } from "../crust-auth";
 
 export default function ConnectButton() {
-  const { activeAddress, activeNetwork, activeWallet, algodClient, wallets } =
-    useWallet();
+  const { activeAddress, activeWallet, algodClient, wallets } = useWallet();
   const [anchorEl, setAnchorEl] = useState(null);
   const open = Boolean(anchorEl);
   // wallet
   const peraWallet = new PeraWalletConnect();
-  const [accountData, setAccountData] = useState();
+  const [accountData, setAccountData] = useState(null as any);
 
   // handlers
   const handleClick = (event: any) => {
@@ -48,10 +47,9 @@ export default function ConnectButton() {
     handleClose();
     try {
       const accts = await wallets.find((w) => w.id === "pera")?.connect();
-
-      const authBasic = await signLoginAlgorandForCrustIpfsEndpoint(
-        accts?.[0].address
-      );
+      const addr = accts?.[0].address;
+      if (!addr) throw Error("Invalid Address");
+      const authBasic = await signLoginAlgorandForCrustIpfsEndpoint(addr);
 
       // continue when connect & signLoginAlgorandForCrustIpfsEndpoint sucess
       localStorage.setItem("authBasic", authBasic);
@@ -128,7 +126,7 @@ export default function ConnectButton() {
           setAccountData(data);
         });
     }
-  }, [activeAddress, activeNetwork]);
+  }, [activeAddress, algodClient]);
 
   return (
     <div className="flex flex-row justify-center items-center">

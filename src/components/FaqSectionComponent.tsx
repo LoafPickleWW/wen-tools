@@ -1,6 +1,7 @@
 import { useState } from "react";
+import { FAQ, type FAQItem } from "../types";
 
-const FAQItem = ({ faq, index, toggleFAQ }) => (
+const FAQItem = ({ faq, index, toggleFAQ }: FAQItem) => (
   <div className="border-b-2 py-4 border-gray-200">
     <button
       className="w-full text-left py-4 focus:outline-none"
@@ -18,12 +19,12 @@ const FAQItem = ({ faq, index, toggleFAQ }) => (
   </div>
 );
 
-const FaqSectionComponent = ({faqData}) => {
+const FaqSectionComponent = ({ faqData }: { faqData: FAQ[] }) => {
   const [faqs, setFaqs] = useState(
     faqData.map((faq) => ({ ...faq, open: false }))
   );
 
-  const toggleFAQ = (index) => {
+  const toggleFAQ = (index: number) => {
     setFaqs(
       faqs.map((faq, i) => {
         if (i === index) {

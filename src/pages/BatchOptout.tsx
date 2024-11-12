@@ -13,15 +13,15 @@ import InfinityModeComponent from "../components/InfinityModeComponent";
 import { useWallet } from "@txnlab/use-wallet-react";
 
 export function BatchOptout() {
-  const [csvData, setCsvData] = useState(null);
+  const [csvData, setCsvData] = useState(null as null | any);
   const [isTransactionsFinished, setIsTransactionsFinished] = useState(false);
   const [txSendingInProgress, setTxSendingInProgress] = useState(false);
   const [mnemonic, setMnemonic] = useState("");
-  const [assetIds, setAssetIds] = useState([]);
+  const [assetIds, setAssetIds] = useState("");
   const { activeAddress, algodClient, transactionSigner } = useWallet();
 
   const handleFileData = async () => {
-    let assets = [];
+    const assets = [];
     for (let i = 0; i < csvData.length; i++) {
       if (i !== 0) {
         assets.push(parseInt(csvData[i][0]));
@@ -64,7 +64,8 @@ export function BatchOptout() {
                 }
               );
             }
-          } catch (error) {
+          } catch (err) {
+            console.error(err);
             toast.error(
               `Transaction ${i + 1} of ${signedTransactions.length} failed!`,
               {
@@ -78,13 +79,15 @@ export function BatchOptout() {
         setTxSendingInProgress(false);
         toast.success("All transactions confirmed!");
         toast.info("You can support by donating :)");
-      } catch (error) {
+      } catch (err) {
+        console.error(err);
         setTxSendingInProgress(false);
         toast.error("Something went wrong! Please check your file!");
         return;
       }
-    } catch (error) {
-      toast.error(error.message);
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err.message);
       setTxSendingInProgress(false);
     }
   };
@@ -92,7 +95,7 @@ export function BatchOptout() {
   return (
     <div className="mb-4 text-center flex flex-col items-center max-w-[40rem] gap-y-2 mx-auto text-white min-h-screen">
       <p className="text-2xl font-bold mt-1">
-        {TOOLS.find((tool) => tool.path === window.location.pathname).label}
+        {TOOLS.find((tool) => tool.path === window.location.pathname)?.label}
       </p>
       <p className="text-sm mt-1 -mb-1 text-gray-400">
         ⚠️ ⚠️ ⚠️ ⚠️ <br />
@@ -124,12 +127,12 @@ export function BatchOptout() {
               id="dropzone-file"
               type="file"
               accept=".csv"
-              onChange={(e) => {
+              onChange={(e: any) => {
                 const file = e.target.files[0];
                 Papa.parse(file, {
                   complete: function (results) {
                     const filteredData = results.data.filter(
-                      (row) => row[0].length > 1
+                      (row: any) => row[0].length > 1
                     );
                     setCsvData(filteredData);
                   },
@@ -156,7 +159,7 @@ export function BatchOptout() {
                 className="mb-2 bg-primary-orange hover:bg-primary-orange text-black text-sm font-semibold rounded py-1 w-fit px-4 mx-auto mt-1 hover:scale-95 duration-700"
                 onClick={() => {
                   // split with comma or newline
-                  let splittedAssetIds = assetIds.split(/[\n,]/);
+                  const splittedAssetIds: any = assetIds.split(/[\n,]/);
                   for (let i = 0; i < splittedAssetIds.length; i++) {
                     splittedAssetIds[i] = [splittedAssetIds[i].trim()];
                   }

@@ -3,8 +3,8 @@ import { peraWallet } from "./utils";
 export const CRUST_DEBUG = false;
 
 // Algorand wallet
-export async function signLoginAlgorandForCrustIpfsEndpoint(address) {
-  const u = {
+export async function signLoginAlgorandForCrustIpfsEndpoint(address: string) {
+  const u: any = {
     account: address,
     wallet: "algorand",
   };
@@ -21,6 +21,7 @@ export async function signLoginAlgorandForCrustIpfsEndpoint(address) {
   return peraWallet
     .signData([{ data: Buffer.from(msg), message: "For login" }], u.account)
     .then((signedData) => {
+      //@ts-expect-error didn't write this, not touching it
       return window.btoa(String.fromCharCode.apply(null, signedData[0]));
     })
     .then((signature) => {
@@ -33,8 +34,8 @@ export async function signLoginAlgorandForCrustIpfsEndpoint(address) {
       }
       return "";
     })
-    .catch((err) => {
-      throw new Error("Algorand wallet signMessage error: ", err);
+    .catch((err: any) => {
+      throw Error("Algorand wallet signMessage error: " + err.message);
     });
 }
 
@@ -48,7 +49,7 @@ export function isCrustAuth() {
   return true;
 }
 
-const getPerfix = (user) => {
+const getPerfix = (user: any) => {
   if (
     user.wallet.startsWith("metamask") ||
     user.wallet === "metax" ||

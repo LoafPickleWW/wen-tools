@@ -14,7 +14,7 @@ import InfinityModeComponent from "../components/InfinityModeComponent";
 import { useWallet } from "@txnlab/use-wallet-react";
 
 export function ARC3MintTool() {
-  const [csvData, setCsvData] = useState(null);
+  const [csvData, setCsvData] = useState(null as null | any);
   const [isTransactionsFinished, setIsTransactionsFinished] = useState(false);
   const [txSendingInProgress, setTxSendingInProgress] = useState(false);
   const [token, setToken] = useState("");
@@ -41,7 +41,7 @@ export function ARC3MintTool() {
       if (i === 0) {
         headers = csvData[i];
       } else {
-        const obj = {};
+        const obj: any = {};
         for (let j = 0; j < headers.length; j++) {
           if (headers[j].startsWith("metadata_")) {
             obj[headers[j].replace("metadata_", "")] = csvData[i][j];
@@ -69,7 +69,7 @@ export function ARC3MintTool() {
       const decimals = item.decimals;
       const total_supply = item.total_supply;
 
-      const ipfs_data = {
+      const ipfs_data: any = {
         name: asset_name,
         standard: "arc3",
         image: item.image_ipfs_cid ? "ipfs://" + item.image_ipfs_cid : "",
@@ -83,9 +83,7 @@ export function ARC3MintTool() {
       };
 
       Object.keys(ipfs_data).forEach((key) => {
-        if (ipfs_data[key] === "") {
-          delete ipfs_data[key];
-        }
+        if (ipfs_data[key] === "") delete ipfs_data[key];
       });
 
       Object.keys(item).forEach((key) => {
@@ -131,6 +129,7 @@ export function ARC3MintTool() {
     try {
       toast.info("Uploading metadata to IPFS...");
       setTxSendingInProgress(true);
+      if (!activeAddress) throw Error("Invalid Address");
       const unsignedAssetTransactions = await createARC3AssetMintArray(
         data_for_txns,
         activeAddress,
@@ -162,8 +161,7 @@ export function ARC3MintTool() {
 
       let signedAssetTransactions;
       if (mnemonic !== "") {
-        if (mnemonic.split(" ").length !== 25)
-          throw new Error("Invalid Mnemonic!");
+        if (mnemonic.split(" ").length !== 25) throw Error("Invalid Mnemonic!");
         const { sk } = algosdk.mnemonicToSecretKey(mnemonic);
         signedAssetTransactions = SignWithSk(assetTransactions.flat(), sk);
       } else {
@@ -188,7 +186,8 @@ export function ARC3MintTool() {
               }
             );
           }
-        } catch (error) {
+        } catch (err) {
+          console.error(err);
           toast.error(
             `Transaction ${i + 1} of ${
               signedAssetTransactions.length / 2
@@ -214,7 +213,7 @@ export function ARC3MintTool() {
   return (
     <div className="mb-4 text-center flex flex-col items-center max-w-[40rem] gap-y-2 mx-auto text-white min-h-screen">
       <p className="text-2xl font-bold mt-1">
-        {TOOLS.find((tool) => tool.path === window.location.pathname).label}
+        {TOOLS.find((tool) => tool.path === window.location.pathname)?.label}
       </p>
       {/* mnemonic */}
       <InfinityModeComponent mnemonic={mnemonic} setMnemonic={setMnemonic} />
@@ -279,12 +278,12 @@ export function ARC3MintTool() {
             id="dropzone-file"
             type="file"
             accept=".csv"
-            onChange={(e) => {
+            onChange={(e: any) => {
               const file = e.target.files[0];
               Papa.parse(file, {
                 complete: function (results) {
                   const filteredData = results.data.filter(
-                    (row) => row[0].length > 1
+                    (row: any) => row[0].length > 1
                   );
                   setCsvData(filteredData);
                 },

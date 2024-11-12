@@ -30,14 +30,14 @@ export const appId = 1275319623;
  * @param size
  * @returns {Promise<number>}
  */
-export async function getPrice(client, size) {
+export async function getPrice(client: algosdk.Algodv2, size: number) {
   const appInfo = await client.getApplicationByID(appId).do();
   const state = appInfo.params["global-state"];
 
   console.log(state);
-  const getStateValue = function (key) {
+  const getStateValue = function (key: string) {
     const item = state.find(
-      (item) => Buffer.from(item.key, "base64").toString() === key
+      (item: any) => Buffer.from(item.key, "base64").toString() === key
     );
     return item ? item.value.uint : 0;
   };
@@ -48,7 +48,7 @@ export async function getPrice(client, size) {
   const cruPrice = getStateValue("cru_price");
   const algoPrice = getStateValue("algo_price");
 
-  console.table(basePrice, bytePrice, serviceRate, cruPrice, algoPrice);
+  console.table([basePrice, bytePrice, serviceRate, cruPrice, algoPrice]);
 
   let price =
     ((((basePrice + (size * bytePrice) / 1024 / 1024) * (serviceRate + 100)) /
@@ -62,18 +62,18 @@ export async function getPrice(client, size) {
   return Math.round(price);
 }
 
-export async function getRandomNode(client) {
+export async function getRandomNode(client: algosdk.Algodv2) {
   try {
     const boxesResponse = await client.getApplicationBoxes(appId).do();
     const boxNames = boxesResponse.boxes.map((box) => box.name);
 
     const nodesBoxName = boxNames.find(
-      (name) => Buffer.from(name, "base64").toString() === "nodes"
+      (name) => Buffer.from(name).toString() === "nodes"
     );
 
     if (!nodesBoxName) {
       console.log("Nodes box not found");
-      return [];
+      return;
     }
 
     const nodesBoxResponse = await client
@@ -81,7 +81,7 @@ export async function getRandomNode(client) {
       .do();
     const nodesData = nodesBoxResponse.value;
 
-    const nodes = [];
+    const nodes: string[] = [];
     for (let i = 0; i < nodesData.length; i += 32) {
       const address = algosdk.encodeAddress(nodesData.slice(i, i + 32));
       nodes.push(address);
@@ -89,12 +89,11 @@ export async function getRandomNode(client) {
     return nodes.filter((node, index) => nodes.indexOf(node) === index)[0];
   } catch (error) {
     console.error("Error fetching nodes:", error);
-    return [];
   }
 }
 
-export const mnemonicSignerCreator = (mnemonic) => {
-  return async (txnGroup, indexesToSign) => {
+export const mnemonicSignerCreator = (mnemonic: string) => {
+  return async (txnGroup: algosdk.Transaction[], _indexesToSign: number[]) => {
     const { sk } = algosdk.mnemonicToSecretKey(mnemonic);
     const signedTxns = SignWithSk(txnGroup, sk);
 
@@ -112,18 +111,18 @@ export const mnemonicSignerCreator = (mnemonic) => {
  * @param {*} cid ipfs cid
  */
 export async function buildAssetMintAtomicTransactionComposer(
-  atc,
+  atc: algosdk.AtomicTransactionComposer,
   address: string,
   algodClient: algosdk.Algodv2,
-  type,
-  txSigner,
-  data_for_txn,
-  suggestedParams,
-  cid
+  type: string,
+  txSigner: algosdk.TransactionSigner,
+  data_for_txn: any,
+  suggestedParams: algosdk.SuggestedParams,
+  cid: string
 ) {
   const wallet = address;
   if (wallet === "" || wallet === undefined) {
-    throw new Error("Wallet not found");
+    throw Error("Wallet not found");
   }
 
   data_for_txn.asset_url_section = "ipfs://" + cid;
@@ -154,7 +153,6 @@ export async function buildAssetMintAtomicTransactionComposer(
       suggestedParams,
       clawback: data_for_txn.has_clawback === "Y" ? wallet : undefined,
       defaultFrozen: data_for_txn.default_frozen === "Y" ? true : false,
-      strictEmptyAddressChecking: false,
     });
 
   const fee_tx = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
@@ -174,17 +172,18 @@ export async function buildAssetMintAtomicTransactionComposer(
 }
 
 export async function pinJSONToCrust(
-  token,
-  json,
+  token: string | null,
+  json: any,
   version = "",
   cidCodec = "",
   endpoint = ""
 ) {
   if (!isCrustAuth()) {
-    throw new Error(
+    throw Error(
       "Crust: authBasic Token not found, please login and try again."
     );
   }
+  if (!token) throw Error("Invalid Token");
   if (endpoint === "") {
     endpoint = getDefaultCrustAuthIpfsEndpoint();
   }
@@ -208,7 +207,7 @@ export async function pinJSONToCrust(
       if (response.status === 200 && response.data && response.data.Hash) {
         return response.data.Hash;
       } else {
-        throw new Error(
+        throw Error(
           response.data
             ? response.data.Error
             : `pinJSONToCrust post failed, cidCodec=${cidCodec}`
@@ -224,25 +223,30 @@ export async function pinJSONToCrust(
       if (response.status === 200 && response.data && response.data.Hash) {
         return response.data.Hash;
       } else {
-        throw new Error(
+        throw Error(
           response.data
             ? response.data.Error
             : `pinJSONToCrust post failed, cidCodec=${cidCodec}`
         );
       }
     }
-  } catch (error) {
-    throw new Error("IPFS pinning failed");
+  } catch (err) {
+    console.error(err);
+    throw Error("IPFS pinning failed");
   }
 }
 
-export async function pinImageToCrust(token, image, endpoint = "") {
+export async function pinImageToCrust(
+  token: string | null,
+  image: any,
+  endpoint = ""
+) {
   if (!isCrustAuth()) {
-    throw new Error(
+    throw Error(
       "Crust: authBasic Token not found, please login and try again."
     );
   }
-
+  if (!token) throw Error("Invalid Token");
   if (endpoint === "") {
     endpoint = getDefaultCrustAuthIpfsEndpoint();
   }
@@ -260,25 +264,25 @@ export async function pinImageToCrust(token, image, endpoint = "") {
     if (response.status === 200 && response.data && response.data.Hash) {
       return response.data.Hash;
     } else {
-      throw new Error(
+      throw Error(
         response.data ? response.data.Error : `pinJSONToCrust post failed`
       );
     }
   } catch (error) {
     console.log("pinImageToCrust fail: ", error);
-    throw new Error("IPFS pinning failed");
+    throw Error("IPFS pinning failed");
   }
 }
 
 export async function makeCrustPinTx(
-  cid,
+  cid: string,
   signer: algosdk.TransactionSigner,
   address: string,
   algodClient: algosdk.Algodv2
 ) {
   const wallet = address;
   if (wallet === "" || wallet === undefined) {
-    throw new Error("Wallet not found");
+    throw Error("Wallet not found");
   }
 
   const price = await getPrice(algodClient, 10000);
@@ -287,12 +291,10 @@ export async function makeCrustPinTx(
   suggestedParams.fee = 2000 * 4; // set fee
 
   const node = await getRandomNode(algodClient);
-
+  if (!node) throw Error("Invalid Node");
   const paymentTxn = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
-    type: "pay",
     from: wallet,
     to: algosdk.getApplicationAddress(appId),
-    receiver: algosdk.getApplicationAddress(appId),
     amount: price,
     closeRemainderTo: undefined,
     note: new TextEncoder().encode(
@@ -310,7 +312,7 @@ export async function makeCrustPinTx(
   if (signer) {
     txSigner = signer;
   } else {
-    throw new Error("makeCrustPinTx: txSigner is not defined");
+    throw Error("makeCrustPinTx: txSigner is not defined");
   }
 
   return {

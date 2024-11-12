@@ -12,7 +12,7 @@ import { useWallet } from "@txnlab/use-wallet-react";
 
 export function MultimintAssetHolders() {
   const [assetId, setAssetId] = useState("");
-  const [assetHolders, setAssetHolders] = useState([]);
+  const [assetHolders, setAssetHolders] = useState([] as any[]);
   const [assetOwnersLoading, setAssetOwnersLoading] = useState(false);
   const [loading, setLoading] = useState(false);
   const [checkOptin, setCheckOptin] = useState(false);
@@ -22,11 +22,11 @@ export function MultimintAssetHolders() {
   const [checkRandSupport, setCheckRandSupport] = useState(false);
   const { activeNetwork, algodClient } = useWallet();
 
-  async function getAssetOwners(asset_id) {
+  async function getAssetOwners(asset_id: number) {
     const isOptin = checkOptin;
     const indexerURL = getIndexerURL(activeNetwork);
     let threshold = 1000;
-    let assetData = {
+    const assetData: any = {
       asset_id: asset_id,
     };
     try {
@@ -35,12 +35,13 @@ export function MultimintAssetHolders() {
       );
       assetData.asset_name = assetDataResponse.data.asset.params.name;
       assetData.decimals = assetDataResponse.data.asset.params.decimals;
-    } catch (error) {
+    } catch (err) {
+      console.error(err);
       toast.error(`${asset_id} is not a valid asset id!`);
       throw Error(`${asset_id} is not a valid asset id!`);
     }
     try {
-      let response = await axios.get(
+      const response = await axios.get(
         `${indexerURL}/v2/assets/${asset_id}/balances` +
           (!isOptin ? "?currency-greater-than=0" : "")
       );
@@ -60,7 +61,7 @@ export function MultimintAssetHolders() {
         response.data["next-token"] = nextResponse.data["next-token"];
         threshold += 1000;
       }
-      assetData.holders = response.data.balances.map((holder) => {
+      assetData.holders = response.data.balances.map((holder: any) => {
         return {
           address: holder.address,
           amount: (holder.amount / Math.pow(10, assetData.decimals)).toFixed(
@@ -70,6 +71,7 @@ export function MultimintAssetHolders() {
       });
       return assetData;
     } catch (err) {
+      console.error(err);
       toast.error("Something went wrong!");
     }
   }
@@ -83,36 +85,38 @@ export function MultimintAssetHolders() {
     assetIDs = [...new Set(assetIDs)];
     try {
       if (assetId) {
-        let assetBalances = [];
+        const assetBalances = [];
         setAssetOwnersLoading(true);
         for (const asset_id of assetIDs) {
           try {
-            const asset_owners = await getAssetOwners(asset_id);
+            const asset_owners = await getAssetOwners(Number(asset_id));
             assetBalances.push(asset_owners);
-          } catch (e) {}
+          } catch (err: any) {
+            console.error(err);
+          }
         }
         setAssetHolders(assetBalances);
         setAssetOwnersLoading(false);
       } else {
         toast.info("Please enter at least one asset id!");
       }
-    } catch (error) {
-      //console.log(error);
+    } catch (err: any) {
+      console.error(err);
     }
   }
 
-  function convertToCSV(headers, objArray) {
-    let array = typeof objArray != "object" ? JSON.parse(objArray) : objArray;
+  function convertToCSV(headers: string[], objArray: any[]) {
+    const array = typeof objArray != "object" ? JSON.parse(objArray) : objArray;
     let str = "";
     let row = "";
 
-    for (let index in headers) {
+    for (const index in headers) {
       row += headers[index] + ",";
     }
     str += row + "\r";
     for (let i = 0; i < array.length; i++) {
       let line = "";
-      for (let index in headers) {
+      for (const index in headers) {
         if (line !== "") line += ",";
         line += array[i][headers[index]] || "";
       }
@@ -122,27 +126,23 @@ export function MultimintAssetHolders() {
     return str;
   }
 
-  function exportCSVFile(headers, items, fileTitle) {
-    let csv = convertToCSV(headers, items);
-    let blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-    if (navigator.msSaveBlob) {
-      navigator.msSaveBlob(blob, fileTitle);
-    } else {
-      let link = document.createElement("a");
-      if (link.download !== undefined) {
-        let url = URL.createObjectURL(blob);
-        link.setAttribute("href", url);
-        link.setAttribute("download", fileTitle);
-        link.style.visibility = "hidden";
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-      }
+  function exportCSVFile(headers: string[], items: any[], fileTitle: string) {
+    const csv = convertToCSV(headers, items);
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    if (link.download !== undefined) {
+      const url = URL.createObjectURL(blob);
+      link.setAttribute("href", url);
+      link.setAttribute("download", fileTitle);
+      link.style.visibility = "hidden";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
     }
   }
 
-  async function getNFDsSocials(nfdomains) {
-    let nfdSocials = {};
+  async function getNFDsSocials(nfdomains: any[]) {
+    const nfdSocials: any = {};
     nfdomains = [...new Set(nfdomains)];
     for (let i = 0; i < nfdomains.length; i++) {
       const nfdomain = nfdomains[i].toLowerCase();
@@ -152,7 +152,8 @@ export function MultimintAssetHolders() {
         const twitter = response.data.properties.verified.twitter || "";
         const discord = response.data.properties.verified.discord || "";
         nfdSocials[nfdomain] = { twitter, discord };
-      } catch (error) {
+      } catch (err) {
+        console.error(err);
         nfdSocials[nfdomain] = { twitter: "", discord: "" };
       }
       if (i % 10 === 0) {
@@ -166,11 +167,11 @@ export function MultimintAssetHolders() {
   async function downloadAssetHoldersDataAsCSV() {
     if (assetHolders.length > 0) {
       setLoading(true);
-      let data = [];
+      let data: any[] = [];
       for (let i = 0; i < assetHolders.length; i++) {
         const asset = assetHolders[i];
         const assetHolderWallets = asset.holders.map(
-          (holder) => holder.address
+          (holder: any) => holder.address
         );
         const nfdDomains = await getNfDomainsInBulk(assetHolderWallets, 20);
         for (let j = 0; j < asset.holders.length; j++) {
@@ -230,10 +231,10 @@ export function MultimintAssetHolders() {
       }
       if (checkRunningNode) {
         toast.info("Checking participation status of wallets");
-        var uniqueWallets = Array.from(new Set(data.map((a) => a.wallet)));
-        var participatedWallets = [];
-        for (var i = 0; i < uniqueWallets.length; i++) {
-          var participationStatus = await getParticipationStatusOfWallet(
+        const uniqueWallets = Array.from(new Set(data.map((a) => a.wallet)));
+        const participatedWallets: any[] = [];
+        for (let i = 0; i < uniqueWallets.length; i++) {
+          const participationStatus = await getParticipationStatusOfWallet(
             uniqueWallets[i],
             algodClient
           );
@@ -258,7 +259,7 @@ export function MultimintAssetHolders() {
   return (
     <div className="mx-auto text-white mb-4 text-center flex flex-col items-center min-h-screen">
       <p className="text-2xl font-bold mt-1">
-        {TOOLS.find((tool) => tool.path === window.location.pathname).label}
+        {TOOLS.find((tool) => tool.path === window.location.pathname)?.label}
       </p>
       <input
         type="text"

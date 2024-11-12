@@ -1,17 +1,13 @@
 import { useState } from "react";
 import { toast } from "react-toastify";
 import axios from "axios";
-import algosdk from "algosdk";
 import { TOOLS } from "../constants";
-import { CID } from "multiformats/cid";
-import * as mfsha2 from "multiformats/hashes/sha2";
-import * as digest from "multiformats/hashes/digest";
-import { getIndexerURL } from "../utils";
+import { getARC19AssetMetadataData, getIndexerURL } from "../utils";
 import { useWallet } from "@txnlab/use-wallet-react";
 
 export function Download19CollectionData() {
   const [creatorWallet, setCreatorWallet] = useState("");
-  const [collectionData, setCollectionData] = useState([]);
+  const [collectionData, setCollectionData] = useState([] as any[]);
   const [loading, setLoading] = useState(false);
   const [counter, setCounter] = useState(0);
   const { activeNetwork } = useWallet();
@@ -27,13 +23,14 @@ export function Download19CollectionData() {
         const url = `${host}/v2/accounts/${creatorWallet}?exclude=assets,apps-local-state,created-apps,none`;
         const response = await axios.get(url);
         const createdAssets = response.data.account["created-assets"].filter(
-          (asset) =>
+          (asset: any) =>
             asset.params.url
               ? asset.params.url.includes("template-ipfs:")
               : false
         );
         setCollectionData(createdAssets);
-      } catch (error) {
+      } catch (err) {
+        console.error(err);
         toast.error("Error getting collection data! Please try again.");
       }
     } else {
@@ -41,12 +38,12 @@ export function Download19CollectionData() {
     }
   }
 
-  function convertToCSV(objArray) {
-    let array = typeof objArray != "object" ? JSON.parse(objArray) : objArray;
+  function convertToCSV(objArray: string) {
+    const array = typeof objArray != "object" ? JSON.parse(objArray) : objArray;
     let str = "";
     for (let i = 0; i < array.length; i++) {
       let line = "";
-      for (let index in array[i]) {
+      for (const index in array[i]) {
         if (line !== "") line += ",";
         line += '"' + array[i][index] + '"';
       }
@@ -60,68 +57,37 @@ export function Download19CollectionData() {
     return str;
   }
 
-  function exportCSVFile(headers, items, fileTitle) {
+  function exportCSVFile(headers: string[], items: any[], fileTitle: string) {
     if (headers) {
       items.unshift(headers);
     }
-    let jsonObject = JSON.stringify(items);
+    const jsonObject = JSON.stringify(items);
 
-    let csv = convertToCSV(jsonObject);
-    let blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-    if (navigator.msSaveBlob) {
-      navigator.msSaveBlob(blob, fileTitle);
-    } else {
-      let link = document.createElement("a");
-      if (link.download !== undefined) {
-        let url = URL.createObjectURL(blob);
-        link.setAttribute("href", url);
-        link.setAttribute("download", fileTitle);
-        link.style.visibility = "hidden";
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-      }
-    }
-  }
-
-  async function getARC19AssetMetadataData(url, reserve) {
-    try {
-      let chunks = url.split("://");
-      if (chunks[0] === "template-ipfs" && chunks[1].startsWith("{ipfscid:")) {
-        const cidComponents = chunks[1].split(":");
-        const cidVersion = cidComponents[1];
-        const cidCodec = cidComponents[2];
-        let cidCodecCode;
-        if (cidCodec === "raw") {
-          cidCodecCode = 0x55;
-        } else if (cidCodec === "dag-pb") {
-          cidCodecCode = 0x70;
-        }
-        const addr = algosdk.decodeAddress(reserve);
-        const mhdigest = digest.create(mfsha2.sha256.code, addr.publicKey);
-        const cid = CID.create(parseInt(cidVersion), cidCodecCode, mhdigest);
-        const response = await axios.get(
-          `https://ipfs.algonode.xyz/ipfs/${cid}`
-        );
-        return response.data;
-      }
-      return {};
-    } catch (error) {
-      return {};
+    const csv = convertToCSV(jsonObject);
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    if (link.download !== undefined) {
+      const url = URL.createObjectURL(blob);
+      link.setAttribute("href", url);
+      link.setAttribute("download", fileTitle);
+      link.style.visibility = "hidden";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
     }
   }
 
   async function downloadCollectionDataAsCSV() {
     if (collectionData.length > 0) {
       setLoading(true);
-      let data = [];
+      const data = [];
       let count = 0;
       for (const asset of collectionData) {
         const asset_metadata = await getARC19AssetMetadataData(
           asset.params.url,
           asset.params.reserve
         );
-        let asset_data = {
+        const asset_data: any = {
           asset_id: asset.index,
           name: asset.params.name,
           "unit-name": asset.params["unit-name"],
@@ -188,7 +154,7 @@ export function Download19CollectionData() {
   return (
     <div className="mx-auto text-white mb-4 text-center flex flex-col items-center min-h-screen">
       <p className="text-2xl font-bold mt-1">
-        {TOOLS.find((tool) => tool.path === window.location.pathname).label}
+        {TOOLS.find((tool) => tool.path === window.location.pathname)?.label}
       </p>
       <input
         type="text"

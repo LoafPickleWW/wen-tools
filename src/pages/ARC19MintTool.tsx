@@ -14,11 +14,14 @@ import InfinityModeComponent from "../components/InfinityModeComponent";
 import { useWallet } from "@txnlab/use-wallet-react";
 
 export function ARC19MintTool() {
-  const [csvData, setCsvData] = useState(null);
+  const [csvData, setCsvData] = useState(null as null | any);
   const [isTransactionsFinished, setIsTransactionsFinished] = useState(false);
   const [txSendingInProgress, setTxSendingInProgress] = useState(false);
   const [token, setToken] = useState("");
-  const [assetTransactions, setAssetTransactions] = useState([]);
+  const [assetTransactions, setAssetTransactions] = useState(
+    [] as algosdk.Transaction[][]
+  );
+
   const [mnemonic, setMnemonic] = useState("");
   const { activeAddress, algodClient, transactionSigner } = useWallet();
 
@@ -33,13 +36,13 @@ export function ARC19MintTool() {
       return;
     }
     let headers;
-    let data = [];
+    const data = [];
     for (let i = 0; i < csvData.length; i++) {
       if (csvData[i].length === 1) continue;
       if (i === 0) {
         headers = csvData[i];
       } else {
-        let obj = {};
+        const obj: any = {};
         for (let j = 0; j < headers.length; j++) {
           if (headers[j].startsWith("metadata_")) {
             obj[headers[j].replace("metadata_", "")] = csvData[i][j];
@@ -58,7 +61,7 @@ export function ARC19MintTool() {
       return;
     }
 
-    let data_for_txns = [];
+    const data_for_txns: any[] = [];
     data.forEach((item) => {
       const asset_name = item.name;
       const unit_name = item.unit_name;
@@ -73,7 +76,7 @@ export function ARC19MintTool() {
         ipfs_cid = ipfs_cid.replace("ipfs://", "");
       }
 
-      let ipfs_data = {
+      const ipfs_data: any = {
         name: asset_name,
         standard: "arc3",
         image: ipfs_cid ? "ipfs://" + ipfs_cid : "",
@@ -137,6 +140,7 @@ export function ARC19MintTool() {
     try {
       toast.info("Uploading metadata to IPFS...");
       setTxSendingInProgress(true);
+      if (!activeAddress) throw Error("Invalid Address");
       const unsignedAssetTransactions = await createARC19AssetMintArray(
         data_for_txns,
         activeAddress,
@@ -146,8 +150,9 @@ export function ARC19MintTool() {
       setAssetTransactions(unsignedAssetTransactions);
       setTxSendingInProgress(false);
       toast.info("Please sign the transactions!");
-    } catch (error) {
-      toast.error(error.message);
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err.message);
       setTxSendingInProgress(false);
     }
   };
@@ -167,8 +172,7 @@ export function ARC19MintTool() {
 
       let signedAssetTransactions;
       if (mnemonic !== "") {
-        if (mnemonic.split(" ").length !== 25)
-          throw new Error("Invalid Mnemonic!");
+        if (mnemonic.split(" ").length !== 25) throw Error("Invalid Mnemonic!");
         const { sk } = algosdk.mnemonicToSecretKey(mnemonic);
         signedAssetTransactions = SignWithSk(assetTransactions.flat(), sk);
       } else {
@@ -192,7 +196,8 @@ export function ARC19MintTool() {
               }
             );
           }
-        } catch (error) {
+        } catch (err) {
+          console.error(err);
           toast.error(
             `Transaction ${i + 1} of ${signedAssetTransactions.length} failed!`,
             {
@@ -206,8 +211,9 @@ export function ARC19MintTool() {
       setTxSendingInProgress(false);
       toast.success("All transactions confirmed!");
       toast.info("You can support by donating :)");
-    } catch (error) {
-      toast.error(error.message);
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err.message);
       setTxSendingInProgress(false);
     }
   };
@@ -215,7 +221,7 @@ export function ARC19MintTool() {
   return (
     <div className="mb-4 text-center flex flex-col items-center max-w-[40rem] gap-y-2 mx-auto text-white min-h-screen">
       <p className="text-2xl font-bold mt-1">
-        {TOOLS.find((tool) => tool.path === window.location.pathname).label}
+        {TOOLS.find((tool) => tool.path === window.location.pathname)?.label}
       </p>
       {/* mnemonic */}
       <InfinityModeComponent mnemonic={mnemonic} setMnemonic={setMnemonic} />
@@ -280,12 +286,12 @@ export function ARC19MintTool() {
             id="dropzone-file"
             type="file"
             accept=".csv"
-            onChange={(e) => {
+            onChange={(e: any) => {
               const file = e.target.files[0];
               Papa.parse(file, {
                 complete: function (results) {
                   const filteredData = results.data.filter(
-                    (row) => row[0].length > 1
+                    (row: any) => row[0].length > 1
                   );
                   setCsvData(filteredData);
                 },

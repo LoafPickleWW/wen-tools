@@ -11,8 +11,9 @@ import {
 
 import { FaWallet } from "react-icons/fa";
 import { IoSwapHorizontal } from "react-icons/io5";
+import { type DropdownMenu } from "../types";
 
-const DropdownMenu = ({ onClose, isOpen }) => {
+const DropdownMenu = ({ onClose, isOpen }: DropdownMenu) => {
   return (
     <Drawer
       variant="temporary"

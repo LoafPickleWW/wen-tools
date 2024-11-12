@@ -4,7 +4,7 @@ import axios from "axios";
 import { getIndexerURL, getNfdDomain } from "../utils";
 import { useWallet } from "@txnlab/use-wallet-react";
 
-export function CollectionSnapshot(props) {
+export function CollectionSnapshot() {
   const [creatorWallet, setCreatorWallet] = useState("");
   const [collectionData, setCollectionData] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -23,10 +23,11 @@ export function CollectionSnapshot(props) {
         const response = await axios.get(url);
         setCollectionData(
           response.data.account["created-assets"]
-            .map((asset) => asset.index)
+            .map((asset: any) => asset.index)
             .flat()
         );
-      } catch (error) {
+      } catch (err) {
+        console.error(err);
         toast.error("Error getting collection data! Please try again.");
       }
     } else {
@@ -34,32 +35,33 @@ export function CollectionSnapshot(props) {
     }
   }
 
-  async function getAssetOwner(asset_id) {
+  async function getAssetOwner(asset_id: number) {
     try {
       const host = getIndexerURL(activeNetwork);
       const url = `${host}/v2/assets/${asset_id}/balances?include-all=false&currency-greater-than=0`;
       const response = await axios.get(url);
       return response.data.balances[0].address;
     } catch (err) {
-      //console.log(err);
+      console.error(err);
     }
   }
 
-  function convertToCSV(headers, objArray) {
-    var array = typeof objArray != "object" ? JSON.parse(objArray) : objArray;
-    var str = "";
-    var row = "";
+  function convertToCSV(headers: string[], objArray: any[]) {
+    const array = typeof objArray != "object" ? JSON.parse(objArray) : objArray;
+    let str = "";
+    let row = "";
 
-    for (var index in headers) {
+    for (const index in headers) {
       row += headers[index] + ",";
     }
     str += row + "\r";
 
-    Object.entries(array).forEach(([key, value]) => {
-      var line = "";
+    Object.entries(array).forEach(([key, value]: [string, any]) => {
+      let line = "";
       line += key + ",";
       line += value.nfd + ",";
-      const asset_list = "[" + value.assets.map((asset) => asset).join(",");
+      const asset_list =
+        "[" + value.assets.map((asset: any) => asset).join(",");
       line += '"' + asset_list + "]" + '",';
       line += value.assets.length + ",";
       str += line + "\r\n";
@@ -68,22 +70,18 @@ export function CollectionSnapshot(props) {
     return str;
   }
 
-  function exportCSVFile(headers, items, fileTitle) {
-    var csv = convertToCSV(headers, items);
-    var blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-    if (navigator.msSaveBlob) {
-      navigator.msSaveBlob(blob, fileTitle);
-    } else {
-      var link = document.createElement("a");
-      if (link.download !== undefined) {
-        var url = URL.createObjectURL(blob);
-        link.setAttribute("href", url);
-        link.setAttribute("download", fileTitle);
-        link.style.visibility = "hidden";
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-      }
+  function exportCSVFile(headers: string[], items: any[], fileTitle: string) {
+    const csv = convertToCSV(headers, items);
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    if (link.download !== undefined) {
+      const url = URL.createObjectURL(blob);
+      link.setAttribute("href", url);
+      link.setAttribute("download", fileTitle);
+      link.style.visibility = "hidden";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
     }
   }
 

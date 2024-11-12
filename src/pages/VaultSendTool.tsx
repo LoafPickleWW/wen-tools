@@ -34,18 +34,18 @@ export function VaultSendTool() {
   const [amount, setAmount] = useState("");
   const [note, setNote] = useState("");
 
-  const [transactions, setTransactions] = useState([]);
+  const [transactions, setTransactions] = useState([] as any[]);
 
   const [processStep, setProcessStep] = useState(START_PROCESS);
   const [mnemonic, setMnemonic] = useState("");
   const { activeAddress, activeNetwork, algodClient, transactionSigner } =
     useWallet();
 
-  function base64ToByteArray(blob) {
+  function base64ToByteArray(blob: any) {
     return stringToByteArray(atob(blob));
   }
 
-  function stringToByteArray(str) {
+  function stringToByteArray(str: string) {
     const array = new Uint8Array(str.length);
     for (let i = 0; i < str.length; i++) {
       array[i] = str.charCodeAt(i);
@@ -53,44 +53,45 @@ export function VaultSendTool() {
     return array;
   }
 
-  function encodeNFDTransactionsArray(transactionsArray) {
+  function encodeNFDTransactionsArray(transactionsArray: any[]) {
     return transactionsArray.map(([_type, txn]) => {
       return base64ToByteArray(txn);
     });
   }
 
-  async function getAssetDecimals(assetId) {
+  async function getAssetDecimals(assetId: number) {
     try {
       const assetInfo = await algodClient.getAssetByID(assetId).do();
       return assetInfo.params.decimals;
-    } catch (error) {
+    } catch (err) {
+      console.error(err);
       toast.error(
         "Something went wrong! Please check your form and network type."
       );
     }
   }
 
-  async function getSegmentsFromDomain(domain) {
-    var segments = [];
+  async function getSegmentsFromDomain(domain: string) {
+    const segments: any[] = [];
     const limit = 200;
-    var offset = 0;
+    let offset = 0;
     const nfdomainApiUrl = getNfdomainAPIURL(activeNetwork);
     const domainData = await axios.get(
       `${nfdomainApiUrl}/nfd/${domain.toLowerCase()}?view=brief&poll=false&nocache=false`
     );
     const appId = domainData.data.appID;
-    var result = await axios.get(
+    let result = await axios.get(
       `${nfdomainApiUrl}/nfd/v2/search?parentAppID=${appId}&traits=segment&limit=${limit}&offset=${offset}&sort=nameAsc&view=brief&state=owned&state=reserved`,
       { headers: { "Cache-Control": "max-age=180" } }
     );
-    result.data.nfds.forEach((element) => {
+    result.data.nfds.forEach((element: any) => {
       if (parseFloat(element.properties.internal.ver) >= 2.11) {
         segments.push(element.name.toLowerCase());
       }
     });
     const total = result.data.total;
     if (total >= 10 && mnemonic === "") {
-      throw new Error(`Please enter your mnemonics to continue to process`);
+      throw Error(`Please enter your mnemonics to continue to process`);
     }
     while (offset < total) {
       offset += limit;
@@ -98,7 +99,7 @@ export function VaultSendTool() {
         `${nfdomainApiUrl}/nfd/v2/search?parentAppID=${appId}&traits=segment&limit=${limit}&offset=${offset}&sort=nameAsc&view=brief&state=owned&state=reserved`,
         { headers: { "Cache-Control": "max-age=180" } }
       );
-      result.data.nfds.forEach((element) => {
+      result.data.nfds.forEach((element: any) => {
         if (parseFloat(element.properties.internal.ver) >= 2.11) {
           segments.push(element.name.toLowerCase());
         }
@@ -120,16 +121,16 @@ export function VaultSendTool() {
       }
 
       if (assetID === "") {
-        throw new Error("Please enter asset ID!");
+        throw Error("Please enter asset ID!");
       } else if (amount === "") {
-        throw new Error("Please enter amount!");
+        throw Error("Please enter amount!");
       } else if (domains.length === 0) {
-        throw new Error("Please enter at least one domain!");
+        throw Error("Please enter at least one domain!");
       }
 
       const decimals = await getAssetDecimals(parseInt(assetID));
 
-      var body = {
+      const body = {
         amount: BigInt(amount) * 10n ** BigInt(decimals),
         assets: [parseInt(assetID)],
         note:
@@ -140,7 +141,7 @@ export function VaultSendTool() {
         sender: wallet,
       };
 
-      var receiverDomains = [];
+      let receiverDomains = [];
       if (toolType === "segments") {
         toast.info(`Fetching segments of ${domains}`);
         setProcessStep(FETCH_SEGMENTS_PROCESS);
@@ -152,14 +153,14 @@ export function VaultSendTool() {
           }
         });
       } else {
-        throw new Error("Please select a valid tool type!");
+        throw Error("Please select a valid tool type!");
       }
       setProcessStep(CREATE_TRANSACTIONS_PROCESS);
 
-      var unsignedTransactions = [];
+      const unsignedTransactions = [];
       toast.info(`Creating transactions for ${receiverDomains.length} domains`);
-      var nfdomainApiUrl = getNfdomainAPIURL(activeNetwork);
-      for (var i = 0; i < receiverDomains.length; i++) {
+      const nfdomainApiUrl = getNfdomainAPIURL(activeNetwork);
+      for (let i = 0; i < receiverDomains.length; i++) {
         try {
           const response = await axios.post(
             `${nfdomainApiUrl}/nfd/vault/sendTo/${receiverDomains[
@@ -178,19 +179,18 @@ export function VaultSendTool() {
               `Created ${i} of ${receiverDomains.length} transactions`
             );
           }
-        } catch (error) {
+        } catch (err: any) {
+          console.error(err);
           console.log(
-            `${receiverDomains[i]}: ${
-              error.response.data.message ?? error.message
-            }`
+            `${receiverDomains[i]}: ${err.response.data.message ?? err.message}`
           );
         }
       }
       setTransactions(unsignedTransactions);
       setProcessStep(SIGN_TRANSACTIONS_PROCESS);
-    } catch (error) {
-      console.error(error);
-      toast.error(error.message);
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err.message);
       setProcessStep(START_PROCESS);
     }
   }
@@ -205,14 +205,14 @@ export function VaultSendTool() {
         return;
       }
 
+      let signedTransactions: any[] = [];
       if (transactions.length === 0) {
-        throw new Error("Please create transactions first!");
+        throw Error("Please create transactions first!");
       }
       try {
-        var signedTransactions = [];
         if (mnemonic !== "") {
           if (mnemonic.split(" ").length !== 25)
-            throw new Error("Invalid Mnemonic!");
+            throw Error("Invalid Mnemonic!");
           const { sk } = algosdk.mnemonicToSecretKey(mnemonic);
           signedTransactions = SignWithSk(transactions.flat(), sk);
         } else {
@@ -221,15 +221,16 @@ export function VaultSendTool() {
             transactionSigner
           );
         }
-      } catch (error) {
-        toast.error(error.message);
+      } catch (err: any) {
+        console.error(err);
+        toast.error(err.message);
       }
 
-      function sliceIntoChunksForDifferentSizes(arr) {
+      function sliceIntoChunksForDifferentSizes(arr: any[]) {
         const res = [];
-        var i = 0;
+        let i = 0;
         while (i < arr.length) {
-          var decodedTxn = algosdk.decodeSignedTransaction(arr[i]);
+          const decodedTxn = algosdk.decodeSignedTransaction(arr[i]);
           if (decodedTxn.txn.group) {
             res.push([arr[i], arr[i + 1], arr[i + 2]]);
             i += 3;
@@ -252,7 +253,8 @@ export function VaultSendTool() {
               }
             );
           }
-        } catch (error) {
+        } catch (err) {
+          console.error(err);
           toast.error(
             `Transaction ${i + 1} of ${signedTransactions.length} failed!`,
             {
@@ -265,17 +267,17 @@ export function VaultSendTool() {
       setProcessStep(TRANSACTIONS_COMPLETED_PROCESS);
       toast.success("All transactions confirmed!");
       toast.info("You can support by donating :)");
-    } catch (error) {
-      toast.error(error.message);
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err.message);
       setProcessStep(SIGN_TRANSACTIONS_PROCESS);
-      console.error(error);
     }
   }
 
   return (
     <div className="mx-auto text-white mb-4 text-center flex flex-col items-center max-w-[40rem] gap-y-2 min-h-screen">
       <p className="text-2xl font-bold mt-1">
-        {TOOLS.find((tool) => tool.path === window.location.pathname).label}
+        {TOOLS.find((tool) => tool.path === window.location.pathname)?.label}
       </p>
       <span className="text-base text-slate-300">
         A vault is an Algorand account controlled by an NFD's smart contract

@@ -7,7 +7,7 @@ import { useWallet } from "@txnlab/use-wallet-react";
 
 export function DownloadCollectionData() {
   const [creatorWallet, setCreatorWallet] = useState("");
-  const [collectionData, setCollectionData] = useState([]);
+  const [collectionData, setCollectionData] = useState([] as any[]);
   const [loading, setLoading] = useState(false);
   const [counter, setCounter] = useState(0);
   const { activeNetwork } = useWallet();
@@ -25,7 +25,8 @@ export function DownloadCollectionData() {
         const url = `${host}/v2/accounts/${creatorWallet}?exclude=assets,apps-local-state,created-apps,none`;
         const response = await axios.get(url);
         setCollectionData(response.data.account["created-assets"]);
-      } catch (error) {
+      } catch (err) {
+        console.error(err);
         toast.error("Error getting collection data! Please try again.");
       }
     } else {
@@ -33,10 +34,10 @@ export function DownloadCollectionData() {
     }
   }
 
-  async function getAssetData(asset) {
+  async function getAssetData(asset: any) {
     try {
       const metadata = await arc69.fetch(asset.index, activeNetwork);
-      const asset_data_csv = {
+      const asset_data_csv: any = {
         index: asset.index,
         name: asset.params.name,
         "unit-name": asset.params["unit-name"],
@@ -51,22 +52,24 @@ export function DownloadCollectionData() {
         });
       }
       if (metadata.attributes) {
-        metadata.attributes.map(({ trait_type, value }) => {
-          return (asset_data_csv[`metadata_${trait_type}`] = value);
-        });
+        metadata.attributes.map(
+          ({ trait_type, value }: { trait_type: string; value: any }) => {
+            return (asset_data_csv[`metadata_${trait_type}`] = value);
+          }
+        );
       }
       return asset_data_csv;
     } catch (err) {
-      //console.log(err);
+      console.error(err);
     }
   }
 
-  function convertToCSV(objArray) {
-    let array = typeof objArray != "object" ? JSON.parse(objArray) : objArray;
+  function convertToCSV(objArray: string) {
+    const array = typeof objArray != "object" ? JSON.parse(objArray) : objArray;
     let str = "";
     for (let i = 0; i < array.length; i++) {
       let line = "";
-      for (let index in array[i]) {
+      for (const index in array[i]) {
         if (line !== "") line += ",";
         line += '"' + array[i][index] + '"';
       }
@@ -80,27 +83,23 @@ export function DownloadCollectionData() {
     return str;
   }
 
-  function exportCSVFile(headers, items, fileTitle) {
+  function exportCSVFile(headers: string[], items: any[], fileTitle: string) {
     if (headers) {
       items.unshift(headers);
     }
-    let jsonObject = JSON.stringify(items);
+    const jsonObject = JSON.stringify(items);
 
-    let csv = convertToCSV(jsonObject);
-    let blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-    if (navigator.msSaveBlob) {
-      navigator.msSaveBlob(blob, fileTitle);
-    } else {
-      let link = document.createElement("a");
-      if (link.download !== undefined) {
-        let url = URL.createObjectURL(blob);
-        link.setAttribute("href", url);
-        link.setAttribute("download", fileTitle);
-        link.style.visibility = "hidden";
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-      }
+    const csv = convertToCSV(jsonObject);
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    if (link.download !== undefined) {
+      const url = URL.createObjectURL(blob);
+      link.setAttribute("href", url);
+      link.setAttribute("download", fileTitle);
+      link.style.visibility = "hidden";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
     }
   }
 
@@ -137,7 +136,7 @@ export function DownloadCollectionData() {
   return (
     <div className="mx-auto text-white mb-4 text-center flex flex-col items-center min-h-screen">
       <p className="text-2xl font-bold mt-1">
-        {TOOLS.find((tool) => tool.path === window.location.pathname).label}
+        {TOOLS.find((tool) => tool.path === window.location.pathname)?.label}
       </p>
       <input
         type="text"

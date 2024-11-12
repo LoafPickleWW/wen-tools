@@ -1,7 +1,8 @@
 // src/Carousel.js
 import React, { useState } from "react";
+import { Image } from "../types";
 
-const CarouselComponent = ({ images }) => {
+const CarouselComponent = ({ images }: { images: Image[] }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
 
   //interval to change the image every 3 seconds

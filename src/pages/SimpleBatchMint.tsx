@@ -41,18 +41,21 @@ export function SimpleBatchMint() {
     creatorName: "",
     tokenId: "",
     royalty: "",
-  });
+  } as any);
 
-  const [csvData, setCsvData] = useState(null);
+  const [csvData, setCsvData] = useState(null as null | any);
 
   const [processStep, setProcessStep] = useState(START_PROCESS);
   const [mnemonic, setMnemonic] = useState("");
   const [hasMetadataFile, setHasMetadataFile] = useState(false);
-  const [assetTransactions, setAssetTransactions] = useState([]);
-  const [previewAsset, setPreviewAsset] = useState(null);
+  const [assetTransactions, setAssetTransactions] = useState(
+    [] as algosdk.Transaction[][]
+  );
+
+  const [previewAsset, setPreviewAsset] = useState(null as any);
   const { activeAddress, algodClient, transactionSigner } = useWallet();
 
-  const TraitMetadataInputField = (key) => {
+  const TraitMetadataInputField = (key: string) => {
     return (
       <div key={key} id={`metadata-${key}`} className="mb-2">
         <input
@@ -133,14 +136,14 @@ export function SimpleBatchMint() {
       }
 
       let headers;
-      let data = [];
+      const data = [];
       if (hasMetadataFile && csvData.length > 1) {
         for (let i = 0; i < csvData.length; i++) {
           if (csvData[i].length === 1) continue;
           if (i === 0) {
             headers = csvData[i];
           } else {
-            let obj = {};
+            const obj: any = {};
             for (let j = 0; j < headers.length; j++) {
               if (headers[j].startsWith("metadata_")) {
                 obj[headers[j].replace("metadata_", "")] = csvData[i][j];
@@ -172,7 +175,7 @@ export function SimpleBatchMint() {
         return;
       }
 
-      let data_for_txns = [];
+      let data_for_txns: any = [];
       data.forEach((item) => {
         const asset_name = `${formData.name} ${item.index}`;
         const unit_name = `${formData.unitName} ${item.index}`;
@@ -182,9 +185,9 @@ export function SimpleBatchMint() {
         const decimals = 0;
         const total_supply = 1;
 
-        let ipfs_cid = item.image_ipfs_cid;
+        const ipfs_cid = item.image_ipfs_cid;
 
-        function getMimeType(extension) {
+        function getMimeType(extension: string) {
           switch (extension) {
             case ".png":
               return "image/png";
@@ -199,7 +202,7 @@ export function SimpleBatchMint() {
           }
         }
 
-        let ipfs_data = {
+        const ipfs_data: any = {
           name: asset_name,
           standard: formData.collectionFormat.toLowerCase(),
           image: ipfs_cid,
@@ -313,7 +316,7 @@ export function SimpleBatchMint() {
       } else if (formData.collectionFormat === "ARC69") {
         toast.info("Creating ARC69 transactions...");
         setProcessStep(CREATE_TRANSACTIONS_PROCESS);
-        data_for_txns = data_for_txns.map((item) => {
+        data_for_txns = data_for_txns.map((item: any) => {
           return {
             ...item,
             asset_note: item.ipfs_data,
@@ -358,8 +361,7 @@ export function SimpleBatchMint() {
 
       let signedAssetTransactions;
       if (mnemonic !== "") {
-        if (mnemonic.split(" ").length !== 25)
-          throw new Error("Invalid Mnemonic!");
+        if (mnemonic.split(" ").length !== 25) throw Error("Invalid Mnemonic!");
         const { sk } = algosdk.mnemonicToSecretKey(mnemonic);
         signedAssetTransactions = SignWithSk(assetTransactions.flat(), sk);
       } else {
@@ -390,7 +392,8 @@ export function SimpleBatchMint() {
               }
             );
           }
-        } catch (error) {
+        } catch (err) {
+          console.error(err);
           toast.error(
             `Transaction ${i + 1} of ${signedAssetTransactions.length} failed!`,
             {
@@ -403,7 +406,8 @@ export function SimpleBatchMint() {
       setProcessStep(COMPLETED);
       toast.success("All transactions confirmed!");
       toast.info("You can support by donating :)");
-    } catch (error) {
+    } catch (err) {
+      console.error(err);
       toast.error("Something went wrong!");
       setProcessStep(2);
     }
@@ -412,7 +416,7 @@ export function SimpleBatchMint() {
   return (
     <div className="mx-auto text-white mb-4 text-center flex flex-col items-center max-w-[40rem] gap-y-2 min-h-screen">
       <p className="text-2xl font-bold mt-1">
-        {TOOLS.find((tool) => tool.path === window.location.pathname).label}
+        {TOOLS.find((tool) => tool.path === window.location.pathname)?.label}
       </p>
       <button className="text-center text-lg text-black mt-2 bg-primary-orange px-4 py-2 rounded">
         <a
@@ -569,12 +573,12 @@ export function SimpleBatchMint() {
                     id="dropzone-file"
                     type="file"
                     accept=".csv"
-                    onChange={(e) => {
+                    onChange={(e: any) => {
                       const file = e.target.files[0];
                       Papa.parse(file, {
                         complete: function (results) {
                           const filteredData = results.data.filter(
-                            (row) => row[0].length > 0
+                            (row: any) => row[0].length > 0
                           );
                           setCsvData(filteredData);
                         },

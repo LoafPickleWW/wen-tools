@@ -6,20 +6,21 @@ import { createAssetConfigArray, sliceIntoChunks, walletSign } from "../utils";
 import { useWallet } from "@txnlab/use-wallet-react";
 
 export function BatchCollectionMetadataUpdate() {
-  const [csvData, setCsvData] = useState(null);
+  const [csvData, setCsvData] = useState(null as null | any[]);
   const [isTransactionsFinished, setIsTransactionsFinished] = useState(false);
   const [txSendingInProgress, setTxSendingInProgress] = useState(false);
   const { activeAddress, algodClient, transactionSigner } = useWallet();
 
   const handleFileData = async () => {
     let headers;
-    let data = [];
+    const data = [];
+    if (!csvData) throw Error("Invalid CSV");
     for (let i = 0; i < csvData.length; i++) {
       if (csvData[i].length == 1) continue;
       if (i === 0) {
         headers = csvData[i];
       } else {
-        let obj = {};
+        const obj: any = {};
         for (let j = 0; j < headers.length; j++) {
           if (headers[j].startsWith("metadata_")) {
             obj[headers[j].replace("metadata_", "")] = csvData[i][j];
@@ -30,9 +31,9 @@ export function BatchCollectionMetadataUpdate() {
         data.push(obj);
       }
     }
-    let data_for_txns = data;
+    const data_for_txns = data;
     data_for_txns.forEach((item) => {
-      let asset_note = {
+      const asset_note: any = {
         properties: {},
       };
       Object.keys(item).forEach((key) => {
@@ -117,7 +118,7 @@ export function BatchCollectionMetadataUpdate() {
             id="dropzone-file"
             type="file"
             accept=".csv,.xlsx,.xls"
-            onChange={(e) => {
+            onChange={(e: any) => {
               const file = e.target.files[0];
               Papa.parse(file, {
                 complete: function (results) {

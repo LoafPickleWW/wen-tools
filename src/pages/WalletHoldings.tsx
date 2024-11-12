@@ -27,7 +27,7 @@ export function WalletHoldings() {
         const response = await axios.get(url);
         if (isIncludedCreatedAssets) {
           setWalletData(
-            response.data.account["assets"].map((asset) => {
+            response.data.account["assets"].map((asset: any) => {
               return {
                 asset_id: asset["asset-id"],
                 amount: asset.amount,
@@ -37,16 +37,16 @@ export function WalletHoldings() {
         } else {
           if (response.data.account["created-assets"]) {
             const created_assets = response.data.account["created-assets"].map(
-              (asset) => {
+              (asset: any) => {
                 return asset["index"];
               }
             );
             setWalletData(
               response.data.account["assets"]
-                .filter((asset) => {
+                .filter((asset: any) => {
                   return !created_assets.includes(asset["asset-id"]);
                 })
-                .map((asset) => {
+                .map((asset: any) => {
                   return {
                     asset_id: asset["asset-id"],
                     amount: asset.amount,
@@ -55,7 +55,7 @@ export function WalletHoldings() {
             );
           } else {
             setWalletData(
-              response.data.account["assets"].map((asset) => {
+              response.data.account["assets"].map((asset: any) => {
                 return {
                   asset_id: asset["asset-id"],
                   amount: asset.amount,
@@ -64,7 +64,8 @@ export function WalletHoldings() {
             );
           }
         }
-      } catch (error) {
+      } catch (err) {
+        console.error(err);
         toast.error("Error getting wallet data! Please try again.");
       }
     } else {
@@ -72,7 +73,7 @@ export function WalletHoldings() {
     }
   }
 
-  async function getAssetData(asset) {
+  async function getAssetData(asset: any) {
     try {
       // asset_id	unit_name	asset_name	amount
       const assetData = await algodClient.getAssetByID(asset.asset_id).do();
@@ -89,12 +90,12 @@ export function WalletHoldings() {
     }
   }
 
-  function convertToCSV(objArray) {
-    let array = typeof objArray != "object" ? JSON.parse(objArray) : objArray;
+  function convertToCSV(objArray: string) {
+    const array = typeof objArray != "object" ? JSON.parse(objArray) : objArray;
     let str = "";
     for (let i = 0; i < array.length; i++) {
       let line = "";
-      for (let index in array[i]) {
+      for (const index in array[i]) {
         if (line !== "") line += ",";
         line += '"' + array[i][index] + '"';
       }
@@ -108,27 +109,23 @@ export function WalletHoldings() {
     return str;
   }
 
-  function exportCSVFile(headers, items, fileTitle) {
+  function exportCSVFile(headers: string[], items: any[], fileTitle: string) {
     if (headers) {
       items.unshift(headers);
     }
-    let jsonObject = JSON.stringify(items);
+    const jsonObject = JSON.stringify(items);
 
-    let csv = convertToCSV(jsonObject);
-    let blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-    if (navigator.msSaveBlob) {
-      navigator.msSaveBlob(blob, fileTitle);
-    } else {
-      let link = document.createElement("a");
-      if (link.download !== undefined) {
-        let url = URL.createObjectURL(blob);
-        link.setAttribute("href", url);
-        link.setAttribute("download", fileTitle);
-        link.style.visibility = "hidden";
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-      }
+    const csv = convertToCSV(jsonObject);
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    if (link.download !== undefined) {
+      const url = URL.createObjectURL(blob);
+      link.setAttribute("href", url);
+      link.setAttribute("download", fileTitle);
+      link.style.visibility = "hidden";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
     }
   }
 
@@ -162,7 +159,7 @@ export function WalletHoldings() {
   return (
     <div className="mx-auto text-white mb-4 text-center flex flex-col items-center min-h-screen">
       <p className="text-2xl font-bold mt-1">
-        {TOOLS.find((tool) => tool.path === window.location.pathname).label}
+        {TOOLS.find((tool) => tool.path === window.location.pathname)?.label}
       </p>
       <input
         type="text"

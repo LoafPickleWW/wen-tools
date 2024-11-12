@@ -13,12 +13,12 @@ import { useWallet } from "@txnlab/use-wallet-react";
 export function CollectionSnapshot() {
   const [creatorWallet, setCreatorWallet] = useState("");
   const [unitNamePrefix, setUnitNamePrefix] = useState("");
-  const [collectionData, setCollectionData] = useState([]);
+  const [collectionData, setCollectionData] = useState([] as any[]);
   const [loading, setLoading] = useState(false);
   const [counter, setCounter] = useState(0);
   const [checkRandSupport, setCheckRandSupport] = useState(false);
   const [checkSeparated, setCheckSeparated] = useState(false);
-  const [randCreatorListings, setRandCreatorListings] = useState([]);
+  const [randCreatorListings, setRandCreatorListings] = useState([] as any[]);
   const { activeNetwork } = useWallet();
 
   async function getCollectionData() {
@@ -34,7 +34,7 @@ export function CollectionSnapshot() {
         }
       }
       creatorWallets = [...new Set(creatorWallets)];
-      let createdAssets = [];
+      let createdAssets: any[] = [];
       for (let i = 0; i < creatorWallets.length; i++) {
         createdAssets = createdAssets.concat(
           await getCreatedAssets(creatorWallets[i], activeNetwork)
@@ -53,10 +53,10 @@ export function CollectionSnapshot() {
       }
       createdAssets = createdAssets.map((asset) => asset.asset_id);
       if (checkRandSupport) {
-        let randData = [];
+        let randData: any[] = [];
         for (let i = 0; i < creatorWallets.length; i++) {
           let creatorListings = await getRandCreatorListings(creatorWallets[i]);
-          creatorListings = creatorListings.filter((listing) =>
+          creatorListings = creatorListings.filter((listing: any) =>
             createdAssets.includes(listing.assetId)
           );
           randData = randData.concat(creatorListings);
@@ -77,21 +77,23 @@ export function CollectionSnapshot() {
     }
   }
 
-  async function getAssetOwner(asset_id) {
+  async function getAssetOwner(asset_id: number) {
     try {
       const indexerURL = getIndexerURL(activeNetwork);
       const url = `${indexerURL}/v2/assets/${asset_id}/balances?include-all=false&currency-greater-than=0`;
       const response = await axios.get(url);
       return response.data.balances[0].address;
-    } catch (err) {}
+    } catch (err: any) {
+      console.error(err);
+    }
   }
 
-  function convertToCSV(headers, objArray) {
-    let array = typeof objArray != "object" ? JSON.parse(objArray) : objArray;
+  function convertToCSV(headers: string[], objArray: any[]) {
+    const array = typeof objArray != "object" ? JSON.parse(objArray) : objArray;
     let str = "";
     let row = "";
 
-    for (let index in headers) {
+    for (const index in headers) {
       row += headers[index] + ",";
     }
     str += row + "\r";
@@ -104,7 +106,7 @@ export function CollectionSnapshot() {
         str += line + "\r\n";
       }
     } else {
-      Object.entries(array).forEach(([key, value]) => {
+      Object.entries(array).forEach(([key, value]: [string, any]) => {
         let line = "";
         line += key + ",";
         line += value.nfd + ",";
@@ -114,12 +116,13 @@ export function CollectionSnapshot() {
           }
           line += value.assets.length + value.listed_assets.length + ",";
         }
-        const asset_list = "[" + value.assets.map((asset) => asset).join(",");
+        const asset_list =
+          "[" + value.assets.map((asset: any) => asset).join(",");
         line += '"' + asset_list + ']",';
         line += value.assets.length + ",";
         if (checkRandSupport) {
           const listed_asset_list =
-            "[" + value.listed_assets.map((asset) => asset).join(",");
+            "[" + value.listed_assets.map((asset: any) => asset).join(",");
           line += '"' + listed_asset_list + ']",';
           line += value.listed_assets.length + ",";
         }
@@ -130,25 +133,22 @@ export function CollectionSnapshot() {
     return str;
   }
 
-  function exportCSVFile(headers, items, fileTitle) {
+  function exportCSVFile(headers: string[], items: any[], fileTitle: string) {
     try {
-      let csv = convertToCSV(headers, items);
-      let blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-      if (navigator.msSaveBlob) {
-        navigator.msSaveBlob(blob, fileTitle);
-      } else {
-        let link = document.createElement("a");
-        if (link.download !== undefined) {
-          let url = URL.createObjectURL(blob);
-          link.setAttribute("href", url);
-          link.setAttribute("download", fileTitle);
-          link.style.visibility = "hidden";
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
-        }
+      const csv = convertToCSV(headers, items);
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+      const link = document.createElement("a");
+      if (link.download !== undefined) {
+        const url = URL.createObjectURL(blob);
+        link.setAttribute("href", url);
+        link.setAttribute("download", fileTitle);
+        link.style.visibility = "hidden";
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
       }
     } catch (err) {
+      console.error(err);
       toast.error("Something went wrong!");
     }
   }
@@ -156,7 +156,7 @@ export function CollectionSnapshot() {
   async function downloadCollectionDataAsCSV() {
     if (collectionData.length > 0) {
       setLoading(true);
-      let data = [];
+      let data: any = [];
       let count = 0;
       for (const asset_id of collectionData) {
         const asset_owner = await getAssetOwner(asset_id);
@@ -182,17 +182,19 @@ export function CollectionSnapshot() {
           "listed_assets",
           "listed_assets_count",
         ];
-        Object.entries(randCreatorListings).forEach(([key, value]) => {
-          if (data[key]) {
-            data[key].listed_assets = value;
+        Object.entries(randCreatorListings).forEach(
+          ([key, value]: [string, any]) => {
+            if (data[key]) {
+              data[key].listed_assets = value;
+            }
           }
-        });
+        );
       }
       if (checkSeparated) {
         headers = ["asset_id", "wallet", "nfdomain"];
-        let newData = [];
-        Object.entries(data).forEach(([key, value]) => {
-          value.assets.forEach((asset_id) => {
+        const newData: any[] = [];
+        Object.entries(data).forEach(([key, value]: [string, any]) => {
+          value.assets.forEach((asset_id: number) => {
             newData.push({
               asset_id,
               wallet: key,
@@ -215,10 +217,9 @@ export function CollectionSnapshot() {
   return (
     <div className="mx-auto text-white mb-4 text-center flex flex-col items-center min-h-screen">
       <p className="text-2xl font-bold mt-1">
-        {TOOLS.find((tool) => tool.path === window.location.pathname).label}
+        {TOOLS.find((tool) => tool.path === window.location.pathname)?.label}
       </p>
       <textarea
-        type="text"
         rows={creatorWallet.split(",").length > 1 ? 3 : 1}
         id="creatorWallet"
         placeholder="Enter Creator Wallet Address List"

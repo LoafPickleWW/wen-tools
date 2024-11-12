@@ -51,18 +51,18 @@ const simpleMintClassicAtom = atomWithStorage("simpleMintClassic", {
       name: "",
     },
   ],
-});
+} as any);
 const smTokenAtom = atomWithStorage("smToken", "");
 
 export function SimpleMintClassic() {
   const [formData, setFormData] = useAtom(simpleMintClassicAtom);
   const [token, setToken] = useAtom(smTokenAtom);
   const [processStep, setProcessStep] = useState(0);
-  const [transaction, setTransaction] = useState(null);
+  const [transaction, setTransaction] = useState(null as any);
   const [createdAssetID, setCreatedAssetID] = useState(null);
   const { activeAddress, algodClient, transactionSigner } = useWallet();
 
-  const TraitMetadataInputField = (id, type) => {
+  const TraitMetadataInputField = (id: string, type: string) => {
     return (
       <div key={id} id={`metadata-${id}`} className="mb-2">
         <input
@@ -70,9 +70,11 @@ export function SimpleMintClassic() {
           id={`category-${id}`}
           placeholder={type.slice(0, -1)}
           className="w-24 md:w-28 bg-gray-300 text-sm font-medium text-center leading-none text-black placeholder:text-black/30 placeholder:text-xs px-3 py-2 border rounded border-gray-200"
-          value={formData[type].find((metadata) => metadata.id === id).category}
+          value={
+            formData[type].find((metadata: any) => metadata.id === id).category
+          }
           onChange={(e) => {
-            const newMetadata = formData[type].map((trait) => {
+            const newMetadata = formData[type].map((trait: any) => {
               if (trait.id === id) {
                 return {
                   ...trait,
@@ -92,9 +94,11 @@ export function SimpleMintClassic() {
           type="text"
           placeholder="value"
           className="w-24 md:w-28 bg-gray-300 text-sm ml-2 font-medium text-center leading-none text-black placeholder:text-black/30 placeholder:text-sm px-3 py-2 border rounded border-gray-200"
-          value={formData[type].find((metadata) => metadata.id === id).name}
+          value={
+            formData[type].find((metadata: any) => metadata.id === id).name
+          }
           onChange={(e) => {
-            const newMetadata = formData[type].map((trait) => {
+            const newMetadata = formData[type].map((trait: any) => {
               if (trait.id === id) {
                 return {
                   ...trait,
@@ -113,7 +117,7 @@ export function SimpleMintClassic() {
           className="rounded bg-primary-red text-lg hover:bg-red-600 transition text-white ml-2 px-4"
           onClick={() => {
             const newMetadata = formData[type].filter(
-              (metadata) => metadata.id !== id
+              (metadata: any) => metadata.id !== id
             );
             setFormData({
               ...formData,
@@ -149,7 +153,7 @@ export function SimpleMintClassic() {
         return;
       }
       setProcessStep(1);
-      let metadata = {
+      const metadata: any = {
         name: formData.name,
         standard: formData.format.toLocaleLowerCase(),
         properties: {},
@@ -161,28 +165,37 @@ export function SimpleMintClassic() {
         metadata.description = formData.description;
       }
       if (formData.traits.length > 0) {
-        metadata.properties.traits = formData.traits.reduce((acc, trait) => {
-          if (trait.category !== "" && trait.name !== "") {
-            acc[trait.category] = trait.name;
-          }
-          return acc;
-        }, {});
+        metadata.properties.traits = formData.traits.reduce(
+          (acc: any, trait: any) => {
+            if (trait.category !== "" && trait.name !== "") {
+              acc[trait.category] = trait.name;
+            }
+            return acc;
+          },
+          {}
+        );
       }
       if (formData.filters.length > 0) {
-        metadata.properties.filters = formData.filters.reduce((acc, filter) => {
-          if (filter.category !== "" && filter.name !== "") {
-            acc[filter.category] = filter.name;
-          }
-          return acc;
-        }, {});
+        metadata.properties.filters = formData.filters.reduce(
+          (acc: any, filter: any) => {
+            if (filter.category !== "" && filter.name !== "") {
+              acc[filter.category] = filter.name;
+            }
+            return acc;
+          },
+          {}
+        );
       }
       if (formData.extras.length > 0) {
-        metadata.properties.extras = formData.extras.reduce((acc, extra) => {
-          if (extra.category !== "" && extra.name !== "") {
-            acc[extra.category] = extra.name;
-          }
-          return acc;
-        }, {});
+        metadata.properties.extras = formData.extras.reduce(
+          (acc: any, extra: any) => {
+            if (extra.category !== "" && extra.name !== "") {
+              acc[extra.category] = extra.name;
+            }
+            return acc;
+          },
+          {}
+        );
       }
       let imageURL;
       if (formData.format === "Token") {
@@ -208,7 +221,7 @@ export function SimpleMintClassic() {
         }
       }
 
-      let metadataForIPFS = {
+      let metadataForIPFS: any = {
         asset_name: formData.name,
         unit_name: formData.unitName,
         has_clawback: formData.clawback ? "Y" : "N",
@@ -291,7 +304,8 @@ export function SimpleMintClassic() {
       removeStoredData(); // Remove stored data now that mint is complete
       toast.success("Asset created successfully!");
       setProcessStep(4);
-    } catch (error) {
+    } catch (err) {
+      console.error(err);
       toast.error("Something went wrong!");
       setProcessStep(2);
     }
@@ -306,7 +320,7 @@ export function SimpleMintClassic() {
   return (
     <div className="mx-auto text-white mb-4 text-center flex flex-col items-center max-w-[40rem] gap-y-2 min-h-screen">
       <p className="text-2xl font-bold mt-1">
-        {TOOLS.find((tool) => tool.path === window.location.pathname).label}
+        {TOOLS.find((tool) => tool.path === window.location.pathname)?.label}
       </p>
       <div className="mt-4 md:flex items-center text-start gap-x-4">
         <div className="flex flex-col md:mt-0 mt-2">
@@ -356,7 +370,7 @@ export function SimpleMintClassic() {
           <input
             className="w-64 bg-gray-300 text-sm font-medium text-center leading-none text-black placeholder:text-black/30 placeholder:text-sm px-3 py-2 border rounded border-gray-200"
             type="number"
-            max={18446744073709551615n}
+            max="18446744073709551615"
             min={1}
             required
             onChange={(e) => {
@@ -403,7 +417,7 @@ export function SimpleMintClassic() {
               accept="image/*,video/*"
               multiple={false}
               required
-              onChange={(e) => {
+              onChange={(e: any) => {
                 setFormData({
                   ...formData,
                   image: e.target.files[0],
@@ -538,7 +552,7 @@ export function SimpleMintClassic() {
         Rarity Traits
       </p>
       <div className="md:flex flex-col items-center text-start justify-center">
-        {formData.traits.map((metadata) => {
+        {formData.traits.map((metadata: any) => {
           return TraitMetadataInputField(metadata.id, "traits");
         })}
       </div>
@@ -548,7 +562,8 @@ export function SimpleMintClassic() {
           let lastId;
           try {
             lastId = formData.traits[formData.traits.length - 1].id;
-          } catch (error) {
+          } catch (err) {
+            console.error(err);
             lastId = 0;
           }
           setFormData({
@@ -573,7 +588,7 @@ export function SimpleMintClassic() {
         Filters
       </p>
       <div className="md:flex flex-col items-center text-start justify-center">
-        {formData.filters.map((metadata) => {
+        {formData.filters.map((metadata: any) => {
           return TraitMetadataInputField(metadata.id, "filters");
         })}
       </div>
@@ -583,7 +598,8 @@ export function SimpleMintClassic() {
           let lastId;
           try {
             lastId = formData.filters[formData.filters.length - 1].id;
-          } catch (error) {
+          } catch (err) {
+            console.error(err);
             lastId = 0;
           }
           setFormData({
@@ -606,7 +622,7 @@ export function SimpleMintClassic() {
         Extras
       </p>
       <div className="md:flex flex-col items-center text-start justify-center">
-        {formData.extras.map((metadata) => {
+        {formData.extras.map((metadata: any) => {
           return TraitMetadataInputField(metadata.id, "extras");
         })}
       </div>
@@ -616,7 +632,8 @@ export function SimpleMintClassic() {
           let lastId;
           try {
             lastId = formData.extras[formData.extras.length - 1].id;
-          } catch (error) {
+          } catch (err) {
+            console.error(err);
             lastId = 0;
           }
           setFormData({

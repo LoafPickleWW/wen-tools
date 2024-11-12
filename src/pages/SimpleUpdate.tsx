@@ -34,23 +34,23 @@ const simpleUpdateAtom = atomWithStorage("simpleUpdate", {
   traits: [],
   filters: [],
   extras: [],
-});
+} as any);
 const suAssetIdAtom = atomWithStorage("suAssetId", "");
 
 export function SimpleUpdate() {
   const [formData, setFormData] = useAtom(simpleUpdateAtom);
 
   const [processStep, setProcessStep] = useState(0);
-  const [transaction, setTransaction] = useState(null);
+  const [transaction, setTransaction] = useState(null as any);
   const [assetID, setAssetID] = useAtom(suAssetIdAtom);
   const navigate = useNavigate();
 
   // batchATC is a AtomicTransactionComposer to batch and send all transactions
-  const [batchATC, setBatchATC] = useState(null);
+  const [batchATC, setBatchATC] = useState(null as any);
   const { activeAddress, activeNetwork, algodClient, transactionSigner } =
     useWallet();
 
-  const TraitMetadataInputField = (id, type) => {
+  const TraitMetadataInputField = (id: string, type: string) => {
     return (
       <div key={id} id={`metadata-${id}`} className="mb-2">
         <input
@@ -58,9 +58,11 @@ export function SimpleUpdate() {
           id={`category-${id}`}
           placeholder={type.slice(0, -1)}
           className="w-24 md:w-28 bg-gray-300 text-sm font-medium text-center leading-none text-black placeholder:text-black/30 placeholder:text-xs px-3 py-2 border rounded border-gray-200"
-          value={formData[type].find((metadata) => metadata.id === id).category}
+          value={
+            formData[type].find((metadata: any) => metadata.id === id).category
+          }
           onChange={(e) => {
-            const newMetadata = formData[type].map((trait) => {
+            const newMetadata = formData[type].map((trait: any) => {
               if (trait.id === id) {
                 return {
                   ...trait,
@@ -81,9 +83,11 @@ export function SimpleUpdate() {
           type="text"
           placeholder="value"
           className="w-24 md:w-28 bg-gray-300 text-sm ml-2 font-medium text-center leading-none text-black placeholder:text-black/30 placeholder:text-sm px-3 py-2 border rounded border-gray-200"
-          value={formData[type].find((metadata) => metadata.id === id).name}
+          value={
+            formData[type].find((metadata: any) => metadata.id === id).name
+          }
           onChange={(e) => {
-            const newMetadata = formData[type].map((trait) => {
+            const newMetadata = formData[type].map((trait: any) => {
               if (trait.id === id) {
                 return {
                   ...trait,
@@ -103,7 +107,7 @@ export function SimpleUpdate() {
           className="rounded bg-primary-red text-lg hover:bg-red-600 transition text-white ml-2 px-4"
           onClick={() => {
             const newMetadata = formData[type].filter(
-              (metadata) => metadata.id !== id
+              (metadata: any) => metadata.id !== id
             );
             setFormData({
               ...formData,
@@ -119,17 +123,18 @@ export function SimpleUpdate() {
 
   async function getAssetData() {
     try {
-      const assetID = document.getElementById("asset_id").value;
+      const assetID = (document.getElementById("asset_id") as HTMLInputElement)
+        ?.value;
       if (assetID === "") {
         toast.error("Please enter an asset ID");
         return;
       }
       setAssetID(assetID);
-      const assetData = await algodClient.getAssetByID(assetID).do();
+      const assetData = await algodClient.getAssetByID(Number(assetID)).do();
 
-      function findFormat(url) {
+      function findFormat(url: string) {
         if (!url) {
-          //throw new Error("This asset doesn't have a URL field.");
+          //throw Error("This asset doesn't have a URL field.");
           return "ARC69";
         }
         if (url.includes("template-ipfs")) {
@@ -139,7 +144,7 @@ export function SimpleUpdate() {
         } else if (url.includes("ipfs://") || url.includes("ipfs/")) {
           return "ARC69";
         } else {
-          throw new Error("Invalid asset or ARC format!");
+          throw Error("Invalid asset or ARC format!");
         }
       }
       const assetFormat = findFormat(assetData.params["url"]);
@@ -151,12 +156,12 @@ export function SimpleUpdate() {
         );
       } else if (assetFormat === "ARC69") {
         const arc69 = new Arc69();
-        assetMetadata = await arc69.fetch(assetID, activeNetwork);
+        assetMetadata = await arc69.fetch(Number(assetID), activeNetwork);
         if (assetMetadata.attributes && !assetMetadata.properties) {
           assetMetadata.properties = assetMetadata.attributes;
           delete assetMetadata.attributes;
           assetMetadata.properties = assetMetadata.properties.reduce(
-            (obj, item) => {
+            (obj: any, item: any) => {
               obj[item.trait_type] = item.value;
               return obj;
             }
@@ -173,7 +178,7 @@ export function SimpleUpdate() {
             .then((res) => res.data);
         }
       }
-      let metadata = {
+      const metadata: any = {
         filters: [],
         traits: [],
         extras: [],
@@ -228,11 +233,12 @@ export function SimpleUpdate() {
         animation_url: assetMetadata.animation_url || assetData.params["url"],
         animation_mime_type: assetMetadata.animation_mime_type,
       });
-    } catch (error) {
-      if (error.response) {
-        toast.error(error.response.data.message);
+    } catch (err: any) {
+      console.error(err);
+      if (err.response) {
+        toast.error(err.response.data.message);
       } else {
-        toast.error(error.message);
+        toast.error(err.message);
       }
       setAssetID("");
     }
@@ -257,7 +263,7 @@ export function SimpleUpdate() {
         return;
       }
       setProcessStep(1);
-      let metadata = {
+      const metadata: any = {
         name: formData.name,
         standard: formData.format.toLocaleLowerCase(),
         properties: {},
@@ -270,28 +276,37 @@ export function SimpleUpdate() {
         metadata.description = formData.description;
       }
       if (formData.traits.length > 0) {
-        metadata.properties.traits = formData.traits.reduce((acc, trait) => {
-          if (trait.category !== "" && trait.name !== "") {
-            acc[trait.category] = trait.name;
-          }
-          return acc;
-        }, {});
+        metadata.properties.traits = formData.traits.reduce(
+          (acc: any, trait: any) => {
+            if (trait.category !== "" && trait.name !== "") {
+              acc[trait.category] = trait.name;
+            }
+            return acc;
+          },
+          {}
+        );
       }
       if (formData.filters.length > 0) {
-        metadata.properties.filters = formData.filters.reduce((acc, filter) => {
-          if (filter.category !== "" && filter.name !== "") {
-            acc[filter.category] = filter.name;
-          }
-          return acc;
-        }, {});
+        metadata.properties.filters = formData.filters.reduce(
+          (acc: any, filter: any) => {
+            if (filter.category !== "" && filter.name !== "") {
+              acc[filter.category] = filter.name;
+            }
+            return acc;
+          },
+          {}
+        );
       }
       if (formData.extras.length > 0) {
-        metadata.properties.extras = formData.extras.reduce((acc, extra) => {
-          if (extra.category !== "" && extra.name !== "") {
-            acc[extra.category] = extra.name;
-          }
-          return acc;
-        }, {});
+        metadata.properties.extras = formData.extras.reduce(
+          (acc: any, extra: any) => {
+            if (extra.category !== "" && extra.name !== "") {
+              acc[extra.category] = extra.name;
+            }
+            return acc;
+          },
+          {}
+        );
       }
 
       if (formData.image && formData.format === "ARC19") {
@@ -310,7 +325,7 @@ export function SimpleUpdate() {
           metadata.image_mime_type = formData.image ? formData.image.type : "";
         }
       } else if (formData.format === "ARC3") {
-        throw new Error("ARC3 assets can't be updated");
+        throw Error("ARC3 assets can't be updated");
       } else {
         if (formData.image_mime_type) {
           metadata.image_mime_type = formData.image_mime_type;
@@ -370,7 +385,7 @@ export function SimpleUpdate() {
         );
         setTransaction(signedTransactions);
       } else {
-        throw new Error("ARC3 assets can't be updated");
+        throw Error("ARC3 assets can't be updated");
       }
       toast.info("Please sign the transaction");
       setProcessStep(2);
@@ -432,7 +447,7 @@ export function SimpleUpdate() {
   return (
     <div className="mx-auto text-white mb-4 text-center flex flex-col items-center max-w-[40rem] gap-y-2 min-h-screen">
       <p className="text-2xl font-bold mt-1">
-        {TOOLS.find((tool) => tool.path === window.location.pathname).label}
+        {TOOLS.find((tool) => tool.path === window.location.pathname)?.label}
       </p>
       {assetID !== "" && formData.name ? (
         <>
@@ -515,7 +530,7 @@ export function SimpleUpdate() {
                   accept="image/*,video/*"
                   multiple={false}
                   required
-                  onChange={(e) => {
+                  onChange={(e: any) => {
                     setFormData({
                       ...formData,
                       image: e.target.files[0],
@@ -550,9 +565,9 @@ export function SimpleUpdate() {
               className="w-60 mx-auto mt-4 object-contain rounded-md"
               alt="asset"
               id="asset_image"
-              onError={(e) => {
+              onError={(e: any) => {
                 e.target.onerror = null;
-                window.document.getElementById("asset_image").remove();
+                window.document.getElementById("asset_image")?.remove();
               }}
             />
           )}
@@ -567,11 +582,10 @@ export function SimpleUpdate() {
                   : formData.animation_url
               }
               className="w-60 mx-auto mt-4 object-contain rounded-md"
-              alt="asset_video"
               id="asset_video"
-              onError={(e) => {
+              onError={(e: any) => {
                 e.target.onerror = null;
-                window.document.getElementById("asset_video").remove();
+                window.document.getElementById("asset_video")?.remove();
               }}
               controls
               autoPlay
@@ -608,7 +622,7 @@ export function SimpleUpdate() {
             Traits
           </p>
           <div className="md:flex flex-col items-center text-start justify-center">
-            {formData.traits.map((metadata) => {
+            {formData.traits.map((metadata: any) => {
               return TraitMetadataInputField(metadata.id, "traits");
             })}
           </div>
@@ -619,7 +633,8 @@ export function SimpleUpdate() {
                 let lastId;
                 try {
                   lastId = formData.traits[formData.traits.length - 1].id;
-                } catch (error) {
+                } catch (err) {
+                  console.error(err);
                   lastId = 0;
                 }
                 setFormData({
@@ -645,7 +660,7 @@ export function SimpleUpdate() {
             Filters
           </p>
           <div className="md:flex flex-col items-center text-start justify-center">
-            {formData.filters.map((metadata) => {
+            {formData.filters.map((metadata: any) => {
               return TraitMetadataInputField(metadata.id, "filters");
             })}
           </div>
@@ -656,7 +671,8 @@ export function SimpleUpdate() {
                 let lastId;
                 try {
                   lastId = formData.filters[formData.filters.length - 1].id;
-                } catch (error) {
+                } catch (err) {
+                  console.error(err);
                   lastId = 0;
                 }
                 setFormData({
@@ -680,7 +696,7 @@ export function SimpleUpdate() {
             Extras
           </p>
           <div className="md:flex flex-col items-center text-start justify-center">
-            {formData.extras.map((metadata) => {
+            {formData.extras.map((metadata: any) => {
               return TraitMetadataInputField(metadata.id, "extras");
             })}
           </div>
@@ -691,7 +707,8 @@ export function SimpleUpdate() {
                 let lastId;
                 try {
                   lastId = formData.extras[formData.extras.length - 1].id;
-                } catch (error) {
+                } catch (err) {
+                  console.error(err);
                   lastId = 0;
                 }
                 setFormData({

@@ -23,8 +23,8 @@ export function SimpleSendTool() {
     },
   ];
   const [toolType, setToolType] = useState(TOOL_TYPES[0].value);
-  const [assets, setAssets] = useState([]);
-  const [receivers, setReceivers] = useState([]);
+  const [assets, setAssets] = useState("");
+  const [receivers, setReceivers] = useState("");
   const [amount, setAmount] = useState("");
   const [note, setNote] = useState("");
 
@@ -34,11 +34,12 @@ export function SimpleSendTool() {
   const { activeAddress, activeNetwork, algodClient, transactionSigner } =
     useWallet();
 
-  async function getAssetDecimals(assetId) {
+  async function getAssetDecimals(assetId: number) {
     try {
       const assetInfo = await algodClient.getAssetByID(assetId).do();
       return assetInfo.params.decimals;
-    } catch (error) {
+    } catch (err) {
+      console.error(err);
       toast.error(
         "Something went wrong! Please check your form and network type."
       );
@@ -48,17 +49,19 @@ export function SimpleSendTool() {
   async function handleNext() {
     const wallet = activeAddress;
     if (wallet === "" || wallet === undefined) {
-      throw new Error(
+      throw Error(
         "You need to connect your wallet first, if using mnemonic too!"
       );
     }
-    let splittedAssetIds;
+    let splittedAssetIds: any;
     let splittedReceivers;
-    let transaction_data = [];
-    let assetDecimals = {};
+    const transaction_data: any[] = [];
+    const assetDecimals: any = {};
     if (toolType === "multipleAssetsOneReceiver") {
       splittedAssetIds = assets.split(/[\n,]/);
-      splittedAssetIds = splittedAssetIds.filter((assetId) => assetId !== "");
+      splittedAssetIds = splittedAssetIds.filter(
+        (assetId: string) => assetId !== ""
+      );
       for (let i = 0; i < splittedAssetIds.length; i++) {
         splittedAssetIds[i] = splittedAssetIds[i].trim();
       }
@@ -107,6 +110,7 @@ export function SimpleSendTool() {
     try {
       try {
         if (mnemonic === "") toast.info("Please sign the transactions!");
+        if (!activeAddress) throw Error("Invalid Address");
         const txns = await createAirdropTransactions(
           transaction_data,
           assetDecimals,
@@ -134,7 +138,8 @@ export function SimpleSendTool() {
                 }
               );
             }
-          } catch (error) {
+          } catch (err) {
+            console.error(err);
             toast.error(
               `Transaction ${i + 1} of ${signedTransactions.length} failed!`,
               {
@@ -154,8 +159,9 @@ export function SimpleSendTool() {
         console.error(error);
         return;
       }
-    } catch (error) {
-      toast.error(error.message);
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err.message);
       setTxSendingInProgress(false);
     }
   }
@@ -163,7 +169,7 @@ export function SimpleSendTool() {
   return (
     <div className="mx-auto text-white mb-4 text-center flex flex-col items-center max-w-[40rem] gap-y-2 min-h-screen">
       <p className="text-2xl font-bold mt-1">
-        {TOOLS.find((tool) => tool.path === window.location.pathname).label}
+        {TOOLS.find((tool) => tool.path === window.location.pathname)?.label}
       </p>
       {/* mnemonic */}
       <InfinityModeComponent mnemonic={mnemonic} setMnemonic={setMnemonic} />

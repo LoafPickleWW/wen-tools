@@ -25,7 +25,7 @@ export function SimpleAirdropTool() {
   const [assetCount, setAssetCount] = useState(0);
   const [foundAssetCount, setFoundAssetCount] = useState(0);
 
-  const [transactions, setTransactions] = useState([]);
+  const [transactions, setTransactions] = useState([] as any[]);
 
   const [processStep, setProcessStep] = useState(0);
   const [mnemonic, setMnemonic] = useState("");
@@ -44,11 +44,12 @@ export function SimpleAirdropTool() {
   ];
   const [toolType, setToolType] = useState(TOOL_TYPES[0].value);
 
-  async function getAssetDecimals(assetId) {
+  async function getAssetDecimals(assetId: number) {
     try {
       const assetInfo = await algodClient.getAssetByID(assetId).do();
       return assetInfo.params.decimals;
-    } catch (error) {
+    } catch (err) {
+      console.error(err);
       toast.error(
         "Something went wrong! Please check your form and network type."
       );
@@ -59,25 +60,25 @@ export function SimpleAirdropTool() {
     try {
       const wallet = activeAddress;
       if (wallet === "" || wallet === undefined) {
-        throw new Error(
+        throw Error(
           "You need to connect your wallet first, if using mnemonic too!"
         );
       }
 
       if (toolType === "creatorWallet" && creatorWallets === "") {
-        throw new Error("Please enter creator wallet(s)!");
+        throw Error("Please enter creator wallet(s)!");
       }
       if (assetID === "") {
-        throw new Error("Please enter asset ID!");
+        throw Error("Please enter asset ID!");
       }
       if (amount === "") {
-        throw new Error("Please enter amount!");
+        throw Error("Please enter amount!");
       }
       setProcessStep(1);
 
       let splittedCreatorWallets;
       let splittedPrefixes;
-      let splittedSpecifiedAssetIds;
+      let splittedSpecifiedAssetIds: any;
 
       splittedCreatorWallets = creatorWallets.split(/[\n,]/);
       splittedCreatorWallets = splittedCreatorWallets.filter(
@@ -96,15 +97,16 @@ export function SimpleAirdropTool() {
 
       splittedSpecifiedAssetIds = specifiedAssetIds.split(/[\n,]/);
       splittedSpecifiedAssetIds = splittedSpecifiedAssetIds.filter(
-        (assetId) => assetId !== ""
+        (assetId: string) => assetId !== ""
       );
 
       try {
-        splittedSpecifiedAssetIds = splittedSpecifiedAssetIds.map((assetId) =>
-          parseInt(assetId.trim())
+        splittedSpecifiedAssetIds = splittedSpecifiedAssetIds.map(
+          (assetId: string) => parseInt(assetId.trim())
         );
         console.log("splittedSpecifiedAssetIds " + splittedSpecifiedAssetIds);
-      } catch (error) {
+      } catch (err) {
+        console.error(err);
         toast.error("Please enter valid specified asset IDs!");
         setProcessStep(0);
         return;
@@ -121,7 +123,7 @@ export function SimpleAirdropTool() {
           );
         }
       }
-      let createdAssets = [];
+      let createdAssets: any[] = [];
       for (let i = 0; i < splittedCreatorWallets.length; i++) {
         console.log("splittedCreatorWallets " + splittedCreatorWallets.length);
 
@@ -146,12 +148,12 @@ export function SimpleAirdropTool() {
       }
 
       if (createdAssets.length === 0) {
-        throw new Error("No assets found with the specified filters!");
+        throw Error("No assets found with the specified filters!");
       }
 
       setAssetCount(createdAssets.length);
 
-      let holders = {};
+      const holders: any = {};
 
       if (toolType === "creatorWallet") {
         //original
@@ -175,7 +177,7 @@ export function SimpleAirdropTool() {
         );
         //multimint
         for (let i = 0; i < createdAssets.length; i++) {
-          const holderObj = await getOwnerAddressAmountOfAsset(
+          const holderObj: any = await getOwnerAddressAmountOfAsset(
             createdAssets[i].asset_id,
             activeNetwork
           );
@@ -201,9 +203,9 @@ export function SimpleAirdropTool() {
 
       console.log("holders => " + JSON.stringify(holders));
       //restart
-      let txns = [];
+      const txns = [];
       for (const holder in holders) {
-        const txn = {
+        const txn: any = {
           asset_id: parseInt(assetID),
           amount: Number(amount) * holders[holder],
           receiver: holder,
@@ -216,8 +218,9 @@ export function SimpleAirdropTool() {
       setTransactions(txns);
       setProcessStep(2);
       if (mnemonic === "") toast.info("Please sign the transactions!");
-    } catch (error) {
-      toast.error(error.message);
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err.message);
       setProcessStep(0);
     }
   }
@@ -225,17 +228,18 @@ export function SimpleAirdropTool() {
   async function sendTransactions() {
     try {
       if (assetID === "") {
-        throw new Error("Please enter asset ID!");
+        throw Error("Please enter asset ID!");
       }
       if (transactions.length === 0) {
-        throw new Error("Please create transactions first!");
+        throw Error("Please create transactions first!");
       }
-      let assetDecimals = {};
+      const assetDecimals: any = {};
       if (parseInt(assetID) === 1) {
         assetDecimals[assetID] = 6;
       } else {
-        assetDecimals[assetID] = await getAssetDecimals(assetID);
+        assetDecimals[assetID] = await getAssetDecimals(Number(assetID));
       }
+      if (!activeAddress) throw Error("Invalid Address");
       const txns = await createAirdropTransactions(
         transactions,
         assetDecimals,
@@ -251,7 +255,7 @@ export function SimpleAirdropTool() {
         signedTransactions = await walletSign(txns, transactionSigner);
       }
       if (signedTransactions.length === 0) {
-        throw new Error("Something went wrong while signing transactions!");
+        throw Error("Something went wrong while signing transactions!");
       }
       setProcessStep(3);
       for (let i = 0; i < signedTransactions.length; i++) {
@@ -265,7 +269,8 @@ export function SimpleAirdropTool() {
               }
             );
           }
-        } catch (error) {
+        } catch (err) {
+          console.error(err);
           toast.error(
             `Transaction ${i + 1} of ${signedTransactions.length} failed!`,
             {
@@ -278,8 +283,9 @@ export function SimpleAirdropTool() {
       setProcessStep(4);
       toast.success("All transactions confirmed!");
       toast.info("You can support by donating :)");
-    } catch (error) {
-      toast.error(error.message);
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err.message);
       setProcessStep(2);
     }
   }
@@ -287,7 +293,7 @@ export function SimpleAirdropTool() {
   return (
     <div className="mx-auto text-white mb-4 text-center flex flex-col items-center max-w-[40rem] gap-y-2 min-h-screen">
       <p className="text-2xl font-bold mt-1">
-        {TOOLS.find((tool) => tool.path === window.location.pathname).label}
+        {TOOLS.find((tool) => tool.path === window.location.pathname)?.label}
       </p>
       <label className="text-xs text-slate-400"></label>
       {/* mnemonic */}
@@ -302,7 +308,7 @@ export function SimpleAirdropTool() {
             setToolType(e.target.value);
             setCreatorWallets("");
             setPrefixes("");
-            setAssetCount("");
+            setAssetCount(0);
           }}
         >
           {TOOL_TYPES.map((toolType) => (

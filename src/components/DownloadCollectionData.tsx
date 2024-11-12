@@ -4,7 +4,7 @@ import axios from "axios";
 import { Arc69, getIndexerURL } from "../utils";
 import { useWallet } from "@txnlab/use-wallet-react";
 
-export function DownloadCollectionData(props) {
+export function DownloadCollectionData() {
   const [creatorWallet, setCreatorWallet] = useState("");
   const [collectionData, setCollectionData] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -24,7 +24,8 @@ export function DownloadCollectionData(props) {
         const url = `${host}/v2/accounts/${creatorWallet}?exclude=assets,apps-local-state,created-apps,none`;
         const response = await axios.get(url);
         setCollectionData(response.data.account["created-assets"]);
-      } catch (error) {
+      } catch (err) {
+        console.error(err);
         toast.error("Error getting collection data! Please try again.");
       }
     } else {
@@ -32,10 +33,10 @@ export function DownloadCollectionData(props) {
     }
   }
 
-  async function getAssetData(asset) {
+  async function getAssetData(asset: any) {
     try {
       const metadata = await arc69.fetch(asset.index, activeNetwork);
-      const asset_data_csv = {
+      const asset_data_csv: any = {
         index: asset.index,
         name: asset.params.name,
         "unit-name": asset.params["unit-name"],
@@ -51,22 +52,24 @@ export function DownloadCollectionData(props) {
         });
       }
       if (metadata.attributes) {
-        metadata.attributes.map(({ trait_type, value }) => {
-          asset_data_csv[`metadata_${trait_type}`] = value;
-        });
+        metadata.attributes.map(
+          ({ trait_type, value }: { trait_type: string; value: any }) => {
+            asset_data_csv[`metadata_${trait_type}`] = value;
+          }
+        );
       }
       return asset_data_csv;
     } catch (err) {
-      //console.log(err);
+      console.error(err);
     }
   }
 
-  function convertToCSV(objArray) {
-    var array = typeof objArray != "object" ? JSON.parse(objArray) : objArray;
-    var str = "";
-    for (var i = 0; i < array.length; i++) {
-      var line = "";
-      for (var index in array[i]) {
+  function convertToCSV(objArray: string) {
+    const array = typeof objArray != "object" ? JSON.parse(objArray) : objArray;
+    let str = "";
+    for (let i = 0; i < array.length; i++) {
+      let line = "";
+      for (const index in array[i]) {
         if (line != "") line += ",";
         line += '"' + array[i][index] + '"';
       }
@@ -80,27 +83,23 @@ export function DownloadCollectionData(props) {
     return str;
   }
 
-  function exportCSVFile(headers, items, fileTitle) {
+  function exportCSVFile(headers: string[], items: any[], fileTitle: string) {
     if (headers) {
       items.unshift(headers);
     }
-    var jsonObject = JSON.stringify(items);
+    const jsonObject = JSON.stringify(items);
 
-    var csv = convertToCSV(jsonObject);
-    var blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-    if (navigator.msSaveBlob) {
-      navigator.msSaveBlob(blob, fileTitle);
-    } else {
-      var link = document.createElement("a");
-      if (link.download !== undefined) {
-        var url = URL.createObjectURL(blob);
-        link.setAttribute("href", url);
-        link.setAttribute("download", fileTitle);
-        link.style.visibility = "hidden";
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-      }
+    const csv = convertToCSV(jsonObject);
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    if (link.download !== undefined) {
+      const url = URL.createObjectURL(blob);
+      link.setAttribute("href", url);
+      link.setAttribute("download", fileTitle);
+      link.style.visibility = "hidden";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
     }
   }
 
@@ -115,8 +114,8 @@ export function DownloadCollectionData(props) {
         setCounter(count);
         data.push(asset_data);
       }
-      const headers = data[parseInt(data.length / 2)]
-        ? Object.keys(data[parseInt(data.length / 2)])
+      const headers = data[data.length / 2]
+        ? Object.keys(data[data.length / 2])
         : [];
       exportCSVFile(
         headers ? headers : ["index", "name", "unit-name", "url", "metadata"],

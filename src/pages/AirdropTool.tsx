@@ -11,7 +11,7 @@ import InfinityModeComponent from "../components/InfinityModeComponent";
 import { useWallet } from "@txnlab/use-wallet-react";
 
 export function AirdropTool() {
-  const [csvData, setCsvData] = useState(null);
+  const [csvData, setCsvData] = useState(null as null | any);
   const [isTransactionsFinished, setIsTransactionsFinished] = useState(false);
   const [txSendingInProgress, setTxSendingInProgress] = useState(false);
   const [mnemonic, setMnemonic] = useState("");
@@ -36,27 +36,27 @@ export function AirdropTool() {
       return;
     }
     let headers;
-    let data = [];
+    const data = [];
     for (let i = 0; i < csvData.length; i++) {
       if (csvData[i].length === 1) continue;
       if (i === 0) {
         headers = csvData[i];
       } else {
-        let obj = {};
+        const obj: any = {};
         for (let j = 0; j < headers.length; j++) {
           obj[headers[j]] = csvData[i][j];
         }
         data.push(obj);
       }
     }
-    let assetIds = {};
+    let assetIds: any = {};
     for (let i = 0; i < data.length; i++) {
       if (data[i].asset_id) {
         assetIds[data[i].asset_id] = true;
       }
     }
     assetIds = Object.keys(assetIds);
-    let assetDecimals = {};
+    const assetDecimals: any = {};
     for (let i = 0; i < assetIds.length; i++) {
       assetIds[i] = parseInt(assetIds[i]);
       if (assetIds[i] === 1) continue;
@@ -123,7 +123,7 @@ export function AirdropTool() {
   return (
     <div className="mx-auto text-white mb-4 text-center flex flex-col items-center max-w-[40rem] gap-y-2 min-h-screen">
       <p className="text-2xl font-bold mt-1">
-        {TOOLS.find((tool) => tool.path === window.location.pathname).label}
+        {TOOLS.find((tool) => tool.path === window.location.pathname)?.label}
       </p>
       <button className="text-center text-lg text-black mt-2 bg-primary-orange px-4 py-2 rounded">
         <a
@@ -168,12 +168,12 @@ export function AirdropTool() {
             id="dropzone-file"
             type="file"
             accept=".csv,.xlsx,.xls"
-            onChange={(e) => {
+            onChange={(e: any) => {
               const file = e.target.files[0];
               Papa.parse(file, {
                 complete: function (results) {
                   const filteredData = results.data.filter(
-                    (row) => row[0].length > 1
+                    (row: any) => row[0].length > 1
                   );
                   setCsvData(filteredData);
                 },
