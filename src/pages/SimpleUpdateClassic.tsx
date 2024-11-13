@@ -242,8 +242,7 @@ export function SimpleUpdateClassic() {
 
   async function update() {
     try {
-      const wallet = activeAddress;
-      if (!wallet) {
+      if (!activeAddress) {
         toast.error("Please connect your wallet");
         return;
       }
@@ -379,8 +378,7 @@ export function SimpleUpdateClassic() {
 
   async function sendTransaction() {
     try {
-      const wallet = activeAddress;
-      if (!wallet) {
+      if (!activeAddress) {
         toast.error("Please connect your wallet");
         return;
       }

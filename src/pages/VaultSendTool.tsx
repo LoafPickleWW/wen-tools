@@ -112,8 +112,7 @@ export function VaultSendTool() {
 
   async function createTransactions() {
     try {
-      const wallet = activeAddress;
-      if (!wallet) {
+      if (!activeAddress) {
         toast.warning(
           "You need to connect your wallet first, if using mnemonic too!"
         );
@@ -138,7 +137,7 @@ export function VaultSendTool() {
           "via Thurstober Digital Studios | " +
             Math.random().toString(36).substring(2),
         optInOnly: false,
-        sender: wallet,
+        sender: activeAddress,
       };
 
       let receiverDomains = [];
@@ -197,8 +196,7 @@ export function VaultSendTool() {
 
   async function sendTransactions() {
     try {
-      const wallet = activeAddress;
-      if (!wallet) {
+      if (!activeAddress) {
         toast.warning(
           "You need to connect your wallet first, if using mnemonic too!"
         );

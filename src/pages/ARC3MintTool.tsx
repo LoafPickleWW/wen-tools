@@ -25,8 +25,7 @@ export function ARC3MintTool() {
   const { activeAddress, algodClient, transactionSigner } = useWallet();
 
   const handleFileData = async () => {
-    const wallet = activeAddress;
-    if (wallet === null || wallet === undefined) {
+    if (!activeAddress) {
       toast.error("Please connect your wallet first!");
       return;
     }
@@ -53,7 +52,10 @@ export function ARC3MintTool() {
       }
     }
 
-    const resp = await algodClient.accountInformation(wallet).do();
+    const resp = await algodClient
+      .accountInformation(activeAddress)
+      .exclude("all")
+      .do();
     const min_balance = resp.amount - resp["min-balance"] / 10 ** 6;
     if (min_balance < (0.1 + 0.1 + 0.001) * data.length) {
       toast.error("You don't have enough balance to mint these assets!");
@@ -148,8 +150,7 @@ export function ARC3MintTool() {
 
   const sendTransactions = async () => {
     try {
-      const wallet = activeAddress;
-      if (wallet === null || wallet === undefined) {
+      if (!activeAddress) {
         toast.error("Please connect your wallet first!");
         return;
       }

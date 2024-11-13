@@ -26,9 +26,6 @@ export const appId = 1275319623;
  *           ],
  *           undefined,undefined,undefined,undefined,undefined,undefined,
  *       );
- * @param client
- * @param size
- * @returns {Promise<number>}
  */
 export async function getPrice(client: algosdk.Algodv2, size: number) {
   const appInfo = await client.getApplicationByID(appId).do();
@@ -101,15 +98,6 @@ export const mnemonicSignerCreator = (mnemonic: string) => {
   };
 };
 
-/**
- * buildAssetMintAtomicTransactionComposer
- * @param {*} atc The AtomicTransactionComposer will be used to build the transaction
- * @param {*} type type is the type of transaction, 'arc3' | 'arc19'
- * @param {*} txSigner  txSigner is the transaction signer, maybe peraWallet/deflyWallet or others?
- * @param {*} data_for_txn data for each transaction
- * @param {*} suggestedParams
- * @param {*} cid ipfs cid
- */
 export async function buildAssetMintAtomicTransactionComposer(
   atc: algosdk.AtomicTransactionComposer,
   address: string,
@@ -120,17 +108,12 @@ export async function buildAssetMintAtomicTransactionComposer(
   suggestedParams: algosdk.SuggestedParams,
   cid: string
 ) {
-  const wallet = address;
-  if (wallet === "" || wallet === undefined) {
-    throw Error("Wallet not found");
-  }
-
   data_for_txn.asset_url_section = "ipfs://" + cid;
   let assetURL = "",
     reserveAddress = "";
   if (type === "ARC3") {
     assetURL = data_for_txn.asset_url_section + "#arc3";
-    reserveAddress = wallet;
+    reserveAddress = address;
   } else if (type === "ARC19") {
     const ret = createReserveAddressFromIpfsCid(cid);
     assetURL = ret.assetURL;
@@ -139,8 +122,8 @@ export async function buildAssetMintAtomicTransactionComposer(
 
   const asset_create_tx =
     algosdk.makeAssetCreateTxnWithSuggestedParamsFromObject({
-      from: wallet,
-      manager: wallet,
+      from: address,
+      manager: address,
       assetName: data_for_txn.asset_name,
       unitName: data_for_txn.unit_name,
       total:
@@ -148,15 +131,15 @@ export async function buildAssetMintAtomicTransactionComposer(
         10n ** BigInt(data_for_txn.decimals),
       decimals: parseInt(data_for_txn.decimals),
       reserve: reserveAddress,
-      freeze: data_for_txn.has_freeze === "Y" ? wallet : undefined,
+      freeze: data_for_txn.has_freeze === "Y" ? address : undefined,
       assetURL,
       suggestedParams,
-      clawback: data_for_txn.has_clawback === "Y" ? wallet : undefined,
+      clawback: data_for_txn.has_clawback === "Y" ? address : undefined,
       defaultFrozen: data_for_txn.default_frozen === "Y" ? true : false,
     });
 
   const fee_tx = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
-    from: wallet,
+    from: address,
     to: MINT_FEE_WALLET,
     amount: algosdk.algosToMicroalgos(MINT_FEE_PER_ASA),
     suggestedParams,
@@ -280,11 +263,6 @@ export async function makeCrustPinTx(
   address: string,
   algodClient: algosdk.Algodv2
 ) {
-  const wallet = address;
-  if (wallet === "" || wallet === undefined) {
-    throw Error("Wallet not found");
-  }
-
   const price = await getPrice(algodClient, 10000);
   const suggestedParams = await algodClient.getTransactionParams().do();
   suggestedParams.flatFee = true;
@@ -293,7 +271,7 @@ export async function makeCrustPinTx(
   const node = await getRandomNode(algodClient);
   if (!node) throw Error("Invalid Node");
   const paymentTxn = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
-    from: wallet,
+    from: address,
     to: algosdk.getApplicationAddress(appId),
     amount: price,
     closeRemainderTo: undefined,
@@ -329,7 +307,7 @@ export async function makeCrustPinTx(
       10000,
       CRUST_DEBUG ? false : true,
     ],
-    sender: wallet,
+    sender: address,
     signer: txSigner,
     suggestedParams,
     boxes: [

@@ -26,8 +26,7 @@ export function ARC19UpdateTool() {
   const { activeAddress, algodClient, transactionSigner } = useWallet();
 
   const handleFileData = async () => {
-    const wallet = activeAddress;
-    if (wallet === null || wallet === undefined) {
+    if (!activeAddress) {
       toast.error("Please connect your wallet first!");
       return;
     }
@@ -54,7 +53,10 @@ export function ARC19UpdateTool() {
       }
     }
 
-    const resp = await algodClient.accountInformation(wallet).do();
+    const resp = await algodClient
+      .accountInformation(activeAddress)
+      .exclude("all")
+      .do();
     const min_balance = resp.amount - resp["min-balance"] / 10 ** 6;
     if (min_balance < (0.05 + 0.001) * data.length) {
       toast.error("You don't have enough balance to update these assets!");
@@ -135,8 +137,7 @@ export function ARC19UpdateTool() {
 
   const sendTransactions = async () => {
     try {
-      const wallet = activeAddress;
-      if (wallet === null || wallet === undefined) {
+      if (!activeAddress) {
         toast.error("Please connect your wallet first!");
         return;
       }

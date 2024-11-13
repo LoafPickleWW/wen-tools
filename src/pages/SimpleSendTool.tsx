@@ -47,8 +47,7 @@ export function SimpleSendTool() {
   }
 
   async function handleNext() {
-    const wallet = activeAddress;
-    if (wallet === "" || wallet === undefined) {
+    if (!activeAddress) {
       throw Error(
         "You need to connect your wallet first, if using mnemonic too!"
       );

@@ -33,12 +33,14 @@ export function BatchCollectionMint() {
         data.push(obj);
       }
     }
-    const wallet = activeAddress;
-    if (wallet === null || wallet === undefined) {
+    if (!activeAddress) {
       toast.error("Please connect your wallet first!");
       return;
     }
-    const resp = await algodClient.accountInformation(wallet).do();
+    const resp = await algodClient
+      .accountInformation(activeAddress)
+      .exclude("all")
+      .do();
     const min_balance = resp.amount - resp["min-balance"] / 10 ** 6;
     if (min_balance < (0.1 + 0.1 + 0.001) * data.length) {
       toast.error("You don't have enough balance to mint these assets!");

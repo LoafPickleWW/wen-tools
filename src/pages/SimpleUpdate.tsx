@@ -247,8 +247,7 @@ export function SimpleUpdate() {
   async function update() {
     let imageCid = null;
     try {
-      const wallet = activeAddress;
-      if (!wallet) {
+      if (!activeAddress) {
         toast.error("Please connect your wallet");
         return;
       }
@@ -398,8 +397,7 @@ export function SimpleUpdate() {
 
   async function sendTransaction() {
     try {
-      const wallet = activeAddress;
-      if (!wallet) {
+      if (!activeAddress) {
         toast.error("Please connect your wallet");
         return;
       }

@@ -133,8 +133,7 @@ export function SimpleMintClassic() {
 
   async function mint() {
     try {
-      const wallet = activeAddress;
-      if (!wallet) {
+      if (!activeAddress) {
         toast.error("Please connect your wallet");
         return;
       }
@@ -278,8 +277,7 @@ export function SimpleMintClassic() {
 
   async function sendTransaction() {
     try {
-      const wallet = activeAddress;
-      if (!wallet) {
+      if (!activeAddress) {
         toast.error("Please connect your wallet");
         return;
       }

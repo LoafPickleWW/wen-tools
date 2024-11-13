@@ -84,8 +84,7 @@ export function SimpleBatchMint() {
 
   async function createTransactions() {
     try {
-      const wallet = activeAddress;
-      if (!wallet || !isCrustAuth()) {
+      if (!activeAddress || !isCrustAuth()) {
         toast.error("Please connect your wallet");
         return;
       }
@@ -168,7 +167,10 @@ export function SimpleBatchMint() {
         }
       }
 
-      const resp = await algodClient.accountInformation(wallet).do();
+      const resp = await algodClient
+        .accountInformation(activeAddress)
+        .exclude("all")
+        .do();
       const min_balance = resp.amount - resp["min-balance"] / 10 ** 6;
       if (min_balance < (0.1 + MINT_FEE_PER_ASA + 0.002) * data.length) {
         toast.error("You don't have enough balance to mint these assets!");
@@ -344,8 +346,7 @@ export function SimpleBatchMint() {
 
   async function sendTransaction() {
     try {
-      const wallet = activeAddress;
-      if (wallet === null || wallet === undefined) {
+      if (!activeAddress) {
         toast.error("Please connect your wallet first!");
         return;
       }

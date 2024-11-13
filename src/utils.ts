@@ -256,13 +256,6 @@ export async function createAssetMintArray(
   return txnsArray;
 }
 
-/**
- * createARC3AssetMintArrayV2 create array of transactions for minting
- * @param {*} data_for_txns
- * @param {*} extraPinCids
- * @param {*} mnemonic
- * @returns AtomicTransactionComposer
- */
 export async function createARC3AssetMintArrayV2(
   data_for_txns: any[],
   address: string,
@@ -1536,7 +1529,10 @@ export async function getParticipationStatusOfWallet(
   algodClient: algosdk.Algodv2
 ) {
   try {
-    const resp = await algodClient.accountInformation(address).do();
+    const resp = await algodClient
+      .accountInformation(address)
+      .exclude("all")
+      .do();
     if (resp.participation && resp.status === "Online") {
       return true;
     }

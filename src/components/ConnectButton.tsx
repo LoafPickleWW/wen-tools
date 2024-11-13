@@ -121,6 +121,7 @@ export default function ConnectButton() {
     if (activeAddress) {
       algodClient
         .accountInformation(activeAddress)
+        .exclude("all")
         .do()
         .then((data: any) => {
           setAccountData(data);

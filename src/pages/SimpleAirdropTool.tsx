@@ -58,8 +58,7 @@ export function SimpleAirdropTool() {
 
   async function createTransactions() {
     try {
-      const wallet = activeAddress;
-      if (wallet === "" || wallet === undefined) {
+      if (!activeAddress) {
         throw Error(
           "You need to connect your wallet first, if using mnemonic too!"
         );
