@@ -105,7 +105,7 @@ export function Download19CollectionData() {
         const mhdigest = digest.create(mfsha2.sha256.code, addr.publicKey);
         const cid = CID.create(parseInt(cidVersion), cidCodecCode, mhdigest);
         const response = await axios.get(
-          `https://ipfs.algonode.xyz/ipfs/${cid}`
+          `https://ipfs.algonode.dev/ipfs/${cid}`
         );
         return response.data;
       }
