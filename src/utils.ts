@@ -740,6 +740,7 @@ export async function updateARC19AssetMintArrayV2(
         parseInt(data_for_txns[i].asset_id),
         algodClient
       );
+      if (!assetURL) throw Error("Invalid URL");
       const chunks = assetURL.split("://");
       const cidVersion = chunks[1].split(":")[1];
       const cidCodec = chunks[1].split(":")[2];
@@ -828,6 +829,7 @@ export async function updateARC19AssetMintArray(
         parseInt(data_for_txns[i].asset_id),
         algodClient
       );
+      if (!assetURL) throw Error("Invalid URL");
       const chunks = assetURL.split("://");
       const cidVersion = chunks[1].split(":")[1];
       const cidCodec = chunks[1].split(":")[2];
