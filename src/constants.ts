@@ -21,7 +21,7 @@ export const MINT_FEE_WALLET =
 export const MINT_FEE_PER_ASA = 0;
 export const UPDATE_FEE_PER_ASA = 0;
 
-export const IPFS_ENDPOINT = "https://ipfs.algonode.xyz/ipfs/";
+export const IPFS_ENDPOINT = "https://ipfs.algonode.dev/ipfs/";
 
 export const CREATOR_WALLETS = [];
 
