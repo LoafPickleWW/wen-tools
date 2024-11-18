@@ -8,6 +8,7 @@ import {
   getAssetCreatorWallet,
   SignWithMnemonic,
   walletSign,
+  getAssetDecimals,
 } from "../utils";
 import { TOOLS } from "../constants";
 
@@ -43,18 +44,6 @@ export function SimpleAirdropTool() {
     },
   ];
   const [toolType, setToolType] = useState(TOOL_TYPES[0].value);
-
-  async function getAssetDecimals(assetId: number) {
-    try {
-      const assetInfo = await algodClient.getAssetByID(assetId).do();
-      return assetInfo.params.decimals;
-    } catch (err) {
-      console.error(err);
-      toast.error(
-        "Something went wrong! Please check your form and network type."
-      );
-    }
-  }
 
   async function createTransactions() {
     try {
@@ -236,7 +225,10 @@ export function SimpleAirdropTool() {
       if (parseInt(assetID) === 1) {
         assetDecimals[assetID] = 6;
       } else {
-        assetDecimals[assetID] = await getAssetDecimals(Number(assetID));
+        assetDecimals[assetID] = await getAssetDecimals(
+          Number(assetID),
+          algodClient
+        );
       }
       if (!activeAddress) throw Error("Invalid Address");
       const txns = await createAirdropTransactions(

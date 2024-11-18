@@ -3,6 +3,7 @@ import Papa from "papaparse";
 import { toast } from "react-toastify";
 import {
   createClawbackTransactions,
+  getAssetDecimals,
   SignWithMnemonic,
   sliceIntoChunks,
   walletSign,
@@ -18,18 +19,6 @@ export function BatchClawback() {
   const [txSendingInProgress, setTxSendingInProgress] = useState(false);
   const [mnemonic, setMnemonic] = useState("");
   const { activeAddress, algodClient, transactionSigner } = useWallet();
-
-  async function getAssetDecimals(assetId: number) {
-    try {
-      const assetInfo = await algodClient.getAssetByID(assetId).do();
-      return assetInfo.params.decimals;
-    } catch (err: any) {
-      console.error(err);
-      toast.error(
-        "Something went wrong! Please check your file and network type."
-      );
-    }
-  }
 
   const handleFileData = async () => {
     if (activeAddress === null || activeAddress === undefined) {
@@ -61,7 +50,10 @@ export function BatchClawback() {
     for (let i = 0; i < assetIds.length; i++) {
       assetIds[i] = parseInt(assetIds[i]);
       if (assetIds[i] === 1) continue;
-      assetDecimals[assetIds[i]] = await getAssetDecimals(assetIds[i]);
+      assetDecimals[assetIds[i]] = await getAssetDecimals(
+        assetIds[i],
+        algodClient
+      );
     }
     try {
       try {

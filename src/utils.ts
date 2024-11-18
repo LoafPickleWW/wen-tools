@@ -1547,9 +1547,26 @@ export async function getAssetUrl(
   algodClient: algosdk.Algodv2
 ) {
   try {
-    const assetData = await algodClient.getAssetByID(assetId).do();
-    return assetData.params.url;
+    const assetInfo = await algodClient.getAssetByID(assetId).do();
+    const typedInfo = algosdk.modelsv2.Asset.from_obj_for_encoding(assetInfo);
+    return typedInfo.params.url;
   } catch {
     return "";
+  }
+}
+
+export async function getAssetDecimals(
+  assetId: number,
+  algodClient: algosdk.Algodv2
+) {
+  try {
+    const assetInfo = await algodClient.getAssetByID(assetId).do();
+    const typedInfo = algosdk.modelsv2.Asset.from_obj_for_encoding(assetInfo);
+    return typedInfo.params.decimals;
+  } catch (err) {
+    console.error(err);
+    toast.error(
+      "Something went wrong! Please check your form and network type."
+    );
   }
 }

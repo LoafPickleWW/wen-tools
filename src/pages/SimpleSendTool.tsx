@@ -2,6 +2,7 @@ import { useState } from "react";
 import { toast } from "react-toastify";
 import {
   createAirdropTransactions,
+  getAssetDecimals,
   SignWithMnemonic,
   walletSign,
 } from "../utils";
@@ -34,18 +35,6 @@ export function SimpleSendTool() {
   const { activeAddress, activeNetwork, algodClient, transactionSigner } =
     useWallet();
 
-  async function getAssetDecimals(assetId: number) {
-    try {
-      const assetInfo = await algodClient.getAssetByID(assetId).do();
-      return assetInfo.params.decimals;
-    } catch (err) {
-      console.error(err);
-      toast.error(
-        "Something went wrong! Please check your form and network type."
-      );
-    }
-  }
-
   async function handleNext() {
     if (!activeAddress) {
       throw Error(
@@ -68,7 +57,8 @@ export function SimpleSendTool() {
         splittedAssetIds[i] = parseInt(splittedAssetIds[i]);
         if (splittedAssetIds[i] === 1) continue;
         assetDecimals[splittedAssetIds[i]] = await getAssetDecimals(
-          splittedAssetIds[i]
+          splittedAssetIds[i],
+          algodClient
         );
       }
       for (let i = 0; i < splittedAssetIds.length; i++) {
@@ -83,7 +73,8 @@ export function SimpleSendTool() {
       splittedAssetIds = parseInt(assets);
       if (splittedAssetIds !== 1) {
         assetDecimals[splittedAssetIds] = await getAssetDecimals(
-          splittedAssetIds
+          splittedAssetIds,
+          algodClient
         );
       }
       splittedReceivers = receivers.split(/[\n,]/);

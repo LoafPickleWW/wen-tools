@@ -3,6 +3,7 @@ import Papa from "papaparse";
 import { toast } from "react-toastify";
 import {
   createAirdropTransactions,
+  getAssetDecimals,
   SignWithMnemonic,
   walletSign,
 } from "../utils";
@@ -17,18 +18,6 @@ export function AirdropTool() {
   const [mnemonic, setMnemonic] = useState("");
   const { activeAddress, activeNetwork, algodClient, transactionSigner } =
     useWallet();
-
-  async function getAssetDecimals(assetId: number) {
-    try {
-      const assetInfo = await algodClient.getAssetByID(assetId).do();
-      return assetInfo.params.decimals;
-    } catch (err) {
-      console.error(err);
-      toast.error(
-        "Something went wrong! Please check your file and network type."
-      );
-    }
-  }
 
   const handleFileData = async () => {
     if (activeAddress === null || activeAddress === undefined) {
@@ -60,7 +49,10 @@ export function AirdropTool() {
     for (let i = 0; i < assetIds.length; i++) {
       assetIds[i] = parseInt(assetIds[i]);
       if (assetIds[i] === 1) continue;
-      assetDecimals[assetIds[i]] = await getAssetDecimals(assetIds[i]);
+      assetDecimals[assetIds[i]] = await getAssetDecimals(
+        assetIds[i],
+        algodClient
+      );
     }
     try {
       try {

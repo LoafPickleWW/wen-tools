@@ -1,7 +1,12 @@
 import { useState } from "react";
 import algosdk from "algosdk";
 import { toast } from "react-toastify";
-import { getNfdomainAPIURL, SignWithSk, walletSign } from "../utils";
+import {
+  getAssetDecimals,
+  getNfdomainAPIURL,
+  SignWithSk,
+  walletSign,
+} from "../utils";
 import { TOOLS } from "../constants";
 import axios from "axios";
 import InfinityModeComponent from "../components/InfinityModeComponent";
@@ -57,18 +62,6 @@ export function VaultSendTool() {
     return transactionsArray.map(([_type, txn]) => {
       return base64ToByteArray(txn);
     });
-  }
-
-  async function getAssetDecimals(assetId: number) {
-    try {
-      const assetInfo = await algodClient.getAssetByID(assetId).do();
-      return assetInfo.params.decimals;
-    } catch (err) {
-      console.error(err);
-      toast.error(
-        "Something went wrong! Please check your form and network type."
-      );
-    }
   }
 
   async function getSegmentsFromDomain(domain: string) {
@@ -127,11 +120,12 @@ export function VaultSendTool() {
         throw Error("Please enter at least one domain!");
       }
 
-      const decimals = await getAssetDecimals(parseInt(assetID));
+      const decimals = await getAssetDecimals(Number(assetID), algodClient);
+      if (!decimals) throw Error("Invalid Asset");
 
       const body = {
-        amount: BigInt(amount) * 10n ** BigInt(decimals),
-        assets: [parseInt(assetID)],
+        amount: Number(amount) * 10 ** Number(decimals),
+        assets: [Number(assetID)],
         note:
           note.trim() ??
           "via Thurstober Digital Studios | " +
