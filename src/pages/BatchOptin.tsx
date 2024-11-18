@@ -3,6 +3,7 @@ import { toast } from "react-toastify";
 import {
   createAssetOptInTransactions,
   SignWithMnemonic,
+  sliceIntoChunks,
   walletSign,
 } from "../utils";
 
@@ -56,7 +57,8 @@ export function BatchOptin() {
         if (mnemonic !== "") {
           signedTransactions = SignWithMnemonic(groups.flat(), mnemonic);
         } else {
-          signedTransactions = await walletSign(groups, transactionSigner);
+          const flat = await walletSign(groups, transactionSigner);
+          signedTransactions = sliceIntoChunks(flat, 16);
         }
         setTxSendingInProgress(true);
         for (let i = 0; i < signedTransactions.length; i++) {

@@ -4,6 +4,7 @@ import { toast } from "react-toastify";
 import {
   createFreezeTransactions,
   SignWithMnemonic,
+  sliceIntoChunks,
   walletSign,
 } from "../utils";
 import { TOOLS } from "../constants";
@@ -49,7 +50,8 @@ export function BatchFreeze() {
         if (mnemonic !== "") {
           signedTransactions = SignWithMnemonic(groups.flat(), mnemonic);
         } else {
-          signedTransactions = await walletSign(groups, transactionSigner);
+          const flat = await walletSign(groups, transactionSigner);
+          signedTransactions = sliceIntoChunks(flat, 16);
         }
         setTxSendingInProgress(true);
         for (let i = 0; i < signedTransactions.length; i++) {
