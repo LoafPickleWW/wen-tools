@@ -931,12 +931,14 @@ export async function createAirdropTransactions(
         });
       } else {
         data_for_txns[i].decimals = assetDecimals[data_for_txns[i].asset_id];
+        const amount = Math.round(
+          Number(data_for_txns[i].amount) *
+            10 ** Number(assetDecimals[data_for_txns[i].asset_id])
+        );
         tx = makeAssetTransferTxnWithSuggestedParamsFromObject({
           from: address,
           to: data_for_txns[i].receiver.trim(),
-          amount:
-          Number(data_for_txns[i].amount) *
-          10 ** Number(assetDecimals[data_for_txns[i].asset_id]),
+          amount,
           assetIndex: parseInt(data_for_txns[i].asset_id),
           suggestedParams: params,
           note: new TextEncoder().encode(
@@ -998,15 +1000,17 @@ export async function createClawbackTransactions(
   const params = await algodClient.getTransactionParams().do();
   const txnsArray = [];
   for (let i = 0; i < data_for_txns.length; i++) {
+    const amount = Math.round(
+      Number(data_for_txns[i].amount) *
+        10 ** Number(assetDecimals[data_for_txns[i].asset_id])
+    );
     const tx = makeAssetTransferTxnWithSuggestedParamsFromObject({
       from: address.trim(),
       revocationTarget: data_for_txns[i].clawback_from,
       to: data_for_txns[i].receiver,
       suggestedParams: params,
       assetIndex: parseInt(data_for_txns[i].asset_id),
-      amount:
-      Number(data_for_txns[i].amount) *
-      10 ** Number(assetDecimals[data_for_txns[i].asset_id]),
+      amount,
       note: new TextEncoder().encode(
         "via wen.tools - free tools for creators and collectors"
       ),
