@@ -934,9 +934,9 @@ export async function createAirdropTransactions(
         tx = makeAssetTransferTxnWithSuggestedParamsFromObject({
           from: address,
           to: data_for_txns[i].receiver.trim(),
-          amount:
-            data_for_txns[i].amount *
-            10 ** data_for_txns[i].decimals,
+          amount: parseInt(
+            data_for_txns[i].amount * 10 ** data_for_txns[i].decimals
+          ),
           assetIndex: parseInt(data_for_txns[i].asset_id),
           suggestedParams: params,
           note: new TextEncoder().encode(
@@ -1004,9 +1004,9 @@ export async function createClawbackTransactions(
       to: data_for_txns[i].receiver,
       suggestedParams: params,
       assetIndex: parseInt(data_for_txns[i].asset_id),
-      amount:
-        data_for_txns[i].amount *
-        10 ** assetDecimals[data_for_txns[i].asset_id],
+      amount: parseInt(
+        data_for_txns[i].amount * 10 ** data_for_txns[i].decimals
+      ),
       note: new TextEncoder().encode(
         "via wen.tools - free tools for creators and collectors"
       ),
