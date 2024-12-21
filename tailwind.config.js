@@ -1,5 +1,5 @@
 /** @type {import('tailwindcss').Config} */
-module.exports = {
+export default {
   content: ["./index.html", "./src/**/*.{vue,js,ts,jsx,tsx}"],
   theme: {
     extend: {
@@ -21,7 +21,7 @@ module.exports = {
         "secondary-gray": "#393C3A",
         "secondary-black": "#000a02",
         "banner-grey": "#262626",
-        "text-white": "#f9fafb",        
+        "text-white": "#f9fafb",
       },
       fontSize: {
         xxs: "0.6rem",
