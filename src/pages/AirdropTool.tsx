@@ -80,7 +80,13 @@ export function AirdropTool() {
                 ? mnemonicSigner
                 : transactionSigner,
           };
-          await createArc59GroupTxns(txns, sender, activeAddress, algodClient);
+          await createArc59GroupTxns(
+            txns,
+            sender,
+            activeAddress,
+            algodClient,
+            activeNetwork
+          );
         } else {
           let signedTransactions = [];
           if (mnemonic !== "") {
