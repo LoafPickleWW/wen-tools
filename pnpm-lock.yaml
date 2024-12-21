@@ -8,6 +8,9 @@ importers:
 
   .:
     dependencies:
+      '@algorandfoundation/algokit-utils':
+        specifier: 6.2.1
+        version: 6.2.1(algosdk@2.9.0)
       '@blockshake/defly-connect':
         specifier: ^1.1.6
         version: 1.1.6(algosdk@2.9.0)
@@ -110,6 +113,12 @@ importers:
         version: 0.22.0(rollup@4.24.4)(vite@5.4.10(@types/node@22.9.0))
 
 packages:
+
+  '@algorandfoundation/algokit-utils@6.2.1':
+    resolution: {integrity: sha512-oJbqT91KJp34OasYID2guWHysCLdgZ/4GVb06sdgXxORWKKMhZa/Uj12UiACo4VzZJBOUZEJCh/QrSuHmu/m2g==}
+    engines: {node: '>=18.0'}
+    peerDependencies:
+      algosdk: ^2.7.0
 
   '@alloc/quick-lru@5.2.0':
     resolution: {integrity: sha512-UrcABB+4bUrFABwbluTIBErXwvbsU/V7TZWfmbgJfbkwiBuziS9gxdODUyuiecfdGQ85jglMW6juS3+z5TsKLw==}
@@ -2333,6 +2342,11 @@ packages:
     engines: {node: '>=10'}
 
 snapshots:
+
+  '@algorandfoundation/algokit-utils@6.2.1(algosdk@2.9.0)':
+    dependencies:
+      algosdk: 2.9.0
+      buffer: 6.0.3
 
   '@alloc/quick-lru@5.2.0': {}
 

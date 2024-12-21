@@ -11,6 +11,8 @@ import { TOOLS } from "../constants";
 import InfinityModeComponent from "../components/InfinityModeComponent";
 import FaqSectionComponent from "../components/FaqSectionComponent";
 import { useWallet } from "@txnlab/use-wallet-react";
+import { createArc59GroupTxns } from "../arc59-helpers";
+import algosdk from "algosdk";
 
 export function SimpleSendTool() {
   const TOOL_TYPES = [
@@ -32,6 +34,8 @@ export function SimpleSendTool() {
   const [isTransactionsFinished, setIsTransactionsFinished] = useState(false);
   const [txSendingInProgress, setTxSendingInProgress] = useState(false);
   const [mnemonic, setMnemonic] = useState("");
+  const [assetInbox, setAssetInbox] = useState(false);
+  const [errMsg, setErrMsg] = useState("");
   const { activeAddress, activeNetwork, algodClient, transactionSigner } =
     useWallet();
 
@@ -97,6 +101,7 @@ export function SimpleSendTool() {
         transaction_data[i].note = note;
       }
     }
+
     try {
       try {
         if (mnemonic === "") toast.info("Please sign the transactions!");
@@ -108,44 +113,65 @@ export function SimpleSendTool() {
           algodClient,
           activeNetwork
         );
-        let signedTransactions = [];
-        if (mnemonic !== "") {
-          signedTransactions = SignWithMnemonic(txns.flat(), mnemonic);
+
+        // Add in arc59 router txns here
+        if (assetInbox) {
+          let mnemonicSigner = null;
+          if (mnemonic !== "") {
+            const privateKey = algosdk.mnemonicToSecretKey(mnemonic);
+            mnemonicSigner =
+              algosdk.makeBasicAccountTransactionSigner(privateKey);
+          }
+          const sender = {
+            addr: activeAddress,
+            signer:
+              mnemonic !== "" && mnemonicSigner !== null
+                ? mnemonicSigner
+                : transactionSigner,
+          };
+          await createArc59GroupTxns(txns, sender, activeAddress, algodClient);
         } else {
-          signedTransactions = await walletSign(txns, transactionSigner);
-        }
-        setTxSendingInProgress(true);
-        for (let i = 0; i < signedTransactions.length; i++) {
-          try {
-            await algodClient.sendRawTransaction(signedTransactions[i]).do();
-            if (i % 5 === 0) {
-              toast.success(
-                `Transaction ${i + 1} of ${
-                  signedTransactions.length
-                } confirmed!`,
+          let signedTransactions = [];
+          if (mnemonic !== "") {
+            console.log("Signing with mnemonic");
+            signedTransactions = SignWithMnemonic(txns.flat(), mnemonic);
+          } else {
+            signedTransactions = await walletSign(txns, transactionSigner);
+          }
+          setTxSendingInProgress(true);
+          for (let i = 0; i < signedTransactions.length; i++) {
+            try {
+              await algodClient.sendRawTransaction(signedTransactions[i]).do();
+              if (i % 5 === 0) {
+                toast.success(
+                  `Transaction ${i + 1} of ${
+                    signedTransactions.length
+                  } confirmed!`,
+                  {
+                    autoClose: 1000,
+                  }
+                );
+              }
+            } catch (err) {
+              console.error(err);
+              toast.error(
+                `Transaction ${i + 1} of ${signedTransactions.length} failed!`,
                 {
                   autoClose: 1000,
                 }
               );
             }
-          } catch (err) {
-            console.error(err);
-            toast.error(
-              `Transaction ${i + 1} of ${signedTransactions.length} failed!`,
-              {
-                autoClose: 1000,
-              }
-            );
+            await new Promise((resolve) => setTimeout(resolve, 50));
           }
-          await new Promise((resolve) => setTimeout(resolve, 50));
         }
         setIsTransactionsFinished(true);
         setTxSendingInProgress(false);
         toast.success("All transactions confirmed!");
         toast.info("You can support by donating :)");
-      } catch (error) {
+      } catch (error: any) {
         setTxSendingInProgress(false);
         toast.error("Something went wrong! Please check your form!");
+        setErrMsg(error.message);
         console.error(error);
         return;
       }
@@ -262,6 +288,14 @@ export function SimpleSendTool() {
           setNote(e.target.value);
         }}
       />
+      <label className="flex flex-row items-center text-slate-400 gap-2">
+        <input
+          type="checkbox"
+          checked={assetInbox}
+          onChange={(e) => setAssetInbox(e.target.checked)}
+        />
+        Send to Asset Inbox
+      </label>
       <div className="flex flex-col justify-center items-center w-[16rem]">
         {isTransactionsFinished ? (
           <>
@@ -295,6 +329,9 @@ export function SimpleSendTool() {
           </>
         )}
       </div>
+      {errMsg !== "" && (
+        <p className="text-red-500 text-xs pt-2">{errMsg.toString()}</p>
+      )}
       <p className="text-center text-xs text-slate-400 py-2">
         ⚠️If you reload or close this page, you will lose your progress⚠️
         <br />
