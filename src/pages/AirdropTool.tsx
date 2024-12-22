@@ -226,9 +226,15 @@ export function AirdropTool() {
                       type="checkbox"
                       checked={assetInbox}
                       onChange={(e) => setAssetInbox(e.target.checked)}
+                      className="size-4"
                     />
-                    Send to Asset Inbox
+                    <div className="flex flex-row text-sm justify-start items-baseline">
+                      <span>Send to Asset Inbox</span>
+                    </div>
                   </label>
+                  <span className="text-sm">
+                    Asset Inbox Recommended with Infinity Mode
+                  </span>
                   <button
                     id="approve-send"
                     className="mb-2 bg-primary-orange hover:bg-primary-orange text-black text-base font-semibold rounded py-2 w-fit px-2 mx-auto mt-1 hover:scale-95 duration-700"
