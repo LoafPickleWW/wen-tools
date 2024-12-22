@@ -126,7 +126,6 @@ export const createArc59GroupTxns = async (
     }
   } catch (e) {
     console.error(e);
-    debugger;
     throw e;
   }
 };

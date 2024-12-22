@@ -299,9 +299,15 @@ export function SimpleSendTool() {
           type="checkbox"
           checked={assetInbox}
           onChange={(e) => setAssetInbox(e.target.checked)}
+          className="size-4"
         />
-        Send to Asset Inbox
+        <div className="flex flex-row text-sm justify-start items-baseline">
+          <span>Send to Asset Inbox</span>
+        </div>
       </label>
+      <span className="text-sm">
+        Asset Inbox Recommended with Infinity Mode
+      </span>
       <div className="flex flex-col justify-center items-center w-[16rem]">
         {isTransactionsFinished ? (
           <>
