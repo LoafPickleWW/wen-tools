@@ -41,7 +41,7 @@ export function Footer() {
         </div>
         <div className="flex gap-4 text-blue-gray-900 sm:justify-center">
           <a
-            href="https://twitter.com/loafpickle"
+            href="https://twitter.com/wendottools"
             target="_blank"
             className="opacity-80 transition-opacity hover:opacity-100"
             rel="noreferrer"
