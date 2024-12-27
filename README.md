@@ -48,7 +48,7 @@ Bounties will be paid out upon successful merge and approval of the Pull Request
 - ~~**Fix UI Bugs like scrolling issues (horizonatal and vertical), white screens, and footer being so high on mobile (issues between tailwind and mui maybe?)** - 500A~~ Completed by [No-Cash](https://github.com/No-Cash-7970)
 - **Fix UI Display Error for Multimint Asset Holder tool when filters are being used. Correct number is not displayed** - 150A
 - **Remove the need to claim when using Wen Swap. Have transfer execute when TX is signed** - 200A
-- **Add send to Asset Inbox (arc59) check box to Simple Send, Simple Airdrop, and Airdrop Tools. When a user checks this option, upon compiling of the tx, Algo balance will be checked to make sure sender has enough to cover MBR Requirements. Total Algo gas fee to be displayed as well.** - 500A
+- **Add send to Asset Inbox (arc59) check box to Simple Send, Simple Airdrop, and Airdrop Tools. When a user checks this option, upon compiling of the tx, Algo balance will be checked to make sure sender has enough to cover MBR Requirements. Total Algo gas fee to be displayed as well.** - 500A - In progress by Tako
 - **Fix Decimals showing as total supply on wen wallet. Also add commas for longer numbers.** - 300A
 - **Add preview functionality to simple mint. This is already a feature of simple bulk mint.** - 400A
 
