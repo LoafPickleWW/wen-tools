@@ -51,8 +51,8 @@ Bounties will be paid out upon successful merge and approval of the Pull Request
 - **Fix Decimals showing as total supply on wen wallet. Also add commas for longer numbers.** - 150A
 - **Add preview functionality to simple mint. This is already a feature of simple bulk mint.** - 200A
 - **Redesign Site per attached mockups [here](https://x.com/wendottools/status/1869572452285854164)** - 200A
-- Merge wenswap and wenwallet repos into main repo and create a link to the tools from the homepage** - 200A
-- Create a bulk claim tool that when logged in, it shows items in your asset inbox and NFD vault (if applicable) and allows you to select multiple and claim** - 250A
+- **Merge wenswap and wenwallet repos into main repo and create a link to the tools from the homepage** - 200A
+- **Create a bulk claim tool that when logged in, it shows items in your asset inbox and NFD vault (if applicable) and allows you to select multiple and claim** - 250A
 
 ## License
 
