@@ -31,21 +31,28 @@ const DonationDialog = () => {
   return (
     <>
       <Button
-        variant="outlined"
-        size="medium"
+        variant="contained"
+        size="large"
         sx={{
-          margin: "0 auto",
-          marginTop: "1rem",
-          color: "#f57b14",
-          border: "solid 1px #f57b14",
-          transition: "color 0.3s ease, border 0.3s ease, opacity 0.3s ease",
-          opacity: 0.8,
+          color: "#010010",
+          border: "0",
+          background: "linear-gradient(to right, #EAE004, #FF931E)",
+          transition: "color 0.3s ease, opacity 0.3s ease",
+          borderRadius: "9999px",
+          padding: ".4rem .5rem",
+          textTransform: "none",
+          fontSize: {
+            xs: ".8rem",
+            md: "1.2rem",
+          },
+          fontFamily: "Poppins, sans-serif",
+          opacity: 1,
           "&:hover": {
-            border: "solid 1px #f57b14",
-            opacity: 1,
+            opacity: 0.8,
           },
         }}
         onClick={handleOpen}
+        className="font-semibold font-sans text-[#010010] text-xl w-[75%] md:w-auto"
       >
         Donate
       </Button>
