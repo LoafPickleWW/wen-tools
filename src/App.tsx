@@ -52,7 +52,7 @@ const walletManager = new WalletManager({
 function App() {
   return (
     <WalletProvider manager={walletManager}>
-      <div className="bg-primary-black flex flex-col min-h-screen font-roboto pb-6">
+      <div className="bg-primary-black flex flex-col min-h-screen font-sans pb-6">
         <ToastContainer
           pauseOnFocusLoss={false}
           closeOnClick

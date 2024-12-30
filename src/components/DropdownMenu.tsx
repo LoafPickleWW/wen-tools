@@ -12,6 +12,7 @@ import {
 import { FaWallet } from "react-icons/fa";
 import { IoSwapHorizontal } from "react-icons/io5";
 import { type DropdownMenu } from "../types";
+import DonationDialog from "./DonationDialog";
 
 const DropdownMenu = ({ onClose, isOpen }: DropdownMenu) => {
   return (
@@ -44,7 +45,7 @@ const DropdownMenu = ({ onClose, isOpen }: DropdownMenu) => {
         </Typography>
       </Toolbar>
       <Divider color="white" />
-      <List>
+      <List className="text-center">
         <ListItemButton
           component="a"
           href="https://wallet.wen.tools"
@@ -71,6 +72,9 @@ const DropdownMenu = ({ onClose, isOpen }: DropdownMenu) => {
             sx={{ color: "white", fontWeight: "bold" }}
           />
         </ListItemButton>
+        <div className="mt-3">
+          <DonationDialog />
+        </div>
       </List>
     </Drawer>
   );

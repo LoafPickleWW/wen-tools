@@ -29,7 +29,7 @@ const CarouselComponent = ({ images }: { images: Image[] }) => {
               } h-24 md:h-28 mx-auto rounded-md`}
             />
           </a>
-        ))}
+        ))} 
       </div>
     </div>
   );
