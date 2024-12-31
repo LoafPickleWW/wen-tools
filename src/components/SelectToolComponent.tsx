@@ -50,7 +50,7 @@ export function SelectToolComponent() {
         ))}
       </div>
       <p className="col-span-3 text-start text-4xl font-semibold tracking-tight text-white font-sans py-4">
-        Mint Tools
+        mint tools
       </p>
       <div className="container gap-6 cursor-pointer grid lg:grid-cols-3 py-4">
         {TOOLS.filter((tool) => tool.category === "mint").map((tool) => (
