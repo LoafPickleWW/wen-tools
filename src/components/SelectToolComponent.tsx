@@ -29,17 +29,20 @@ export function SelectToolComponent() {
         {TOOLS.filter((tool) => tool.category === "asset").map((tool) => (
           <div className="w-full rounded-[36px] bg-gradient-to-r from-[#E4E808] to-[#FD941D] hover:bg-none p-1">
             <div
-              className="flex flex-col rounded-[36px] border-transparent bg-black gap-3 p-8 w-[100%] h-[100%] text-[#FDFDFD] shadow bg-[#000] transition duration-200 ease-in-out hover:text-black hover:bg-gradient-to-r from-[#E4E808] to-[#FD941D] hover:border-2 relative group"
+              className="flex flex-col items-center justify-center rounded-[36px] border-transparent bg-black gap-3 p-8 w-[100%] h-[100%] text-[#FDFDFD] shadow bg-[#000] transition duration-500 ease-in-out hover:text-black hover:bg-gradient-to-r from-[#E4E808] to-[#FD941D] hover:border-2 relative group"
               key={tool.id}
             >
               <Link
                 to={tool.path}
-                className="block  transform -translate-y-[-1.5rem] flex flex-col items-center justify-center duration-200 ease-in-out group-hover:-translate-y-0"
+                className="transform flex flex-col items-center justify-center duration-300 ease-in-out group-hover:-translate-y-0"
               >
-                <h5 className=" text-2xl font-medium ">{tool.label}</h5>
+                {/* Faster color change for h5 */}
+                <h5 className="text-2xl font-medium transition-colors duration-200 ease-in-out group-hover:text-black">
+                  {tool.label}
+                </h5>
               </Link>
-              {/* Description shown on hover */}
-              <p className="font-medium text-center text-black  transition-display duration-200 ease-in-out group-hover:block rounded-3xl">
+              {/* Description with height and opacity transition */}
+              <p className="font-medium text-center text-black opacity-0 max-h-0 overflow-hidden duration-500 ease-in-out group-hover:opacity-100 group-hover:max-h-20 transition-all">
                 {tool.description}
               </p>
             </div>
@@ -53,17 +56,20 @@ export function SelectToolComponent() {
         {TOOLS.filter((tool) => tool.category === "mint").map((tool) => (
           <div className="w-full rounded-[36px] bg-gradient-to-r from-[#E4E808] to-[#FD941D] hover:bg-none p-1">
             <div
-              className="flex flex-col rounded-[36px] border-transparent bg-black gap-3 p-8 w-[100%] h-[100%] text-[#FDFDFD] shadow bg-[#000] transition duration-200 ease-in-out hover:text-black hover:bg-gradient-to-r from-[#E4E808] to-[#FD941D] hover:border-2 relative group"
+              className="flex flex-col items-center justify-center rounded-[36px] border-transparent bg-black gap-3 p-8 w-[100%] h-[100%] text-[#FDFDFD] shadow bg-[#000] transition duration-500 ease-in-out hover:text-black hover:bg-gradient-to-r from-[#E4E808] to-[#FD941D] hover:border-2 relative group"
               key={tool.id}
             >
               <Link
                 to={tool.path}
-                className="block  transform -translate-y-[-1.5rem] flex flex-col items-center justify-center duration-200 ease-in-out group-hover:-translate-y-0"
+                className="transform flex flex-col items-center justify-center duration-300 ease-in-out group-hover:-translate-y-0"
               >
-                <h5 className=" text-2xl font-medium ">{tool.label}</h5>
+                {/* Faster color change for h5 */}
+                <h5 className="text-2xl font-medium transition-colors duration-200 ease-in-out group-hover:text-black">
+                  {tool.label}
+                </h5>
               </Link>
-              {/* Description shown on hover */}
-              <p className="font-medium text-center text-black  transition-display duration-200 ease-in-out group-hover:block rounded-3xl">
+              {/* Description with height and opacity transition */}
+              <p className="font-medium text-center text-black opacity-0 max-h-0 overflow-hidden duration-500 ease-in-out group-hover:opacity-100 group-hover:max-h-20 transition-all">
                 {tool.description}
               </p>
             </div>
