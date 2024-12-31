@@ -8,7 +8,7 @@ export default function Home() {
       </main>
       <div className="flex flex-col mx-auto w-[80%] md:w-[70%] py-8">
         <h2 className="text-4xl font-semibold text-start text-slate-100 mb-2 font-sans">
-          Partners
+          partners
         </h2>
         <div className="partners_class flex flex-col lg:flex-row justify-between items-center gap-6 lg:gap-4  py-4">
           <a
