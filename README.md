@@ -37,6 +37,8 @@ See the list of [contributors](https://github.com/thurstober-digital/evil-tools/
 
 Bounties will be paid out upon successful merge and approval of the Pull Request.
 
+Total Bounties Paid: 4,450A
+
 - ~~**Have Slider Track Color and Donate Button outline have Hex Code #f57b14** - 100A~~ Completed by [Vince](https://github.com/vincealvare)
 - ~~**Integrate Crust IPFS Network to all Mint tools w/ Option to opt out and enter own Pinata Key** - 2000A~~ - Completed by [Crust](https://github.com/x-wagmi)
 - ~~**Add an airdrop to multimint asset holders to Simple Airdrop Tool** - 500A~~ Completed by [Twrtl](https://github.com/twirtle2)
@@ -48,11 +50,11 @@ Bounties will be paid out upon successful merge and approval of the Pull Request
 - ~~**Fix UI Display Error for Multimint Asset Holder tool when filters are being used. Correct number is not displayed** - 150A~~ - Completed by [Satishccy](https://github.com/satishccy)
 - ~~**Remove the need to claim when using Wen Swap. Have transfer execute when TX is signed** - 200A~~ - Completed by [Satishccy](https://github.com/satishccy)
 - **Add send to Asset Inbox (arc59) check box to Simple Send, Simple Airdrop, and Airdrop Tools. When a user checks this option, upon compiling of the tx, Algo balance will be checked to make sure sender has enough to cover MBR Requirements. Total Algo gas fee to be displayed as well.** - 500A - In progress by Tako
-- **Fix Decimals showing as total supply on wen wallet. Also add commas for longer numbers.** - 150A
-- **Add preview functionality to simple mint. This is already a feature of simple bulk mint.** - 200A
-- **Redesign Site per attached mockups [here](https://x.com/wendottools/status/1869572452285854164)** - 200A
-- **Merge wenswap and wenwallet repos into main repo and create a link to the tools from the homepage** - 200A
-- **Create a bulk claim tool that when logged in, it shows items in your asset inbox and NFD vault (if applicable) and allows you to select multiple and claim** - 250A
+- ~~**Fix Decimals showing as total supply on wen wallet. Also add commas for longer numbers.** - 150A~~ - Completed by [Satishccy](https://github.com/satishccy)
+- **Add preview functionality to simple mint. This is already a feature of simple bulk mint.** - 200A - In progress by Satish
+- ~~**Redesign Site per attached mockups [here](https://x.com/wendottools/status/1869572452285854164)** - 200A~~ - Completed by [Sandeep](https://github.com/satishccy)
+- **Merge wenswap and wenwallet repos into main repo and create a link to the tools from the homepage** - 200A - In progress by Satish
+- **Create a bulk claim tool that when logged in, it shows items in your asset inbox and NFD vault (if applicable) and allows you to select multiple and claim** - 250A - In progress by Satish
 
 ## License
 
