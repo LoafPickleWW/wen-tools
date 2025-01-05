@@ -327,7 +327,7 @@ export function SimpleMintClassic() {
           </label>
           <input
             type="text"
-            placeholder="Ex: STUPIDHORSE 001"
+            placeholder="Ex: USAlgo 001"
             className="w-64 bg-gray-300 text-sm font-medium text-center leading-none text-black placeholder:text-black/30 px-3 py-2 border rounded border-gray-200"
             maxLength={32}
             required
@@ -346,7 +346,7 @@ export function SimpleMintClassic() {
           </label>
           <input
             type="text"
-            placeholder="Ex: HORSE001"
+            placeholder="Ex: USA01"
             className="w-64 bg-gray-300 text-sm font-medium text-center leading-none text-black placeholder:text-black/30 px-3 py-2 border rounded border-gray-200"
             maxLength={8}
             required

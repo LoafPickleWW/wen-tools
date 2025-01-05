@@ -1,5 +1,4 @@
 import { SelectToolComponent } from "../components/SelectToolComponent";
-import DonationDialog from "../components/DonationDialog";
 
 export default function Home() {
   return (
@@ -7,18 +6,47 @@ export default function Home() {
       <main className="flex flex-col justify-center items-center mx-4 md:mx-40 rounded-lg">
         <SelectToolComponent />
       </main>
-      <div className="flex flex-col mx-auto mt-2">
-        <h2 className="text-3xl font-semibold tracking-tight leading-tight text-center text-slate-100 -mb-2">
-          Partners
+      <div className="flex flex-col mx-auto w-[80%] md:w-[70%] py-8">
+        <h2 className="text-4xl font-semibold text-start text-slate-100 mb-2 font-sans">
+          partners
         </h2>
-        <div className="grid grid-cols-2 md:grid-cols-4 mx-auto">
+        <div className="partners_class flex flex-col lg:flex-row justify-between items-center gap-6 lg:gap-4  py-4">
           <a
-            href="https://www.randgallery.com/algo-collection?ref=eviltools"
+            href="https://www.algorand.foundation?ref=eviltools"
             className="flex justify-center opacity-80 hover:opacity-100 transition"
             target="_blank noreferrer"
           >
+            <img
+              src="./af_logo.svg"
+              alt="af"
+              className="w-40 h-30 md:w-32 md:h-32"
+            />
+          </a>
+          <a
+            href="https://algoverify.me?ref=eviltools"
+            className="flex justify-center text-center items-center opacity-80 text-3xl hover:opacity-100 transition font-sans font-semibold"
+            target="_blank noreferrer"
+          >
+            AlgoVerify
+          </a>
+          <a
+            href="https://nf.domains?ref=eviltools"
+            className="flex justify-center items-center opacity-80 hover:opacity-100 transition"
+            target="_blank noreferrer"
+          >
+            <svg viewBox="0 0 1260 400" fill="white" className="h-10 w-auto">
+              <polygon points="430,0 430,66.7 430,133.3 430,200 430,266.7 430,400 630,400 630,266.7 730,266.7 730,200 730,133.3 830,133.3 830,66.7 830,0 630,0"></polygon>
+              <polygon points="200,200 0,0 0,400 200,400 400,400 400,200 400,0 200,0"></polygon>
+              <path d="M1060,0H860v200v200h200c110.5,0,200-89.5,200-200S1170.5,0,1060,0z"></path>
+            </svg>
+          </a>
+          <a
+            href="https://www.randgallery.com/algo-collection?ref=eviltools"
+            className="flex justify-center opacity-80 hover:opacity-100 transition "
+            target="_blank noreferrer"
+          >
             <svg
-              width="56"
+              width="90"
               viewBox="0 0 560 560"
               fill="none"
               xmlns="http://www.w3.org/2000/svg"
@@ -34,37 +62,6 @@ export default function Home() {
             </svg>
           </a>
           <a
-            href="https://nf.domains?ref=eviltools"
-            className="flex justify-center items-center opacity-80 hover:opacity-100 transition"
-            target="_blank noreferrer"
-          >
-            <svg viewBox="0 0 1260 400" fill="white" className="h-6 w-auto">
-              <polygon points="430,0 430,66.7 430,133.3 430,200 430,266.7 430,400 630,400 630,266.7 730,266.7 730,200 730,133.3 830,133.3 830,66.7 830,0 630,0"></polygon>
-              <polygon points="200,200 0,0 0,400 200,400 400,400 400,200 400,0 200,0"></polygon>
-              <path d="M1060,0H860v200v200h200c110.5,0,200-89.5,200-200S1170.5,0,1060,0z"></path>
-            </svg>
-          </a>
-          <a
-            href="https://algoverify.me?ref=eviltools"
-            className="flex justify-center text-center items-center opacity-80 hover:opacity-100 transition"
-            target="_blank noreferrer"
-          >
-            Algo
-            <br />
-            Verify
-          </a>
-          <a
-            href="https://www.algorand.foundation?ref=eviltools"
-            className="flex justify-center opacity-80 hover:opacity-100 transition"
-            target="_blank noreferrer"
-          >
-            <img
-              src="./af_logo.svg"
-              alt="af"
-              className="w-24 h-20 md:w-32 md:h-32"
-            />
-          </a>
-          <a
             href="https://apps.crust.network/?rpc=wss%3A%2F%2Frpc.crust.network#/explorer"
             className="flex justify-center opacity-80 hover:opacity-100 transition"
             target="_blank noreferrer"
@@ -72,12 +69,11 @@ export default function Home() {
             <img
               src="./crust.png"
               alt="crust"
-              className="w-24 h-20 md:w-40 md:h-20"
+              className="w-40 h-30 md:w-40 md:h-20"
             />
           </a>
         </div>
       </div>
-      <DonationDialog />
     </div>
   );
 }

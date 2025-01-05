@@ -130,7 +130,7 @@ export default function ConnectButton() {
   }, [activeAddress, algodClient]);
 
   return (
-    <div className="flex flex-row justify-center items-center">
+    <div className="flex flex-row justify-center items-center gap-2 font-sans rounded-2xl">
       {!activeAddress ? (
         <Button
           id="connect-button"
@@ -139,9 +139,10 @@ export default function ConnectButton() {
           aria-expanded={open ? "true" : undefined}
           onClick={handleClick}
           color="success"
-          className="hover:bg-primary-orange hover:text-white transition"
         >
-          <span className="font-sans text-secondary-orange">Connect</span>
+          <span className="font-sans text-white text-[14px] font-light normal-case	lg:text-xl w-[100%] pr-3">
+            Wallet Connect
+          </span>
         </Button>
       ) : (
         <Tooltip title="Account" placement="bottom-start">
@@ -151,9 +152,9 @@ export default function ConnectButton() {
             aria-haspopup="true"
             aria-expanded={open ? "true" : undefined}
             onClick={handleClick}
-            sx={{ fontFamily: "sans", fontWeight: "bold", color: "white" }}
+            sx={{ fontFamily: "sans", color: "white", borderRadius: "24px" }}
           >
-            <FaWallet height={50} width={50} />
+            <FaWallet className="pr-4 text-4xl" />
           </IconButton>
         </Tooltip>
       )}
@@ -165,54 +166,129 @@ export default function ConnectButton() {
         MenuListProps={{
           "aria-labelledby": "connect-button",
         }}
-        sx={{ mt: "1px", "& .MuiMenu-paper": { backgroundColor: "#010002" } }}
+        sx={{
+          mt: "1px",
+          "& .MuiMenu-paper": { backgroundColor: "#1A1A1A" },
+          fontFamily: "poppins, sans-serif",
+          borderRadius: "24px",
+        }}
+        className="p-6 rounded-lg w-[100%] overflow-hidden rounded-xl"
       >
         {!activeAddress ? (
-          <MenuList sx={{ p: "0px" }}>
+          <MenuList
+            sx={{ p: "0px", borderRadius: "24px" }}
+            className="flex flex-col gap-3 w-[130px] md:w-[180px] rounded-xl items-center justify-center"
+          >
             <MenuItem
               sx={{
-                backgroundColor: "#ffee55",
-                color: "black",
-                fontWeight: "bold",
-                borderTopLeftRadius: "4px",
-                borderTopRightRadius: "4px",
-                ":hover": { backgroundColor: "#ffee55", opacity: "0.8" },
+                backgroundColor: "transparent",
+                color: "white",
+                ":hover": { backgroundColor: "#1A1A1A", opacity: "0.8" },
               }}
               onClick={connectToPera}
             >
-              Pera
+              <div className="flex flex-col gap-2 items-start rounded-xl">
+                <div className="font-sans text-lg font-medium flex flex-row items-center">
+                  <img
+                    src="/pera-logomark-white.png"
+                    alt=""
+                    className="w-[24px] h-[24px]"
+                  />
+                  <span className="ml-2 font-normal">Pera</span>
+                </div>
+              </div>
             </MenuItem>
             <MenuItem
               sx={{
-                backgroundColor: "#131313",
+                backgroundColor: "transparent",
                 color: "white",
-                fontWeight: "bold",
-                ":hover": { backgroundColor: "#131313", opacity: "0.8" },
+                ":hover": { backgroundColor: "transparent", opacity: "0.8" },
               }}
               onClick={connectToDefly}
             >
-              Defly
+              <div className="flex flex-col gap-2 items-start">
+                <div className="font-sans text-lg font-medium flex flex-row items-center">
+                  <img
+                    src="/defly-logo.png"
+                    alt=""
+                    className="w-[30px] h-[30px]"
+                  />
+                  <span className="ml-2 font-normal">Defly</span>
+                </div>
+              </div>
             </MenuItem>
             <MenuItem
               sx={{
-                backgroundColor: "#AB47BC",
-                color: "black",
-                fontWeight: "bold",
+                backgroundColor: "transparent",
+                color: "white",
                 borderBottomLeftRadius: "4px",
                 borderBottomRightRadius: "4px",
-                ":hover": { backgroundColor: "#AB47BC", opacity: "0.8" },
+                ":hover": { backgroundColor: "transparent", opacity: "0.8" },
               }}
               onClick={connectToLute}
             >
-              Lute
+              <div className="flex flex-col gap-2 items-start">
+                <div className="font-sans text-lg font-medium flex flex-row items-center">
+                  <img
+                    src="/lute-wallet.svg"
+                    alt=""
+                    className="w-[26px] h-[26px]"
+                  />
+                  <span className="ml-2 font-normal">Lute</span>
+                </div>
+              </div>
             </MenuItem>
           </MenuList>
         ) : (
-          <MenuList sx={{ p: "0px" }}>
+          <MenuList
+            sx={{ p: "0px", fontFamily: "poppins, sans-serif" }}
+            className="flex flex-col gap-1 w-[260px] rounded-lg"
+          >
+            {activeWallet?.id && (
+              <MenuItem
+                sx={{
+                  backgroundColor: "transparent",
+                  color: "white",
+                  borderTopLeftRadius: "4px",
+                  borderTopRightRadius: "4px",
+                  fontFamily: "poppins, sans-serif",
+                  ":hover": { backgroundColor: "#1A1A1A", opacity: "0.8" },
+                }}
+                onClick={handleClose}
+              >
+                <div className="flex flex-row items-center gap-2">
+                  <div>
+                    {activeWallet?.id === "pera" && (
+                      <img
+                        src="/pera-logomark-white.png"
+                        alt=""
+                        className="w-[24px] h-[24px]"
+                      />
+                    )}
+                    {activeWallet?.id === "defly" && (
+                      <img
+                        src="/defly-logo.png"
+                        alt=""
+                        className="w-[30px] h-[30px]"
+                      />
+                    )}
+                    {activeWallet?.id === "lute" && (
+                      <img
+                        src="/lute-wallet.svg"
+                        alt=""
+                        className="w-[26px] h-[26px]"
+                      />
+                    )}
+                  </div>
+                  <span>{activeWallet?.id}</span>
+                </div>
+              </MenuItem>
+            )}
             <MenuItem
               sx={{
                 color: "white",
-                fontWeight: "bold",
+                fontWeight: "500",
+                fontFamily: "poppins, sans-serif",
               }}
               onClick={() => {
                 navigator.clipboard.writeText(activeAddress);
@@ -230,26 +306,27 @@ export default function ConnectButton() {
               sx={{
                 textAlign: "start",
                 color: "white",
+                fontFamily: "poppins, sans-serif",
                 borderBottomLeftRadius: "4px",
                 borderBottomRightRadius: "4px",
               }}
               onClick={handleClose}
             >
               <div className="flex flex-col justify-start">
-                <span className="text-sm font-medium">
+                <span className="text-sm font-medium font-sans">
                   <div className="flex flex-row items-center">
                     Balance: {((accountData?.amount || 0) / 10 ** 6).toFixed(2)}
                     {algoLogo}
                   </div>
                 </span>
-                <span className="text-sm font-medium">
+                <span className="text-sm font-medium mb-2 font-sans">
                   <div className="flex flex-row items-center">
                     Min Balance:{" "}
                     {((accountData?.["min-balance"] || 0) / 10 ** 6).toFixed(2)}
                     {algoLogo}
                   </div>
                 </span>
-                <span className="text-sm font-medium">
+                <span className="text-sm font-medium font-sans">
                   Asset Count: {accountData?.["total-assets-opted-in"]}
                 </span>
               </div>
@@ -259,7 +336,8 @@ export default function ConnectButton() {
                 backgroundColor: "red",
                 color: "white",
                 ":hover": { backgroundColor: "red", opacity: "0.8" },
-                fontWeight: "bold",
+                fontFamily: "poppins, sans-serif",
+                fontWeight: "500",
                 borderBottomLeftRadius: "4px",
                 borderBottomRightRadius: "4px",
               }}

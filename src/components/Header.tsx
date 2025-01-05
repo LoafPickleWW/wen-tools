@@ -1,7 +1,8 @@
 import AppBar from "@mui/material/AppBar";
 import Toolbar from "@mui/material/Toolbar";
 import Typography from "@mui/material/Typography";
-import IconButton from "@mui/material/IconButton";
+import List from "@mui/material/List";
+import ListItemButton from "@mui/material/ListItemButton";
 
 import { Link } from "react-router-dom";
 import ConnectButton from "./ConnectButton";
@@ -9,6 +10,8 @@ import SelectNetworkComponent from "./SelectNetworkComponent";
 import { MdMenu } from "react-icons/md";
 import { useState } from "react";
 import DropdownMenu from "./DropdownMenu";
+import DonationDialog from "./DonationDialog";
+import IconButton from "@mui/material/IconButton";
 
 export function Header() {
   const [isSidesheetOpen, setIsSidesheetOpen] = useState(false);
@@ -21,17 +24,20 @@ export function Header() {
     <AppBar sx={{ backgroundColor: "#1A171A" }} position="sticky">
       <DropdownMenu isOpen={isSidesheetOpen} onClose={handleDrawerToggle} />
 
-      <Toolbar>
-        <IconButton
-          color="inherit"
-          aria-label="open drawer"
-          edge="start"
-          onClick={handleDrawerToggle}
+      <Toolbar  className="flex flex-row items-center justify-between w-[100%] lg:w-[90%] mx-auto py-2 px-4 gap-0 lg:gap-6">
+        <div className="lg:hidden">
+          <IconButton
+            color="inherit"
+            aria-label="open drawer"
+            edge="start"
+            onClick={handleDrawerToggle}
+          >
+            <MdMenu />
+          </IconButton>
+        </div>
+        <Link to="/" 
         >
-          <MdMenu />
-        </IconButton>
-        <Link to="/">
-          <img src="/TL_large_white.png" alt="logo" className="mr-2 h-12 p-1" />
+          <img src="/w-t-logo.png" alt="logo" className=" mr-2 p-1 w-20 lg:w-36" />
         </Link>
         <Typography
           component="div"
@@ -40,10 +46,9 @@ export function Header() {
             flexGrow: 1,
             fontWeight: 400,
             fontSize: {
-              xs: "1rem",
-              sm: "1.25rem",
-              md: "1.5rem",
-              lg: "1.75rem",
+              xs: ".5rem",
+              sm: "1rem",
+              lg: "1rem",
             },
             ":hover": {
               cursor: "pointer",
@@ -52,10 +57,32 @@ export function Header() {
             visibility: { xs: "hidden", sm: "visible" },
           }}
         ></Typography>
-        <SelectNetworkComponent />
-        <ConnectButton />
+        <List 
+          className="hidden lg:flex flex-row items-center px-4 py-2 gap-2 text-xl "
+        >
+        <ListItemButton
+          component="a"
+          href="https://wallet.wen.tools"
+          target="_blank"
+        >
+          <p>Wen Wallet</p>
+        </ListItemButton>
+        <ListItemButton
+          component="a"
+          href="https://swap.wen.tools"
+          target="_blank"
+          className="text-xl flex flex-row items-center gap-1"
+        >
+          <p>Wen Swap</p>
+        </ListItemButton>
+      </List>
+      <ConnectButton />
+      <SelectNetworkComponent />
+      <div className="hidden lg:flex">
+        <DonationDialog />
+      </div>
       </Toolbar>
-      <div className="bg-secondary-orange text-black flex py-1 justify-center items-center">
+      {/* <div className="bg-secondary-orange text-black flex py-1 justify-center items-center">
         <p className="text-center text-sm">
           You can read more about Infinity Mode{" "}
           <a
@@ -80,7 +107,7 @@ export function Header() {
             Wen Wallet!
           </a>
         </p>
-      </div>
+      </div> */}
     </AppBar>
   );
 }

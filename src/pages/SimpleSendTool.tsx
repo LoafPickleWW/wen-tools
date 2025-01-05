@@ -270,7 +270,7 @@ export function SimpleSendTool() {
           )}
         </div>
         <div className="flex flex-col rounded border-gray-300  dark:border-gray-700">
-          <label className="text-xs text-slate-400">Amount</label>
+          <label className="text-xs text-slate-400">Amount per Wallet</label>
           <input
             type="number"
             placeholder="Amount"
