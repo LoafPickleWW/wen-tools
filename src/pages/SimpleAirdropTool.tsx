@@ -14,8 +14,8 @@ import { TOOLS } from "../constants";
 
 import InfinityModeComponent from "../components/InfinityModeComponent";
 import { useWallet } from "@txnlab/use-wallet-react";
-import { createArc59GroupTxns } from "../arc59-helpers";
-import algosdk from "algosdk";
+// import { createArc59GroupTxns } from "../arc59-helpers";
+// import algosdk from "algosdk";
 
 export function SimpleAirdropTool() {
   const [creatorWallets, setCreatorWallets] = useState("");
@@ -32,7 +32,7 @@ export function SimpleAirdropTool() {
 
   const [processStep, setProcessStep] = useState(0);
   const [mnemonic, setMnemonic] = useState("");
-  const [assetInbox, setAssetInbox] = useState(false);
+  // const [assetInbox, setAssetInbox] = useState(false);
   const { activeAddress, activeNetwork, algodClient, transactionSigner } =
     useWallet();
 
@@ -241,64 +241,62 @@ export function SimpleAirdropTool() {
         algodClient,
         activeNetwork
       );
-      if (assetInbox) {
-        let mnemonicSigner = null;
-        if (mnemonic !== "") {
-          const privateKey = algosdk.mnemonicToSecretKey(mnemonic);
-          mnemonicSigner =
-            algosdk.makeBasicAccountTransactionSigner(privateKey);
-        }
-        const sender = {
-          addr: activeAddress,
-          signer:
-            mnemonic !== "" && mnemonicSigner !== null
-              ? mnemonicSigner
-              : transactionSigner,
-        };
-        await createArc59GroupTxns(
-          txns,
-          sender,
-          activeAddress,
-          algodClient,
-          activeNetwork
-        );
+      // if (assetInbox) {
+      //   let mnemonicSigner = null;
+      //   if (mnemonic !== "") {
+      //     const privateKey = algosdk.mnemonicToSecretKey(mnemonic);
+      //     mnemonicSigner =
+      //       algosdk.makeBasicAccountTransactionSigner(privateKey);
+      //   }
+      //   const sender = {
+      //     addr: activeAddress,
+      //     signer:
+      //       mnemonic !== "" && mnemonicSigner !== null
+      //         ? mnemonicSigner
+      //         : transactionSigner,
+      //   };
+      //   await createArc59GroupTxns(
+      //     txns,
+      //     sender,
+      //     activeAddress,
+      //     algodClient,
+      //     activeNetwork
+      //   );
+      // } else {
+      let signedTransactions = [];
+      if (mnemonic !== "") {
+        signedTransactions = SignWithMnemonic(txns.flat(), mnemonic);
       } else {
-        let signedTransactions = [];
-        if (mnemonic !== "") {
-          signedTransactions = SignWithMnemonic(txns.flat(), mnemonic);
-        } else {
-          toast.info("Please sign the transactions!");
-          signedTransactions = await walletSign(txns, transactionSigner);
-        }
-        if (signedTransactions.length === 0) {
-          throw Error("Something went wrong while signing transactions!");
-        }
-        setProcessStep(3);
-        for (let i = 0; i < signedTransactions.length; i++) {
-          try {
-            await algodClient.sendRawTransaction(signedTransactions[i]).do();
-            if (i % 5 === 0) {
-              toast.success(
-                `Transaction ${i + 1} of ${
-                  signedTransactions.length
-                } confirmed!`,
-                {
-                  autoClose: 1000,
-                }
-              );
-            }
-          } catch (err) {
-            console.error(err);
-            toast.error(
-              `Transaction ${i + 1} of ${signedTransactions.length} failed!`,
+        toast.info("Please sign the transactions!");
+        signedTransactions = await walletSign(txns, transactionSigner);
+      }
+      if (signedTransactions.length === 0) {
+        throw Error("Something went wrong while signing transactions!");
+      }
+      setProcessStep(3);
+      for (let i = 0; i < signedTransactions.length; i++) {
+        try {
+          await algodClient.sendRawTransaction(signedTransactions[i]).do();
+          if (i % 5 === 0) {
+            toast.success(
+              `Transaction ${i + 1} of ${signedTransactions.length} confirmed!`,
               {
                 autoClose: 1000,
               }
             );
           }
-          await new Promise((resolve) => setTimeout(resolve, 50));
+        } catch (err) {
+          console.error(err);
+          toast.error(
+            `Transaction ${i + 1} of ${signedTransactions.length} failed!`,
+            {
+              autoClose: 1000,
+            }
+          );
         }
+        await new Promise((resolve) => setTimeout(resolve, 50));
       }
+      // }
       setProcessStep(4);
       toast.success("All transactions confirmed!");
       toast.info("You can support by donating :)");
@@ -467,7 +465,7 @@ export function SimpleAirdropTool() {
           </>
         ) : processStep === 2 ? (
           <>
-            <label className="flex flex-row items-center text-slate-400 gap-2">
+            {/* <label className="flex flex-row items-center text-slate-400 gap-2">
               <input
                 type="checkbox"
                 checked={assetInbox}
@@ -480,7 +478,7 @@ export function SimpleAirdropTool() {
             </label>
             <span className="text-sm">
               Asset Inbox Recommended with Infinity Mode
-            </span>
+            </span> */}
             <p className="mt-1 text-slate-200/60 text-sm">
               Transactions created!
             </p>
