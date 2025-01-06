@@ -62,10 +62,17 @@ export function Header() {
         >
         <ListItemButton
           component="a"
+          href="https://discord.com/oauth2/authorize?client_id=1325220652332089435"
+          target="_blank"
+        >
+          <p>wen bot</p>
+        </ListItemButton>
+        <ListItemButton
+          component="a"
           href="https://wallet.wen.tools"
           target="_blank"
         >
-          <p>Wen Wallet</p>
+          <p>wen wallet</p>
         </ListItemButton>
         <ListItemButton
           component="a"
@@ -73,7 +80,7 @@ export function Header() {
           target="_blank"
           className="text-xl flex flex-row items-center gap-1"
         >
-          <p>Wen Swap</p>
+          <p>wen swap</p>
         </ListItemButton>
       </List>
       <ConnectButton />
