@@ -327,7 +327,7 @@ export async function createARC3AssetMintArrayV2(
   return atc;
 }
 
-function getTxnGroupFromATC(atc: algosdk.AtomicTransactionComposer) {
+export function getTxnGroupFromATC(atc: algosdk.AtomicTransactionComposer) {
   const txnsWithSigners = atc.buildGroup();
   return txnsWithSigners.map((txnWithSigner) => txnWithSigner.txn);
 }

@@ -29,7 +29,7 @@ export function SelectToolComponent() {
         {TOOLS.filter((tool) => tool.category === "asset").map((tool) => (
           <div className="w-full rounded-[36px] bg-gradient-to-r from-[#E4E808] to-[#FD941D] hover:bg-none p-1">
             <div
-              className="flex flex-col items-center justify-center rounded-[36px] border-transparent bg-black gap-3 p-8 w-[100%] h-[100%] text-[#FDFDFD] shadow bg-[#000] transition duration-500 ease-in-out hover:text-black hover:bg-gradient-to-r from-[#E4E808] to-[#FD941D] hover:border-2 relative group"
+              className="flex flex-col items-center justify-center rounded-[36px] border-transparent bg-black gap-3 p-8 w-[100%] h-[100%] text-[#FDFDFD] shadow transition duration-500 ease-in-out hover:text-black hover:bg-gradient-to-r from-[#E4E808] to-[#FD941D] hover:border-2 relative group"
               key={tool.id}
             >
               <Link
@@ -56,7 +56,7 @@ export function SelectToolComponent() {
         {TOOLS.filter((tool) => tool.category === "mint").map((tool) => (
           <div className="w-full rounded-[36px] bg-gradient-to-r from-[#E4E808] to-[#FD941D] hover:bg-none p-1">
             <div
-              className="flex flex-col items-center justify-center rounded-[36px] border-transparent bg-black gap-3 p-8 w-[100%] h-[100%] text-[#FDFDFD] shadow bg-[#000] transition duration-500 ease-in-out hover:text-black hover:bg-gradient-to-r from-[#E4E808] to-[#FD941D] hover:border-2 relative group"
+              className="flex flex-col items-center justify-center rounded-[36px] border-transparent bg-black gap-3 p-8 w-[100%] h-[100%] text-[#FDFDFD] shadow transition duration-500 ease-in-out hover:text-black hover:bg-gradient-to-r from-[#E4E808] to-[#FD941D] hover:border-2 relative group"
               key={tool.id}
             >
               <Link
