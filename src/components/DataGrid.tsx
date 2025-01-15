@@ -13,10 +13,10 @@ import Toolbar from "@mui/material/Toolbar";
 import Typography from "@mui/material/Typography";
 import Paper from "@mui/material/Paper";
 import Checkbox from "@mui/material/Checkbox";
-import IconButton from "@mui/material/IconButton";
 import Tooltip from "@mui/material/Tooltip";
 import { visuallyHidden } from "@mui/utils";
 import { HeadCell } from "../types";
+import { Button } from "@mui/material";
 
 interface BaseData {
   id: number;
@@ -166,12 +166,15 @@ function EnhancedTableToolbar<T extends BaseData>(
       {numSelected > 0 &&
         actions.map((action) => (
           <Tooltip title={action.tooltipTitle} key={action.tooltipTitle}>
-            <IconButton
+            <Button
+              className={`${
+                disabled ? "!cursor-not-allowed !text-gray-400" : "!text-primary-orange"
+              }`}
               disabled={disabled}
               onClick={(_) => action.onClick(selected, setDisabled)}
             >
               {action.icon}
-            </IconButton>
+            </Button>
           </Tooltip>
         ))}
     </Toolbar>
