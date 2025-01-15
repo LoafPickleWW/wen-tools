@@ -36,10 +36,11 @@ const fetchNFDVaultAssets = async (nfd: string, activeNetwork: NetworkId) => {
 
   const vaultAddress = data.nfdAccount;
   try {
-    const version = Number(data.properties.internal.ver);
-    if (version < 2.6) {
+    const version = data.properties.internal.ver;
+    const [major, minor] = version.split(".").map(Number);
+    if (major < 2 || (major === 2 && minor < 6)) {
       toast.error(
-        "To Claim NFD vault Assets Please Upgrade Your NFD version  to greater than 2.6"
+        "To Claim NFD vault Assets Please Upgrade Your NFD version to greater than 2.6"
       );
       return [];
     }
