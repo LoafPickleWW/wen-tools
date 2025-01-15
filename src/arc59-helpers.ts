@@ -273,6 +273,10 @@ export const generateARC59ClaimTxns = async (
         assetIndex: Number(assetId),
         amount: 0,
         suggestedParams: await algodClient.getTransactionParams().do(),
+        note: new TextEncoder().encode(
+          "via wen.tools - free tools for creators and collectors | " +
+            Math.random().toString(36).substring(2)
+        ),
       })
     );
   }
@@ -280,8 +284,12 @@ export const generateARC59ClaimTxns = async (
   composer.arc59Claim(
     { asa: assetId },
     {
+      note: new TextEncoder().encode(
+        "via wen.tools - free tools for creators and collectors | " +
+          Math.random().toString(36).substring(2)
+      ),
       boxes: [algosdk.decodeAddress(claimer).publicKey],
-      accounts: [claimer,inboxAddress],
+      accounts: [claimer, inboxAddress],
       assets: [Number(assetId)],
       sendParams: { fee: algokit.microAlgos(1000 * totalTxns) },
     }

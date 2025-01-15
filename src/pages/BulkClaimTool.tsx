@@ -35,6 +35,21 @@ const fetchNFDVaultAssets = async (nfd: string, activeNetwork: NetworkId) => {
   if (!data.nfdAccount) return [];
 
   const vaultAddress = data.nfdAccount;
+  try {
+    const version = data.properties.internal.ver;
+    const [major, minor] = version.split(".").map(Number);
+    if (major < 2 || (major === 2 && minor < 6)) {
+      toast.error(
+        "To Claim NFD vault Assets Please Upgrade Your NFD version to greater than 2.6"
+      );
+      return [];
+    }
+  } catch (error: any) {
+    toast.error(`Error fetching NFD vault assets: ${error.message}`);
+    console.error("Error fetching NFD vault assets:", error);
+    return [];
+  }
+
   const indexerUrl = getIndexerURL(activeNetwork);
   let assets: any[] = [];
   let nextToken = null;
@@ -141,12 +156,18 @@ export const BlukClaimTool = () => {
               receiver: activeAddress,
               receiverType: "account",
               sender: activeAddress,
+              receiverCanSign:true,
+              note:
+                "via wen.tools - free tools for creators and collectors | " +
+                Math.random().toString(36).substring(2),
             }
           );
 
           const txns = JSON.parse(data).map((txn: string[]) =>
             algosdk.decodeUnsignedTransaction(Buffer.from(txn[1], "base64"))
           );
+
+          console.log(txns, "txns",asset.assetId);
 
           return { ...asset, txns };
         }),
