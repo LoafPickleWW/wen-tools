@@ -21,6 +21,8 @@ export const MINT_FEE_WALLET =
 export const MINT_FEE_PER_ASA = 0;
 export const UPDATE_FEE_PER_ASA = 0;
 
+export const ALGORAND_ZERO_ADDRESS = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAY5HFKQ";
+
 export const IPFS_ENDPOINT = "https://ipfs.algonode.dev/ipfs/";
 
 export const CREATOR_WALLETS = [];
@@ -120,7 +122,7 @@ export const TOOLS = [
   {
     id: "simple_send_tool",
     // label: "📨 Simple Send",
-    label: "Simple Send",    
+    label: "Simple Send",
     description:
       "Easily mass send assets to a single or an asset to multiple wallets.",
     path: "/simple-send",
@@ -223,5 +225,13 @@ export const TOOLS = [
     description: "Easily update your Mutable Inscriptions using Pinata",
     path: "/simple-update-classic",
     category: "mint",
+  },
+  {
+    id: "bluk_claim",
+    label: "Bulk Claim",
+    description:
+      "Claim multiple assets from your asset Inbox & NFD vault in one go",
+    path: "/bulk-claim",
+    category: "asset",
   },
 ];

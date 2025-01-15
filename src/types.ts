@@ -27,3 +27,10 @@ export interface Infinity {
   setMnemonic: React.Dispatch<React.SetStateAction<string>>;
   description?: string;
 }
+
+export interface HeadCell {
+  disablePadding: boolean;
+  id: string;
+  label: string;
+  numeric: boolean;
+}

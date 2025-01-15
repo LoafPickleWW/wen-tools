@@ -34,6 +34,7 @@ import { VaultSendTool } from "./pages/VaultSendTool";
 import { SimpleBatchMint } from "./pages/SimpleBatchMint";
 import { SimpleMintClassic } from "./pages/SimpleMintClassic";
 import { SimpleUpdateClassic } from "./pages/SimpleUpdateClassic";
+import { BlukClaimTool } from "./pages/BulkClaimTool";
 import ScrollToTop from "./components/ScrollToTop";
 import { Analytics } from "@vercel/analytics/react";
 
@@ -88,6 +89,7 @@ function App() {
             <Route path="/batch-destroy" element={<BatchDelete />} />
             <Route path="/batch-clawback" element={<BatchClawback />} />
             <Route path="/batch-freeze" element={<BatchFreeze />} />
+            <Route path="/bulk-claim" element={<BlukClaimTool />} />
             <Route
               path="/find-collection-holders"
               element={<CollectionSnapshot />}
