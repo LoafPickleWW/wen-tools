@@ -19,6 +19,8 @@ interface Asset {
   amount: number;
   name: string;
   type: string;
+  orgAmount:number;
+  decimals:number;
   id: number;
 }
 
@@ -80,6 +82,8 @@ const getAssetDetails = async (asset: any, indexerUrl: string) => {
     id: asset.id,
     assetId: asset.assetId,
     amount: asset.amount / 10 ** data.asset.params.decimals,
+    orgAmount:asset.amount,
+    decimals:data.asset.params.decimals,
     name: data.asset.params.name,
     type: asset.type,
   };
@@ -151,7 +155,8 @@ export const BlukClaimTool = () => {
           const { data } = await axios.post(
             `https://api.nf.domains/nfd/vault/sendFrom/${nfd}`,
             {
-              amount: 0,
+              amount: asset.orgAmount,
+              amountStr: asset.orgAmount.toString(),
               assets: [asset.assetId],
               receiver: activeAddress,
               receiverType: "account",
