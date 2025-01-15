@@ -35,6 +35,20 @@ const fetchNFDVaultAssets = async (nfd: string, activeNetwork: NetworkId) => {
   if (!data.nfdAccount) return [];
 
   const vaultAddress = data.nfdAccount;
+  try {
+    const version = Number(data.properties.internal.ver);
+    if (version < 2.6) {
+      toast.error(
+        "To Claim NFD vault Assets Please Upgrade Your NFD version  to greater than 2.6"
+      );
+      return [];
+    }
+  } catch (error: any) {
+    toast.error(`Error fetching NFD vault assets: ${error.message}`);
+    console.error("Error fetching NFD vault assets:", error);
+    return [];
+  }
+
   const indexerUrl = getIndexerURL(activeNetwork);
   let assets: any[] = [];
   let nextToken = null;
@@ -141,6 +155,9 @@ export const BlukClaimTool = () => {
               receiver: activeAddress,
               receiverType: "account",
               sender: activeAddress,
+              note:
+                "via wen.tools - free tools for creators and collectors | " +
+                Math.random().toString(36).substring(2),
             }
           );
 
