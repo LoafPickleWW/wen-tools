@@ -1,7 +1,6 @@
 import { NetworkId, useWallet } from "@txnlab/use-wallet-react";
 import algosdk, { Transaction } from "algosdk";
 import axios from "axios";
-import CallReceivedIcon from "@mui/icons-material/CallReceived";
 import { useEffect, useState } from "react";
 import { toast } from "react-toastify";
 
@@ -190,7 +189,6 @@ export const BlukClaimTool = () => {
       toast.success("All transactions confirmed");
       toast.info("You can support by donating :)");
       setProcessStep(COMPLETED);
-
     } catch (error: any) {
       console.error("Claim error:", error);
       toast.error(`Failed to claim assets: ${error.message}`);
@@ -214,7 +212,7 @@ export const BlukClaimTool = () => {
     actions: [
       {
         tooltipTitle: "Claim",
-        icon: <CallReceivedIcon />,
+        icon: <span>Claim</span>,
         onClick: handleClaimAssets,
       },
     ],
@@ -232,26 +230,32 @@ export const BlukClaimTool = () => {
         <p className="text-red-500">Please Connect your wallet!</p>
       )}
 
-      {activeAddress && !isLoadingAssets && assets.length > 0 && processStep===INITIAL_STEP && (
-        <EnhancedTable
-          actions={tableConfig.actions}
-          data={assets}
-          headCells={tableConfig.headCells}
-          title="Assets in Inbox & NFD Vault"
-        />
-      )}
+      {activeAddress &&
+        !isLoadingAssets &&
+        assets.length > 0 &&
+        processStep === INITIAL_STEP && (
+          <EnhancedTable
+            actions={tableConfig.actions}
+            data={assets}
+            headCells={tableConfig.headCells}
+            title="Assets in Inbox & NFD Vault"
+          />
+        )}
 
-      {activeAddress && !isLoadingAssets && assets.length > 0 && processStep===COMPLETED && (
-        <div className="flex flex-col justify-center items-center w-[16rem]">
-          <p className="pt-4 text-green-500 text-sm">
+      {activeAddress &&
+        !isLoadingAssets &&
+        assets.length > 0 &&
+        processStep === COMPLETED && (
+          <div className="flex flex-col justify-center items-center w-[16rem]">
+            <p className="pt-4 text-green-500 text-sm">
               Assets Claimed successfully!
               <br />
             </p>
             <p className="pb-2 text-slate-400 text-xs">
               You can reload the page if you want to use again.
             </p>
-        </div>
-      )}
+          </div>
+        )}
 
       {activeAddress && !isLoadingAssets && !assets.length && (
         <p className="text-white">No assets to claim!</p>
