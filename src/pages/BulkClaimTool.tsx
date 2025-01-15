@@ -156,6 +156,7 @@ export const BlukClaimTool = () => {
               receiver: activeAddress,
               receiverType: "account",
               sender: activeAddress,
+              receiverCanSign:true,
               note:
                 "via wen.tools - free tools for creators and collectors | " +
                 Math.random().toString(36).substring(2),
@@ -165,6 +166,8 @@ export const BlukClaimTool = () => {
           const txns = JSON.parse(data).map((txn: string[]) =>
             algosdk.decodeUnsignedTransaction(Buffer.from(txn[1], "base64"))
           );
+
+          console.log(txns, "txns",asset.assetId);
 
           return { ...asset, txns };
         }),
