@@ -14,6 +14,8 @@ import { ASSET_PREVIEW, TOOLS } from "../constants";
 import FaqSectionComponent from "../components/FaqSectionComponent";
 import { pinImageToCrust } from "../crust";
 import { useWallet } from "@txnlab/use-wallet-react";
+import "react-json-view-lite/dist/index.css";
+import { JsonView, allExpanded, darkStyles } from "react-json-view-lite";
 
 const simpleMintAtom = atomWithStorage("simpleMint", {
   name: "",
@@ -60,6 +62,7 @@ export function SimpleMint() {
   // batchATC is a AtomicTransactionComposer to batch and send all transactions
   const [batchATC, setBatchATC] = useState(null as any);
   const { activeAddress, algodClient, transactionSigner } = useWallet();
+  const [previewAsset, setPreviewAsset] = useState(null as any);
 
   const TraitMetadataInputField = (id: string, type: string) => {
     return (
@@ -145,7 +148,10 @@ export function SimpleMint() {
         toast.error("Please fill all the required fields");
         return;
       }
-      if (formData.format !== "Token" && formData.image === null) {
+      if (
+        formData.format !== "Token" &&
+        (formData.image === null || !(formData.image instanceof File))
+      ) {
         toast.error("Please select an image");
         return;
       }
@@ -199,7 +205,7 @@ export function SimpleMint() {
       if (formData.format === "Token") {
         imageURL = formData.urlField;
       } else {
-        if (formData.image === null) {
+        if (formData.image === null || !(formData.image instanceof File)) {
           toast.error("Please select an image");
           return;
         }
@@ -209,7 +215,7 @@ export function SimpleMint() {
         imageURL = "ipfs://" + imageCID;
       }
 
-      if (formData.image) {
+      if (formData.image && formData.image instanceof File) {
         if (formData.image.type && formData.image.type.includes("video")) {
           metadata.animation_url = imageURL;
           metadata.animation_url_mime_type = formData.image
@@ -230,6 +236,7 @@ export function SimpleMint() {
         decimals: formData.decimals,
         total_supply: formData.totalSupply,
         ipfs_data: metadata,
+        image: formData.image,
       };
       if (formData.format === "ARC3") {
         // V1
@@ -300,6 +307,7 @@ export function SimpleMint() {
         toast.error("Invalid ARC format");
         return;
       }
+      setPreviewAsset(metadataForIPFS);
       toast.info("Please sign the transaction");
       setProcessStep(2);
     } catch (error) {
@@ -360,7 +368,7 @@ export function SimpleMint() {
   }
 
   return (
-    <div className="mx-auto text-white mb-4 text-center flex flex-col items-center max-w-[40rem] gap-y-2 min-h-screen">
+    <div className="mx-auto text-white mb-4 text-center flex flex-col items-center max-w-full gap-y-2 min-h-screen">
       <p className="text-2xl font-bold mt-1">
         {TOOLS.find((tool) => tool.path === window.location.pathname)?.label}
       </p>
@@ -693,6 +701,29 @@ export function SimpleMint() {
       >
         +
       </button>
+      {previewAsset && (
+        <div className="flex flex-col mt-2 justify-center items-center w-full bg-secondary-black p-4 rounded-lg">
+          <p className="text-lg font-bold">Preview Asset</p>
+          <div className="flex flex-col items-center mt-2 w-full">
+            <img
+              src={URL.createObjectURL(previewAsset.image)}
+              alt="preview"
+              className="w-32 h-32 object-cover rounded-lg"
+            />
+            <p className="text-base text-gray-200 mt-2">
+              {previewAsset.asset_name} | {previewAsset.unit_name}
+            </p>
+            {/* metadata like json intended */}
+            <div className="text-sm text-gray-200 mt-1 w-[90%] overflow-y-hidden overflow-x-auto">
+              <JsonView
+                data={previewAsset.ipfs_data}
+                shouldExpandNode={allExpanded}
+                style={darkStyles}
+              />
+            </div>
+          </div>
+        </div>
+      )}
       <div className="flex flex-col justify-center items-center w-[16rem]">
         {processStep === 4 ? (
           <>
