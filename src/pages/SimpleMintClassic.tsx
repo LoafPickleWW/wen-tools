@@ -16,8 +16,6 @@ import {
 import { ASSET_PREVIEW, TOOLS } from "../constants";
 import FaqSectionComponent from "../components/FaqSectionComponent";
 import { useWallet } from "@txnlab/use-wallet-react";
-import "react-json-view-lite/dist/index.css";
-import { JsonView, allExpanded, darkStyles } from "react-json-view-lite";
 
 const simpleMintClassicAtom = atomWithStorage("simpleMintClassic", {
   name: "",
@@ -63,7 +61,6 @@ export function SimpleMintClassic() {
   const [transaction, setTransaction] = useState(null as any);
   const [createdAssetID, setCreatedAssetID] = useState(null);
   const { activeAddress, algodClient, transactionSigner } = useWallet();
-  const [previewAsset, setPreviewAsset] = useState(null as any);
 
   const TraitMetadataInputField = (id: string, type: string) => {
     return (
@@ -150,10 +147,7 @@ export function SimpleMintClassic() {
         toast.error("Please fill all the required fields");
         return;
       }
-      if (
-        formData.format !== "Token" &&
-        (formData.image === null || !(formData.image instanceof File))
-      ) {
+      if (formData.format !== "Token" && formData.image === null) {
         toast.error("Please select an image");
         return;
       }
@@ -206,7 +200,7 @@ export function SimpleMintClassic() {
       if (formData.format === "Token") {
         imageURL = formData.urlField;
       } else {
-        if (formData.image === null || !(formData.image instanceof File)) {
+        if (formData.image === null) {
           toast.error("Please select an image");
           return;
         }
@@ -214,7 +208,7 @@ export function SimpleMintClassic() {
         imageURL = "ipfs://" + (await pinImageToPinata(token, formData.image));
       }
 
-      if (formData.image && formData.image instanceof File) {
+      if (formData.image) {
         if (formData.image.type.includes("video")) {
           metadata.animation_url = imageURL;
           metadata.animation_url_mime_type = formData.image
@@ -235,7 +229,6 @@ export function SimpleMintClassic() {
         decimals: formData.decimals,
         total_supply: formData.totalSupply,
         ipfs_data: metadata,
-        image: formData.image,
       };
       let unsignedAssetTransaction;
       if (formData.format === "ARC3") {
@@ -272,7 +265,6 @@ export function SimpleMintClassic() {
         toast.error("Something went wrong while creating transactions");
         return;
       }
-      setPreviewAsset(metadataForIPFS);
       setTransaction(unsignedAssetTransaction);
       toast.info("Please sign the transaction");
       setProcessStep(2);
@@ -324,7 +316,7 @@ export function SimpleMintClassic() {
   }
 
   return (
-    <div className="mx-auto text-white mb-4 text-center flex flex-col items-center max-w-full gap-y-2 min-h-screen">
+    <div className="mx-auto text-white mb-4 text-center flex flex-col items-center max-w-[40rem] gap-y-2 min-h-screen">
       <p className="text-2xl font-bold mt-1">
         {TOOLS.find((tool) => tool.path === window.location.pathname)?.label}
       </p>
@@ -681,29 +673,6 @@ export function SimpleMintClassic() {
           </a>
         </p>
       </div>
-      {previewAsset && (
-        <div className="flex flex-col mt-2 justify-center items-center w-full bg-secondary-black p-4 rounded-lg">
-          <p className="text-lg font-bold">Preview Asset</p>
-          <div className="flex flex-col items-center mt-2 w-full">
-            <img
-              src={URL.createObjectURL(previewAsset.image)}
-              alt="preview"
-              className="w-32 h-32 object-cover rounded-lg"
-            />
-            <p className="text-base text-gray-200 mt-2">
-              {previewAsset.asset_name} | {previewAsset.unit_name}
-            </p>
-            {/* metadata like json intended */}
-            <div className="text-sm text-gray-200 mt-1 w-[90%] overflow-y-hidden overflow-x-auto">
-              <JsonView
-                data={previewAsset.ipfs_data}
-                shouldExpandNode={allExpanded}
-                style={darkStyles}
-              />
-            </div>
-          </div>
-        </div>
-      )}
       <div className="flex flex-col justify-center items-center w-[16rem]">
         {processStep === 4 ? (
           <>

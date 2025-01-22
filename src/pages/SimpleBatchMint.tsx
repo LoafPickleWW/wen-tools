@@ -17,8 +17,6 @@ import InfinityModeComponent from "../components/InfinityModeComponent";
 import FaqSectionComponent from "../components/FaqSectionComponent";
 import { isCrustAuth } from "../crust-auth";
 import { useWallet } from "@txnlab/use-wallet-react";
-import "react-json-view-lite/dist/index.css";
-import { JsonView, allExpanded, darkStyles } from "react-json-view-lite";
 
 export function SimpleBatchMint() {
   const START_PROCESS = 0;
@@ -417,7 +415,7 @@ export function SimpleBatchMint() {
   }
 
   return (
-    <div className="mx-auto text-white mb-4 text-center flex flex-col items-center max-w-full gap-y-2 min-h-screen">
+    <div className="mx-auto text-white mb-4 text-center flex flex-col items-center max-w-[40rem] gap-y-2 min-h-screen">
       <p className="text-2xl font-bold mt-1">
         {TOOLS.find((tool) => tool.path === window.location.pathname)?.label}
       </p>
@@ -702,9 +700,9 @@ export function SimpleBatchMint() {
         })}
       </div>
       {previewAsset && (
-        <div className="flex flex-col mt-2 justify-center items-center w-full bg-secondary-black p-4 rounded-lg">
+        <div className="flex flex-col mt-2 justify-center items-center w-[16rem] bg-secondary-black p-4 rounded-lg">
           <p className="text-lg font-bold">Preview Asset</p>
-          <div className="flex flex-col items-center mt-2 w-full">
+          <div className="flex flex-col items-center mt-2">
             <img
               src={previewAsset.ipfs_data.image.replace(
                 "ipfs://",
@@ -717,13 +715,9 @@ export function SimpleBatchMint() {
               {previewAsset.asset_name} | {previewAsset.unit_name}
             </p>
             {/* metadata like json intended */}
-            <div className="text-sm text-gray-200 mt-1 w-[90%] overflow-y-hidden overflow-x-auto">
-              <JsonView
-                data={previewAsset.ipfs_data}
-                shouldExpandNode={allExpanded}
-                style={darkStyles}
-              />
-            </div>
+            <p className="text-sm text-gray-200 mt-1 w-48 overflow-x-auto">
+              {JSON.stringify(previewAsset.ipfs_data, null, 2)}
+            </p>
           </div>
         </div>
       )}
