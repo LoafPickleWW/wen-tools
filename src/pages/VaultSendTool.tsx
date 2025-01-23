@@ -128,8 +128,7 @@ export function VaultSendTool() {
         assets: [Number(assetID)],
         note:
           note.trim() ??
-          "via Thurstober Digital Studios | " +
-            Math.random().toString(36).substring(2),
+          "via wen.tools | " + Math.random().toString(36).substring(2),
         optInOnly: false,
         sender: activeAddress,
       };
@@ -163,9 +162,11 @@ export function VaultSendTool() {
           );
           const transactionsArray = JSON.parse(response.data);
           unsignedTransactions.push(
-            encodeNFDTransactionsArray(transactionsArray).map((a) =>
-              algosdk.decodeUnsignedTransaction(a)
-            )
+            encodeNFDTransactionsArray(transactionsArray).map((a) => {
+              const uTxn = algosdk.decodeUnsignedTransaction(a);
+              uTxn.lastRound = uTxn.lastRound + 900;
+              return uTxn;
+            })
           );
           if (i % 50 === 0 && i !== 0) {
             toast.info(
@@ -245,8 +246,8 @@ export function VaultSendTool() {
               }
             );
           }
-        } catch (err) {
-          console.error(err);
+        } catch (err: any) {
+          console.log(err.message);
           toast.error(
             `Transaction ${i + 1} of ${signedTransactions.length} failed!`,
             {
