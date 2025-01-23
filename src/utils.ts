@@ -800,9 +800,13 @@ export async function updateARC19AssetMintArrayV2(
   // extra pinning
   if (extraPinCids) {
     for (let i = 0; i < extraPinCids.length; i++) {
-      atc.addMethodCall(
-        await makeCrustPinTx(extraPinCids[i], txSigner, address, algodClient)
+      const pinTxn = await makeCrustPinTx(
+        extraPinCids[i],
+        txSigner,
+        address,
+        algodClient
       );
+      atc.addMethodCall(pinTxn);
     }
   }
 
