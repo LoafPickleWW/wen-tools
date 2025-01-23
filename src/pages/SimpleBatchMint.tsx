@@ -18,7 +18,7 @@ import FaqSectionComponent from "../components/FaqSectionComponent";
 import { isCrustAuth } from "../crust-auth";
 import { useWallet } from "@txnlab/use-wallet-react";
 import "react-json-view-lite/dist/index.css";
-import { JsonView, allExpanded, darkStyles } from "react-json-view-lite";
+import { PreviewAssetComponent } from "../components/PreviewAssetComponent";
 
 export function SimpleBatchMint() {
   const START_PROCESS = 0;
@@ -702,30 +702,13 @@ export function SimpleBatchMint() {
         })}
       </div>
       {previewAsset && (
-        <div className="flex flex-col mt-2 justify-center items-center w-full bg-secondary-black p-4 rounded-lg">
-          <p className="text-lg font-bold">Preview Asset</p>
-          <div className="flex flex-col items-center mt-2 w-full">
-            <img
-              src={previewAsset.ipfs_data.image.replace(
-                "ipfs://",
-                IPFS_ENDPOINT
-              )}
-              alt="preview"
-              className="w-32 h-32 object-cover rounded-lg"
-            />
-            <p className="text-base text-gray-200 mt-2">
-              {previewAsset.asset_name} | {previewAsset.unit_name}
-            </p>
-            {/* metadata like json intended */}
-            <div className="text-sm text-gray-200 mt-1 w-[90%] overflow-y-hidden overflow-x-auto">
-              <JsonView
-                data={previewAsset.ipfs_data}
-                shouldExpandNode={allExpanded}
-                style={darkStyles}
-              />
-            </div>
-          </div>
-        </div>
+        <PreviewAssetComponent
+          imageUrl={previewAsset.ipfs_data.image.replace(
+            "ipfs://",
+            IPFS_ENDPOINT
+          )}
+          previewAsset={previewAsset}
+        />
       )}
       <div className="flex flex-col justify-center items-center w-[16rem]">
         {processStep === COMPLETED ? (
