@@ -17,7 +17,7 @@ import {
 import { TOOLS, IPFS_ENDPOINT, ASSET_PREVIEW } from "../constants";
 import { useWallet } from "@txnlab/use-wallet-react";
 import "react-json-view-lite/dist/index.css";
-import { JsonView, allExpanded, darkStyles } from "react-json-view-lite";
+import { PreviewAssetComponent } from "../components/PreviewAssetComponent";
 
 const simpleUpdateAtom = atomWithStorage("simpleUpdate", {
   name: "",
@@ -751,34 +751,17 @@ export function SimpleUpdateClassic() {
                 </div>
               )}
               {previewAsset && (
-                <div className="flex flex-col mt-2 justify-center items-center w-full bg-secondary-black p-4 rounded-lg">
-                  <p className="text-lg font-bold">Preview Asset</p>
-                  <div className="flex flex-col items-center mt-2 w-full">
-                    <img
-                      src={
-                        previewAsset.image
-                          ? URL.createObjectURL(previewAsset.image)
-                          : previewAsset.ipfs_data.image.replace(
-                              "ipfs://",
-                              IPFS_ENDPOINT
-                            )
-                      }
-                      alt="preview"
-                      className="w-32 h-32 object-cover rounded-lg"
-                    />
-                    <p className="text-base text-gray-200 mt-2">
-                      {previewAsset.asset_name} | {previewAsset.unit_name}
-                    </p>
-                    {/* metadata like json intended */}
-                    <div className="text-sm text-gray-200 mt-1 w-[90%] overflow-y-hidden overflow-x-auto">
-                      <JsonView
-                        data={previewAsset.ipfs_data}
-                        shouldExpandNode={allExpanded}
-                        style={darkStyles}
-                      />
-                    </div>
-                  </div>
-                </div>
+                <PreviewAssetComponent
+                  imageUrl={
+                    previewAsset.image
+                      ? URL.createObjectURL(previewAsset.image)
+                      : previewAsset.ipfs_data.image.replace(
+                          "ipfs://",
+                          IPFS_ENDPOINT
+                        )
+                  }
+                  previewAsset={previewAsset}
+                />
               )}
               <div className="flex flex-col justify-center items-center w-[16rem]">
                 {processStep === 4 ? (
