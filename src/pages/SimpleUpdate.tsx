@@ -758,10 +758,12 @@ export function SimpleUpdate() {
                   imageUrl={
                     previewAsset.image
                       ? URL.createObjectURL(previewAsset.image)
-                      : previewAsset.ipfs_data.image.replace(
+                      : previewAsset.ipfs_data.image
+                      ? previewAsset.ipfs_data.image.replace(
                           "ipfs://",
                           IPFS_ENDPOINT
                         )
+                      : ""
                   }
                   previewAsset={previewAsset}
                 />

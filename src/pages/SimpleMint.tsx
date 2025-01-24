@@ -227,6 +227,15 @@ export function SimpleMint() {
         }
       }
 
+      let imageURLForPreview ;
+
+      try{
+        imageURLForPreview = URL.createObjectURL(formData.image);
+      }catch(e){
+        imageURLForPreview = "";
+        console.error(e);
+      }
+
       let metadataForIPFS: any = {
         asset_name: formData.name,
         unit_name: formData.unitName,
@@ -236,7 +245,7 @@ export function SimpleMint() {
         decimals: formData.decimals,
         total_supply: formData.totalSupply,
         ipfs_data: metadata,
-        image: formData.image,
+        image: imageURLForPreview,
       };
       if (formData.format === "ARC3") {
         // V1
@@ -703,7 +712,7 @@ export function SimpleMint() {
       </button>
       {previewAsset && (
         <PreviewAssetComponent
-          imageUrl={URL.createObjectURL(previewAsset.image)}
+          imageUrl={previewAsset.image}
           previewAsset={previewAsset}
         />
       )}
