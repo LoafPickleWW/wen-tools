@@ -14,6 +14,8 @@ import { ASSET_PREVIEW, TOOLS } from "../constants";
 import FaqSectionComponent from "../components/FaqSectionComponent";
 import { pinImageToCrust } from "../crust";
 import { useWallet } from "@txnlab/use-wallet-react";
+import "react-json-view-lite/dist/index.css";
+import { PreviewAssetComponent } from "../components/PreviewAssetComponent";
 
 const simpleMintAtom = atomWithStorage("simpleMint", {
   name: "",
@@ -60,6 +62,7 @@ export function SimpleMint() {
   // batchATC is a AtomicTransactionComposer to batch and send all transactions
   const [batchATC, setBatchATC] = useState(null as any);
   const { activeAddress, algodClient, transactionSigner } = useWallet();
+  const [previewAsset, setPreviewAsset] = useState(null as any);
 
   const TraitMetadataInputField = (id: string, type: string) => {
     return (
@@ -145,7 +148,10 @@ export function SimpleMint() {
         toast.error("Please fill all the required fields");
         return;
       }
-      if (formData.format !== "Token" && formData.image === null) {
+      if (
+        formData.format !== "Token" &&
+        (formData.image === null || !(formData.image instanceof File))
+      ) {
         toast.error("Please select an image");
         return;
       }
@@ -199,7 +205,7 @@ export function SimpleMint() {
       if (formData.format === "Token") {
         imageURL = formData.urlField;
       } else {
-        if (formData.image === null) {
+        if (formData.image === null || !(formData.image instanceof File)) {
           toast.error("Please select an image");
           return;
         }
@@ -209,7 +215,7 @@ export function SimpleMint() {
         imageURL = "ipfs://" + imageCID;
       }
 
-      if (formData.image) {
+      if (formData.image && formData.image instanceof File) {
         if (formData.image.type && formData.image.type.includes("video")) {
           metadata.animation_url = imageURL;
           metadata.animation_url_mime_type = formData.image
@@ -221,6 +227,15 @@ export function SimpleMint() {
         }
       }
 
+      let imageURLForPreview ;
+
+      try{
+        imageURLForPreview = URL.createObjectURL(formData.image);
+      }catch(e){
+        imageURLForPreview = "";
+        console.error(e);
+      }
+
       let metadataForIPFS: any = {
         asset_name: formData.name,
         unit_name: formData.unitName,
@@ -230,6 +245,7 @@ export function SimpleMint() {
         decimals: formData.decimals,
         total_supply: formData.totalSupply,
         ipfs_data: metadata,
+        image: imageURLForPreview,
       };
       if (formData.format === "ARC3") {
         // V1
@@ -300,6 +316,7 @@ export function SimpleMint() {
         toast.error("Invalid ARC format");
         return;
       }
+      setPreviewAsset(metadataForIPFS);
       toast.info("Please sign the transaction");
       setProcessStep(2);
     } catch (error) {
@@ -360,7 +377,7 @@ export function SimpleMint() {
   }
 
   return (
-    <div className="mx-auto text-white mb-4 text-center flex flex-col items-center max-w-[40rem] gap-y-2 min-h-screen">
+    <div className="mx-auto text-white mb-4 text-center flex flex-col items-center max-w-full gap-y-2 min-h-screen">
       <p className="text-2xl font-bold mt-1">
         {TOOLS.find((tool) => tool.path === window.location.pathname)?.label}
       </p>
@@ -693,6 +710,12 @@ export function SimpleMint() {
       >
         +
       </button>
+      {previewAsset && (
+        <PreviewAssetComponent
+          imageUrl={previewAsset.image}
+          previewAsset={previewAsset}
+        />
+      )}
       <div className="flex flex-col justify-center items-center w-[16rem]">
         {processStep === 4 ? (
           <>

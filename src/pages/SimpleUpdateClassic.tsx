@@ -16,6 +16,8 @@ import {
 } from "../utils";
 import { TOOLS, IPFS_ENDPOINT, ASSET_PREVIEW } from "../constants";
 import { useWallet } from "@txnlab/use-wallet-react";
+import "react-json-view-lite/dist/index.css";
+import { PreviewAssetComponent } from "../components/PreviewAssetComponent";
 
 const simpleUpdateAtom = atomWithStorage("simpleUpdate", {
   name: "",
@@ -42,6 +44,7 @@ export function SimpleUpdateClassic() {
   const [token, setToken] = useAtom(suTokenAtom);
   const [processStep, setProcessStep] = useState(0);
   const [transaction, setTransaction] = useState(null as any);
+  const [previewAsset, setPreviewAsset] = useState(null as any);
   const [assetID, setAssetID] = useAtom(suAssetIdAtom);
   const navigate = useNavigate();
   const { activeAddress, activeNetwork, algodClient, transactionSigner } =
@@ -303,11 +306,19 @@ export function SimpleUpdateClassic() {
         );
       }
 
-      if (formData.image && formData.format === "ARC19") {
+      if (
+        formData.image &&
+        formData.image instanceof File &&
+        formData.format === "ARC19"
+      ) {
         toast.info("Uploading the image to IPFS...");
         const imageURL =
           "ipfs://" + (await pinImageToPinata(token, formData.image));
-        if (formData.image && formData.image.type.includes("video")) {
+        if (
+          formData.image &&
+          formData.image instanceof File &&
+          formData.image.type.includes("video")
+        ) {
           metadata.animation_url = imageURL;
           metadata.animation_mime_type = formData.image
             ? formData.image.type
@@ -332,6 +343,8 @@ export function SimpleUpdateClassic() {
           metadata.animation_mime_type = formData.animation_mime_type;
         }
       }
+
+      let ipfs_data;
       if (formData.format === "ARC19") {
         const transaction_data = {
           asset_id: assetID,
@@ -339,6 +352,7 @@ export function SimpleUpdateClassic() {
           freeze: formData.freeze,
           clawback: formData.clawback,
         };
+        ipfs_data = metadata;
         const unsignedAssetTransactions = await updateARC19AssetMintArray(
           [transaction_data],
           activeAddress,
@@ -358,6 +372,7 @@ export function SimpleUpdateClassic() {
           freeze: formData.freeze,
           clawback: formData.clawback,
         };
+        ipfs_data = metadata;
         const signedTransactions = await createAssetConfigArray(
           [transaction_data],
           activeAddress,
@@ -368,6 +383,12 @@ export function SimpleUpdateClassic() {
         throw Error("ARC3 assets can't be updated");
       }
       toast.info("Please sign the transaction");
+      setPreviewAsset({
+        ipfs_data,
+        asset_name: formData.name,
+        unit_name: formData.unitName,
+        image: formData.image instanceof File ? formData.image : null,
+      });
       setProcessStep(2);
     } catch (error) {
       console.log(error);
@@ -415,7 +436,7 @@ export function SimpleUpdateClassic() {
   }
 
   return (
-    <div className="mx-auto text-white mb-4 text-center flex flex-col items-center max-w-[40rem] gap-y-2 min-h-screen">
+    <div className="mx-auto text-white mb-4 text-center flex flex-col items-center max-w-full gap-y-2 min-h-screen">
       <p className="text-2xl font-bold mt-1">
         {TOOLS.find((tool) => tool.path === window.location.pathname)?.label}
       </p>
@@ -728,6 +749,21 @@ export function SimpleUpdateClassic() {
                     </a>
                   </p>{" "}
                 </div>
+              )}
+              {previewAsset && (
+                <PreviewAssetComponent
+                  imageUrl={
+                    previewAsset.image
+                      ? URL.createObjectURL(previewAsset.image)
+                      : previewAsset.ipfs_data.image
+                      ? previewAsset.ipfs_data.image.replace(
+                          "ipfs://",
+                          IPFS_ENDPOINT
+                        )
+                      : ""
+                  }
+                  previewAsset={previewAsset}
+                />
               )}
               <div className="flex flex-col justify-center items-center w-[16rem]">
                 {processStep === 4 ? (
