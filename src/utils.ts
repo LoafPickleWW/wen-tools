@@ -39,6 +39,7 @@ import {
   pinJSONToCrust,
 } from "./crust";
 import { NetworkId } from "@txnlab/use-wallet-react";
+import * as algokit from "@algorandfoundation/algokit-utils";
 
 export const peraWallet = new PeraWalletConnect({
   shouldShowSignTxnToast: true,
@@ -1580,3 +1581,89 @@ export async function getAssetDecimals(
     );
   }
 }
+
+export function formatWithCommas(input: number): string {
+  if (isNaN(input)) {
+    return input.toString();
+  }
+  return input.toLocaleString("en-US");
+}
+
+export const formatNumber = (num: number) => {
+  const fullNumber = num.toLocaleString(); // Full number with commas
+  const suffixes = ["", "", "M", "B", "T", "Q", "Qi", "Sx"]; // Start suffix from 'M'
+  let index = 0;
+
+  // Skip formatting for numbers less than 1 million
+  if (num < 1_000_000) {
+    return fullNumber;
+  }
+
+  while (num >= 1000 && index < suffixes.length - 1) {
+    num /= 1000;
+    index++;
+  }
+
+  const rounded = parseFloat(num.toFixed(2)); // Round to 2 decimal places
+  const display =
+    rounded % 1 === 0
+      ? `${Math.floor(rounded)} ${suffixes[index]}`
+      : `${rounded} ${suffixes[index]}`;
+
+  return display;
+};
+
+export const formatAddress = (address: string) => {
+  return `${address.slice(0, 6)}...${address.slice(-6)}`;
+};
+
+export function base64ToUint8Array(base64: string) {
+  const binaryString = atob(base64); // Decode the Base64 string to binary
+  const length = binaryString.length;
+  const bytes = new Uint8Array(length);
+
+  for (let i = 0; i < length; i++) {
+    bytes[i] = binaryString.charCodeAt(i);
+  }
+
+  return bytes;
+}
+
+export const stringToBase64 = (input: string): string => {
+  const encoder = new TextEncoder();
+  const bytes = encoder.encode(input);
+  return btoa(String.fromCharCode(...bytes));
+};
+
+export const base64ToString = (input: string): string => {
+  const binary = atob(input);
+  const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
+  const decoder = new TextDecoder();
+  return decoder.decode(bytes);
+};
+
+export const hexToString = (hex: string): string => {
+  hex = hex.replace(/^0x/, "");
+  return Buffer.from(hex, "hex").toString("utf8");
+};
+
+export const stringToHex = (str: string): string => {
+  return `0x${Buffer.from(str).toString("hex")}`;
+};
+
+export const getAssetHolding = async (
+  address: string,
+  algorand: algokit.AlgorandClient,
+  assetId: number
+) => {
+  try {
+    const res = await algorand.asset.getAccountInformation(
+      address,
+      BigInt(assetId)
+    );
+    return Number(res.balance);
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  } catch (_: any) {
+    return -1;
+  }
+};
