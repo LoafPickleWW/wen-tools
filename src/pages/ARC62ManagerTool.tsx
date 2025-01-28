@@ -456,16 +456,28 @@ export const ARC62ManagerTool = () => {
           args: { address: label1, label: assetData.arc62Data.label1.key },
           assetReferences: [BigInt(assetData.assetId)],
           accountReferences: [label1],
+          note: new TextEncoder().encode(
+            "via wen.tools - free tools for creators and collectors | " +
+              Math.random().toString(36).substring(2)
+          ),
         })
         .setNotCirculatingAddress({
           args: { address: label2, label: assetData.arc62Data.label2.key },
           assetReferences: [BigInt(assetData.assetId)],
           accountReferences: [label2],
+          note: new TextEncoder().encode(
+            "via wen.tools - free tools for creators and collectors | " +
+              Math.random().toString(36).substring(2)
+          ),
         })
         .setNotCirculatingAddress({
           args: { address: label3, label: assetData.arc62Data.label3.key },
           assetReferences: [BigInt(assetData.assetId)],
           accountReferences: [label3],
+          note: new TextEncoder().encode(
+            "via wen.tools - free tools for creators and collectors | " +
+              Math.random().toString(36).substring(2)
+          ),
         })
         .send({});
 
@@ -601,6 +613,10 @@ export const ARC62ManagerTool = () => {
         .setAsset({
           args: { assetId: BigInt(assetId) },
           assetReferences: [BigInt(assetId)],
+          note: new TextEncoder().encode(
+            "via wen.tools - free tools for creators and collectors | " +
+              Math.random().toString(36).substring(2)
+          ),
         })
         .addTransaction(
           algosdk.makeAssetConfigTxnWithSuggestedParamsFromObject({
@@ -624,6 +640,10 @@ export const ARC62ManagerTool = () => {
           args: { address: newLabelForm.value1, label: newLabelForm.key1 },
           assetReferences: [BigInt(assetId)],
           accountReferences: [newLabelForm.value1],
+          note: new TextEncoder().encode(
+            "via wen.tools - free tools for creators and collectors | " +
+              Math.random().toString(36).substring(2)
+          ),
         });
       }
       if (newLabelForm.value2 !== "") {
@@ -631,6 +651,10 @@ export const ARC62ManagerTool = () => {
           args: { address: newLabelForm.value2, label: newLabelForm.key2 },
           assetReferences: [BigInt(assetId)],
           accountReferences: [newLabelForm.value2],
+          note: new TextEncoder().encode(
+            "via wen.tools - free tools for creators and collectors | " +
+              Math.random().toString(36).substring(2)
+          ),
         });
       }
       if (newLabelForm.value3 !== "") {
@@ -638,6 +662,10 @@ export const ARC62ManagerTool = () => {
           args: { address: newLabelForm.value3, label: newLabelForm.key3 },
           assetReferences: [BigInt(assetId)],
           accountReferences: [newLabelForm.value3],
+          note: new TextEncoder().encode(
+            "via wen.tools - free tools for creators and collectors | " +
+              Math.random().toString(36).substring(2)
+          ),
         });
       }
 
@@ -973,6 +1001,9 @@ export const ARC62ManagerTool = () => {
                 }`}
               >
                 Set Up {assetData.isArc62 ? "New" : ""} ARC62 App
+              </p>
+              <p className="text-sm text-gray-200 mt-2">
+                This will create a new ARC62 application with the given labels, will replace existing app if already created.
               </p>
               <div className="mt-4 md:flex items-center text-start gap-x-4">
                 {[1, 2, 3].map((num) => (
