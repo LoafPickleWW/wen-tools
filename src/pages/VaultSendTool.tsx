@@ -119,9 +119,8 @@ export function VaultSendTool() {
       } else if (domains.length === 0) {
         throw Error("Please enter at least one domain!");
       }
-
       const decimals = await getAssetDecimals(Number(assetID), algodClient);
-      if (!decimals) throw Error("Invalid Asset");
+      if (decimals === undefined) throw Error("Invalid Asset");
 
       const body = {
         amount: Number(amount) * 10 ** Number(decimals),
