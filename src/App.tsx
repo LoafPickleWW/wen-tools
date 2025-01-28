@@ -37,6 +37,7 @@ import { SimpleUpdateClassic } from "./pages/SimpleUpdateClassic";
 import { BlukClaimTool } from "./pages/BulkClaimTool";
 import ScrollToTop from "./components/ScrollToTop";
 import { Analytics } from "@vercel/analytics/react";
+import { ARC62ManagerTool } from "./pages/ARC62ManagerTool";
 
 const walletManager = new WalletManager({
   wallets: [
@@ -90,6 +91,7 @@ function App() {
             <Route path="/batch-clawback" element={<BatchClawback />} />
             <Route path="/batch-freeze" element={<BatchFreeze />} />
             <Route path="/bulk-claim" element={<BlukClaimTool />} />
+            <Route path="/token-manager" element={<ARC62ManagerTool />} />
             <Route
               path="/find-collection-holders"
               element={<CollectionSnapshot />}

@@ -234,4 +234,12 @@ export const TOOLS = [
     path: "/bulk-claim",
     category: "asset",
   },
+  {
+    id: "token_manager",
+    label: "Token Manager",
+    description:
+      "Set and manage your token's circulation supply using the ARC62 Standard",
+    path: "/token-manager",
+    category: "asset",
+  },
 ];

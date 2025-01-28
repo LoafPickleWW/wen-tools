@@ -226,7 +226,7 @@ export const generateARC59ClaimTxns = async (
   // Check if the claimer has opted in to the asset
   let claimerOptedIn = false;
   try {
-    await algorand.account.getAssetInformation(claimer, assetId);
+    await algorand.asset.getAccountInformation(claimer,assetId);
     claimerOptedIn = true;
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
   } catch (_: any) {
