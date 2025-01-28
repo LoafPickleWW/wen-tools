@@ -83,7 +83,7 @@ export function VaultSendTool() {
       }
     });
     const total = result.data.total;
-    if (total >= 10 && mnemonic === "") {
+    if (total >= 250 && mnemonic === "") {
       throw Error(`Please enter your mnemonics to continue to process`);
     }
     while (offset < total) {
