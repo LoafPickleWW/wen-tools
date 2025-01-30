@@ -1,5 +1,5 @@
 import { useState } from "react";
-import algosdk from "algosdk";
+import algosdk, { Transaction } from "algosdk";
 import { toast } from "react-toastify";
 import {
   getAssetDecimals,
@@ -148,7 +148,7 @@ export function VaultSendTool() {
       }
       setProcessStep(CREATE_TRANSACTIONS_PROCESS);
 
-      const unsignedTransactions = [];
+      let unsignedTransactions: Transaction[][] = [];
       toast.info(`Creating transactions for ${receiverDomains.length} domains`);
       const nfdomainApiUrl = getNfdomainAPIURL(activeNetwork);
       for (let i = 0; i < receiverDomains.length; i++) {
@@ -164,6 +164,7 @@ export function VaultSendTool() {
             encodeNFDTransactionsArray(transactionsArray).map((a) => {
               const uTxn = algosdk.decodeUnsignedTransaction(a);
               uTxn.lastRound = uTxn.lastRound + 900;
+              uTxn.group = undefined;
               return uTxn;
             })
           );
@@ -179,7 +180,12 @@ export function VaultSendTool() {
           );
         }
       }
+      console.log(unsignedTransactions)
+      unsignedTransactions = unsignedTransactions.map((a) => {
+        return algosdk.assignGroupID(a);
+      });
       setTransactions(unsignedTransactions);
+      console.log(unsignedTransactions)
       setProcessStep(SIGN_TRANSACTIONS_PROCESS);
     } catch (err: any) {
       console.error(err);
