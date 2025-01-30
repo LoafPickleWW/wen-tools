@@ -226,11 +226,11 @@ export function SimpleMintClassic() {
         }
       }
 
-      let imageURLForPreview ;
+      let imageURLForPreview;
 
-      try{
+      try {
         imageURLForPreview = URL.createObjectURL(formData.image);
-      }catch(e){
+      } catch (e) {
         imageURLForPreview = "";
         console.error(e);
       }
@@ -252,7 +252,8 @@ export function SimpleMintClassic() {
           [metadataForIPFS],
           activeAddress,
           algodClient,
-          token
+          token,
+          transactionSigner,
         );
       } else if (formData.format === "ARC19") {
         unsignedAssetTransaction = await createARC19AssetMintArray(

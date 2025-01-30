@@ -30,10 +30,7 @@ import {
 import * as mfsha2 from "multiformats/hashes/sha2";
 import * as digest from "multiformats/hashes/digest";
 import {
-  appId,
   buildAssetMintAtomicTransactionComposer,
-  getPrice,
-  getRandomNode,
   makeCrustPinTx,
   mnemonicSignerCreator,
   pinJSONToCrust,
@@ -400,68 +397,32 @@ export async function createARC3AssetMintArray(
   data_for_txns: any[],
   address: string,
   algodClient: algosdk.Algodv2,
-  token: string
+  token: string,
+  TransactionSigner: algosdk.TransactionSigner,
+  mnemonic?: string
 ) {
   if (!address) {
     throw Error("Wallet not found");
   }
+
+  let txSigner = null;
+  if (mnemonic) {
+    // create a mnemonic signer
+    txSigner = mnemonicSignerCreator(mnemonic);
+  } else {
+    txSigner = TransactionSigner;
+  }
+
+  if (txSigner === null) {
+    throw Error("txSigner is not defined");
+  }
+
   const params = await algodClient.getTransactionParams().do();
   const txnsArray = [];
   for (let i = 0; i < data_for_txns.length; i++) {
     try {
       const jsonString = JSON.stringify(data_for_txns[i].ipfs_data);
       const cid = await pinJSONToPinata(token, jsonString);
-      const price = await getPrice(algodClient, 10000);
-      const node = await getRandomNode(algodClient);
-      if (typeof node !== "string") {
-        throw Error("Invalid Node!");
-      }
-
-      const suggestedParams = await algodClient.getTransactionParams().do();
-      suggestedParams.flatFee = true;
-      suggestedParams.fee = 2000 * 4; // 设置固定费用
-
-      const paymentTxn = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
-        from: address,
-        to: algosdk.getApplicationAddress(appId),
-        amount: price,
-        closeRemainderTo: undefined,
-        note: undefined,
-        suggestedParams,
-      });
-
-      const method = algosdk.ABIMethod.fromSignature(
-        "place_order(pay,account,string,uint64,bool)void"
-      );
-
-      const args = [
-        method.getSelector(),
-        algosdk.encodeUnsignedTransaction(paymentTxn),
-        algosdk.decodeAddress(node).publicKey,
-        algosdk.encodeObj(cid),
-        algosdk.encodeUint64(10000),
-        new Uint8Array([1]),
-      ];
-      console.log(args);
-
-      const appCallTxn = algosdk.makeApplicationCallTxnFromObject({
-        onComplete: algosdk.OnApplicationComplete.NoOpOC,
-        accounts: [address, node],
-        from: address,
-        appIndex: appId,
-        appArgs: [
-          method.getSelector(),
-          algosdk.decodeAddress(node).publicKey,
-          algosdk.encodeObj(cid),
-          algosdk.encodeUint64(10000),
-          new Uint8Array([1]),
-        ],
-        suggestedParams,
-        boxes: [
-          { appIndex: appId, name: algosdk.decodeAddress(node).publicKey },
-          { appIndex: appId, name: new TextEncoder().encode("nodes") },
-        ],
-      });
 
       data_for_txns[i].asset_url_section = "ipfs://" + cid;
       const asset_create_tx = makeAssetCreateTxnWithSuggestedParamsFromObject({
@@ -491,17 +452,13 @@ export async function createARC3AssetMintArray(
             Math.random().toString(36).substring(2)
         ),
       });
-      const groupID = computeGroupID([
-        asset_create_tx,
-        fee_tx,
-        paymentTxn,
-        appCallTxn,
-      ]);
-      asset_create_tx.group = groupID;
-      fee_tx.group = groupID;
-      paymentTxn.group = groupID;
-      appCallTxn.group = groupID;
-      txnsArray.push([asset_create_tx, fee_tx, paymentTxn, appCallTxn]);
+      const atc = new algosdk.AtomicTransactionComposer();
+      atc.addTransaction({ txn: asset_create_tx, signer: txSigner });
+      atc.addTransaction({ txn: fee_tx, signer: txSigner });
+      atc.addMethodCall(
+        await makeCrustPinTx(cid, txSigner, address, algodClient)
+      );
+      txnsArray.push(getTxnGroupFromATC(atc));
       toast.info(`Asset ${i + 1} of ${data_for_txns.length} uploaded to IPFS`, {
         autoClose: 200,
       });

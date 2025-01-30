@@ -136,8 +136,12 @@ export function ARC3MintTool() {
         data_for_txns,
         activeAddress,
         algodClient,
-        token
+        token,
+        transactionSigner,
+        mnemonic
       );
+
+      console.log(unsignedAssetTransactions)
       setAssetTransactions(unsignedAssetTransactions);
       setTxSendingInProgress(false);
       toast.info("Please sign the transactions!");
@@ -172,7 +176,7 @@ export function ARC3MintTool() {
         );
       }
 
-      signedAssetTransactions = sliceIntoChunks(signedAssetTransactions, 2);
+      signedAssetTransactions = sliceIntoChunks(signedAssetTransactions, 4);
 
       for (let i = 0; i < signedAssetTransactions.length; i++) {
         try {
@@ -180,7 +184,7 @@ export function ARC3MintTool() {
           if (i % 5 === 0) {
             toast.success(
               `Transaction ${i + 1} of ${
-                signedAssetTransactions.length / 2
+                signedAssetTransactions.length
               } confirmed!`,
               {
                 autoClose: 1000,
@@ -191,7 +195,7 @@ export function ARC3MintTool() {
           console.error(err);
           toast.error(
             `Transaction ${i + 1} of ${
-              signedAssetTransactions.length / 2
+              signedAssetTransactions.length
             } failed!`,
             {
               autoClose: 1000,
