@@ -870,7 +870,7 @@ export function SimpleUpdate() {
         own token. Evil Tools will not be held responsible for anything that
         happens to publicly hosted images.
       </p>
-      <p className="text-sm italic text-slate-200">Fee: Free</p>
+      <p className="text-sm italic text-slate-200"> Pin Fee: Arc69 - Free, Arc3/19 - 2.8A </p>
     </div>
   );
 }
