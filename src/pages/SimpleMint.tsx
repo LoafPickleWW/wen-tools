@@ -776,7 +776,7 @@ export function SimpleMint() {
         )}
       </div>
       <p className="text-sm italic text-slate-200 mb-6">
-        Site Fee: Free/Pin Fee: Variable
+        Pin Fee: Arc69 - 1.4A, Arc3/19 - 2.8A, Token - Free
       </p>
       <Button
         variant="outlined"
