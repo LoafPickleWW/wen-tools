@@ -36,6 +36,7 @@ export function SimpleAirdropTool() {
   const [mnemonic, setMnemonic] = useState("");
   const [assetInbox, setAssetInbox] = useState(false);
   const [assetInboxInfo, setAssetInboxInfo] = useState({} as TxnInfoType);
+  const [currentSpendingBalance, setCurrentSpendingBalance] = useState(0);
   const { activeAddress, activeNetwork, algodClient, transactionSigner } =
     useWallet();
 
@@ -336,6 +337,13 @@ export function SimpleAirdropTool() {
       console.log("txnData " + JSON.stringify(txnData.logDataArray));
       console.log("Totals " + JSON.stringify(txnData.grandTotal));
       setAssetInboxInfo(txnData);
+
+      // Calculate the spending balance for the current account to see if it can cover the fees
+      const accountInfo = await algodClient
+        .accountInformation(activeAddress as string)
+        .do();
+      const spendingBalance = accountInfo.amount - accountInfo["min-balance"];
+      setCurrentSpendingBalance(spendingBalance);
       setProcessStep(6);
     } catch (err: any) {
       console.error(err);
@@ -543,8 +551,20 @@ export function SimpleAirdropTool() {
               </div>
               <div className="flex flex-row gap-2">
                 <div className="text-xs text-slate-100">Total Fee's:</div>
-                <div className="text-xs text-primary-orange">
+                <div
+                  className={`${
+                    assetInboxInfo.grandTotal < currentSpendingBalance
+                      ? "text-primary-orange"
+                      : "text-primary-red"
+                  } text-xs `}
+                >
                   {(assetInboxInfo.grandTotal * 1e-6).toFixed(4)} Algos
+                </div>
+              </div>
+              <div className="flex flex-row gap-2">
+                <div className="text-xs text-slate-100">Balance:</div>
+                <div className="text-xs text-primary-orange">
+                  {(currentSpendingBalance * 1e-6).toFixed(4)} Algos
                 </div>
               </div>
             </div>
