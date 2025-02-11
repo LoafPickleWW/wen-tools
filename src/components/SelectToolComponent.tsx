@@ -1,9 +1,9 @@
 import { Link } from "react-router-dom";
 import { TOOLS } from "../constants";
-
+import { USAlgo2025Leaderboard } from "./USAlgo2025Leaderboard";
 export function SelectToolComponent() {
   return (
-    <div className="text-center">
+    <div className="text-center w-full">
       <div className="mx-auto my-2 md:my-4">
         <div className="flex flex-col lg:flex-row items-center justify-evenly lg:gap-2 gap-4">
           <a
@@ -22,6 +22,9 @@ export function SelectToolComponent() {
           </a>
         </div>
       </div>
+
+      <USAlgo2025Leaderboard />
+
       <p className="col-span-3 text-start  text-2xl lg:text-4xl font-semibold tracking-tight text-white font-sans py-4">
         asset tools
       </p>
