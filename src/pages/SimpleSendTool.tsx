@@ -156,7 +156,6 @@ export function SimpleSendTool() {
             algodClient,
             activeNetwork
           );
-          console.log("txnData " + JSON.stringify(txnData.logDataArray));
           console.log("Totals " + JSON.stringify(txnData.grandTotal));
           setAssetInboxInfo(txnData);
 
@@ -231,7 +230,10 @@ export function SimpleSendTool() {
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = "asset_box_data.csv";
+    a.download =
+      processStep === "ASSET_INBOX_TXNS_FINISHED"
+        ? "asset_box_data_atxn.csv"
+        : "asset_box_data_btxn.csv";
     a.click();
     window.URL.revokeObjectURL(url);
   };

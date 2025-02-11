@@ -51,8 +51,9 @@ export const createArc59GroupTxns = async (
 
   // const atomicTxns: algosdk.AtomicTransactionComposer[] = [];
   const logDataArray: LogDataType[] = [];
-  const suggestedParams = await algodClient.getTransactionParams().do();
   const appId = activeNetwork === "mainnet" ? 2449590623 : 643020148;
+  const suggestedParams = await algodClient.getTransactionParams().do();
+
   try {
     const appClient = new Arc59Client(
       {
@@ -124,13 +125,6 @@ export const createArc59GroupTxns = async (
           totalAmount: algosdk.ALGORAND_MIN_TX_FEE,
           txnID: "",
         });
-        console.log("logData: ", logData);
-
-        // gather signatures and submit the atomic transaction
-
-        // await atc.gatherSignatures();
-        // const result = await atc.submit(algodClient);
-        // console.log("result: ", result);
       } else {
         logData.txnFees = 0;
 
@@ -138,10 +132,7 @@ export const createArc59GroupTxns = async (
         logData.innerTxns = Number(itxns) * algosdk.ALGORAND_MIN_TX_FEE;
         logData.txnFees += algosdk.ALGORAND_MIN_TX_FEE;
 
-        console.log(logData.txnFees);
-
         let amount = 0;
-
         logData.receiverOptedIn = receiverOptedIn;
 
         logData.mbr = Number(mbr) || 0;
@@ -221,10 +212,23 @@ export const createArc59GroupTxns = async (
         // get the atomic transaction composer
         const atc = await composer.atc();
 
+        // Adjust the app call to 1000 rounds instead of 10 rounds
+        const originalTxns = atc.clone().buildGroup();
+        const unsignedTxn = originalTxns.map((txn) => {
+          txn.txn.lastRound = txn.txn.firstRound + 1000;
+          txn.txn.group = undefined;
+          return txn.txn;
+        });
+
+        const newATC = new algosdk.AtomicTransactionComposer();
+        unsignedTxn.forEach((txn) => {
+          newATC.addTransaction({ txn: txn, signer: sender.signer });
+        });
+
+        newATC.buildGroup();
         // push data to the arrays
-        txnInfo.atomicTxns.push(atc);
+        txnInfo.atomicTxns.push(newATC);
         logDataArray.push(logData);
-        console.log("logData: ", logData);
       }
     }
   } catch (e) {
