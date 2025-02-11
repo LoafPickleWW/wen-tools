@@ -14,7 +14,11 @@ import { TOOLS } from "../constants";
 
 import InfinityModeComponent from "../components/InfinityModeComponent";
 import { useWallet } from "@txnlab/use-wallet-react";
-import { createArc59GroupTxns, TxnInfoType } from "../arc59-helpers";
+import {
+  createArc59GroupTxns,
+  TxnInfoType,
+  convertToCSV,
+} from "../arc59-helpers";
 import algosdk from "algosdk";
 
 import FileDownloadIcon from "@mui/icons-material/FileDownload";
@@ -364,14 +368,24 @@ export function SimpleAirdropTool() {
   };
 
   async function sendAssetInboxTransactions() {
-    console.log("sendAssetInboxTransactions");
     setProcessStep(3);
+    const txnsLength = assetInboxInfo.atomicTxns.length;
     try {
       for (let i = 0; i < assetInboxInfo.atomicTxns.length; i++) {
-        await assetInboxInfo.atomicTxns[i].gatherSignatures();
-        const result = await assetInboxInfo.atomicTxns[i].submit(algodClient);
-        console.log("result: ", result);
+        try {
+          await assetInboxInfo.atomicTxns[i].gatherSignatures();
+          const result = await assetInboxInfo.atomicTxns[i].submit(algodClient);
+          assetInboxInfo.logDataArray[i].txnID = result.flat().toString();
+        } catch (err: any) {
+          assetInboxInfo.logDataArray[i].txnID = `Failed: ${err.message}`;
+          console.error(err);
+          toast.error(`Transaction ${i + 1} of ${txnsLength} failed!`, {
+            autoClose: 1000,
+          });
+        }
+        await new Promise((resolve) => setTimeout(resolve, 50));
       }
+      assetInboxInfo.csv = await convertToCSV(assetInboxInfo.logDataArray);
       setProcessStep(7);
       toast.success("All transactions confirmed!");
       toast.info("You can support by donating :)");
@@ -529,7 +543,10 @@ export function SimpleAirdropTool() {
               onClick={getCSV}
             >
               <FileDownloadIcon />
-              <span>Download CSV Logs</span>
+              <span>Download asset inbox logs</span>
+              <span className="text-xs text-gray-400">
+                This csv does include transaction ID's
+              </span>
             </button>
             <p className="pt-4 text-primary-orange animate-pulse text-sm">
               All transactions completed!
@@ -573,7 +590,10 @@ export function SimpleAirdropTool() {
               onClick={getCSV}
             >
               <FileDownloadIcon />
-              <span>Download CSV Logs</span>
+              <span>Download asset inbox logs</span>
+              <span className="text-xs text-gray-400">
+                This csv does NOT include transaction ID's
+              </span>
             </button>
             <button
               id="send_asset_inbox_transactions_id"

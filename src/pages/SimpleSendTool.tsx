@@ -13,7 +13,11 @@ import FileDownloadIcon from "@mui/icons-material/FileDownload";
 import InfinityModeComponent from "../components/InfinityModeComponent";
 import FaqSectionComponent from "../components/FaqSectionComponent";
 import { useWallet } from "@txnlab/use-wallet-react";
-import { createArc59GroupTxns, TxnInfoType } from "../arc59-helpers";
+import {
+  createArc59GroupTxns,
+  TxnInfoType,
+  convertToCSV,
+} from "../arc59-helpers";
 import algosdk from "algosdk";
 
 type PageState =
@@ -240,13 +244,14 @@ export function SimpleSendTool() {
         try {
           await assetInboxInfo.atomicTxns[i].gatherSignatures();
           const result = await assetInboxInfo.atomicTxns[i].submit(algodClient);
-          console.log("result: ", result);
+          assetInboxInfo.logDataArray[i].txnID = result.flat().toString();
           if (i % 5 === 0) {
             toast.success(`Transaction ${i + 1} of ${txnsLength} confirmed!`, {
               autoClose: 1000,
             });
           }
-        } catch (err) {
+        } catch (err: any) {
+          assetInboxInfo.logDataArray[i].txnID = `Failed: ${err.message}`;
           console.error(err);
           toast.error(`Transaction ${i + 1} of ${txnsLength} failed!`, {
             autoClose: 1000,
@@ -254,6 +259,7 @@ export function SimpleSendTool() {
         }
         await new Promise((resolve) => setTimeout(resolve, 50));
       }
+      assetInboxInfo.csv = await convertToCSV(assetInboxInfo.logDataArray);
       setProcessStep("ASSET_INBOX_TXNS_FINISHED");
       toast.success("All transactions confirmed!");
       toast.info("You can support by donating :)");
@@ -373,6 +379,16 @@ export function SimpleSendTool() {
       <div className="flex flex-col justify-center items-center w-[16rem]">
         {processStep === "ASSET_INBOX_TXNS_FINISHED" ? (
           <>
+            <button
+              className="mb-2 text-sm  rounded py-2 w-fit mx-auto flex flex-col items-center"
+              onClick={getCSV}
+            >
+              <FileDownloadIcon />
+              <span>Download asset inbox logs</span>
+              <span className="text-xs text-gray-400">
+                This csv does include transaction ID's
+              </span>
+            </button>
             <p className="pt-4 text-green-500 animate-pulse text-sm">
               All asset inbox transactions completed!
               <br />
@@ -431,7 +447,10 @@ export function SimpleSendTool() {
               onClick={getCSV}
             >
               <FileDownloadIcon />
-              <span>Download CSV Logs</span>
+              <span>Download asset inbox logs</span>
+              <span className="text-xs text-gray-400">
+                This csv does NOT include transaction ID's
+              </span>
             </button>
             <button
               id="send_asset_inbox_transactions_id"

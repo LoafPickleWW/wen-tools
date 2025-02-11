@@ -25,6 +25,7 @@ export type LogDataType = {
   receiverAlgoNeededForClaim: number;
   txnFees: number;
   totalAmount: number;
+  txnID: string;
 };
 
 export type TxnInfoType = {
@@ -33,125 +34,6 @@ export type TxnInfoType = {
   grandTotal: number;
   csv: string;
 };
-
-// TODO: make sure to add the correct singleton contract id depending on the network
-
-// export const createArc59GroupTxns = async (
-//   txn: Transaction[],
-//   sender: SenderType,
-//   activeAddress: string,
-//   algodClient: Algodv2,
-//   activeNetwork: NetworkId
-// ) => {
-//   try {
-//     const appClient = new Arc59Client(
-//       {
-//         sender,
-//         resolveBy: "id",
-//         id: activeNetwork === "mainnet" ? 2449590623 : 643020148,
-//       },
-//       algodClient
-//     );
-
-//     const simSender = {
-//       addr: activeAddress,
-//       signer: algosdk.makeEmptyTransactionSigner(),
-//     };
-//     const simParams = {
-//       allowEmptySignatures: true,
-//       allowUnnamedResources: true,
-//       fixSigners: true,
-//     };
-//     for (let i = 0; i < txn.length; i++) {
-//       const suggestedParams = await algodClient.getTransactionParams().do();
-//       const composer = appClient.compose();
-//       const appAddr = (await appClient.appClient.getAppReference()).appAddress;
-//       const receiver = algosdk.encodeAddress(txn[i].to.publicKey);
-//       const [
-//         itxns,
-//         mbr,
-//         routerOptedIn,
-//         _receiverOptedIn,
-//         receiverAlgoNeededForClaim,
-//       ] = (
-//         await appClient
-//           .compose()
-//           .arc59GetSendAssetInfo(
-//             {
-//               asset: txn[i].assetIndex,
-//               receiver: receiver,
-//             },
-//             {
-//               sender: {
-//                 ...simSender,
-//                 addr: activeAddress,
-//               },
-//             }
-//           )
-//           .simulate(simParams)
-//       ).returns[0];
-
-//       console.log("itxns: ", itxns);
-
-//       if (_receiverOptedIn) {
-//         console.log("Receiver is opted in");
-//       }
-//       if (mbr || receiverAlgoNeededForClaim) {
-//         // If the MBR is non-zero, send the MBR to the router
-//         const mbrPayment = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
-//           to: appAddr,
-//           from: activeAddress,
-//           suggestedParams,
-//           amount: Number(mbr + receiverAlgoNeededForClaim),
-//         });
-//         composer.addTransaction({
-//           txn: mbrPayment,
-//           signer: sender.signer,
-//         });
-//       }
-
-//       // If the router is not opted in, add a call to arc59OptRouterIn to do so
-//       if (!routerOptedIn) composer.arc59OptRouterIn({ asa: txn[i].assetIndex });
-
-//       // The transfer of the asset to the router
-//       txn[i].to = algosdk.decodeAddress(appAddr);
-
-//       // An extra itxn is if we are also sending ALGO for the receiver claim
-//       const totalItxns = itxns + (receiverAlgoNeededForClaim === 0n ? 0n : 1n);
-
-//       const fee = (
-//         algosdk.ALGORAND_MIN_TX_FEE * Number(totalItxns + 1n)
-//       ).microAlgos();
-//       const boxes = [algosdk.decodeAddress(receiver).publicKey];
-//       const inboxAddress = (
-//         await appClient
-//           .compose()
-//           .arc59GetInbox({ receiver: receiver }, { sender: simSender })
-//           .simulate(simParams)
-//       ).returns[0];
-
-//       const accounts = [receiver, inboxAddress];
-//       const assets = [Number(txn[i].assetIndex)];
-//       composer.arc59SendAsset(
-//         {
-//           axfer: txn[i],
-//           receiver: receiver,
-//           additionalReceiverFunds: receiverAlgoNeededForClaim,
-//         },
-//         { sendParams: { fee }, boxes, accounts, assets }
-//       );
-
-//       // get the atomic transaction composer
-//       const atc = await composer.atc();
-//       await atc.gatherSignatures();
-//       const result = await atc.submit(algodClient);
-//       console.log("result: ", result);
-//     }
-//   } catch (e) {
-//     console.error(e);
-//     throw e;
-//   }
-// };
 
 export const createArc59GroupTxns = async (
   txn: Transaction[],
@@ -170,9 +52,6 @@ export const createArc59GroupTxns = async (
   // const atomicTxns: algosdk.AtomicTransactionComposer[] = [];
   const logDataArray: LogDataType[] = [];
   const suggestedParams = await algodClient.getTransactionParams().do();
-
-  console.log("suggestedParams: ", suggestedParams);
-
   const appId = activeNetwork === "mainnet" ? 2449590623 : 643020148;
   try {
     const appClient = new Arc59Client(
@@ -243,6 +122,7 @@ export const createArc59GroupTxns = async (
           receiverAlgoNeededForClaim: 0,
           routerOptedIn: routerOptedIn,
           totalAmount: algosdk.ALGORAND_MIN_TX_FEE,
+          txnID: "",
         });
         console.log("logData: ", logData);
 
@@ -335,10 +215,8 @@ export const createArc59GroupTxns = async (
         // asset send txn fee
         amount += algosdk.ALGORAND_MIN_TX_FEE;
         logData.txnFees += algosdk.ALGORAND_MIN_TX_FEE;
-
-        console.log(logData.txnFees);
-
         logData.totalAmount = amount;
+        logData.txnID = ""; // empty txnID
 
         // get the atomic transaction composer
         const atc = await composer.atc();
@@ -347,11 +225,6 @@ export const createArc59GroupTxns = async (
         txnInfo.atomicTxns.push(atc);
         logDataArray.push(logData);
         console.log("logData: ", logData);
-
-        // gather signatures and submit the atomic transaction
-        // await atc.gatherSignatures();
-        // const result = await atc.submit(algodClient);
-        // console.log("result: ", result);
       }
     }
   } catch (e) {
@@ -369,7 +242,7 @@ export const createArc59GroupTxns = async (
   return txnInfo;
 };
 
-function convertToCSV(logData: LogDataType[]) {
+export function convertToCSV(logData: LogDataType[]) {
   const array = [Object.keys(logData[0])].concat(
     logData.map((item) => Object.values(item).map(String))
   );

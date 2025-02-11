@@ -7,11 +7,28 @@ import {
   SignWithMnemonic,
   walletSign,
 } from "../utils";
+import FileDownloadIcon from "@mui/icons-material/FileDownload";
+
 import { TOOLS } from "../constants";
 import InfinityModeComponent from "../components/InfinityModeComponent";
 import { useWallet } from "@txnlab/use-wallet-react";
-import { createArc59GroupTxns } from "../arc59-helpers";
+import {
+  createArc59GroupTxns,
+  TxnInfoType,
+  convertToCSV,
+} from "../arc59-helpers";
 import algosdk from "algosdk";
+
+type PageState =
+  | "INITIAL"
+  | "CSV_UPLOADED"
+  | "SENDING_TXNS"
+  | "TXNS_FINISHED"
+  | "CALCULATE_FEES"
+  | "CALCULATING_FEES"
+  | "SEND_TO_ASSET_INBOX"
+  | "SENDING_TO_ASSET_INBOX"
+  | "ASSET_INBOX_TXNS_FINISHED";
 
 export function AirdropTool() {
   const [csvData, setCsvData] = useState(null as null | any);
@@ -19,6 +36,10 @@ export function AirdropTool() {
   const [txSendingInProgress, setTxSendingInProgress] = useState(false);
   const [mnemonic, setMnemonic] = useState("");
   const [assetInbox, setAssetInbox] = useState(false);
+  const [assetInboxInfo, setAssetInboxInfo] = useState({} as TxnInfoType);
+  const [currentSpendingBalance, setCurrentSpendingBalance] = useState(0);
+
+  const [processStep, setProcessStep] = useState<PageState>("INITIAL");
   const { activeAddress, activeNetwork, algodClient, transactionSigner } =
     useWallet();
 
@@ -27,6 +48,9 @@ export function AirdropTool() {
       toast.error("Wallet not found!");
       return;
     }
+
+    setProcessStep(assetInbox ? "CALCULATING_FEES" : "SENDING_TXNS");
+
     let headers;
     const data = [];
     for (let i = 0; i < csvData.length; i++) {
@@ -80,13 +104,25 @@ export function AirdropTool() {
                 ? mnemonicSigner
                 : transactionSigner,
           };
-          await createArc59GroupTxns(
+          const txnData = await createArc59GroupTxns(
             txns,
             sender,
             activeAddress,
             algodClient,
             activeNetwork
           );
+          console.log("txnData " + JSON.stringify(txnData.logDataArray));
+          console.log("Totals " + JSON.stringify(txnData.grandTotal));
+          setAssetInboxInfo(txnData);
+
+          // Calculate the spending balance for the current account to see if it can cover the fees
+          const accountInfo = await algodClient
+            .accountInformation(activeAddress as string)
+            .do();
+          const spendingBalance =
+            accountInfo.amount - accountInfo["min-balance"];
+          setCurrentSpendingBalance(spendingBalance);
+          setProcessStep("SEND_TO_ASSET_INBOX");
         } else {
           let signedTransactions = [];
           if (mnemonic !== "") {
@@ -120,11 +156,11 @@ export function AirdropTool() {
             }
             await new Promise((resolve) => setTimeout(resolve, 1));
           }
+          setIsTransactionsFinished(true);
+          setTxSendingInProgress(false);
+          toast.success("All transactions confirmed!");
+          toast.info("You can support by donating :)");
         }
-        setIsTransactionsFinished(true);
-        setTxSendingInProgress(false);
-        toast.success("All transactions confirmed!");
-        toast.info("You can support by donating :)");
       } catch (error) {
         console.log(error);
         setTxSendingInProgress(false);
@@ -135,6 +171,51 @@ export function AirdropTool() {
       console.error(err);
       toast.error(err.message);
       setTxSendingInProgress(false);
+    }
+  };
+
+  const getCSV = () => {
+    // Create blob and download
+    const blob = new Blob([assetInboxInfo.csv], { type: "text/csv" });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "asset_box_data.csv";
+    a.click();
+    window.URL.revokeObjectURL(url);
+  };
+
+  const sendAssetInboxTxns = async () => {
+    setProcessStep("SENDING_TO_ASSET_INBOX");
+    const txnsLength = assetInboxInfo.atomicTxns.length;
+    try {
+      for (let i = 0; i < txnsLength; i++) {
+        try {
+          await assetInboxInfo.atomicTxns[i].gatherSignatures();
+          const result = await assetInboxInfo.atomicTxns[i].submit(algodClient);
+          assetInboxInfo.logDataArray[i].txnID = result.flat().toString();
+          if (i % 5 === 0) {
+            toast.success(`Transaction ${i + 1} of ${txnsLength} confirmed!`, {
+              autoClose: 1000,
+            });
+          }
+        } catch (err: any) {
+          assetInboxInfo.logDataArray[i].txnID = `Failed: ${err.message}`;
+          console.error(err);
+          toast.error(`Transaction ${i + 1} of ${txnsLength} failed!`, {
+            autoClose: 1000,
+          });
+        }
+        await new Promise((resolve) => setTimeout(resolve, 50));
+      }
+      assetInboxInfo.csv = await convertToCSV(assetInboxInfo.logDataArray);
+      setProcessStep("ASSET_INBOX_TXNS_FINISHED");
+      toast.success("All transactions confirmed!");
+      toast.info("You can support by donating :)");
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err.message);
+      setProcessStep("SEND_TO_ASSET_INBOX");
     }
   };
 
@@ -194,6 +275,7 @@ export function AirdropTool() {
                     (row: any) => row[0].length > 1
                   );
                   setCsvData(filteredData);
+                  setProcessStep("CSV_UPLOADED");
                 },
                 skipEmptyLines: true,
               });
@@ -202,7 +284,91 @@ export function AirdropTool() {
         </label>
       ) : (
         <div className="flex flex-col justify-center items-center w-[16rem]">
-          {isTransactionsFinished ? (
+          {processStep === "ASSET_INBOX_TXNS_FINISHED" ? (
+            <>
+              <button
+                className="mb-2 text-sm  rounded py-2 w-fit mx-auto flex flex-col items-center"
+                onClick={getCSV}
+              >
+                <FileDownloadIcon />
+                <span>Download asset inbox logs</span>
+                <span className="text-xs text-gray-300">
+                  This csv does include transaction ID's
+                </span>
+              </button>
+              <p className="pt-4 text-green-500 animate-pulse text-sm">
+                All asset inbox transactions completed!
+                <br />
+              </p>
+              <p className="pb-2 text-slate-400 text-xs">
+                You can reload the page if you want to use again.
+              </p>
+            </>
+          ) : processStep === "SENDING_TO_ASSET_INBOX" ? (
+            <div className="mx-auto flex flex-col">
+              <div className="flex justify-center items-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-200"></div>
+              </div>
+              Please wait... Transactions are sending to the network
+            </div>
+          ) : processStep === "CALCULATING_FEES" ? (
+            <>
+              <div className="mx-auto flex flex-col space-y-2">
+                <div className="flex justify-center items-center m-2">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-200"></div>
+                </div>
+                <span className="text-primary-orange">Calculating Fee's</span>
+              </div>
+            </>
+          ) : processStep === "SEND_TO_ASSET_INBOX" ? (
+            <div className="flex flex-col justify-start items-center space-y-2">
+              <div className="flex flex-col ps-3 mt-2">
+                <div className="flex flex-row gap-2">
+                  <div className="text-xs text-slate-100">Total Txn's:</div>
+                  <div className="text-xs text-primary-orange">
+                    {assetInboxInfo.logDataArray.length}
+                  </div>
+                </div>
+                <div className="flex flex-row gap-2">
+                  <div className="text-xs text-slate-100">Total Fee's:</div>
+                  <div
+                    className={`${
+                      assetInboxInfo.grandTotal < currentSpendingBalance
+                        ? "text-primary-orange"
+                        : "text-primary-red"
+                    } text-xs `}
+                  >
+                    {(assetInboxInfo.grandTotal * 1e-6).toFixed(4)} Algos
+                  </div>
+                </div>
+                <div className="flex flex-row gap-2">
+                  <div className="text-xs text-slate-100">Balance:</div>
+                  <div className="text-xs text-primary-orange">
+                    {(currentSpendingBalance * 1e-6).toFixed(4)} Algos
+                  </div>
+                </div>
+              </div>
+              <button
+                className="mb-2 text-sm  rounded py-2 w-fit mx-auto flex flex-col items-center"
+                onClick={getCSV}
+              >
+                <FileDownloadIcon />
+                <span>Download CSV Logs</span>
+                <span className="text-xs text-gray-400">
+                  This csv does NOT include transaction ID's
+                </span>
+              </button>
+              <button
+                id="send_asset_inbox_transactions_id"
+                className="mb-2 bg-primary-orange hover:bg-primary-orange text-black text-sm font-semibold rounded py-2 w-fit px-4 mx-auto mt-1 duration-700"
+                onClick={() => {
+                  sendAssetInboxTxns();
+                }}
+              >
+                Sign & Send
+              </button>
+            </div>
+          ) : processStep === "TXNS_FINISHED" ? (
             <>
               <p className="pt-4 text-primary-orange animate-pulse text-sm">
                 All transactions completed!
@@ -212,14 +378,23 @@ export function AirdropTool() {
                 You can reload the page if you want to use again.
               </p>
             </>
-          ) : (
+          ) : processStep === "SENDING_TXNS" ? (
+            <>
+              <div className="mx-auto flex flex-col gap-2">
+                <div className="flex justify-center items-center">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-200"></div>
+                </div>
+                Please wait... Transactions are sending to the network.
+              </div>
+            </>
+          ) : processStep === "CSV_UPLOADED" ? (
             <>
               <p className="mb-1 text-sm font-bold">File uploaded</p>
               <p className="text-sm text-gray-400">
                 {csvData.length - 1} transactions found!
               </p>
               <p>3- Sign Your Transactions</p>
-              {!txSendingInProgress ? (
+              <>
                 <>
                   <label className="flex flex-row items-center text-slate-400 gap-2">
                     <input
@@ -235,24 +410,19 @@ export function AirdropTool() {
                   <span className="text-sm">
                     Asset Inbox Recommended with Infinity Mode
                   </span>
-                  <button
-                    id="approve-send"
-                    className="mb-2 bg-primary-orange hover:bg-primary-orange text-black text-base font-semibold rounded py-2 w-fit px-2 mx-auto mt-1 hover:scale-95 duration-700"
-                    onClick={handleFileData}
-                  >
-                    Approve & Send
-                  </button>
                 </>
-              ) : (
-                <div className="mx-auto flex flex-col">
-                  <div
-                    className="spinner-border animate-spin inline-block mx-auto w-8 h-8 border-4 rounded-full"
-                    role="status"
-                  ></div>
-                  Please wait... Transactions are sending to the network.
-                </div>
-              )}
+
+                <button
+                  id="approve-send"
+                  className="mb-2 bg-primary-orange hover:bg-primary-orange text-black text-base font-semibold rounded py-2 w-fit px-2 mx-auto mt-1 hover:scale-95 duration-700"
+                  onClick={handleFileData}
+                >
+                  {assetInbox ? "Calculate Fee's" : "Approve & Send"}
+                </button>
+              </>
             </>
+          ) : (
+            <></>
           )}
         </div>
       )}
