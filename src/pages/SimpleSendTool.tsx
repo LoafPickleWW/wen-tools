@@ -8,11 +8,23 @@ import {
 } from "../utils";
 import { TOOLS } from "../constants";
 
+import FileDownloadIcon from "@mui/icons-material/FileDownload";
+
 import InfinityModeComponent from "../components/InfinityModeComponent";
 import FaqSectionComponent from "../components/FaqSectionComponent";
 import { useWallet } from "@txnlab/use-wallet-react";
-import { createArc59GroupTxns } from "../arc59-helpers";
+import { createArc59GroupTxns, TxnInfoType } from "../arc59-helpers";
 import algosdk from "algosdk";
+
+type PageState =
+  | "INITIAL"
+  | "SENDING_TXNS"
+  | "TXNS_FINISHED"
+  | "CALCULATE_FEES"
+  | "CALCULATING_FEES"
+  | "SEND_TO_ASSET_INBOX"
+  | "SENDING_TO_ASSET_INBOX"
+  | "ASSET_INBOX_TXNS_FINISHED";
 
 export function SimpleSendTool() {
   const TOOL_TYPES = [
@@ -31,10 +43,11 @@ export function SimpleSendTool() {
   const [amount, setAmount] = useState("");
   const [note, setNote] = useState("");
 
-  const [isTransactionsFinished, setIsTransactionsFinished] = useState(false);
-  const [txSendingInProgress, setTxSendingInProgress] = useState(false);
+  const [processStep, setProcessStep] = useState<PageState>("INITIAL");
   const [mnemonic, setMnemonic] = useState("");
   const [assetInbox, setAssetInbox] = useState(false);
+  const [assetInboxInfo, setAssetInboxInfo] = useState({} as TxnInfoType);
+  const [currentSpendingBalance, setCurrentSpendingBalance] = useState(0);
   const [errMsg, setErrMsg] = useState("");
   const { activeAddress, activeNetwork, algodClient, transactionSigner } =
     useWallet();
@@ -45,6 +58,9 @@ export function SimpleSendTool() {
         "You need to connect your wallet first, if using mnemonic too!"
       );
     }
+
+    setProcessStep(assetInbox ? "CALCULATING_FEES" : "SENDING_TXNS");
+
     let splittedAssetIds: any;
     let splittedReceivers;
     const transaction_data: any[] = [];
@@ -129,13 +145,26 @@ export function SimpleSendTool() {
                 ? mnemonicSigner
                 : transactionSigner,
           };
-          await createArc59GroupTxns(
+          const txnData = await createArc59GroupTxns(
             txns,
             sender,
             activeAddress,
             algodClient,
             activeNetwork
           );
+          console.log("txnData " + JSON.stringify(txnData.logDataArray));
+          console.log("Totals " + JSON.stringify(txnData.grandTotal));
+          setAssetInboxInfo(txnData);
+
+          // Calculate the spending balance for the current account to see if it can cover the fees
+          const accountInfo = await algodClient
+            .accountInformation(activeAddress as string)
+            .do();
+          const spendingBalance =
+            accountInfo.amount - accountInfo["min-balance"];
+          setCurrentSpendingBalance(spendingBalance);
+          // setCalculatingAssetInboxFees(false);
+          setProcessStep("SEND_TO_ASSET_INBOX");
         } else {
           let signedTransactions = [];
           if (mnemonic !== "") {
@@ -144,7 +173,7 @@ export function SimpleSendTool() {
           } else {
             signedTransactions = await walletSign(txns, transactionSigner);
           }
-          setTxSendingInProgress(true);
+          // setTxSendingInProgress(true);
           for (let i = 0; i < signedTransactions.length; i++) {
             try {
               await algodClient.sendRawTransaction(signedTransactions[i]).do();
@@ -169,13 +198,16 @@ export function SimpleSendTool() {
             }
             await new Promise((resolve) => setTimeout(resolve, 50));
           }
+
+          // setIsTransactionsFinished(true);
+          setProcessStep("TXNS_FINISHED");
+          // setTxSendingInProgress(false);
+          toast.success("All transactions confirmed!");
+          toast.info("You can support by donating :)");
         }
-        setIsTransactionsFinished(true);
-        setTxSendingInProgress(false);
-        toast.success("All transactions confirmed!");
-        toast.info("You can support by donating :)");
       } catch (error: any) {
-        setTxSendingInProgress(false);
+        // setTxSendingInProgress(false);
+        setProcessStep("INITIAL");
         toast.error("Something went wrong! Please check your form!");
         setErrMsg(error.message);
         console.error(error);
@@ -184,9 +216,53 @@ export function SimpleSendTool() {
     } catch (err: any) {
       console.error(err);
       toast.error(err.message);
-      setTxSendingInProgress(false);
+      setProcessStep("INITIAL");
+      // setTxSendingInProgress(false);
     }
   }
+
+  const getCSV = () => {
+    // Create blob and download
+    const blob = new Blob([assetInboxInfo.csv], { type: "text/csv" });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "asset_box_data.csv";
+    a.click();
+    window.URL.revokeObjectURL(url);
+  };
+
+  const sendAssetInboxTxns = async () => {
+    setProcessStep("SENDING_TO_ASSET_INBOX");
+    const txnsLength = assetInboxInfo.atomicTxns.length;
+    try {
+      for (let i = 0; i < txnsLength; i++) {
+        try {
+          await assetInboxInfo.atomicTxns[i].gatherSignatures();
+          const result = await assetInboxInfo.atomicTxns[i].submit(algodClient);
+          console.log("result: ", result);
+          if (i % 5 === 0) {
+            toast.success(`Transaction ${i + 1} of ${txnsLength} confirmed!`, {
+              autoClose: 1000,
+            });
+          }
+        } catch (err) {
+          console.error(err);
+          toast.error(`Transaction ${i + 1} of ${txnsLength} failed!`, {
+            autoClose: 1000,
+          });
+        }
+        await new Promise((resolve) => setTimeout(resolve, 50));
+      }
+      setProcessStep("ASSET_INBOX_TXNS_FINISHED");
+      toast.success("All transactions confirmed!");
+      toast.info("You can support by donating :)");
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err.message);
+      setProcessStep("SEND_TO_ASSET_INBOX");
+    }
+  };
 
   return (
     <div className="mx-auto text-white mb-4 text-center flex flex-col items-center max-w-[40rem] gap-y-2 min-h-screen">
@@ -294,22 +370,107 @@ export function SimpleSendTool() {
           setNote(e.target.value);
         }}
       />
-      <label className="flex flex-row items-center text-slate-400 gap-2">
-        <input
-          type="checkbox"
-          checked={assetInbox}
-          onChange={(e) => setAssetInbox(e.target.checked)}
-          className="size-4"
-        />
-        <div className="flex flex-row text-sm justify-start items-baseline">
-          <span>Send to Asset Inbox</span>
-        </div>
-      </label>
-      <span className="text-sm">
-        Asset Inbox Recommended with Infinity Mode
-      </span>
       <div className="flex flex-col justify-center items-center w-[16rem]">
-        {isTransactionsFinished ? (
+        {processStep === "ASSET_INBOX_TXNS_FINISHED" ? (
+          <>
+            <p className="pt-4 text-green-500 animate-pulse text-sm">
+              All asset inbox transactions completed!
+              <br />
+            </p>
+            <p className="pb-2 text-slate-400 text-xs">
+              You can reload the page if you want to use again.
+            </p>
+          </>
+        ) : processStep === "SENDING_TO_ASSET_INBOX" ? (
+          <div className="mx-auto flex flex-col">
+            <div className="flex justify-center items-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-200"></div>
+            </div>
+            Please wait... Transactions are sending to the network
+          </div>
+        ) : processStep === "CALCULATING_FEES" ? (
+          <>
+            <div className="mx-auto flex flex-col space-y-2">
+              <div className="flex justify-center items-center m-2">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-200"></div>
+              </div>
+              <span className="text-primary-orange">Calculating Fee's</span>
+            </div>
+          </>
+        ) : processStep === "SEND_TO_ASSET_INBOX" ? (
+          <div className="flex flex-col justify-start items-center space-y-2">
+            {/* <p className="mt-1 text-slate-200/60 text-sm">Fee's Calculated!</p> */}
+            <div className="flex flex-col ps-3 mt-2">
+              <div className="flex flex-row gap-2">
+                <div className="text-xs text-slate-100">Total Txn's:</div>
+                <div className="text-xs text-primary-orange">
+                  {assetInboxInfo.logDataArray.length}
+                </div>
+              </div>
+              <div className="flex flex-row gap-2">
+                <div className="text-xs text-slate-100">Total Fee's:</div>
+                <div
+                  className={`${
+                    assetInboxInfo.grandTotal < currentSpendingBalance
+                      ? "text-primary-orange"
+                      : "text-primary-red"
+                  } text-xs `}
+                >
+                  {(assetInboxInfo.grandTotal * 1e-6).toFixed(4)} Algos
+                </div>
+              </div>
+              <div className="flex flex-row gap-2">
+                <div className="text-xs text-slate-100">Balance:</div>
+                <div className="text-xs text-primary-orange">
+                  {(currentSpendingBalance * 1e-6).toFixed(4)} Algos
+                </div>
+              </div>
+            </div>
+            <button
+              className="mb-2 text-sm  rounded py-2 w-fit mx-auto flex flex-col items-center"
+              onClick={getCSV}
+            >
+              <FileDownloadIcon />
+              <span>Download CSV Logs</span>
+            </button>
+            <button
+              id="send_asset_inbox_transactions_id"
+              className="mb-2 bg-primary-orange hover:bg-primary-orange text-black text-sm font-semibold rounded py-2 w-fit px-4 mx-auto mt-1 duration-700"
+              onClick={() => {
+                sendAssetInboxTxns();
+              }}
+            >
+              Sign & Send
+            </button>
+          </div>
+        ) : processStep === "CALCULATE_FEES" ? (
+          <>
+            <label className="flex flex-row items-center text-slate-400 gap-2">
+              <input
+                type="checkbox"
+                checked={assetInbox}
+                onChange={(e) => {
+                  setAssetInbox(e.target.checked);
+                  setProcessStep("INITIAL");
+                }}
+                className="size-4"
+              />
+              <div className="flex flex-row text-sm justify-start items-baseline">
+                <span>Send to Asset Inbox</span>
+              </div>
+            </label>
+            <span className="text-sm">
+              Asset Inbox Recommended with Infinity Mode
+            </span>
+            <button
+              id="approve-send"
+              className="mb-2 bg-primary-orange hover:bg-primary-orange text-black text-sm font-semibold rounded py-2 w-fit px-4 mx-auto mt-1 hover:scale-95 duration-700"
+              onClick={() => handleNext()}
+            >
+              Calculate Fee's
+            </button>
+          </>
+        ) : processStep === "TXNS_FINISHED" ? (
           <>
             <p className="pt-4 text-green-500 animate-pulse text-sm">
               All transactions completed!
@@ -319,25 +480,41 @@ export function SimpleSendTool() {
               You can reload the page if you want to use again.
             </p>
           </>
+        ) : processStep === "SENDING_TXNS" ? (
+          <>
+            <div className="mx-auto flex flex-col gap-2">
+              <div className="flex justify-center items-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-200"></div>
+              </div>
+              Please wait... Transactions are sending to the network.
+            </div>
+          </>
         ) : (
           <>
-            {!txSendingInProgress ? (
-              <button
-                id="approve-send"
-                className="mb-2 bg-primary-orange hover:bg-primary-orange text-black text-sm font-semibold rounded py-2 w-fit px-4 mx-auto mt-1 hover:scale-95 duration-700"
-                onClick={() => handleNext()}
-              >
-                Approve & Send
-              </button>
-            ) : (
-              <div className="mx-auto flex flex-col">
-                <div
-                  className="spinner-border animate-spin inline-block mx-auto w-8 h-8 border-4 rounded-full"
-                  role="status"
-                ></div>
-                Please wait... Transactions are sending to the network.
+            <label className="flex flex-row items-center text-slate-400 gap-2">
+              <input
+                type="checkbox"
+                checked={assetInbox}
+                onChange={(e) => {
+                  setAssetInbox(e.target.checked);
+                  setProcessStep("CALCULATE_FEES");
+                }}
+                className="size-4"
+              />
+              <div className="flex flex-row text-sm justify-start items-baseline">
+                <span>Send to Asset Inbox</span>
               </div>
-            )}
+            </label>
+            <span className="text-sm">
+              Asset Inbox Recommended with Infinity Mode
+            </span>
+            <button
+              id="approve-send"
+              className="mb-2 bg-primary-orange hover:bg-primary-orange text-black text-sm font-semibold rounded py-2 w-fit px-4 mx-auto mt-1 hover:scale-95 duration-700"
+              onClick={() => handleNext()}
+            >
+              Approve & Send
+            </button>
           </>
         )}
       </div>
