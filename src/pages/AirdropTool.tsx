@@ -32,8 +32,6 @@ type PageState =
 
 export function AirdropTool() {
   const [csvData, setCsvData] = useState(null as null | any);
-  const [isTransactionsFinished, setIsTransactionsFinished] = useState(false);
-  const [txSendingInProgress, setTxSendingInProgress] = useState(false);
   const [mnemonic, setMnemonic] = useState("");
   const [assetInbox, setAssetInbox] = useState(false);
   const [assetInboxInfo, setAssetInboxInfo] = useState({} as TxnInfoType);
@@ -131,7 +129,6 @@ export function AirdropTool() {
             toast.info("Please sign the transactions!");
             signedTransactions = await walletSign(txns, transactionSigner);
           }
-          setTxSendingInProgress(true);
           for (let i = 0; i < signedTransactions.length; i++) {
             try {
               await algodClient.sendRawTransaction(signedTransactions[i]).do();
@@ -156,21 +153,20 @@ export function AirdropTool() {
             }
             await new Promise((resolve) => setTimeout(resolve, 1));
           }
-          setIsTransactionsFinished(true);
-          setTxSendingInProgress(false);
+          setProcessStep("TXNS_FINISHED");
           toast.success("All transactions confirmed!");
           toast.info("You can support by donating :)");
         }
       } catch (error) {
+        setProcessStep("INITIAL");
         console.log(error);
-        setTxSendingInProgress(false);
         toast.error("Something went wrong! Please check your file!");
         return;
       }
     } catch (err: any) {
+      setProcessStep("INITIAL");
       console.error(err);
       toast.error(err.message);
-      setTxSendingInProgress(false);
     }
   };
 

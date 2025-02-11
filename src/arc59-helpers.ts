@@ -232,7 +232,7 @@ export const createArc59GroupTxns = async (
     throw e;
   }
   // Create CSV file for txn logs
-  txnInfo.csv = convertToCSV(logDataArray);
+  txnInfo.csv = await convertToCSV(logDataArray);
   txnInfo.grandTotal = logDataArray
     .map((logData) => logData.totalAmount)
     .reduce((a, b) => a + b, 0);
@@ -242,7 +242,7 @@ export const createArc59GroupTxns = async (
   return txnInfo;
 };
 
-export function convertToCSV(logData: LogDataType[]) {
+export async function convertToCSV(logData: LogDataType[]) {
   const array = [Object.keys(logData[0])].concat(
     logData.map((item) => Object.values(item).map(String))
   );
