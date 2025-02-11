@@ -1247,12 +1247,17 @@ export const USAlgo2025TrackerTool = () => {
     _: React.MouseEvent<HTMLElement>,
     newAlignment: "bronze" | "silver" | "gold"
   ) => {
+    console.log(newAlignment);
     setAlignment(newAlignment);
   };
 
   useEffect(() => {
+    if(alignment){
     const canClaim = assets[alignment].every((state) => state.balance > 0);
     setCanClaim(canClaim);
+    }else{
+      setCanClaim(false);
+    }
   }, [assets, alignment]);
 
   useEffect(() => {
@@ -1414,34 +1419,42 @@ export const USAlgo2025TrackerTool = () => {
           </ToggleButtonGroup>
 
           <div className="flex flex-col items-center gap-y-4 mt-4">
-            {assets[alignment].map((state) => (
-              <div
-                key={state.id}
-                className={`flex flex-row items-center justify-between gap-x-4 p-4 rounded-lg min-w-full ${
-                  state.balance > 0 ? "bg-orange-200 text-black" : "bg-gray-800"
-                }`}
-              >
-                <div className="flex flex-row items-center gap-x-4">
-                  <img
-                    src={state.imageUrl}
-                    alt={state.name}
-                    className="rounded-lg w-32"
-                  />
-                  <div className="flex flex-col items-start gap-y-1">
-                    <p title="Asset Name" className="text-md font-bold">
-                      {state.name}
-                    </p>
-                    <p title="Unit Name" className="text-sm">
-                      {state.unit}
-                    </p>
+            {alignment &&
+              assets[alignment].map((state) => (
+                <div
+                  key={state.id}
+                  className={`flex flex-row items-center justify-between gap-x-4 p-4 rounded-lg min-w-full ${
+                    state.balance > 0
+                      ? "bg-orange-200 text-black"
+                      : "bg-gray-800"
+                  }`}
+                >
+                  <div className="flex flex-row items-center gap-x-4">
+                    <img
+                      src={state.imageUrl}
+                      alt={state.name}
+                      className="rounded-lg w-32"
+                    />
+                    <div className="flex flex-col items-start gap-y-1">
+                      <p title="Asset Name" className="text-md font-bold">
+                        {state.name}
+                      </p>
+                      <p title="Unit Name" className="text-sm">
+                        {state.unit}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div title="Holdings" className="justify-self-end">
+                    <p className="text-md font-bold">#{state.balance}</p>
                   </div>
                 </div>
-
-                <div title="Holdings" className="justify-self-end">
-                  <p className="text-md font-bold">#{state.balance}</p>
-                </div>
+              ))}
+            {!alignment && (
+              <div className="text-center text-orange-400 animate-pulse mt-4">
+                <p>Select a Set</p>
               </div>
-            ))}
+            )}
           </div>
         </>
       )}
