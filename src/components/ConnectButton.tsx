@@ -172,7 +172,7 @@ export default function ConnectButton() {
           fontFamily: "poppins, sans-serif",
           borderRadius: "24px",
         }}
-        className="p-6 rounded-lg w-[100%] overflow-hidden rounded-xl"
+        className="p-6 w-[100%] overflow-hidden rounded-xl"
       >
         {!activeAddress ? (
           <MenuList

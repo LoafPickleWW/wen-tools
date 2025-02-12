@@ -1624,3 +1624,82 @@ export const getAssetHolding = async (
     return -1;
   }
 };
+
+export async function getARC19AssetData(url: string, reserve: string) {
+  try {
+    const chunks = url.split("://");
+    if (chunks[0] === "template-ipfs" && chunks[1].startsWith("{ipfscid:")) {
+      const cidComponents = chunks[1].split(":");
+      const cidVersion = parseInt(cidComponents[1]);
+      const cidCodec = cidComponents[2];
+      let cidCodecCode;
+      if (cidCodec === "raw") {
+        cidCodecCode = 0x55;
+      } else if (cidCodec === "dag-pb") {
+        cidCodecCode = 0x70;
+      } else {
+        throw new Error("Unknown codec");
+      }
+      const addr = decodeAddress(reserve);
+      const mhdigest = digest.create(mfsha2.sha256.code, addr.publicKey);
+      const cid =
+        cidVersion === 1
+          ? CID.createV1(cidCodecCode, mhdigest)
+          : CID.createV0(mhdigest);
+      const response = await axios.get(`${IPFS_ENDPOINT}/${cid}`);
+      return { data: response.data, cid: cid };
+    } else {
+      throw new Error("invalid url" + url);
+    }
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  } catch (err: any) {
+    throw new Error("invalid url" + url);
+  }
+}
+
+export const getNFTImageUrl = async (
+  assetUrl: string,
+  assetReserve: string,
+  forDetail = false
+): Promise<string> => {
+  if (!assetUrl) return "";
+  try {
+    const optimizer = !forDetail ? "?optimizer=image&width=450&quality=70" : "";
+    if (assetUrl.includes("template-ipfs")) {
+      const { data, cid } = await getARC19AssetData(assetUrl, assetReserve);
+      const url = data.image
+        ? data.image
+        : `${IPFS_ENDPOINT}/${cid}${optimizer}`;
+      if (url.startsWith("ipfs://"))
+        return `${IPFS_ENDPOINT}/${url.slice(7)}${optimizer}`;
+      if (url !== "") return url;
+      return "";
+    }
+    if (assetUrl.endsWith("#arc3")) {
+      const url = assetUrl.slice(0, -5);
+      if (url.startsWith("ipfs://")) {
+        const response = await axios.get(`${IPFS_ENDPOINT}/${url.slice(7)}`);
+        if (response.data.image.startsWith("ipfs://")) {
+          return `${IPFS_ENDPOINT}/${response.data.image.slice(7)}${optimizer}`;
+        }
+        return response.data.image;
+      } else {
+        const response = await axios.get(url);
+        if (response.data.image.startsWith("ipfs://")) {
+          return `${IPFS_ENDPOINT}/${response.data.image.slice(7)}${optimizer}`;
+        }
+        return response.data.image;
+      }
+    }
+    if (assetUrl.startsWith("https://") && assetUrl.includes("ipfs")) {
+      return `${IPFS_ENDPOINT}/${assetUrl.split("/ipfs/")[1]}${optimizer}`;
+    }
+    if (assetUrl.startsWith("ipfs://")) {
+      return `${IPFS_ENDPOINT}/${assetUrl.slice(7)}${optimizer}`;
+    }
+    return assetUrl;
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  } catch (error) {
+    return "";
+  }
+};

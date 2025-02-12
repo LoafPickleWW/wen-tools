@@ -242,4 +242,12 @@ export const TOOLS = [
     path: "/token-manager",
     category: "asset",
   },
+  {
+    id: "usalgo_2025_tracker",
+    label: "USAlgo 2025 Tracker",
+    description:
+      "Track your collections from USAlgo 2025",
+    path: "/usalgo-2025-tracker",
+    category: "asset",
+  },
 ];
