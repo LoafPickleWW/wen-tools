@@ -6,19 +6,19 @@ export function SelectToolComponent() {
     <div className="text-center w-full">
       <div className="mx-auto my-2 md:my-4">
         <div className="flex flex-col lg:flex-row items-center justify-evenly lg:gap-2 gap-4">
-          <a
-            href="https://wallet.wen.tools/"
-            target="blank"
-            className="lg:w-[34%] w-[70%]"
-          >
-            <img src="/wenwallet.png" alt="" />
+          <CarouselComponent
+            images={[
+              { path: "./wenwallet.png", url: "https://wallet.wen.tools" },
+              { path: "./wenswap.png", url: "https://swap.wen.tools" },
+            ]}
+          />
           </a>
           <a
-            href="https://swap.wen.tools/"
+            href="https://algoxnft.com/shuffle/2943"
             target="blank"
             className="lg:w-[34%] w-[70%]"
           >
-            <img src="/wenswap.png" alt="" />
+            <img src="/usalgo.gif" alt="" />
           </a>
         </div>
       </div>
