@@ -11,6 +11,7 @@ export function SelectToolComponent() {
             images={[
               { path: "./wenwallet.png", url: "https://wallet.wen.tools" },
               { path: "./wenswap.png", url: "https://swap.wen.tools" },
+              { path: "./wenbot.png", url: "https://discord.com/oauth2/authorize?client_id=1325220652332089435" },
             ]}
           />
           <a
