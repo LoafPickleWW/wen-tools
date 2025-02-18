@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { TOOLS } from "../constants";
 import { USAlgo2025Leaderboard } from "./USAlgo2025Leaderboard";
+import CarouselComponent from "./CarouselComponent";
 export function SelectToolComponent() {
   return (
     <div className="text-center w-full">
