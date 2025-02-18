@@ -12,7 +12,6 @@ export function SelectToolComponent() {
               { path: "./wenswap.png", url: "https://swap.wen.tools" },
             ]}
           />
-          </a>
           <a
             href="https://algoxnft.com/shuffle/2943"
             target="blank"
