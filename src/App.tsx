@@ -55,7 +55,7 @@ const walletManager = new WalletManager({
 function App() {
   return (
     <WalletProvider manager={walletManager}>
-      <div className="bg-primary-black flex flex-col min-h-screen font-sans pb-6">
+      <div className="bg-primary-black flex flex-col min-h-screen font-sans ">
         <ToastContainer
           pauseOnFocusLoss={false}
           closeOnClick
@@ -93,7 +93,10 @@ function App() {
             <Route path="/batch-freeze" element={<BatchFreeze />} />
             <Route path="/bulk-claim" element={<BlukClaimTool />} />
             <Route path="/token-manager" element={<ARC62ManagerTool />} />
-            <Route path="/usalgo-2025-tracker" element={<USAlgo2025TrackerTool />} />
+            <Route
+              path="/usalgo-2025-tracker"
+              element={<USAlgo2025TrackerTool />}
+            />
             <Route
               path="/find-collection-holders"
               element={<CollectionSnapshot />}

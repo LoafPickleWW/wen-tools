@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&family=Roboto:ital,wght@0,100;0,300;0,400;0,500;0,700;0,900;1,100;1,300;1,400;1,500;1,700;1,900&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&family=Roboto:ital,wght@0,100;0,300;0,400;0,500;0,700;0,900;1,100;1,300;1,400;1,500;1,700;1,900&display=swap");
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -21,6 +21,35 @@ input[type="number"] {
 
 .has-tooltip:hover .tooltip {
   @apply visible z-10;
+}
+
+/* scrollbar */
+
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #1e1e1e;
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #fd941d;
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #357abd;
+}
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #fd941d #1e1e1e;
+}
+body {
+  -ms-overflow-style: none;
+  scrollbar-face-color: #fd941d;
+  scrollbar-track-color: #1e1e1e;
 }
 
 @keyframes ticker {
@@ -60,8 +89,6 @@ input[type="number"] {
     animation-duration: 30s;
   }
 }
-
-
 
 /* Stop the animations for users who may be sensitive to motion */
 @media (prefers-reduced-motion: reduce) {
