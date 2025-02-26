@@ -3,14 +3,14 @@ import { SelectToolComponent } from "../components/SelectToolComponent";
 export default function Home() {
   return (
     <div className="bg-primary-black pt-2 flex justify-center flex-col text-white pb-10">
-      <main className="flex flex-col justify-center items-center mx-4 md:mx-40 rounded-lg">
+      <main className="flex flex-col justify-center items-center mx-4 md:mx-10 rounded-lg">
         <SelectToolComponent />
       </main>
-      <div className="flex flex-col mx-auto w-[80%] md:w-[70%] py-8">
-        <h2 className="text-4xl font-semibold text-start text-slate-100 mb-2 font-sans">
+      <div className="flex flex-col mx-auto w-[80%] md:w-[90%] lg:w-[70%] py-8">
+        <h2 className="text-2xl font-semibold text-center text-slate-100 mb-2 font-sans">
           partners
         </h2>
-        <div className="partners_class flex flex-col lg:flex-row justify-between items-center gap-6 lg:gap-4  py-4">
+        <div className="partners_class flex flex-col md:flex-row justify-between items-center gap-6 md:gap-4  py-4">
           <a
             href="https://www.algorand.foundation?ref=eviltools"
             className="flex justify-center opacity-80 hover:opacity-100 transition"
@@ -19,7 +19,7 @@ export default function Home() {
             <img
               src="./af_logo.svg"
               alt="af"
-              className="w-40 h-30 md:w-32 md:h-32"
+              className="w-40 h-30 md:w-20 md:h-20"
             />
           </a>
           <a
@@ -70,6 +70,17 @@ export default function Home() {
               src="./crust.png"
               alt="crust"
               className="w-40 h-30 md:w-40 md:h-20"
+            />
+          </a>
+          <a
+            href="https://mentalmarvin.art/"
+            className="flex justify-center opacity-80 hover:opacity-100 transition"
+            target="_blank noreferrer"
+          >
+            <img
+              src="./sm-small.png"
+              alt="crust"
+              className="w-40 h-10 md:w-50 md:h-10"
             />
           </a>
         </div>

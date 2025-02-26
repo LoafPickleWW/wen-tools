@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { TOOLS } from "../constants";
 import { USAlgo2025Leaderboard } from "./USAlgo2025Leaderboard";
 import CarouselComponent from "./CarouselComponent";
+
 export function SelectToolComponent() {
   return (
     <div className="text-center w-full">
@@ -11,7 +12,10 @@ export function SelectToolComponent() {
             images={[
               { path: "./wenwallet.png", url: "https://wallet.wen.tools" },
               { path: "./wenswap.png", url: "https://swap.wen.tools" },
-              { path: "./wenbot.png", url: "https://discord.com/oauth2/authorize?client_id=1325220652332089435" },
+              {
+                path: "./wenbot.png",
+                url: "https://discord.com/oauth2/authorize?client_id=1325220652332089435",
+              },
             ]}
           />
           <a
@@ -23,63 +27,111 @@ export function SelectToolComponent() {
           </a>
         </div>
       </div>
-
+      <p className="col-span-3 text-center text-2xl lg:text-4xl font-semibold tracking-tight text-white font-sans py-2 pb-6 border-b border-t border-dashed border-secondary-gray">
+        our <span className="text-amber-400">top</span> tools
+        <div className="grid grid grid-cols-2 md:grid-cols-4 xl:w-[70%] w-full justify-center gap-2 items-stretch mx-auto">
+          {TOOLS.filter((tool) =>
+            [
+              "Simple Mint",
+              "Airdrop",
+              "Simple Send",
+              "Multimint Asset Holders",
+            ].includes(tool.label)
+          )
+            .slice(0, 4) // Ensures only 4 tools are shown
+            .map((tool) => (
+              <Link to={tool.path}>
+                <div
+                  className="button-link group relative flex flex-col mt-2.5 h-full align-content-stretch rounded-[36px] bg-banner-grey p-2.5 text-center transition-transform duration-100 ease-in-out hover:scale-[0.97]"
+                  key={tool.id}
+                >
+                  <div className="relative flex items-center mb-[50px] w-full h-[70px] rounded-t-[28px] bg-gradient-to-r from-[#E4E808] to-[#FD941D]">
+                    <div className="absolute top-[85%] left-1/2 -translate-x-1/2 -translate-y-1/2 z-10">
+                      <div className="relative flex items-center justify-center w-20 h-20 text-center rounded-full bg-[#262626] flex-shrink-0 border-transparent bg-gradient-to-r from-yellow-400 to-orange-400 p-1 ">
+                        <div className="flex items-center justify-center w-full h-full rounded-full bg-[#262626]">
+                          <img
+                            src={tool.icon}
+                            alt="icon"
+                            className="w-[70%] h-[70%] invert-[0.9]"
+                          ></img>
+                        </div>{" "}
+                      </div>
+                    </div>
+                  </div>
+                  <h5 className="text-xl xl:text-3xl">{tool.label}</h5>
+                  <p className="text-sm xl:text-base font-light p-1 mt-2">
+                    {tool.description}
+                  </p>
+                </div>
+              </Link>
+            ))}
+        </div>
+      </p>
       <USAlgo2025Leaderboard />
 
-      <p className="col-span-3 text-start  text-2xl lg:text-4xl font-semibold tracking-tight text-white font-sans py-4">
-        asset tools
-      </p>
-      <div className="container gap-6 cursor-pointer grid lg:grid-cols-3 py-4">
-        {TOOLS.filter((tool) => tool.category === "asset").map((tool) => (
-          <div className="w-full rounded-[36px] bg-gradient-to-r from-[#E4E808] to-[#FD941D] hover:bg-none p-1">
-            <div
-              className="flex flex-col items-center justify-center rounded-[36px] border-transparent bg-black gap-3 p-8 w-[100%] h-[100%] text-[#FDFDFD] shadow transition duration-500 ease-in-out hover:text-black hover:bg-gradient-to-r from-[#E4E808] to-[#FD941D] hover:border-2 relative group"
-              key={tool.id}
-            >
-              <Link
-                to={tool.path}
-                className="transform flex flex-col items-center justify-center duration-300 ease-in-out group-hover:-translate-y-0"
+      <p className="col-span-3 text-center text-2xl lg:text-4xl font-semibold tracking-tight text-white font-sans py-4 border-b border-t border-dashed border-secondary-gray">
+        all <span className="text-amber-400">asset management</span> tools
+        <div className="grid grid grid-cols-2 md:grid-cols-4 xl:w-[70%] w-full justify-center gap-2 items-stretch mx-auto">
+          {TOOLS.filter((tool) => tool.category === "asset").map((tool) => (
+            <Link to={tool.path}>
+              <div
+                className="button-link group relative flex flex-col mt-2.5 h-full align-content-stretch rounded-[36px] bg-banner-grey p-2.5 text-center transition-transform duration-100 ease-in-out hover:scale-[0.97]"
+                key={tool.id}
               >
-                {/* Faster color change for h5 */}
-                <h5 className="text-2xl font-medium transition-colors duration-200 ease-in-out group-hover:text-black">
-                  {tool.label}
-                </h5>
-              </Link>
-              {/* Description with height and opacity transition */}
-              <p className="font-medium text-center text-black opacity-0 max-h-0 overflow-hidden duration-500 ease-in-out group-hover:opacity-100 group-hover:max-h-20 transition-all">
-                {tool.description}
-              </p>
-            </div>
-          </div>
-        ))}
-      </div>
-      <p className="col-span-3 text-start text-4xl font-semibold tracking-tight text-white font-sans py-4">
-        mint tools
+                <div className="relative flex items-center mb-[50px] w-full h-[70px] rounded-t-[28px] bg-gradient-to-r from-[#E4E808] to-[#FD941D]">
+                  <div className="absolute top-[85%] left-1/2 -translate-x-1/2 -translate-y-1/2 z-10">
+                    <div className="relative flex items-center justify-center w-20 h-20 text-center rounded-full bg-[#262626] flex-shrink-0 border-transparent bg-gradient-to-r from-yellow-400 to-orange-400 p-1 ">
+                      <div className="flex items-center justify-center w-full h-full rounded-full bg-[#262626]">
+                        <img
+                          src={tool.icon}
+                          alt="icon"
+                          className="w-[70%] h-[70%] invert-[0.9]"
+                        ></img>
+                      </div>{" "}
+                    </div>
+                  </div>
+                </div>
+                <h5 className="text-xl xl:text-3xl">{tool.label}</h5>
+                <p className="text-sm xl:text-base font-light p-1 mt-2">
+                  {tool.description}
+                </p>
+              </div>
+            </Link>
+          ))}
+        </div>
       </p>
-      <div className="container gap-6 cursor-pointer grid lg:grid-cols-3 py-4">
-        {TOOLS.filter((tool) => tool.category === "mint").map((tool) => (
-          <div className="w-full rounded-[36px] bg-gradient-to-r from-[#E4E808] to-[#FD941D] hover:bg-none p-1">
-            <div
-              className="flex flex-col items-center justify-center rounded-[36px] border-transparent bg-black gap-3 p-8 w-[100%] h-[100%] text-[#FDFDFD] shadow transition duration-500 ease-in-out hover:text-black hover:bg-gradient-to-r from-[#E4E808] to-[#FD941D] hover:border-2 relative group"
-              key={tool.id}
-            >
-              <Link
-                to={tool.path}
-                className="transform flex flex-col items-center justify-center duration-300 ease-in-out group-hover:-translate-y-0"
+
+      <p className="col-span-3 text-center text-2xl lg:text-4xl font-semibold tracking-tight text-white font-sans py-4 border-b border-dashed border-secondary-gray">
+        all <span className="text-amber-400">mint</span> tools
+        <div className="grid grid grid-cols-2 md:grid-cols-4 xl:w-[70%] w-full justify-center gap-2 items-stretch mx-auto">
+          {TOOLS.filter((tool) => tool.category === "mint").map((tool) => (
+            <Link to={tool.path}>
+              <div
+                className="button-link group relative flex flex-col mt-2.5 h-full align-content-stretch rounded-[36px] bg-banner-grey p-2.5 text-center transition-transform duration-100 ease-in-out hover:scale-[0.97]"
+                key={tool.id}
               >
-                {/* Faster color change for h5 */}
-                <h5 className="text-2xl font-medium transition-colors duration-200 ease-in-out group-hover:text-black">
-                  {tool.label}
-                </h5>
-              </Link>
-              {/* Description with height and opacity transition */}
-              <p className="font-medium text-center text-black opacity-0 max-h-0 overflow-hidden duration-500 ease-in-out group-hover:opacity-100 group-hover:max-h-20 transition-all">
-                {tool.description}
-              </p>
-            </div>
-          </div>
-        ))}
-      </div>
+                <div className="relative flex items-center mb-[50px] w-full h-[70px] rounded-t-[28px] bg-gradient-to-r from-[#E4E808] to-[#FD941D]">
+                  <div className="absolute top-[85%] left-1/2 -translate-x-1/2 -translate-y-1/2 z-10">
+                    <div className="relative flex items-center justify-center w-20 h-20 text-center rounded-full bg-[#262626] flex-shrink-0 border-transparent bg-gradient-to-r from-yellow-400 to-orange-400 p-1 ">
+                      <div className="flex items-center justify-center w-full h-full rounded-full bg-[#262626]">
+                        <img
+                          src={tool.icon}
+                          alt="icon"
+                          className="w-[70%] h-[70%] invert-[0.9]"
+                        ></img>
+                      </div>{" "}
+                    </div>
+                  </div>
+                </div>
+                <h5 className="text-xl xl:text-3xl">{tool.label}</h5>
+                <p className="text-sm xl:text-base font-light p-1 mt-2">
+                  {tool.description}
+                </p>
+              </div>
+            </Link>
+          ))}
+        </div>
+      </p>
     </div>
   );
 }
