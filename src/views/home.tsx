@@ -6,7 +6,7 @@ export default function Home() {
       <main className="flex flex-col justify-center items-center mx-4 md:mx-10 rounded-lg">
         <SelectToolComponent />
       </main>
-      <div className="flex flex-col mx-auto w-[80%] md:w-[90%] py-8">
+      <div className="flex flex-col mx-auto w-[80%] md:w-[90%] lg:w-[70%] py-8">
         <h2 className="text-2xl font-semibold text-center text-slate-100 mb-2 font-sans">
           partners
         </h2>
