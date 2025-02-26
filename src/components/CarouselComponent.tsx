@@ -11,7 +11,7 @@ const CarouselComponent = ({ images }: { images: Image[] }) => {
       setCurrentIndex((prevIndex) =>
         prevIndex === images.length - 1 ? 0 : prevIndex + 1
       );
-    }, 8000);
+    }, 10000);
     return () => clearInterval(interval);
   }, [currentIndex, images.length]);
 
