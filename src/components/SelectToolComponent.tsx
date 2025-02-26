@@ -32,10 +32,10 @@ export function SelectToolComponent() {
         <div className="grid grid grid-cols-2 md:grid-cols-4 xl:w-[70%] w-full justify-center gap-2 items-stretch mx-auto">
           {TOOLS.filter((tool) =>
             [
-              "Mint Token / NFT",
-              "Asset Destroy",
-              "Find Collection Holders",
-              "Asset Send/Airdrop",
+              "Simple Mint",
+              "Airdrop",
+              "Simple Send",
+              "Multimint Asset Holders",
             ].includes(tool.label)
           )
             .slice(0, 4) // Ensures only 4 tools are shown

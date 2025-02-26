@@ -44,7 +44,7 @@ export const TOOLS = [
   {
     id: "simple_mint",
     // label: "🌿 Simple Mint",
-    label: "Mint Token / NFT",
+    label: "Simple Mint",
     description: "Easily mint a token or NFT using Crust Network",
     path: "/simple-mint",
     category: "mint",
@@ -182,7 +182,7 @@ export const TOOLS = [
   {
     id: "airdrop_tool",
     // label: "🪂 Asset Send/Airdrop",
-    label: "Asset Send/Airdrop",
+    label: "Airdrop",
     description: "Airdrop/Send assets/ALGO to a list of addresses.",
     path: "/airdrop",
     category: "asset",
