@@ -18,13 +18,12 @@ export function SelectToolComponent() {
               },
             ]}
           />
-          <a
-            href="https://algoxnft.com/shuffle/2943"
-            target="blank"
-            className="lg:w-[34%] w-[70%]"
-          >
-            <img src="/usalgo.gif" alt="" />
-          </a>
+          <CarouselComponent
+            images={[
+              { path: "./usalgo.gif", url: "https://algoxnft.com/shuffle/2943" },
+              { path: "./AEwebp.webp", url: "https://astroexplorer.co/" },
+            ]}
+          />
         </div>
       </div>
       <p className="col-span-3 text-center text-2xl lg:text-4xl font-semibold tracking-tight text-white font-sans py-2 pb-6 border-b border-t border-dashed border-secondary-gray">
