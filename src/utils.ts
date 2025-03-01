@@ -455,9 +455,6 @@ export async function createARC3AssetMintArray(
       const atc = new algosdk.AtomicTransactionComposer();
       atc.addTransaction({ txn: asset_create_tx, signer: txSigner });
       atc.addTransaction({ txn: fee_tx, signer: txSigner });
-      atc.addMethodCall(
-        await makeCrustPinTx(cid, txSigner, address, algodClient)
-      );
       txnsArray.push(getTxnGroupFromATC(atc));
       toast.info(`Asset ${i + 1} of ${data_for_txns.length} uploaded to IPFS`, {
         autoClose: 200,
