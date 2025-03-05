@@ -176,7 +176,7 @@ export function ARC3MintTool() {
         );
       }
 
-      signedAssetTransactions = sliceIntoChunks(signedAssetTransactions, 4);
+      signedAssetTransactions = sliceIntoChunks(signedAssetTransactions, 2);
 
       for (let i = 0; i < signedAssetTransactions.length; i++) {
         try {
