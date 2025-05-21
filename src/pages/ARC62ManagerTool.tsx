@@ -442,6 +442,15 @@ export const ARC62ManagerTool = () => {
       return;
     }
 
+    const held1 = await getAssetHolding(label1, algorand, assetData.assetId);
+    const held2 = await getAssetHolding(label2, algorand, assetData.assetId);
+    const held3 = await getAssetHolding(label3, algorand, assetData.assetId);
+
+    if (held1 == -1 || held2 == -1 || held3 == -1) {
+      toast.error("All Addresses should hold the asset");
+      return;
+    }
+
     try {
       setLabelUpdateLoading(true);
       const caller = new CirculatingSupplyFactory({
@@ -560,6 +569,29 @@ export const ARC62ManagerTool = () => {
       return;
     }
 
+    const held1 = await getAssetHolding(
+      newLabelForm.value1,
+      algorand,
+      assetData.assetId
+    );
+
+    const held2 = await getAssetHolding(
+      newLabelForm.value2,
+      algorand,
+      assetData.assetId
+    );
+
+    const held3 = await getAssetHolding(
+      newLabelForm.value3,
+      algorand,
+      assetData.assetId
+    );
+
+    if (held1 == -1 || held2 == -1 || held3 == -1) {
+      toast.error("All Addresses should hold the asset");
+      return;
+    } 
+
     try {
       setNewLabelUpdateLoading(true);
       let approval = base64ToString(APP_SPEC.source.approval);
@@ -575,36 +607,29 @@ export const ARC62ManagerTool = () => {
       );
 
       const method = algosdk.ABIMethod.fromSignature("createApplication()void");
-
-      const appCreate = await algorand.appDeployer.deploy({
-        metadata: { name: `CirculatingSupply ${assetId}`, version: "1.0.0" },
-        onSchemaBreak: "append",
-        onUpdate: "append",
-        createParams: {
-          sender: activeAddress,
-          signer: transactionSigner,
-          schema: {
-            globalByteSlices: APP_SPEC.state.schema.global.bytes,
-            globalInts: APP_SPEC.state.schema.global.ints,
-            localByteSlices: APP_SPEC.state.schema.local.bytes,
-            localInts: APP_SPEC.state.schema.local.ints,
-          },
-          approvalProgram: approval,
-          clearStateProgram: clear,
-          onComplete: algosdk.OnApplicationComplete.NoOpOC,
-          args: [method.getSelector()],
+      console.log(method);
+      const appCreateResult = await algorand.send.appCreateMethodCall({
+        approvalProgram: approval,
+        clearStateProgram: clear,
+        schema: {
+          globalByteSlices: APP_SPEC.state.schema.global.bytes,
+          globalInts: APP_SPEC.state.schema.global.ints,
+          localByteSlices: APP_SPEC.state.schema.local.bytes,
+          localInts: APP_SPEC.state.schema.local.ints,
         },
-        updateParams: { sender: activeAddress },
-        deleteParams: { sender: activeAddress },
-      });
+        sender: activeAddress,
+        signer: transactionSigner,
+        method: method,
+        onComplete: algosdk.OnApplicationComplete.NoOpOC,
+      })
       toast.info(
-        "ARC62 app created successfully with app id: " + appCreate.appId
+        "ARC62 app created successfully with app id: " + appCreateResult.appId
       );
       const caller = new CirculatingSupplyFactory({
         algorand,
         defaultSigner: transactionSigner,
         defaultSender: activeAddress,
-      }).getAppClientById({ appId: BigInt(appCreate.appId) });
+      }).getAppClientById({ appId: BigInt(appCreateResult.appId) });
 
       const encoder = new TextEncoder();
       toast.info("Updating label addresses in ARC62 app, please sign the Txn");
@@ -629,7 +654,7 @@ export const ARC62ManagerTool = () => {
             strictEmptyAddressChecking: true,
             suggestedParams: await algodClient.getTransactionParams().do(),
             note: encoder.encode(
-              `arc62:j{"application-id":${appCreate.appId.toString()}}`
+              `arc62:j{"application-id":${appCreateResult.appId.toString()}}`
             ),
           }),
           transactionSigner
