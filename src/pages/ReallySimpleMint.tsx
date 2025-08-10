@@ -5,11 +5,7 @@ import { toast } from "react-toastify";
 import { useAtom } from "jotai";
 import { atomWithStorage, RESET } from "jotai/utils";
 import { Button } from "@mui/material";
-import {
-  createARC3AssetMintArrayV2,
-  createARC19AssetMintArrayV2,
-  createAssetMintArrayV2,
-} from "../utils";
+import { createAssetMintArrayV2 } from "../utils";
 import { ASSET_PREVIEW, TOOLS } from "../constants";
 import FaqSectionComponent from "../components/FaqSectionComponent";
 import { pinImageToCrust } from "../crust";
@@ -77,7 +73,7 @@ export function ReallySimpleMint() {
       return;
     }
 
-    let imageURL = "ipfs://" + imageCID;
+    const imageURL = "ipfs://" + imageCID;
     const metadata: any = {
       name: formData.name,
       standard: formData.format.toLocaleLowerCase(),
