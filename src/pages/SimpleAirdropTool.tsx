@@ -22,6 +22,7 @@ import {
 import algosdk from "algosdk";
 
 import FileDownloadIcon from "@mui/icons-material/FileDownload";
+import ConnectButton from "../components/ConnectButton";
 
 export function SimpleAirdropTool() {
   const [creatorWallets, setCreatorWallets] = useState("");
@@ -401,6 +402,7 @@ export function SimpleAirdropTool() {
       <h1 className="text-2xl font-bold mt-6">
         {TOOLS.find((tool) => tool.path === window.location.pathname)?.label}
       </h1>
+      <ConnectButton inmain={true} />
       <label className="text-xs text-slate-400"></label>
       {/* mnemonic */}
       <InfinityModeComponent mnemonic={mnemonic} setMnemonic={setMnemonic} />

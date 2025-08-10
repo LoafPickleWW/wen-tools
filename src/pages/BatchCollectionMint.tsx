@@ -6,6 +6,7 @@ import { TOOLS } from "../constants";
 
 import InfinityModeComponent from "../components/InfinityModeComponent";
 import { useWallet } from "@txnlab/use-wallet-react";
+import ConnectButton from "../components/ConnectButton";
 
 export function BatchCollectionMint() {
   const [csvData, setCsvData] = useState(null as null | any);
@@ -170,6 +171,7 @@ export function BatchCollectionMint() {
       <h1 className="text-2xl font-bold mt-6">
         {TOOLS.find((tool) => tool.path === window.location.pathname)?.label}
       </h1>
+      <ConnectButton inmain={true} />
       {/* mnemonic */}
       <InfinityModeComponent mnemonic={mnemonic} setMnemonic={setMnemonic} />
       {/* end mnemonic */}

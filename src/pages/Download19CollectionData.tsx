@@ -4,6 +4,7 @@ import axios from "axios";
 import { TOOLS } from "../constants";
 import { getARC19AssetMetadataData, getIndexerURL } from "../utils";
 import { useWallet } from "@txnlab/use-wallet-react";
+import ConnectButton from "../components/ConnectButton";
 
 export function Download19CollectionData() {
   const [creatorWallet, setCreatorWallet] = useState("");
@@ -156,6 +157,7 @@ export function Download19CollectionData() {
       <h1 className="text-2xl font-bold mt-6">
         {TOOLS.find((tool) => tool.path === window.location.pathname)?.label}
       </h1>
+      <ConnectButton inmain={true} />
       <input
         type="text"
         id="creatorWallet"

@@ -18,6 +18,7 @@ import { TOOLS, IPFS_ENDPOINT, ASSET_PREVIEW } from "../constants";
 import { useWallet } from "@txnlab/use-wallet-react";
 import "react-json-view-lite/dist/index.css";
 import { PreviewAssetComponent } from "../components/PreviewAssetComponent";
+import ConnectButton from "../components/ConnectButton";
 
 const simpleUpdateAtom = atomWithStorage("simpleUpdate", {
   name: "",
@@ -440,6 +441,7 @@ export function SimpleUpdateClassic() {
       <h1 className="text-2xl font-bold mt-6">
         {TOOLS.find((tool) => tool.path === window.location.pathname)?.label}
       </h1>
+      <ConnectButton inmain={true} />
       {assetID !== "" && formData.name ? (
         <>
           <div className="flex flex-col md:flex-row justify-between">

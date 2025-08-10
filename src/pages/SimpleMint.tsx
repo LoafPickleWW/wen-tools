@@ -16,6 +16,7 @@ import { pinImageToCrust } from "../crust";
 import { useWallet } from "@txnlab/use-wallet-react";
 import "react-json-view-lite/dist/index.css";
 import { PreviewAssetComponent } from "../components/PreviewAssetComponent";
+import ConnectButton from "../components/ConnectButton";
 
 const simpleMintAtom = atomWithStorage("simpleMint", {
   name: "",
@@ -381,6 +382,7 @@ export function SimpleMint() {
       <h1 className="text-2xl font-bold mt-6">
         {TOOLS.find((tool) => tool.path === window.location.pathname)?.label}
       </h1>
+      <ConnectButton inmain={true} />
       <div className="mt-4 md:flex items-center text-start gap-x-4">
         <div className="flex flex-col md:mt-0 mt-2">
           <label className="mb-2 text-sm leading-none text-gray-200">

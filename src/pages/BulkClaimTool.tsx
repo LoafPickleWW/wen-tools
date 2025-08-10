@@ -13,6 +13,7 @@ import { getIndexerURL, getNfdDomain, SignWithSk, walletSign } from "../utils";
 import { EnhancedTable } from "../components/DataGrid";
 import InfinityModeComponent from "../components/InfinityModeComponent";
 import { HeadCell } from "../types";
+import ConnectButton from "../components/ConnectButton";
 
 interface Asset {
   assetId: number;
@@ -249,6 +250,7 @@ export const BlukClaimTool = () => {
       <h1 className="text-2xl font-bold mt-6">
         {TOOLS.find((tool) => tool.path === window.location.pathname)?.label}
       </h1>
+      <ConnectButton inmain={true} />
 
       <InfinityModeComponent mnemonic={mnemonic} setMnemonic={setMnemonic} />
 

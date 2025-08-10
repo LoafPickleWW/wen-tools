@@ -12,6 +12,7 @@ import { TOOLS } from "../constants";
 
 import InfinityModeComponent from "../components/InfinityModeComponent";
 import { useWallet } from "@txnlab/use-wallet-react";
+import ConnectButton from "../components/ConnectButton";
 
 export function BatchClawback() {
   const [csvData, setCsvData] = useState(null as null | any);
@@ -118,6 +119,7 @@ export function BatchClawback() {
       <h1 className="text-2xl font-bold mt-6">
         {TOOLS.find((tool) => tool.path === window.location.pathname)?.label}
       </h1>
+      <ConnectButton inmain={true} />
       <button className="text-center text-lg text-black mt-2 bg-primary-orange px-4 py-2 rounded">
         <a
           className="hover:text-black transition"

@@ -10,13 +10,19 @@ import MenuList from "@mui/material/MenuList";
 import Tooltip from "@mui/material/Tooltip";
 import { useWallet } from "@txnlab/use-wallet-react";
 
-import { FaCopy, FaWallet } from "react-icons/fa";
-import { toast } from "react-toastify";
-// // ** Wallet Imports
+// ** Wallet Imports
 import { PeraWalletConnect } from "@perawallet/connect";
 import { signLoginAlgorandForCrustIpfsEndpoint } from "../crust-auth";
 
-export default function ConnectButton() {
+import { FaCopy, FaWallet } from "react-icons/fa";
+import { toast } from "react-toastify";
+
+export default function ConnectButton({
+  inmain = false
+}: {
+  /** If this connect button is to be in the main part of the page (not in the header) */
+  inmain?: boolean
+}) {
   const { activeAddress, activeWallet, algodClient, wallets } = useWallet();
   const [anchorEl, setAnchorEl] = useState(null);
   const open = Boolean(anchorEl);
@@ -130,24 +136,32 @@ export default function ConnectButton() {
   }, [activeAddress, algodClient]);
 
   return (
-    <div className="flex flex-row justify-center items-center gap-2 font-sans rounded-2xl">
+    <div className={
+      "flex flex-row justify-center items-center font-sans rounded-2xl mx-2"
+      // Add extra vertical spacing when connect button is in the main part of the page
+      + ((inmain && !activeAddress) ? " mt-4 mb-2" : "")
+    }>
       {!activeAddress ? (
         <Button
-          id="connect-button"
+          id={"connect-button" + (inmain ? "-main" : "")}
           aria-controls={open ? "connect-menu" : undefined}
           aria-haspopup="true"
           aria-expanded={open ? "true" : undefined}
           onClick={handleClick}
-          color="success"
+          variant="outlined"
+          color="inherit"
         >
-          <span className="font-sans text-white text-[14px] font-light normal-case	lg:text-xl w-[100%] pr-3">
+          <span className={
+            "font-sans font-light normal-case sm:leading-relaxed "
+            + (inmain ? "leading-relaxed text-xl" : "leading-tight lg:text-xl")
+          }>
             Wallet Connect
           </span>
         </Button>
-      ) : (
+      ) : (!inmain && /* Render this section if the button is not in the body (in the header) */
         <Tooltip title="Account" placement="bottom-start">
           <IconButton
-            id="connect-button"
+            id={"connect-button" + (inmain ? "-main" : "")}
             aria-controls={open ? "connect-menu" : undefined}
             aria-haspopup="true"
             aria-expanded={open ? "true" : undefined}
@@ -164,7 +178,7 @@ export default function ConnectButton() {
         open={open}
         onClose={handleClose}
         MenuListProps={{
-          "aria-labelledby": "connect-button",
+          "aria-labelledby": "connect-button" + (inmain ? "-main" : ""),
         }}
         sx={{
           mt: "1px",

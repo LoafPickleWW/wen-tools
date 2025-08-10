@@ -27,6 +27,7 @@ import { IconButton } from "@mui/material";
 import { FaCopy } from "react-icons/fa";
 import { NumberFormatter } from "../components/NumberFormatter";
 import { ALGORAND_ZERO_ADDRESS } from "../constants";
+import ConnectButton from "../components/ConnectButton";
 
 interface LabelData {
   key: string;
@@ -711,6 +712,7 @@ export const ARC62ManagerTool = () => {
       <h1 className="text-2xl font-bold mt-6">
         {TOOLS.find((tool) => tool.path === window.location.pathname)?.label}
       </h1>
+      <ConnectButton inmain={true} />
       <p className="text-md text-gray-200">
         Set and manage your token's circulation supply using the ARC62 Standard
       </p>
