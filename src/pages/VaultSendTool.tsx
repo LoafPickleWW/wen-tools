@@ -274,9 +274,9 @@ export function VaultSendTool() {
 
   return (
     <div className="mx-auto text-white mb-4 text-center flex flex-col items-center max-w-[40rem] gap-y-2 min-h-screen">
-      <p className="text-2xl font-bold mt-1">
+      <h1 className="text-2xl font-bold mt-6">
         {TOOLS.find((tool) => tool.path === window.location.pathname)?.label}
-      </p>
+      </h1>
       <span className="text-base text-slate-300">
         A vault is an Algorand account controlled by an NFD's smart contract
         that can automatically opt-in to assets it receives. Check{" "}

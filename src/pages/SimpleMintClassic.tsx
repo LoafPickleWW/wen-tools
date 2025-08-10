@@ -335,9 +335,9 @@ export function SimpleMintClassic() {
 
   return (
     <div className="mx-auto text-white mb-4 text-center flex flex-col items-center max-w-full gap-y-2 min-h-screen">
-      <p className="text-2xl font-bold mt-1">
+      <h1 className="text-2xl font-bold mt-6">
         {TOOLS.find((tool) => tool.path === window.location.pathname)?.label}
-      </p>
+      </h1>
       <div className="mt-4 md:flex items-center text-start gap-x-4">
         <div className="flex flex-col md:mt-0 mt-2">
           <label className="mb-2 text-sm leading-none text-gray-200">
