@@ -39,7 +39,7 @@ export const TOOLS = [
     path: "/simple-batch-mint",
     category: "mint",
     icon:"/icons/mint.png"
-    
+
   },
   {
     id: "simple_mint",
@@ -47,6 +47,15 @@ export const TOOLS = [
     label: "Simple Mint",
     description: "Easily mint a token or NFT using Crust Network",
     path: "/simple-mint",
+    category: "mint",
+    icon:"/icons/devtools.png"
+  },
+  {
+    id: "really_simple_mint",
+    // label: "🌿 Really Simple Mint",
+    label: "Really Simple Mint",
+    description: "Easily mint an NFT using Crust Network",
+    path: "/really-simple-mint",
     category: "mint",
     icon:"/icons/devtools.png"
   },

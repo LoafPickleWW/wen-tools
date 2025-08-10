@@ -28,7 +28,7 @@ export function SelectToolComponent() {
       </div>
       <p className="col-span-3 text-center text-2xl lg:text-4xl font-semibold tracking-tight text-white font-sans py-2 pb-6 border-b border-t border-dashed border-secondary-gray">
         our <span className="text-amber-400">top</span> tools
-        <div className="grid grid grid-cols-2 md:grid-cols-4 xl:w-[70%] w-full justify-center gap-2 items-stretch mx-auto">
+        <div className="grid grid-cols-2 md:grid-cols-4 xl:w-[70%] w-full justify-center gap-2 items-stretch mx-auto">
           {TOOLS.filter((tool) =>
             [
               "Simple Mint",
@@ -70,7 +70,7 @@ export function SelectToolComponent() {
 
       <p className="col-span-3 text-center text-2xl lg:text-4xl font-semibold tracking-tight text-white font-sans py-4 border-b border-t border-dashed border-secondary-gray">
         all <span className="text-amber-400">asset management</span> tools
-        <div className="grid grid grid-cols-2 md:grid-cols-4 xl:w-[70%] w-full justify-center gap-2 items-stretch mx-auto">
+        <div className="grid grid-cols-2 md:grid-cols-4 xl:w-[70%] w-full justify-center gap-2 items-stretch mx-auto">
           {TOOLS.filter((tool) => tool.category === "asset").map((tool) => (
             <Link to={tool.path}>
               <div
@@ -102,7 +102,7 @@ export function SelectToolComponent() {
 
       <p className="col-span-3 text-center text-2xl lg:text-4xl font-semibold tracking-tight text-white font-sans py-4 border-b border-dashed border-secondary-gray">
         all <span className="text-amber-400">mint</span> tools
-        <div className="grid grid grid-cols-2 md:grid-cols-4 xl:w-[70%] w-full justify-center gap-2 items-stretch mx-auto">
+        <div className="grid grid-cols-2 md:grid-cols-4 xl:w-[70%] w-full justify-center gap-2 items-stretch mx-auto">
           {TOOLS.filter((tool) => tool.category === "mint").map((tool) => (
             <Link to={tool.path}>
               <div

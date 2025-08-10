@@ -35,7 +35,7 @@ export function Header() {
             <MdMenu />
           </IconButton>
         </div>
-        <Link to="/" 
+        <Link to="/"
         >
           <img src="/w-t-logo.png" alt="logo" className=" mr-2 p-1 w-20 lg:w-36" />
         </Link>
@@ -57,7 +57,7 @@ export function Header() {
             visibility: { xs: "hidden", sm: "visible" },
           }}
         ></Typography>
-        <List 
+        <List
           className="hidden lg:flex flex-row items-center px-4 py-2 gap-2 text-xl "
         >
         <ListItemButton

@@ -39,6 +39,7 @@ import ScrollToTop from "./components/ScrollToTop";
 import { Analytics } from "@vercel/analytics/react";
 import { ARC62ManagerTool } from "./pages/ARC62ManagerTool";
 import { USAlgo2025TrackerTool } from "./pages/USAlgo2025TrackerTool";
+import { ReallySimpleMint } from "./pages/ReallySimpleMint";
 
 const walletManager = new WalletManager({
   wallets: [
@@ -130,6 +131,7 @@ function App() {
               path="/simple-update-classic"
               element={<SimpleUpdateClassic />}
             />
+            <Route path="/really-simple-mint" element={<ReallySimpleMint />} />
             <Route path="*" element={<Home />} />
           </Routes>
           <Footer />
