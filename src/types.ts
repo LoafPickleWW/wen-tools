@@ -22,7 +22,7 @@ export interface FAQ {
   open?: boolean;
 }
 
-export interface Infinity {
+export interface InfinityData {
   mnemonic: string;
   setMnemonic: React.Dispatch<React.SetStateAction<string>>;
   description?: string;

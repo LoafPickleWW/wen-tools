@@ -1,12 +1,12 @@
 import { useState } from "react";
 import { AiOutlineInfoCircle } from "react-icons/ai";
-import { Infinity } from "../types";
+import { InfinityData } from "../types";
 
 const InfinityModeComponent = ({
   mnemonic,
   setMnemonic,
   description = "Infinity Mode allows for no restrictions to the amount of transactions per upload.",
-}: Infinity) => {
+}: InfinityData) => {
   const [isOpen, setIsOpen] = useState(false);
 
   const toggleAccordion = () => {
