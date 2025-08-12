@@ -45,6 +45,7 @@ const walletManager = new WalletManager({
   wallets: [
     WalletId.PERA,
     WalletId.DEFLY,
+    WalletId.EXODUS,
     {
       id: WalletId.LUTE,
       options: { siteName: "wen.tools" },
