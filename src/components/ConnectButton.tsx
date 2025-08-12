@@ -3,11 +3,12 @@ import { useEffect, useState } from "react";
 
 // ** MUI Imports
 import { Icon, IconButton } from "@mui/material";
-import Button from "@mui/material/Button";
+import Button, { ButtonProps } from "@mui/material/Button";
 import Menu from "@mui/material/Menu";
 import MenuItem from "@mui/material/MenuItem";
 import MenuList from "@mui/material/MenuList";
 import Tooltip from "@mui/material/Tooltip";
+import { styled } from '@mui/material/styles';
 import { useWallet } from "@txnlab/use-wallet-react";
 
 // ** Wallet Imports
@@ -142,22 +143,33 @@ export default function ConnectButton({
       + ((inmain && !activeAddress) ? " mt-4 mb-2" : "")
     }>
       {!activeAddress ? (
-        <Button
-          id={"connect-button" + (inmain ? "-main" : "")}
-          aria-controls={open ? "connect-menu" : undefined}
-          aria-haspopup="true"
-          aria-expanded={open ? "true" : undefined}
-          onClick={handleClick}
-          variant="outlined"
-          color="inherit"
-        >
-          <span className={
-            "font-sans font-light normal-case sm:leading-relaxed "
-            + (inmain ? "leading-relaxed text-xl" : "leading-tight lg:text-xl")
-          }>
-            Wallet Connect
-          </span>
-        </Button>
+        // Show a different button according to where it is on the page
+        inmain
+          ? <ButtonMain // Button in main section of the page
+            id="connect-button-main"
+            aria-controls={open ? "connect-menu" : undefined}
+            aria-haspopup="true"
+            aria-expanded={open ? "true" : undefined}
+            onClick={handleClick}
+            variant="outlined"
+            color="inherit"
+          >
+            <span className="font-sans font-light normal-case sm:leading-relaxed leading-relaxed text-xl">
+              Wallet Connect
+            </span>
+          </ButtonMain>
+          : <Button // Button in header
+            id={"connect-button"}
+            aria-controls={open ? "connect-menu" : undefined}
+            aria-haspopup="true"
+            aria-expanded={open ? "true" : undefined}
+            onClick={handleClick}
+            color="inherit"
+          >
+            <span className="font-sans font-light normal-case sm:leading-relaxed leading-tight lg:text-xl">
+              Wallet Connect
+            </span>
+          </Button>
       ) : (!inmain && /* Render this section if the button is not in the body (in the header) */
         <Tooltip title="Account" placement="bottom-start">
           <IconButton
@@ -365,3 +377,18 @@ export default function ConnectButton({
     </div>
   );
 }
+
+/**
+ * A customized button for the Wallet Connect button when it is in the main section of the page.
+ * See the MUI documentation for more information:
+ * <https://mui.com/material-ui/react-button/#customization>
+ */
+const ButtonMain = styled(Button)<ButtonProps>(({ theme }) => ({
+  // #f57b14 is what "primary-orange" color is set to in tailwind.config.js
+  borderColor: '#f57b14',
+  color: '#f57b14',
+  '&:hover': {
+    backgroundColor: '#f57b14',
+    color: theme.palette.getContrastText('#f57b14'),
+  },
+}));
