@@ -19,6 +19,7 @@ import { pinImageToCrust } from "../crust";
 import { useWallet } from "@txnlab/use-wallet-react";
 import "react-json-view-lite/dist/index.css";
 import { PreviewAssetComponent } from "../components/PreviewAssetComponent";
+import ConnectButton from "../components/ConnectButton";
 
 const simpleUpdateAtom = atomWithStorage("simpleUpdate", {
   name: "",
@@ -466,9 +467,10 @@ export function SimpleUpdate() {
 
   return (
     <div className="mx-auto text-white mb-4 text-center flex flex-col items-center max-w-full gap-y-2 min-h-screen">
-      <p className="text-2xl font-bold mt-1">
+      <h1 className="text-2xl font-bold mt-6">
         {TOOLS.find((tool) => tool.path === window.location.pathname)?.label}
-      </p>
+      </h1>
+      <ConnectButton inmain={true} />
       {assetID !== "" && formData.name ? (
         <>
           <div className="flex flex-col md:flex-row justify-between">

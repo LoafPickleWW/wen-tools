@@ -18,6 +18,7 @@ import {
   convertToCSV,
 } from "../arc59-helpers";
 import algosdk from "algosdk";
+import ConnectButton from "../components/ConnectButton";
 
 type PageState =
   | "INITIAL"
@@ -217,9 +218,10 @@ export function AirdropTool() {
 
   return (
     <div className="mx-auto text-white mb-4 text-center flex flex-col items-center max-w-[40rem] gap-y-2 min-h-screen">
-      <p className="text-2xl font-bold mt-1">
+      <h1 className="text-2xl font-bold mt-6">
         {TOOLS.find((tool) => tool.path === window.location.pathname)?.label}
-      </p>
+      </h1>
+      <ConnectButton inmain={true} />
       <button className="text-center text-lg text-black mt-2 bg-primary-orange px-4 py-2 rounded">
         <a
           className="hover:text-primary-orange transition"

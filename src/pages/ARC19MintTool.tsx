@@ -12,6 +12,7 @@ import {
 
 import InfinityModeComponent from "../components/InfinityModeComponent";
 import { useWallet } from "@txnlab/use-wallet-react";
+import ConnectButton from "../components/ConnectButton";
 
 export function ARC19MintTool() {
   const [csvData, setCsvData] = useState(null as null | any);
@@ -221,9 +222,10 @@ export function ARC19MintTool() {
 
   return (
     <div className="mb-4 text-center flex flex-col items-center max-w-[40rem] gap-y-2 mx-auto text-white min-h-screen">
-      <p className="text-2xl font-bold mt-1">
+      <h1 className="text-2xl font-bold mt-6">
         {TOOLS.find((tool) => tool.path === window.location.pathname)?.label}
-      </p>
+      </h1>
+      <ConnectButton inmain={true} />
       {/* mnemonic */}
       <InfinityModeComponent mnemonic={mnemonic} setMnemonic={setMnemonic} />
       {/* end mnemonic */}

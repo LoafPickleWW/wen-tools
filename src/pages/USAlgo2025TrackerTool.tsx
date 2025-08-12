@@ -7,6 +7,7 @@ import ToggleButton from "@mui/material/ToggleButton";
 import ToggleButtonGroup from "@mui/material/ToggleButtonGroup";
 import { toast } from "react-toastify";
 import algosdk, { AtomicTransactionComposer } from "algosdk";
+import ConnectButton from "../components/ConnectButton";
 
 interface StateData {
   name: string;
@@ -1393,9 +1394,10 @@ export const USAlgo2025TrackerTool = () => {
 
   return (
     <div className="mx-auto text-white mb-4 mt-4 text-center flex flex-col items-center max-w-full gap-y-2 min-h-screen">
-      <p className="text-2xl font-bold mt-1">
+      <h1 className="text-2xl font-bold mt-6">
         {TOOLS.find((tool) => tool.path === window.location.pathname)?.label}
-      </p>
+      </h1>
+      <ConnectButton inmain={true} />
       <p className="text-md text-gray-200">
         {
           TOOLS.find((tool) => tool.path === window.location.pathname)

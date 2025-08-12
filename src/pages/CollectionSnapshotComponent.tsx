@@ -9,6 +9,7 @@ import {
 } from "../utils";
 import { TOOLS } from "../constants";
 import { useWallet } from "@txnlab/use-wallet-react";
+import ConnectButton from "../components/ConnectButton";
 
 export function CollectionSnapshot() {
   const [creatorWallet, setCreatorWallet] = useState("");
@@ -216,9 +217,10 @@ export function CollectionSnapshot() {
 
   return (
     <div className="mx-auto text-white mb-4 text-center flex flex-col items-center min-h-screen">
-      <p className="text-2xl font-bold mt-1">
+      <h1 className="text-2xl font-bold mt-6">
         {TOOLS.find((tool) => tool.path === window.location.pathname)?.label}
-      </p>
+      </h1>
+      <ConnectButton inmain={true} />
       <textarea
         rows={creatorWallet.split(",").length > 1 ? 3 : 1}
         id="creatorWallet"

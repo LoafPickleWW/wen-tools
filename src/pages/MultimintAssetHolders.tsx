@@ -9,6 +9,7 @@ import {
   getParticipationStatusOfWallet,
 } from "../utils";
 import { useWallet } from "@txnlab/use-wallet-react";
+import ConnectButton from "../components/ConnectButton";
 
 export function MultimintAssetHolders() {
   const [assetId, setAssetId] = useState("");
@@ -286,9 +287,10 @@ export function MultimintAssetHolders() {
 
   return (
     <div className="mx-auto text-white mb-4 text-center flex flex-col items-center min-h-screen">
-      <p className="text-2xl font-bold mt-1">
+      <h1 className="text-2xl font-bold mt-6">
         {TOOLS.find((tool) => tool.path === window.location.pathname)?.label}
-      </p>
+      </h1>
+      <ConnectButton inmain={true} />
       <input
         type="text"
         id="asset_id_list"
