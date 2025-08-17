@@ -155,7 +155,7 @@ export default function ConnectButton({
             color="inherit"
           >
             <span className="font-sans font-light normal-case sm:leading-relaxed leading-relaxed text-xl">
-              Wallet Connect
+              Login
             </span>
           </ButtonMain>
           : <Button // Button in header
@@ -167,7 +167,7 @@ export default function ConnectButton({
             color="inherit"
           >
             <span className="font-sans font-light normal-case sm:leading-relaxed leading-tight lg:text-xl">
-              Wallet Connect
+              Login
             </span>
           </Button>
       ) : (!inmain && /* Render this section if the button is not in the body (in the header) */
@@ -392,3 +392,4 @@ const ButtonMain = styled(Button)<ButtonProps>(({ theme }) => ({
     color: theme.palette.getContrastText('#f57b14'),
   },
 }));
+
