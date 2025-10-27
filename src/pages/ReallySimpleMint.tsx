@@ -302,6 +302,11 @@ export function ReallySimpleMint() {
               "There is a network fee of 0.1A and a pinning fee of 1.4A. In total you need to have at least 1.6A in your wallet available before minting.",
           },
           {
+            question: "I am coming in from Algorand and am having some issues",
+            answer:
+              "You need to sign the arbitrary data message when logging into the website. If you don't it will say upload failed. In addition, you need to use your phone's browser or a computer to use the website, uploading an image from Pera's in-app browser does not work. Finally this tool only works with Pera Wallet.",
+          },
+          {
             question: "Can I mint a token or memecoin?",
             answer: "No, you can only mint an ARC-69 NFT.",
           },
@@ -310,5 +315,6 @@ export function ReallySimpleMint() {
     </div>
   );
 }
+
 
 
