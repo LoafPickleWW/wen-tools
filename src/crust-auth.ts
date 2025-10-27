@@ -43,7 +43,7 @@ export function isCrustAuth() {
   // localStorage.setItem("authBasic", authBasic);
   const token = localStorage.getItem("authBasic");
   if (token === "" || token === undefined || token === null) {
-    return true;
+    return false;
   }
 
   return true;
