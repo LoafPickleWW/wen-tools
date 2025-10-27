@@ -299,7 +299,7 @@ export function ReallySimpleMint() {
           {
             question: "How much does it cost to Mint?",
             answer:
-              "There is a network fee of 0.1A. In total you need to have at least 0.2A in your wallet before minting.",
+              "There is a network fee of 0.1A and a pinning fee of 1.4A. In total you need to have at least 1.6A in your wallet available before minting.",
           },
           {
             question: "Can I mint a token or memecoin?",
@@ -310,4 +310,5 @@ export function ReallySimpleMint() {
     </div>
   );
 }
+
 
