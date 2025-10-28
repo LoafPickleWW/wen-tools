@@ -1596,6 +1596,44 @@ export const base64ToString = (input: string): string => {
   return decoder.decode(bytes);
 };
 
+/** Converts bytes as a Uint8Array buffer to data URL. This is usually used as a step in converting
+ * bytes to a Base64 string. This should not be need when `Uint8Array.toBase64()` becomes widely
+ * available.
+ *
+ * Adapted from:
+ * <https://developer.mozilla.org/en-US/docs/Web/API/Window/btoa#converting_arbitrary_binary_data>
+ *
+ * Copied from:
+ * <https://github.com/No-Cash-7970/txnDuck/blob/50f82a8aaf206c129b83ddf613fcdc995c2c8ea6/src/app/lib/utils.ts#L25>
+ * with minor modifications
+ *
+ * @param bytes The bytes to convert to a data URL
+ * @param type The MIME type of the data
+ * @returns The bytes in the form of a data URL
+ */
+export const bytesToDataUrl = async (
+  bytes: Uint8Array,
+  type = 'application/octet-stream'
+): Promise<string> => {
+  return await new Promise((resolve, reject) => {
+    const reader = Object.assign(new FileReader(), {
+      onload: () => resolve(reader.result as string),
+      onerror: () => reject(reader.error),
+    });
+    reader.readAsDataURL(new File([bytes as BlobPart], '', { type }));
+  });
+};
+
+/** Converts bytes as a Uint8Array buffer to a Base64-encoded string. This should be able to be
+ * replaced with the native `Uint8Array.toBase64()` method when it becomes widely available.
+ * @param bytes The bytes to convert to a Base64-encoded string
+ * @returns The bytes in the form of a Base64-encoded string
+ */
+export const bytesToBase64 = async (bytes: Uint8Array) => {
+  const dataUrl = await bytesToDataUrl(bytes);
+  return dataUrl.slice(dataUrl.indexOf(',') + 1);
+};
+
 export const hexToString = (hex: string): string => {
   hex = hex.replace(/^0x/, "");
   return Buffer.from(hex, "hex").toString("utf8");
@@ -1604,6 +1642,69 @@ export const hexToString = (hex: string): string => {
 export const stringToHex = (str: string): string => {
   return `0x${Buffer.from(str).toString("hex")}`;
 };
+
+// Copied from: <https://github.com/polkadot-js/common/blob/7d77f89f3402b0e7f8c64bc751ab8a99d88ace95/packages/util/src/types.ts#L73>
+export type HexString = `0x${string}`;
+
+// Copied from <https://github.com/polkadot-js/common/blob/7d77f89f3402b0e7f8c64bc751ab8a99d88ace95/packages/util/src/u8a/toHex.ts#L22>
+// with modifications
+function hex (value: Uint8Array, result: HexString): HexString {
+  // --------------------------
+  // This section is copied from
+  // <https://github.com/polkadot-js/common/blob/7d77f89f3402b0e7f8c64bc751ab8a99d88ace95/packages/util/src/u8a/toHex.ts#L6>
+  const U8 = new Array<string>(256);
+  const U16 = new Array<string>(256 * 256);
+
+  for (let n = 0; n < 256; n++) {
+    U8[n] = n.toString(16).padStart(2, '0');
+  }
+
+  for (let i = 0; i < 256; i++) {
+    const s = i << 8;
+
+    for (let j = 0; j < 256; j++) {
+      U16[s | j] = U8[i] + U8[j];
+    }
+  }
+  // --------------------------
+
+  const mod = (value.length % 2) | 0;
+  const length = (value.length - mod) | 0;
+
+  for (let i = 0; i < length; i += 2) {
+    result += U16[(value[i] << 8) | value[i + 1]];
+  }
+
+  if (mod) {
+    result += U8[value[length] | 0];
+  }
+
+  return result;
+}
+
+/** Creates a hex string from a Uint8Array object. `null` or `undefined` values returns an `0x` string.
+ *
+ * This code is copied from
+ * <https://github.com/polkadot-js/common/blob/7d77f89f3402b0e7f8c64bc751ab8a99d88ace95/packages/util/src/u8a/toHex.ts#L51>
+ * with modification to the function name and minor formatting modifications. The code was copied
+ * instead of imported to minimize the number of third-party dependencies in the code base.
+ */
+export function bytesToHex (value?: Uint8Array | null, bitLength = -1, isPrefixed = true): HexString {
+  // this is not 100% correct since we support isPrefixed = false....
+  const empty = isPrefixed ? '0x' : '' as HexString;
+
+  if (!value?.length) {
+    return empty;
+  } else if (bitLength > 0) {
+    const length = Math.ceil(bitLength / 8);
+
+    if (value.length > length) {
+      return `${hex(value.subarray(0, length / 2), empty)}…${hex(value.subarray(value.length - length / 2), '' as HexString)}`;
+    }
+  }
+
+  return hex(value, empty);
+}
 
 export const getAssetHolding = async (
   address: string,
