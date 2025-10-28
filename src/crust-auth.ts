@@ -1,16 +1,16 @@
-import { bytesToBase64 } from "./utils";
-import { toast } from "react-toastify";
+// import { bytesToBase64 } from "./utils";
+// import { toast } from "react-toastify";
 
-/** Text encoder used to convert strings to Uint8Arrays */
-const textEncoder = new TextEncoder;
+// /** Text encoder used to convert strings to Uint8Arrays */
+// const textEncoder = new TextEncoder;
 
-/** Data about the user and the wallet they are using */
-type UserData = {
-  // The address of the user's account
-  account: string,
-  // The chain the user is using
-  wallet: string
-}
+// /** Data about the user and the wallet they are using */
+// type UserData = {
+//   // The address of the user's account
+//   account: string,
+//   // The chain the user is using
+//   wallet: string
+// }
 
 export const CRUST_DEBUG = false;
 
@@ -19,7 +19,8 @@ export const CRUST_DEBUG = false;
  * @param address The address of the Algorand account
  * @return An access token that can be used to access Crust IPFS W3Auth PS endpoints
  */
-export async function signLoginAlgorandForCrustIpfsEndpoint(address: string) {
+// @ts-expect-error The argument being unused should be temporary
+export async function signLoginAlgorandForCrustIpfsEndpoint(address: string) { // eslint-disable-line
   // XXX: Fake the Crust authentication so that we can skip the authentication when connecting the
   // wallet while still being able to use the tools that rely on Crust. This is an actual token for
   // the account: BCAPWJALWA3N3EIZRFCO55PQ3YBYCSGPZXNDHOOA6R7CGHTISV2GCSYC6Y
@@ -90,47 +91,47 @@ export function isCrustAuth() {
   return true;
 }
 
-const getPrefix = (user: UserData) => {
-  if (
-    user.wallet.startsWith("metamask") ||
-    user.wallet === "metax" ||
-    user.wallet === "wallet-connect" ||
-    user.wallet === "web3auth"
-  ) {
-    return "eth";
-  }
+// const getPrefix = (user: UserData) => {
+//   if (
+//     user.wallet.startsWith("metamask") ||
+//     user.wallet === "metax" ||
+//     user.wallet === "wallet-connect" ||
+//     user.wallet === "web3auth"
+//   ) {
+//     return "eth";
+//   }
 
-  if (user.wallet === "near") {
-    return "near";
-  }
+//   if (user.wallet === "near") {
+//     return "near";
+//   }
 
-  if (user.wallet === "flow") {
-    return "flow";
-  }
+//   if (user.wallet === "flow") {
+//     return "flow";
+//   }
 
-  if (user.wallet === "solana") {
-    return "sol";
-  }
+//   if (user.wallet === "solana") {
+//     return "sol";
+//   }
 
-  if (user.wallet === "elrond") {
-    return "elrond";
-  }
+//   if (user.wallet === "elrond") {
+//     return "elrond";
+//   }
 
-  if (user.wallet === "algorand") {
-    return "algo";
-  }
+//   if (user.wallet === "algorand") {
+//     return "algo";
+//   }
 
-  if (user.wallet === "aptos-martian") {
-    return "aptos";
-  }
+//   if (user.wallet === "aptos-martian") {
+//     return "aptos";
+//   }
 
-  if (user.wallet === "aptos-petra") {
-    return "aptos";
-  }
+//   if (user.wallet === "aptos-petra") {
+//     return "aptos";
+//   }
 
-  if (user.wallet === "ton-connect") {
-    return "ton";
-  }
+//   if (user.wallet === "ton-connect") {
+//     return "ton";
+//   }
 
-  return "substrate";
-};
+//   return "substrate";
+// };
