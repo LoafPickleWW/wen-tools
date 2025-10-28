@@ -9,7 +9,7 @@ import MenuItem from "@mui/material/MenuItem";
 import MenuList from "@mui/material/MenuList";
 import Tooltip from "@mui/material/Tooltip";
 import { styled } from '@mui/material/styles';
-import { useWallet } from "@txnlab/use-wallet-react";
+import { useWallet, WalletId } from "@txnlab/use-wallet-react";
 
 // ** Wallet Imports
 import { PeraWalletConnect } from "@perawallet/connect";
@@ -24,7 +24,7 @@ export default function ConnectButton({
   /** If this connect button is to be in the main part of the page (not in the header) */
   inmain?: boolean
 }) {
-  const { activeAddress, activeWallet, algodClient, wallets, signTransactions } = useWallet();
+  const { activeAddress, activeWallet, algodClient, wallets } = useWallet();
   const [anchorEl, setAnchorEl] = useState(null);
   const open = Boolean(anchorEl);
   // wallet
@@ -130,15 +130,19 @@ export default function ConnectButton({
   // This is for authenticating with Crust, which is needed for some of the tools (Simple Mint,
   // Simple Update, etc.)
   useEffect(() => {
-    if (activeAddress) {
+    // Only Pera supports signing the arbitrary bytes, which is needed for Crust authentication
+    if (activeWallet?.id !== WalletId.PERA) return;
+
+    // The connect button in the main body should not activate this useEffect
+    if (activeAddress && !inmain) {
       // Already authenticated or the authentication was rejected. Do nothing.
       if (isCrustAuth() || isCrustAuthFail()) return
 
-      signLoginAlgorandForCrustIpfsEndpoint(activeAddress, signTransactions, algodClient)
+      signLoginAlgorandForCrustIpfsEndpoint(activeAddress)
         .then(authBasic => {
           localStorage.setItem("authBasic", authBasic ?? '');
           console.log("------------crust auth success: ", authBasic);
-          toast.success("Crust authentication success!")
+          // toast.success("Crust authentication success!")
         })
         .catch((err: any) => {
           localStorage.setItem("authBasicFail", "true")

@@ -179,7 +179,7 @@ export async function pinJSONToCrust(
       data.append("file", blob);
       const response = await axios.post(`${endpoint}/api/v0/add`, data, {
         headers: {
-          Authorization: `Bearer ${token.trim()}`,
+          Authorization: `Basic ${token.trim()}`,
         },
         params: {
           pin: true,
@@ -200,7 +200,7 @@ export async function pinJSONToCrust(
       response = await axios.post(`${endpoint}/api/v0/add`, json, {
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token.trim()}`,
+          Authorization: `Basic ${token.trim()}`,
         },
       });
       if (response.status === 200 && response.data && response.data.Hash) {
@@ -239,7 +239,7 @@ export async function pinImageToCrust(
     data.append("file", image);
     const response = await axios.post(`${endpoint}/api/v0/add`, data, {
       headers: {
-        Authorization: `Bearer ${token.trim()}`,
+        Authorization: `Basic ${token.trim()}`,
       },
       params: { pin: true, "cid-version": 1 },
     });
