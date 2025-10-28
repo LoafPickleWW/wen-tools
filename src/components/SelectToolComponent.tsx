@@ -26,7 +26,7 @@ export function SelectToolComponent() {
           />
         </div>
       </div>
-      <p className="col-span-3 text-center text-2xl lg:text-4xl font-semibold tracking-tight text-white font-sans py-2 pb-6 border-b border-t border-dashed border-secondary-gray">
+      <div className="col-span-3 text-center text-2xl lg:text-4xl font-semibold tracking-tight text-white font-sans py-2 pb-6 border-b border-t border-dashed border-secondary-gray">
         our <span className="text-amber-400">top</span> tools
         <div className="grid grid-cols-2 md:grid-cols-4 xl:w-[70%] w-full justify-center gap-2 items-stretch mx-auto">
           {TOOLS.filter((tool) =>
@@ -39,10 +39,9 @@ export function SelectToolComponent() {
           )
             .slice(0, 4) // Ensures only 4 tools are shown
             .map((tool) => (
-              <Link to={tool.path}>
+              <Link to={tool.path} key={tool.id + '-0'}>
                 <div
                   className="button-link group relative flex flex-col mt-2.5 h-full align-content-stretch rounded-[36px] bg-banner-grey p-2.5 text-center transition-transform duration-100 ease-in-out hover:scale-[0.97]"
-                  key={tool.id}
                 >
                   <div className="relative flex items-center mb-[50px] w-full h-[70px] rounded-t-[28px] bg-gradient-to-r from-[#E4E808] to-[#FD941D]">
                     <div className="absolute top-[85%] left-1/2 -translate-x-1/2 -translate-y-1/2 z-10">
@@ -65,17 +64,16 @@ export function SelectToolComponent() {
               </Link>
             ))}
         </div>
-      </p>
+      </div>
       <USAlgo2025Leaderboard />
 
-      <p className="col-span-3 text-center text-2xl lg:text-4xl font-semibold tracking-tight text-white font-sans py-4 border-b border-t border-dashed border-secondary-gray">
+      <div className="col-span-3 text-center text-2xl lg:text-4xl font-semibold tracking-tight text-white font-sans py-4 border-b border-t border-dashed border-secondary-gray">
         all <span className="text-amber-400">asset management</span> tools
         <div className="grid grid-cols-2 md:grid-cols-4 xl:w-[70%] w-full justify-center gap-2 items-stretch mx-auto">
           {TOOLS.filter((tool) => tool.category === "asset").map((tool) => (
-            <Link to={tool.path}>
+            <Link to={tool.path} key={tool.id + '-1'}>
               <div
                 className="button-link group relative flex flex-col mt-2.5 h-full align-content-stretch rounded-[36px] bg-banner-grey p-2.5 text-center transition-transform duration-100 ease-in-out hover:scale-[0.97]"
-                key={tool.id}
               >
                 <div className="relative flex items-center mb-[50px] w-full h-[70px] rounded-t-[28px] bg-gradient-to-r from-[#E4E808] to-[#FD941D]">
                   <div className="absolute top-[85%] left-1/2 -translate-x-1/2 -translate-y-1/2 z-10">
@@ -98,16 +96,15 @@ export function SelectToolComponent() {
             </Link>
           ))}
         </div>
-      </p>
+      </div>
 
-      <p className="col-span-3 text-center text-2xl lg:text-4xl font-semibold tracking-tight text-white font-sans py-4 border-b border-dashed border-secondary-gray">
+      <div className="col-span-3 text-center text-2xl lg:text-4xl font-semibold tracking-tight text-white font-sans py-4 border-b border-dashed border-secondary-gray">
         all <span className="text-amber-400">mint</span> tools
         <div className="grid grid-cols-2 md:grid-cols-4 xl:w-[70%] w-full justify-center gap-2 items-stretch mx-auto">
           {TOOLS.filter((tool) => tool.category === "mint").map((tool) => (
-            <Link to={tool.path}>
+            <Link to={tool.path} key={tool.id + '-2'}>
               <div
                 className="button-link group relative flex flex-col mt-2.5 h-full align-content-stretch rounded-[36px] bg-banner-grey p-2.5 text-center transition-transform duration-100 ease-in-out hover:scale-[0.97]"
-                key={tool.id}
               >
                 <div className="relative flex items-center mb-[50px] w-full h-[70px] rounded-t-[28px] bg-gradient-to-r from-[#E4E808] to-[#FD941D]">
                   <div className="absolute top-[85%] left-1/2 -translate-x-1/2 -translate-y-1/2 z-10">
@@ -130,7 +127,7 @@ export function SelectToolComponent() {
             </Link>
           ))}
         </div>
-      </p>
+      </div>
     </div>
   );
 }

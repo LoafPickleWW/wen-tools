@@ -19,9 +19,8 @@ const CarouselComponent = ({ images }: { images: Image[] }) => {
     <div className="mx-auto my-2 md:my-4">
       <div>
         {images.map((image, index) => (
-          <a href={image.url} target="_blank" rel="noreferrer">
+          <a href={image.url} target="_blank" rel="noreferrer" key={index}>
             <img
-              key={index}
               src={image.path}
               alt={image.path}
               className={`${
@@ -29,7 +28,7 @@ const CarouselComponent = ({ images }: { images: Image[] }) => {
               } h-24 md:h-28 mx-auto rounded-md`}
             />
           </a>
-        ))} 
+        ))}
       </div>
     </div>
   );
