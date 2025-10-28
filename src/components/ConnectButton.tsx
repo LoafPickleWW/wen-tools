@@ -9,11 +9,11 @@ import MenuItem from "@mui/material/MenuItem";
 import MenuList from "@mui/material/MenuList";
 import Tooltip from "@mui/material/Tooltip";
 import { styled } from '@mui/material/styles';
-import { useWallet } from "@txnlab/use-wallet-react";
+import { useWallet, WalletId } from "@txnlab/use-wallet-react";
 
 // ** Wallet Imports
 import { PeraWalletConnect } from "@perawallet/connect";
-// import { signLoginAlgorandForCrustIpfsEndpoint } from "../crust-auth";
+import { isCrustAuth, signLoginAlgorandForCrustIpfsEndpoint } from "../crust-auth";
 
 import { FaCopy, FaWallet } from "react-icons/fa";
 import { toast } from "react-toastify";
@@ -24,7 +24,7 @@ export default function ConnectButton({
   /** If this connect button is to be in the main part of the page (not in the header) */
   inmain?: boolean
 }) {
-  const { activeAddress, activeWallet, algodClient, wallets } = useWallet();
+  const { activeAddress, activeWallet, algodClient, wallets, signTransactions } = useWallet();
   const [anchorEl, setAnchorEl] = useState(null);
   const open = Boolean(anchorEl);
   // wallet
@@ -59,24 +59,6 @@ export default function ConnectButton({
     } catch {
       toast.error("Failed to connect!");
     }
-
-    // try {
-    //   const accts = await wallets.find((w) => w.id === "pera")?.connect();
-    //   const addr = accts?.[0].address;
-    //   if (!addr) throw Error("Invalid Address");
-    //   const authBasic = await signLoginAlgorandForCrustIpfsEndpoint(addr);
-
-    //   // continue when connect & signLoginAlgorandForCrustIpfsEndpoint success
-    //   localStorage.setItem("authBasic", authBasic);
-
-    //   console.log("------------crust auth success: ", authBasic);
-
-    //   toast.success("Connected!");
-    // } catch (err) {
-    //   console.error(err);
-    //   toast.error("Failed to connect!");
-    //   clearLoginState(); // clear when crust auth fail
-    // }
   };
 
   const connectToDefly = async () => {
@@ -143,6 +125,30 @@ export default function ConnectButton({
         });
     }
   }, [activeAddress, algodClient]);
+
+  // This is for authenticating with Crust, which is needed for some of the tools (Simple Mint,
+  // Simple Update, etc.)
+  useEffect(() => {
+    // XXX: Any wallet should be able to use Crust authentication because the authentication
+    // requires signing a transaction instead of signing some arbitrary bytes. However, Crust
+    // authentication was once an Pera-only feature because it was the only wallet to support
+    // signing arbitrary bytes. For now, we are going to leave it as a Pera-only feature for
+    // historical reasons.
+    if (activeWallet?.id === WalletId.PERA) {
+      // Already authenticated, so do nothing
+      if (isCrustAuth()) return
+
+      if (!activeAddress) throw Error("Invalid active address");
+
+      signLoginAlgorandForCrustIpfsEndpoint(activeAddress, signTransactions, algodClient)
+        .then(authBasic => {
+          localStorage.setItem("authBasic", authBasic ?? '');
+          console.log("------------crust auth success: ", authBasic);
+          toast.success("Crust authentication success!")
+        })
+        .catch((err: any) => console.error('Failed to log into Crust:', err));
+    }
+  }, [activeWallet, activeAddress])
 
   return (
     <div className={
