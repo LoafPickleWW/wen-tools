@@ -9,7 +9,7 @@ import MenuItem from "@mui/material/MenuItem";
 import MenuList from "@mui/material/MenuList";
 import Tooltip from "@mui/material/Tooltip";
 import { styled } from '@mui/material/styles';
-import { useWallet, WalletId } from "@txnlab/use-wallet-react";
+import { useWallet } from "@txnlab/use-wallet-react";
 
 // ** Wallet Imports
 import { PeraWalletConnect } from "@perawallet/connect";
@@ -130,16 +130,9 @@ export default function ConnectButton({
   // This is for authenticating with Crust, which is needed for some of the tools (Simple Mint,
   // Simple Update, etc.)
   useEffect(() => {
-    // XXX: Any wallet should be able to use Crust authentication because the authentication
-    // requires signing a transaction instead of signing some arbitrary bytes. However, Crust
-    // authentication was once an Pera-only feature because it was the only wallet to support
-    // signing arbitrary bytes. For now, we are going to leave it as a Pera-only feature for
-    // historical reasons.
-    if (activeWallet?.id === WalletId.PERA) {
+    if (activeAddress) {
       // Already authenticated or the authentication was rejected. Do nothing.
       if (isCrustAuth() || isCrustAuthFail()) return
-
-      if (!activeAddress) throw Error("Invalid active address");
 
       signLoginAlgorandForCrustIpfsEndpoint(activeAddress, signTransactions, algodClient)
         .then(authBasic => {
@@ -150,7 +143,7 @@ export default function ConnectButton({
         .catch((err: any) => {
           localStorage.setItem("authBasicFail", "true")
           console.error('Failed to log into Crust:', err)
-          toast.error("Crust authentication failed. Don't worry, your wallet is still connected to wen.tools.")
+          toast.warn("Crust authentication failed. Don't worry, your wallet is still connected to wen.tools.")
         });
     }
   }, [activeWallet, activeAddress])

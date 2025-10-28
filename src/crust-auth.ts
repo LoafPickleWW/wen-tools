@@ -62,7 +62,6 @@ export async function signLoginAlgorandForCrustIpfsEndpoint(
       from: address,
       to: address,
       amount: 0,
-      note: textEncoder.encode('For authenticating with Crust. Transaction will not be sent.'),
       suggestedParams: await algodClient.getTransactionParams().do(),
     })])
   } catch (err: any) {
