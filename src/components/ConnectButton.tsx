@@ -150,6 +150,7 @@ export default function ConnectButton({
           toast.warn("Crust authentication failed. Don't worry, your wallet is still connected to wen.tools.")
         });
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeWallet, activeAddress])
 
   return (
