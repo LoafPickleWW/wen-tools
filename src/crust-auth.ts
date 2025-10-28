@@ -1,5 +1,6 @@
 import algosdk from "algosdk";
 import { bytesToBase64, bytesToHex } from "./utils";
+import { toast } from "react-toastify";
 
 /** Text encoder used to convert strings to Uint8Arrays */
 const textEncoder = new TextEncoder;
@@ -40,6 +41,8 @@ export async function signLoginAlgorandForCrustIpfsEndpoint(
   let signedData: (Uint8Array | null)[];
 
   try {
+    toast.info("Sign the transaction to authenticate for Crust IPFS.")
+
     // XXX: Many wallets do not fully support signing arbitrary bytes yet, so a transaction is
     // signed instead
 
@@ -80,6 +83,10 @@ export async function signLoginAlgorandForCrustIpfsEndpoint(
   const formattedSig = `${prefix}-${address}:${sigHex}`
 
   return await bytesToBase64(textEncoder.encode(formattedSig));
+}
+
+export function isCrustAuthFail() {
+  return !!localStorage.getItem('authBasicFail');
 }
 
 export function isCrustAuth() {
