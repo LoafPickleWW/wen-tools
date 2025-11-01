@@ -9,7 +9,7 @@ import MenuItem from "@mui/material/MenuItem";
 import MenuList from "@mui/material/MenuList";
 import Tooltip from "@mui/material/Tooltip";
 import { styled } from '@mui/material/styles';
-import { useWallet, WalletId } from "@txnlab/use-wallet-react";
+import { useWallet } from "@txnlab/use-wallet-react";
 
 // ** Wallet Imports
 import { PeraWalletConnect } from "@perawallet/connect";
