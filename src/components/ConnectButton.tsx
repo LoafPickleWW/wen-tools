@@ -81,6 +81,16 @@ export default function ConnectButton({
     }
   };
 
+  const connectToExodus = async () => {
+    handleClose();
+    try {
+      await wallets.find((w) => w.id === "exodus")?.connect();
+      toast.success("Connected!");
+    } catch {
+      toast.error("Failed to connect!");
+    }
+  };
+
   const algoLogo = (
     <svg
       className="fill-text-color me-1 mb-1 ml-1"
@@ -278,6 +288,28 @@ export default function ConnectButton({
                     className="w-[26px] h-[26px]"
                   />
                   <span className="ml-2 font-normal">Lute</span>
+                </div>
+              </div>
+            </MenuItem>
+            
+            <MenuItem
+              sx={{
+                backgroundColor: "transparent",
+                color: "white",
+                borderBottomLeftRadius: "4px",
+                borderBottomRightRadius: "4px",
+                ":hover": { backgroundColor: "transparent", opacity: "0.8" },
+              }}
+              onClick={connectToExodus}
+            >
+              <div className="flex flex-col gap-2 items-start">
+                <div className="font-sans text-lg font-medium flex flex-row items-center">
+                  <img
+                    src="/exodus-logo.svg"
+                    alt=""
+                    className="w-[26px] h-[26px]"
+                  />
+                  <span className="ml-2 font-normal">Exodus</span>
                 </div>
               </div>
             </MenuItem>
