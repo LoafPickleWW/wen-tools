@@ -1,0 +1,58 @@
+# Actions for checking the code for errors before deploying
+
+name: Code Checks
+permissions:
+  contents: read
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - "**/*.md" # Do not run these checks when only documentation files are changed
+  pull_request:
+    branches: [main]
+    paths-ignore:
+      - "**/*.md" # Do not run these checks when only documentation files are changed
+  workflow_dispatch: null
+jobs:
+  lint: # Check for style errors in code
+    timeout-minutes: 5
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Install Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Enable Corepack for PNPM
+        run: corepack enable
+      - name: Set up Node cache # Set up Node cache by installing again
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - name: Install dependencies
+        run: pnpm install
+      - name: Run linter
+        run: pnpm lint
+  build-check: # Check for errors by building the project
+    timeout-minutes: 5
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Install Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Enable Corepack for PNPM
+        run: corepack enable
+      - name: Set up Node cache # Set up Node cache by installing again
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - name: Install dependencies
+        run: pnpm install
+      - name: Run linter
+        run: pnpm build
