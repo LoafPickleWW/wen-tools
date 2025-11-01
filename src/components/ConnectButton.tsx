@@ -130,8 +130,11 @@ export default function ConnectButton({
   // This is for authenticating with Crust, which is needed for some of the tools (Simple Mint,
   // Simple Update, etc.)
   useEffect(() => {
-    // Only Pera supports signing the arbitrary bytes, which is needed for Crust authentication
-    if (activeWallet?.id !== WalletId.PERA) return;
+    // XXX: The following code was needed when Crust authentication token wasn't faked and only Pera
+    // supported signing the arbitrary bytes needed to create a token. This code is commented out
+    // because the authentication token is faked, which allows any wallet to successfully use Crust.
+    // // Only Pera supports signing the arbitrary bytes, which is needed for Crust authentication
+    // if (activeWallet?.id !== WalletId.PERA) return;
 
     // The connect button in the main body should not activate this useEffect
     if (activeAddress && !inmain) {
