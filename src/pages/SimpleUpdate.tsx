@@ -47,6 +47,8 @@ export function SimpleUpdate() {
   const [transaction, setTransaction] = useState(null as any);
   const [previewAsset, setPreviewAsset] = useState(null as any);
   const [assetID, setAssetID] = useAtom(suAssetIdAtom);
+  const [removeFreeze, setRemoveFreeze] = useState(false);
+  const [removeClawback, setRemoveClawback] = useState(false);
   const navigate = useNavigate();
 
   // batchATC is a AtomicTransactionComposer to batch and send all transactions
@@ -237,6 +239,9 @@ export function SimpleUpdate() {
         animation_url: assetMetadata.animation_url || assetData.params["url"],
         animation_mime_type: assetMetadata.animation_mime_type,
       });
+
+      setRemoveFreeze(false);
+      setRemoveClawback(false);
     } catch (err: any) {
       console.error(err);
       if (err.response) {
@@ -357,8 +362,8 @@ export function SimpleUpdate() {
         const transaction_data = {
           asset_id: assetID,
           ipfs_data: metadata,
-          freeze: formData.freeze,
-          clawback: formData.clawback,
+          freeze: removeFreeze ? "" : formData.freeze,
+          clawback: removeClawback ? "" : formData.clawback,
         };
 
         ipfs_data = metadata;
@@ -390,8 +395,8 @@ export function SimpleUpdate() {
         const transaction_data = {
           asset_id: assetID,
           note: metadata,
-          freeze: formData.freeze,
-          clawback: formData.clawback,
+          freeze: removeFreeze ? "" : formData.freeze,
+          clawback: removeClawback ? "" : formData.clawback,
         };
         ipfs_data = metadata;
         const signedTransactions = await createAssetConfigArray(
@@ -748,6 +753,46 @@ export function SimpleUpdate() {
             >
               +
             </button>
+          )}
+          {(formData.freeze || formData.clawback) && (
+            <div className="mt-4 flex flex-col items-center justify-center gap-y-2">
+              <p className="focus:outline-nonetext-sm font-semibold text-xl leading-tight text-gray-200">
+                Asset Capabilities
+              </p>
+              <div className="flex flex-row gap-x-6">
+                {formData.freeze && (
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      className="sr-only peer"
+                      onChange={(e) => setRemoveFreeze(e.target.checked)}
+                      checked={removeFreeze}
+                    />
+                    <div className="w-11 h-6 bg-gray-400 peer-focus:outline-none peer-focus:ring-4 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all border-gray-600 peer-checked:bg-red-600"></div>
+                    <span className="ml-3 text-sm font-medium text-gray-300">
+                      Remove Freeze
+                    </span>
+                  </label>
+                )}
+                {formData.clawback && (
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      className="sr-only peer"
+                      onChange={(e) => setRemoveClawback(e.target.checked)}
+                      checked={removeClawback}
+                    />
+                    <div className="w-11 h-6 bg-gray-400 peer-focus:outline-none peer-focus:ring-4 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all border-gray-600 peer-checked:bg-red-600"></div>
+                    <span className="ml-3 text-sm font-medium text-gray-300">
+                      Remove Clawback
+                    </span>
+                  </label>
+                )}
+              </div>
+              <p className="text-xs text-red-400 mt-1">
+                Warning: Removing these capabilities is permanent and cannot be undone.
+              </p>
+            </div>
           )}
           {formData.format === "ARC3" ? (
             <p className="text-lg text-red-400 font-roboto">

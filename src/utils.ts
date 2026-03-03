@@ -106,8 +106,8 @@ export async function createAssetConfigArray(
       note: new TextEncoder().encode(JSON.stringify(data_for_txns[i].note)),
       manager: address,
       reserve: address,
-      freeze: data_for_txns[i].freeze || undefined,
-      clawback: data_for_txns[i].clawback || undefined,
+      freeze: typeof data_for_txns[i].freeze === "string" ? data_for_txns[i].freeze : undefined,
+      clawback: typeof data_for_txns[i].clawback === "string" ? data_for_txns[i].clawback : undefined,
       suggestedParams: params,
       strictEmptyAddressChecking: false,
     });
@@ -118,7 +118,7 @@ export async function createAssetConfigArray(
       suggestedParams: params,
       note: new TextEncoder().encode(
         "via wen.tools - free tools for creators and collectors | " +
-          Math.random().toString(36).substring(2)
+        Math.random().toString(36).substring(2)
       ),
     });
     const groupID = computeGroupID([asset_update_tx, fee_tx]);
@@ -160,11 +160,11 @@ export async function createAssetMintArrayV2(
           10n ** BigInt(data_for_txns[i].decimals),
         decimals: parseInt(data_for_txns[i].decimals),
         reserve: address,
-        freeze: data_for_txns[i].has_freeze === "Y" ? address : undefined,
+        freeze: typeof data_for_txns[i].has_freeze === "string" ? (data_for_txns[i].has_freeze === "Y" ? address : undefined) : undefined,
         assetURL: data_for_txns[i].asset_url,
         suggestedParams: params,
         note: note,
-        clawback: data_for_txns[i].has_clawback === "Y" ? address : undefined,
+        clawback: typeof data_for_txns[i].has_clawback === "string" ? (data_for_txns[i].has_clawback === "Y" ? address : undefined) : undefined,
         defaultFrozen: data_for_txns[i].default_frozen === "Y" ? true : false,
       });
 
@@ -175,7 +175,7 @@ export async function createAssetMintArrayV2(
         suggestedParams: params,
         note: new TextEncoder().encode(
           "via wen.tools - free tools for creators and collectors | " +
-            Math.random().toString(36).substring(2)
+          Math.random().toString(36).substring(2)
         ),
       });
 
@@ -240,7 +240,7 @@ export async function createAssetMintArray(
         suggestedParams: params,
         note: new TextEncoder().encode(
           "via wen.tools - free tools for creators and collectors | " +
-            Math.random().toString(36).substring(2)
+          Math.random().toString(36).substring(2)
         ),
       });
       const groupID = computeGroupID([asset_create_tx, fee_tx]);
@@ -449,7 +449,7 @@ export async function createARC3AssetMintArray(
         suggestedParams: params,
         note: new TextEncoder().encode(
           "via wen.tools - free tools for creators and collectors | " +
-            Math.random().toString(36).substring(2)
+          Math.random().toString(36).substring(2)
         ),
       });
       const atc = new algosdk.AtomicTransactionComposer();
@@ -642,7 +642,7 @@ export async function createARC19AssetMintArray(
         suggestedParams: params,
         note: new TextEncoder().encode(
           "via wen.tools - free tools for creators and collectors | " +
-            Math.random().toString(36).substring(2)
+          Math.random().toString(36).substring(2)
         ),
       });
       const groupID = computeGroupID([asset_create_tx, fee_tx]);
@@ -731,7 +731,7 @@ export async function updateARC19AssetMintArrayV2(
         suggestedParams: params,
         note: new TextEncoder().encode(
           "via wen.tools - free tools for creators and collectors | " +
-            Math.random().toString(36).substring(2)
+          Math.random().toString(36).substring(2)
         ),
       });
 
@@ -819,7 +819,7 @@ export async function updateARC19AssetMintArray(
         suggestedParams: params,
         note: new TextEncoder().encode(
           "via wen.tools - free tools for creators and collectors | " +
-            Math.random().toString(36).substring(2)
+          Math.random().toString(36).substring(2)
         ),
       });
       const groupID = computeGroupID([update_tx, fee_tx]);
@@ -881,18 +881,18 @@ export async function createAirdropTransactions(
           note: new TextEncoder().encode(
             isHolder
               ? data_for_txns[i].note.slice(0, 950) +
-                  " | via wen.tools - free tools for creators and collectors  " +
-                  Math.random().toString(36).substring(2)
+              " | via wen.tools - free tools for creators and collectors  " +
+              Math.random().toString(36).substring(2)
               : data_for_txns[i].note.slice(0, 950) +
-                  " | via wen.tools - free tools for creators and collectors  " +
-                  Math.random().toString(36).substring(2)
+              " | via wen.tools - free tools for creators and collectors  " +
+              Math.random().toString(36).substring(2)
           ),
         });
       } else {
         data_for_txns[i].decimals = assetDecimals[data_for_txns[i].asset_id];
         const amount = Math.round(
           Number(data_for_txns[i].amount) *
-            10 ** Number(assetDecimals[data_for_txns[i].asset_id])
+          10 ** Number(assetDecimals[data_for_txns[i].asset_id])
         );
         tx = makeAssetTransferTxnWithSuggestedParamsFromObject({
           from: address,
@@ -903,11 +903,11 @@ export async function createAirdropTransactions(
           note: new TextEncoder().encode(
             isHolder
               ? data_for_txns[i].note.slice(0, 950) +
-                  " | via wen.tools - free tools for creators and collectors  " +
-                  Math.random().toString(36).substring(2)
+              " | via wen.tools - free tools for creators and collectors  " +
+              Math.random().toString(36).substring(2)
               : data_for_txns[i].note.slice(0, 950) +
-                  " | via wen.tools - free tools for creators and collectors  " +
-                  Math.random().toString(36).substring(2)
+              " | via wen.tools - free tools for creators and collectors  " +
+              Math.random().toString(36).substring(2)
           ),
         });
       }
@@ -961,7 +961,7 @@ export async function createClawbackTransactions(
   for (let i = 0; i < data_for_txns.length; i++) {
     const amount = Math.round(
       Number(data_for_txns[i].amount) *
-        10 ** Number(assetDecimals[data_for_txns[i].asset_id])
+      10 ** Number(assetDecimals[data_for_txns[i].asset_id])
     );
     const tx = makeAssetTransferTxnWithSuggestedParamsFromObject({
       from: address.trim(),
@@ -1083,7 +1083,7 @@ export async function createAssetDeleteTransactions(
         assetIndex: assets[i],
         note: new TextEncoder().encode(
           "via wen.tools - free tools for creators and collectors | " +
-            Math.random().toString(36).substring(2)
+          Math.random().toString(36).substring(2)
         ),
       });
       const fee_tx = makePaymentTxnWithSuggestedParamsFromObject({
@@ -1206,8 +1206,7 @@ export async function getAssetsFromAddress(
   );
   while (userAssets.data.assets.length === threshold) {
     const nextAssets = await axios.get(
-      `${getIndexerURL(activeNetwork)}/v2/accounts/${address}/assets?next=${
-        userAssets.data["next-token"]
+      `${getIndexerURL(activeNetwork)}/v2/accounts/${address}/assets?next=${userAssets.data["next-token"]
       }`
     );
     userAssets.data.assets = userAssets.data.assets.concat(
@@ -1235,8 +1234,7 @@ export async function getCreatedAssets(
     const nextAssets = await axios.get(
       `${getIndexerURL(
         activeNetwork
-      )}/v2/accounts/${address}/created-assets?limit=1000&next=${
-        createdAssets.data["next-token"]
+      )}/v2/accounts/${address}/created-assets?limit=1000&next=${createdAssets.data["next-token"]
       }`
     );
     createdAssets.data.assets = createdAssets.data.assets.concat(
@@ -1648,7 +1646,7 @@ export type HexString = `0x${string}`;
 
 // Copied from <https://github.com/polkadot-js/common/blob/7d77f89f3402b0e7f8c64bc751ab8a99d88ace95/packages/util/src/u8a/toHex.ts#L22>
 // with modifications
-function hex (value: Uint8Array, result: HexString): HexString {
+function hex(value: Uint8Array, result: HexString): HexString {
   // --------------------------
   // This section is copied from
   // <https://github.com/polkadot-js/common/blob/7d77f89f3402b0e7f8c64bc751ab8a99d88ace95/packages/util/src/u8a/toHex.ts#L6>
@@ -1689,7 +1687,7 @@ function hex (value: Uint8Array, result: HexString): HexString {
  * with modification to the function name and minor formatting modifications. The code was copied
  * instead of imported to minimize the number of third-party dependencies in the code base.
  */
-export function bytesToHex (value?: Uint8Array | null, bitLength = -1, isPrefixed = true): HexString {
+export function bytesToHex(value?: Uint8Array | null, bitLength = -1, isPrefixed = true): HexString {
   // this is not 100% correct since we support isPrefixed = false....
   const empty = isPrefixed ? '0x' : '' as HexString;
 
@@ -1749,7 +1747,7 @@ export async function getARC19AssetData(url: string, reserve: string) {
     } else {
       throw new Error("invalid url" + url);
     }
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
   } catch (err: any) {
     throw new Error("invalid url" + url);
   }
@@ -1796,7 +1794,7 @@ export const getNFTImageUrl = async (
       return `${IPFS_ENDPOINT}/${assetUrl.slice(7)}${optimizer}`;
     }
     return assetUrl;
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
   } catch (error) {
     return "";
   }
