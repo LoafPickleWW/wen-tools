@@ -140,8 +140,7 @@ export function SimpleUpdate() {
 
       function findFormat(url: string) {
         if (!url) {
-          //throw Error("This asset doesn't have a URL field.");
-          return "ARC69";
+          return "Token";
         }
         if (url.includes("template-ipfs")) {
           return "ARC19";
@@ -150,11 +149,11 @@ export function SimpleUpdate() {
         } else if (url.includes("ipfs://") || url.includes("ipfs/")) {
           return "ARC69";
         } else {
-          throw Error("Invalid asset or ARC format!");
+          return "Token";
         }
       }
       const assetFormat = findFormat(assetData.params["url"]);
-      let assetMetadata;
+      let assetMetadata: any = {};
       if (assetFormat === "ARC19") {
         assetMetadata = await getARC19AssetMetadataData(
           assetData.params["url"],
@@ -173,7 +172,7 @@ export function SimpleUpdate() {
             }
           );
         }
-      } else {
+      } else if (assetFormat === "ARC3") {
         if (assetData.params["url"].startsWith("ipfs://")) {
           assetMetadata = await axios
             .get(IPFS_ENDPOINT + assetData.params["url"].replace("ipfs://", ""))
@@ -183,6 +182,9 @@ export function SimpleUpdate() {
             .get(assetData.params["url"])
             .then((res) => res.data);
         }
+      } else {
+        // Token format - no complex metadata parsing
+        assetMetadata = {};
       }
       const metadata: any = {
         filters: [],
@@ -215,26 +217,26 @@ export function SimpleUpdate() {
         format: assetFormat,
         description: assetMetadata.description || "",
         external_url: assetMetadata.external_url || "",
-        traits: Object.keys(metadata.traits).map((key, index) => ({
+        traits: Object.keys(metadata.traits || {}).map((key, index) => ({
           id: index,
           category: key,
           name: metadata.traits[key],
         })),
         filters: Object.keys(metadata).includes("filters")
-          ? Object.keys(metadata.filters).map((key, index) => ({
-              id: index,
-              category: key,
-              name: metadata.filters[key],
-            }))
+          ? Object.keys(metadata.filters || {}).map((key, index) => ({
+            id: index,
+            category: key,
+            name: metadata.filters[key],
+          }))
           : [],
         extras: Object.keys(metadata).includes("extras")
-          ? Object.keys(metadata.extras).map((key, index) => ({
-              id: index,
-              category: key,
-              name: metadata.extras[key],
-            }))
+          ? Object.keys(metadata.extras || {}).map((key, index) => ({
+            id: index,
+            category: key,
+            name: metadata.extras[key],
+          }))
           : [],
-        image_url: assetMetadata.image || assetData.params["url"],
+        image_url: assetMetadata.image || assetData.params["url"] || "",
         image_mime_type: assetMetadata.image_mime_type,
         animation_url: assetMetadata.animation_url || assetData.params["url"],
         animation_mime_type: assetMetadata.animation_mime_type,
@@ -342,6 +344,10 @@ export function SimpleUpdate() {
         }
       } else if (formData.format === "ARC3") {
         throw Error("ARC3 assets can't be updated");
+      } else if (formData.format === "Token") {
+        if (formData.image_url) {
+          metadata.image = formData.image_url;
+        }
       } else {
         if (formData.image_mime_type) {
           metadata.image_mime_type = formData.image_mime_type;
@@ -399,6 +405,20 @@ export function SimpleUpdate() {
           clawback: removeClawback ? "" : formData.clawback,
         };
         ipfs_data = metadata;
+        const signedTransactions = await createAssetConfigArray(
+          [transaction_data],
+          activeAddress,
+          algodClient
+        );
+        setTransaction(signedTransactions);
+      } else if (formData.format === "Token") {
+        const transaction_data = {
+          asset_id: assetID,
+          note: "", // Tokens don't need ARC metadata notes
+          freeze: removeFreeze ? "" : formData.freeze,
+          clawback: removeClawback ? "" : formData.clawback,
+        };
+        ipfs_data = {}; // Empty since it's just a Token
         const signedTransactions = await createAssetConfigArray(
           [transaction_data],
           activeAddress,
@@ -579,14 +599,14 @@ export function SimpleUpdate() {
               </div>
             </div>
           </div>
-          {formData.image_url && (
+          {formData.image_url && formData.format !== "Token" && (
             <img
               src={
                 formData.image_url.startsWith("ipfs://")
                   ? `${IPFS_ENDPOINT}${formData.image_url.replace(
-                      "ipfs://",
-                      ""
-                    )}`
+                    "ipfs://",
+                    ""
+                  )}`
                   : formData.image_url
               }
               className="w-60 mx-auto mt-4 object-contain rounded-md"
@@ -603,9 +623,9 @@ export function SimpleUpdate() {
               src={
                 formData.animation_url.startsWith("ipfs://")
                   ? `${IPFS_ENDPOINT}${formData.animation_url.replace(
-                      "ipfs://",
-                      ""
-                    )}`
+                    "ipfs://",
+                    ""
+                  )}`
                   : formData.animation_url
               }
               className="w-60 mx-auto mt-4 object-contain rounded-md"
@@ -621,7 +641,7 @@ export function SimpleUpdate() {
           <p className="focus:outline-nonetext-sm font-semibold text-lg leading-tight text-gray-200 mt-2">
             Property Metadata
           </p>
-          {["external_url", "description"].map((key) => {
+          {formData.format !== "Token" && ["external_url", "description"].map((key) => {
             return (
               <div className="mb-2">
                 <input
@@ -645,15 +665,19 @@ export function SimpleUpdate() {
               </div>
             );
           })}
-          <p className="focus:outline-nonetext-sm font-light leading-tight text-gray-200 mt-2">
-            Traits
-          </p>
-          <div className="md:flex flex-col items-center text-start justify-center">
-            {formData.traits.map((metadata: any) => {
-              return TraitMetadataInputField(metadata.id, "traits");
-            })}
-          </div>
-          {formData.format !== "ARC3" && (
+          {formData.format !== "Token" && (
+            <>
+              <p className="focus:outline-nonetext-sm font-light leading-tight text-gray-200 mt-2">
+                Traits
+              </p>
+              <div className="md:flex flex-col items-center text-start justify-center">
+                {formData.traits.map((metadata: any) => {
+                  return TraitMetadataInputField(metadata.id, "traits");
+                })}
+              </div>
+            </>
+          )}
+          {formData.format !== "ARC3" && formData.format !== "Token" && (
             <button
               className="rounded-md bg-primary-orange hover:bg-green-600 transition text-black px-4 py-1"
               onClick={() => {
@@ -680,18 +704,22 @@ export function SimpleUpdate() {
               +
             </button>
           )}
-          <p className="focus:outline-nonetext-sm font-semibold text-xl leading-tight text-gray-200 mt-2">
-            Non-Rarity Filters
-          </p>
-          <p className="focus:outline-nonetext-sm font-light leading-tight text-gray-200 mt-2">
-            Filters
-          </p>
-          <div className="md:flex flex-col items-center text-start justify-center">
-            {formData.filters.map((metadata: any) => {
-              return TraitMetadataInputField(metadata.id, "filters");
-            })}
-          </div>
-          {formData.format !== "ARC3" && (
+          {formData.format !== "Token" && (
+            <>
+              <p className="focus:outline-nonetext-sm font-semibold text-xl leading-tight text-gray-200 mt-2">
+                Non-Rarity Filters
+              </p>
+              <p className="focus:outline-nonetext-sm font-light leading-tight text-gray-200 mt-2">
+                Filters
+              </p>
+              <div className="md:flex flex-col items-center text-start justify-center">
+                {formData.filters.map((metadata: any) => {
+                  return TraitMetadataInputField(metadata.id, "filters");
+                })}
+              </div>
+            </>
+          )}
+          {formData.format !== "ARC3" && formData.format !== "Token" && (
             <button
               className="rounded-md bg-primary-orange hover:bg-green-600 transition text-black px-4 py-1"
               onClick={() => {
@@ -718,16 +746,20 @@ export function SimpleUpdate() {
               +
             </button>
           )}
-          <div className="border-b-2 border-gray-400 w-1/2 my-4"></div>
-          <p className="focus:outline-nonetext-sm font-light leading-tight text-gray-200">
-            Extras
-          </p>
-          <div className="md:flex flex-col items-center text-start justify-center">
-            {formData.extras.map((metadata: any) => {
-              return TraitMetadataInputField(metadata.id, "extras");
-            })}
-          </div>
-          {formData.format !== "ARC3" && (
+          {formData.format !== "Token" && (
+            <>
+              <div className="border-b-2 border-gray-400 w-1/2 my-4"></div>
+              <p className="focus:outline-nonetext-sm font-light leading-tight text-gray-200">
+                Extras
+              </p>
+              <div className="md:flex flex-col items-center text-start justify-center">
+                {formData.extras.map((metadata: any) => {
+                  return TraitMetadataInputField(metadata.id, "extras");
+                })}
+              </div>
+            </>
+          )}
+          {formData.format !== "ARC3" && formData.format !== "Token" && (
             <button
               className="rounded-md bg-primary-orange hover:bg-green-600 transition text-black px-4 py-1"
               onClick={() => {
@@ -806,11 +838,11 @@ export function SimpleUpdate() {
                     previewAsset.image
                       ? URL.createObjectURL(previewAsset.image)
                       : previewAsset.ipfs_data.image
-                      ? previewAsset.ipfs_data.image.replace(
+                        ? previewAsset.ipfs_data.image.replace(
                           "ipfs://",
                           IPFS_ENDPOINT
                         )
-                      : ""
+                        : ""
                   }
                   previewAsset={previewAsset}
                 />
