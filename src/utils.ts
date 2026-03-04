@@ -106,8 +106,8 @@ export async function createAssetConfigArray(
       note: new TextEncoder().encode(JSON.stringify(data_for_txns[i].note)),
       manager: address,
       reserve: address,
-      freeze: typeof data_for_txns[i].freeze === "string" ? data_for_txns[i].freeze : undefined,
-      clawback: typeof data_for_txns[i].clawback === "string" ? data_for_txns[i].clawback : undefined,
+      freeze: data_for_txns[i].freeze || undefined,
+      clawback: data_for_txns[i].clawback || undefined,
       suggestedParams: params,
       strictEmptyAddressChecking: false,
     });
@@ -160,11 +160,11 @@ export async function createAssetMintArrayV2(
           10n ** BigInt(data_for_txns[i].decimals),
         decimals: parseInt(data_for_txns[i].decimals),
         reserve: address,
-        freeze: typeof data_for_txns[i].has_freeze === "string" ? (data_for_txns[i].has_freeze === "Y" ? address : undefined) : undefined,
+        freeze: data_for_txns[i].has_freeze === "Y" ? address : undefined,
         assetURL: data_for_txns[i].asset_url,
         suggestedParams: params,
         note: note,
-        clawback: typeof data_for_txns[i].has_clawback === "string" ? (data_for_txns[i].has_clawback === "Y" ? address : undefined) : undefined,
+        clawback: data_for_txns[i].has_clawback === "Y" ? address : undefined,
         defaultFrozen: data_for_txns[i].default_frozen === "Y" ? true : false,
       });
 
