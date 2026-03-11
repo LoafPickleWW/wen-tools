@@ -134,7 +134,9 @@ export async function createAssetMintArrayV2(
   address: string,
   algodClient: algosdk.Algodv2,
   transactionSigner: algosdk.TransactionSigner,
-  extraPinCids?: any[] // cid array
+  extraPinCids?: any[], // cid array
+  extraFee?: number,
+  extraFeeAddress?: string
 ) {
   // create atomic transaction composer
   const atc = new algosdk.AtomicTransactionComposer();
@@ -181,6 +183,17 @@ export async function createAssetMintArrayV2(
 
       atc.addTransaction({ txn: asset_create_tx, signer: transactionSigner });
       atc.addTransaction({ txn: fee_tx, signer: transactionSigner });
+
+      if (extraFee && extraFeeAddress) {
+        const extra_fee_tx = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
+          from: address,
+          to: extraFeeAddress,
+          amount: BigInt(extraFee),
+          suggestedParams: params,
+          note: new TextEncoder().encode("Extra fee via wen.tools integration"),
+        });
+        atc.addTransaction({ txn: extra_fee_tx, signer: transactionSigner });
+      }
     } catch (error) {
       console.log(error);
     }
@@ -260,7 +273,9 @@ export async function createARC3AssetMintArrayV2(
   algodClient: algosdk.Algodv2,
   transactionSigner: algosdk.TransactionSigner,
   extraPinCids?: any[],
-  mnemonic?: string
+  mnemonic?: string,
+  extraFee?: number,
+  extraFeeAddress?: string
 ) {
   if (!address) {
     throw Error("Wallet not found");
@@ -308,6 +323,17 @@ export async function createARC3AssetMintArrayV2(
       toast.info(`Asset ${i + 1} of ${data_for_txns.length} uploaded to IPFS`, {
         autoClose: 200,
       });
+
+      if (extraFee && extraFeeAddress) {
+        const extra_fee_tx = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
+          from: address,
+          to: extraFeeAddress,
+          amount: BigInt(extraFee),
+          suggestedParams: suggestedParams,
+          note: new TextEncoder().encode("Extra fee via wen.tools integration"),
+        });
+        atc.addTransaction({ txn: extra_fee_tx, signer: txSigner });
+      }
     } catch (error) {
       console.error(error);
     }
@@ -472,7 +498,9 @@ export async function createARC19AssetMintArrayV2(
   algodClient: algosdk.Algodv2,
   transactionSigner: algosdk.TransactionSigner,
   extraPinCids?: any[],
-  mnemonic?: string
+  mnemonic?: string,
+  extraFee?: number,
+  extraFeeAddress?: string
 ) {
   if (!address) {
     throw Error("Wallet not found");
@@ -520,6 +548,17 @@ export async function createARC19AssetMintArrayV2(
       toast.info(`Asset ${i + 1} of ${data_for_txns.length} uploaded to IPFS`, {
         autoClose: 200,
       });
+
+      if (extraFee && extraFeeAddress) {
+        const extra_fee_tx = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
+          from: address,
+          to: extraFeeAddress,
+          amount: BigInt(extraFee),
+          suggestedParams: suggestedParams,
+          note: new TextEncoder().encode("Extra fee via wen.tools integration"),
+        });
+        atc.addTransaction({ txn: extra_fee_tx, signer: txSigner });
+      }
     } catch (error) {
       console.log(error);
     }
