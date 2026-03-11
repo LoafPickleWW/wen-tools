@@ -25,7 +25,7 @@ const simpleMintAtom = atomWithStorage("simpleMint", {
   totalSupply: 1,
   decimals: 0,
   image: null,
-  format: "ARC19",
+  format: "ARC69",
   freeze: false,
   clawback: false,
   defaultFrozen: false,
@@ -65,6 +65,7 @@ export function SimpleMint() {
   const [batchATC, setBatchATC] = useState(null as any);
   const { activeAddress, algodClient, transactionSigner } = useWallet();
   const [previewAsset, setPreviewAsset] = useState(null as any);
+  const [showIntegratorPortal, setShowIntegratorPortal] = useState(false);
   const [searchParams] = useSearchParams();
   const [extraFee, setExtraFee] = useState<number | null>(null);
   const [extraFeeAddress, setExtraFeeAddress] = useState<string | null>(null);
@@ -119,6 +120,7 @@ export function SimpleMint() {
         if (data.totalSupply) msgFormData.totalSupply = data.totalSupply;
         if (data.decimals) msgFormData.decimals = data.decimals;
         if (data.format) msgFormData.format = data.format;
+        else msgFormData.format = "ARC69";
         if (data.image) msgFormData.image = data.image; // Should be a File or Blob
 
         if (data.extraFee) setExtraFee(data.extraFee);
@@ -151,57 +153,98 @@ export function SimpleMint() {
 
   const IntegratorPortal = () => {
     return (
-      <div className="mt-20 w-full max-w-4xl mx-auto px-4 py-8 bg-primary-black/40 border border-slate-700/50 rounded-xl text-left shadow-2xl backdrop-blur-sm">
-        <h2 className="text-2xl font-bold bg-gradient-to-r from-primary-yellow to-secondary-orange bg-clip-text text-transparent mb-4">
-          Want to add decentralized minting to your own site?
-        </h2>
-        <p className="text-slate-300 mb-6">
-          Use Wen-Tools as your backend "minting engine". Perfect for marketplaces, launchpads, or any site that wants to offer decentralized IPFS minting without building the infra.
-        </p>
+      <div className="mt-20 w-full max-w-4xl mx-auto px-4">
+        <button 
+          onClick={() => setShowIntegratorPortal(!showIntegratorPortal)}
+          className="w-full py-4 px-6 bg-primary-black/60 border border-slate-700/50 rounded-xl flex justify-between items-center hover:bg-primary-black/80 transition shadow-lg group"
+        >
+          <span className="text-xl font-bold bg-gradient-to-r from-primary-yellow to-secondary-orange bg-clip-text text-transparent">
+            Integrate Wen-Tools into your own site
+          </span>
+          <span className={`text-2xl transition-transform duration-300 ${showIntegratorPortal ? 'rotate-180' : ''} text-slate-400 group-hover:text-primary-yellow`}>
+            ▼
+          </span>
+        </button>
 
-        <div className="grid md:grid-cols-2 gap-8">
-          <div>
-            <h3 className="text-lg font-semibold text-white mb-3">1. URL Parameter Redirect</h3>
-            <p className="text-sm text-slate-400 mb-3">
-              Fastest way to integrate. Link users directly to Wen-Tools with pre-filled data.
+        {showIntegratorPortal && (
+          <div className="mt-4 p-8 bg-primary-black/40 border border-slate-700/50 rounded-xl text-left shadow-2xl backdrop-blur-sm animate-fadeIn">
+            <p className="text-slate-300 mb-6">
+              Use Wen-Tools as your backend "minting engine". Perfect for marketplaces, launchpads, or any site that wants to offer decentralized IPFS minting without building the infra.
             </p>
-            <ul className="text-xs space-y-2 text-slate-300 bg-black/30 p-3 rounded-lg border border-slate-800">
-              <li><span className="text-primary-yellow font-mono">name</span>: (Required) Asset Name</li>
-              <li><span className="text-primary-yellow font-mono">image_url</span>: Link to your media file</li>
-              <li><span className="text-primary-yellow font-mono">description</span>: Metadata description</li>
-              <li><span className="text-primary-yellow font-mono">extraFee</span>: Amount in microAlgos</li>
-              <li><span className="text-primary-yellow font-mono">extraFeeAddress</span>: Your wallet address</li>
-              <li><span className="text-primary-yellow font-mono">autoMint=true</span>: Jump straight to the sign step!</li>
-            </ul>
-            <div className="mt-4">
-               <a 
-                 href="/simple-mint?name=MyIntegratorNFT&image_url=https://ipfs.io/ipfs/QmQ6y8nS6p3gH8T9K8Vv...&extraFee=1000000&extraFeeAddress=MYWALLET..."
-                 className="text-xs text-blue-400 hover:underline break-all"
-               >
-                 Example: wen.tools/simple-mint?name=NFT&image_url=...
-               </a>
-            </div>
-          </div>
 
-          <div>
-            <h3 className="text-lg font-semibold text-white mb-3">2. Iframe Messaging</h3>
-            <p className="text-sm text-slate-400 mb-3">
-              Embed Wen-Tools and use <span className="font-mono text-secondary-orange">postMessage</span> for a seamless inside-out experience.
-            </p>
-            <pre className="text-[10px] text-green-400 bg-black/50 p-3 rounded-lg border border-slate-800 overflow-x-auto">
-{`iframe.contentWindow.postMessage({
+            <div className="grid md:grid-cols-2 gap-8">
+              <div>
+                <h3 className="text-lg font-semibold text-white mb-3">1. URL Parameter Redirect</h3>
+                <p className="text-sm text-slate-400 mb-3">
+                  Fastest way to integrate. Link users directly to Wen-Tools with pre-filled data.
+                </p>
+                <ul className="text-xs space-y-2 text-slate-300 bg-black/30 p-3 rounded-lg border border-slate-800">
+                  <li><span className="text-primary-yellow font-mono">format</span>: ARC Format (Default: <span className="text-primary-yellow">ARC69</span>)</li>
+                  <li><span className="text-primary-yellow font-mono">name</span>: (Required) Asset Name</li>
+                  <li><span className="text-primary-yellow font-mono">image_url</span>: Link to your media file</li>
+                  <li><span className="text-primary-yellow font-mono">description</span>: Metadata description</li>
+                  <li><span className="text-primary-yellow font-mono">extraFee</span>: Amount in microAlgos</li>
+                  <li><span className="text-primary-yellow font-mono">extraFeeAddress</span>: Your wallet address</li>
+                  <li><span className="text-primary-yellow font-mono">autoMint=true</span>: Jump straight to the sign step!</li>
+                </ul>
+                <div className="mt-4">
+                   <a 
+                     href="/simple-mint?name=MyIntegratorNFT&image_url=https://ipfs.io/ipfs/QmQ6y8nS6p3gH8T9K8Vv...&extraFee=1000000&extraFeeAddress=MYWALLET..."
+                     className="text-xs text-blue-400 hover:underline break-all"
+                   >
+                     Example: wen.tools/simple-mint?name=NFT&image_url=...
+                   </a>
+                </div>
+              </div>
+
+              <div>
+                <h3 className="text-lg font-semibold text-white mb-3">2. Iframe Embedding</h3>
+                <p className="text-sm text-slate-400 mb-2">
+                  Embed Wen-Tools and use <span className="font-mono text-secondary-orange">postMessage</span> for a seamless minting experience.
+                </p>
+                <div className="space-y-4">
+                  <div>
+                    <p className="text-[10px] text-slate-500 uppercase font-bold mb-1">HTML</p>
+                    <pre className="text-[10px] text-blue-300 bg-black/50 p-2 rounded border border-slate-800">
+{`<iframe 
+  id="wen-tools"
+  src="https://wen.tools/simple-mint"
+  width="100%" 
+  height="600px"
+/>`}
+                    </pre>
+                  </div>
+                  <div>
+                    <p className="text-[10px] text-slate-500 uppercase font-bold mb-1">JavaScript (Send Request)</p>
+                    <pre className="text-[10px] text-green-400 bg-black/50 p-2 rounded border border-slate-800 overflow-x-auto">
+{`const wen = document.getElementById('wen-tools');
+wen.contentWindow.postMessage({
   type: 'WEN_TOOLS_MINT_REQUEST',
   data: {
     name: 'Awesome NFT',
     image: myFileBlob,
-    extraFee: 1000000,
-    extraFeeAddress: '...',
+    format: 'ARC69',
     autoMint: true
   }
 }, 'https://wen.tools');`}
-            </pre>
+                    </pre>
+                  </div>
+                  <div>
+                    <p className="text-[10px] text-slate-500 uppercase font-bold mb-1">Listen for Success</p>
+                    <pre className="text-[10px] text-purple-400 bg-black/50 p-2 rounded border border-slate-800">
+{`window.addEventListener('message', (event) => {
+  if (event.data.type === 'WEN_TOOLS_MINT_SUCCESS') {
+    console.log('Minted Asset ID:', event.data.assetID);
+    alert('NFT Minted Successfully!');
+  }
+});`}
+                    </pre>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
-        </div>
+        )}
       </div>
     );
   };
@@ -514,7 +557,13 @@ export function SimpleMint() {
       setCreatedAssetID(result["asset-index"]);
 
       removeStoredData(); // Remove stored data now that mint is complete
-      toast.success("Asset created successfully!");
+      toast.success("Asset updated successfully!");
+      if (window.parent) {
+        window.parent.postMessage({
+          type: "WEN_TOOLS_MINT_SUCCESS",
+          assetID: createdAssetID
+        }, "*");
+      }
       setProcessStep(4);
     } catch (error) {
       console.log("Something went wrong: ", error);
