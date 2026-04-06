@@ -154,6 +154,12 @@ export async function buildAssetMintAtomicTransactionComposer(
   atc.addMethodCall(await makeCrustPinTx(cid, txSigner, address, algodClient));
 }
 
+const CRUST_GATEWAYS = [
+  "https://gw-seattle.crustcloud.io:443",
+  "https://gw-singapore.crustcloud.io:443",
+  "https://gw-london.crustcloud.io:443",
+];
+
 export async function pinJSONToCrust(
   token: string | null,
   json: any,
@@ -167,56 +173,51 @@ export async function pinJSONToCrust(
     );
   }
   if (!token) throw Error("Invalid Token");
-  if (endpoint === "") {
-    endpoint = getDefaultCrustAuthIpfsEndpoint();
-  }
+  
+  const endpointsToTry = endpoint !== "" ? [endpoint] : CRUST_GATEWAYS;
+  let lastError: any;
 
-  try {
-    let response;
-    if (cidCodec === "raw" || cidCodec === "") {
-      const blob = new Blob([json], { type: "application/json" });
-      const data = new FormData();
-      data.append("file", blob);
-      const response = await axios.post(`${endpoint}/api/v0/add`, data, {
-        headers: {
-          Authorization: `Basic ${token.trim()}`,
-        },
-        params: {
-          pin: true,
-          "cid-version": version === "" ? 1 : parseInt(version),
-        },
-      });
+  for (const gw of endpointsToTry) {
+    try {
+      let response;
+      if (cidCodec === "raw" || cidCodec === "") {
+        const blob = new Blob([json], { type: "application/json" });
+        const data = new FormData();
+        data.append("file", blob);
+        response = await axios.post(`${gw}/api/v0/add`, data, {
+          headers: {
+            Authorization: `Basic ${token.trim()}`,
+          },
+          params: {
+            pin: true,
+            "cid-version": version === "" ? 1 : parseInt(version),
+          },
+        });
+      } else {
+        response = await axios.post(`${gw}/api/v0/add`, json, {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Basic ${token.trim()}`,
+          },
+        });
+      }
 
       if (response.status === 200 && response.data && response.data.Hash) {
         return response.data.Hash;
       } else {
-        throw Error(
+        lastError = Error(
           response.data
             ? response.data.Error
             : `pinJSONToCrust post failed, cidCodec=${cidCodec}`
         );
       }
-    } else {
-      response = await axios.post(`${endpoint}/api/v0/add`, json, {
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Basic ${token.trim()}`,
-        },
-      });
-      if (response.status === 200 && response.data && response.data.Hash) {
-        return response.data.Hash;
-      } else {
-        throw Error(
-          response.data
-            ? response.data.Error
-            : `pinJSONToCrust post failed, cidCodec=${cidCodec}`
-        );
-      }
+    } catch (err) {
+      console.error(`pinJSONToCrust fail on ${gw}: `, err);
+      lastError = err || Error("IPFS pinning failed");
     }
-  } catch (err) {
-    console.error(err);
-    throw Error("IPFS pinning failed");
   }
+
+  throw lastError || Error("IPFS pinning failed");
 }
 
 export async function pinImageToCrust(
@@ -230,31 +231,35 @@ export async function pinImageToCrust(
     );
   }
   if (!token) throw Error("Invalid Token");
-  if (endpoint === "") {
-    endpoint = getDefaultCrustAuthIpfsEndpoint();
-  }
+  
+  const endpointsToTry = endpoint !== "" ? [endpoint] : CRUST_GATEWAYS;
+  let lastError: any;
 
-  try {
-    const data = new FormData();
-    data.append("file", image);
-    const response = await axios.post(`${endpoint}/api/v0/add`, data, {
-      headers: {
-        Authorization: `Basic ${token.trim()}`,
-      },
-      params: { pin: true, "cid-version": 1 },
-    });
+  for (const gw of endpointsToTry) {
+    try {
+      const data = new FormData();
+      data.append("file", image);
+      const response = await axios.post(`${gw}/api/v0/add`, data, {
+        headers: {
+          Authorization: `Basic ${token.trim()}`,
+        },
+        params: { pin: true, "cid-version": 1 },
+      });
 
-    if (response.status === 200 && response.data && response.data.Hash) {
-      return response.data.Hash;
-    } else {
-      throw Error(
-        response.data ? response.data.Error : `pinJSONToCrust post failed`
-      );
+      if (response.status === 200 && response.data && response.data.Hash) {
+        return response.data.Hash;
+      } else {
+        lastError = Error(
+          response.data ? response.data.Error : `pinImageToCrust post failed`
+        );
+      }
+    } catch (error: any) {
+      console.log(`pinImageToCrust fail on ${gw}: `, error);
+      lastError = error || Error("IPFS pinning failed");
     }
-  } catch (error) {
-    console.log("pinImageToCrust fail: ", error);
-    throw Error("IPFS pinning failed");
   }
+  
+  throw lastError || Error("IPFS pinning failed");
 }
 
 export async function makeCrustPinTx(
