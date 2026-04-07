@@ -221,6 +221,11 @@ export function SimpleMintClassic() {
           metadata.animation_url_mime_type = formData.image
             ? formData.image.type
             : "";
+        } else if (formData.image.type.includes("audio")) {
+          metadata.properties.file_url = imageURL;
+          metadata.properties.file_url_mimetype = formData.image
+            ? formData.image.type
+            : "";
         } else {
           metadata.image = imageURL;
           metadata.image_mime_type = formData.image ? formData.image.type : "";
@@ -432,7 +437,7 @@ export function SimpleMintClassic() {
               className="block w-64 text-sm border border-gray-200 rounded cursor-pointer bg-gray-300  focus:outline-none  text-black font-medium"
               id="select_image"
               type="file"
-              accept="image/*,video/*"
+              accept="image/*,video/*,audio/*"
               multiple={false}
               required
               onChange={(e: any) => {
