@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { MdLayers, MdLoop } from 'react-icons/md';
 import { PreviewItemT } from './WenPadTypes';
 import { loadImage } from './ProjectUtils';

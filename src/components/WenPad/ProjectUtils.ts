@@ -1,5 +1,5 @@
 import { RarityType, LayerT, PreviewItemT, TraitT } from './WenPadTypes';
-import { db } from './db';
+
 
 export function calculateNftRating(nft: any, allNfts: any[]) {
   const rarityScore = getTraitRarityScore(nft, allNfts);

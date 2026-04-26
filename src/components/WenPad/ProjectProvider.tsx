@@ -22,7 +22,7 @@ import {
 } from './ProjectUtils';
 
 type ContextT = {
-  form: UseFormReturn<ProjectT, any, undefined>;
+  form: UseFormReturn<ProjectT, any, any>;
   project: ProjectT;
   layers: LayerT[];
   customs: PreviewItemT[];
@@ -65,7 +65,7 @@ type Props = {
 };
 
 export const ProjectProvider = ({ children }: Props) => {
-  const [originalProject, setOriginalProject] = useState<ProjectT>();
+  const [, setOriginalProject] = useState<ProjectT>();
   const [activeLayer, setActiveLayer] = useState<string>('');
   const [activeStep, setActiveStep] = useState<number>(0);
   const [sortBy, setSortBy] = useState('name');

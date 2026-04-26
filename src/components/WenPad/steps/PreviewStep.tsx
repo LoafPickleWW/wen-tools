@@ -1,5 +1,5 @@
 import { useProject } from '../ProjectProvider';
-import { MdRefresh, MdFilterList, MdDelete } from 'react-icons/md';
+import { MdRefresh } from 'react-icons/md';
 import PreviewImage from '../PreviewImage';
 
 const PreviewStep = () => {
