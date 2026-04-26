@@ -149,7 +149,7 @@ export function SimpleMint() {
     }
 
     return () => window.removeEventListener("message", handleMessage);
-  }, []);
+  }, [formData, searchParams, setFormData]);
 
   const IntegratorPortal = () => {
     return (

@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useContext, createContext } from 'react';
+import React, { useEffect, useState, useContext, createContext, useCallback } from 'react';
 import { useForm, UseFormReturn, useFieldArray } from 'react-hook-form';
 import { v4 as uuid } from 'uuid';
 import { toast } from 'react-toastify';
@@ -293,7 +293,7 @@ export const ProjectProvider = ({ children }: Props) => {
           item.index = i + 1;
           items.push(item);
         }
-      } catch (error) {
+      } catch {
         allErrors.push('Generation failed for item ' + (i + 1));
       }
 
@@ -380,7 +380,7 @@ export const ProjectProvider = ({ children }: Props) => {
     }
   };
 
-  const getProjectFromLocalDb = async () => {
+  const getProjectFromLocalDb = useCallback(async () => {
     try {
       const projects = await db.projects.toArray();
       if (projects[0]) {
@@ -392,7 +392,7 @@ export const ProjectProvider = ({ children }: Props) => {
     } catch (error) {
       console.error(error);
     }
-  };
+  }, [form]);
 
   const resetOriginalProject = () => {
     setOriginalProject(form.getValues());
@@ -405,7 +405,7 @@ export const ProjectProvider = ({ children }: Props) => {
 
   useEffect(() => {
     getProjectFromLocalDb();
-  }, []);
+  }, [getProjectFromLocalDb]);
 
   return (
     <ProjectContext.Provider

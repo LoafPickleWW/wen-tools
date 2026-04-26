@@ -86,7 +86,7 @@ const MintStep = () => {
           }
         });
 
-        let assetData: any = {
+        const assetData: any = {
           asset_name: metadata.name,
           unit_name: project.unitName,
           total_supply: 1,

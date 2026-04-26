@@ -12,7 +12,6 @@ function getTraitRarityScore(nft: any, allNfts: any[]) {
   const total = allNfts.length;
   const traitFrequencies = getTraitFrequencies(allNfts);
   const rarityScore = Object.entries(nft.metadata.properties).reduce((acc, [trait, value]) => {
-    // @ts-ignore
     const traitFrequency = traitFrequencies[`${trait}:${value}`];
     const rarity = 1 / (traitFrequency / total);
     return acc + rarity;
@@ -53,10 +52,10 @@ export function addRatings(items: PreviewItemT[], allLayers: LayerT[]) {
       const sameAs = traitDetails?.sameAs;
       const sameAsDetails = layer?.traits?.find((t) => t.id === sameAs);
       if (sameAsDetails) {
-        // @ts-ignore
+        // @ts-expect-error
         formattedItem.metadata.properties[trait.trait_type] = sameAsDetails.name;
       } else {
-        // @ts-ignore
+        // @ts-expect-error
         formattedItem.metadata.properties[trait.trait_type] = trait.value;
       }
     });
@@ -110,12 +109,12 @@ export function getRandomTrait(traits: TraitT[]) {
 export function handleForceTraits(previewItem: PreviewItemT, layers: LayerT[]) {
   Object.values(previewItem.traits).forEach((trait) => {
     const layer = layers.find((f) => f.name === trait.trait_type);
-    const traitDetails = layer?.traits.find((f) => f.name === trait.value)!;
+    const traitDetails = layer?.traits.find((f) => f.name === trait.value);
     const traitRules = traitDetails?.rules || [];
     for (const rule of traitRules) {
-      const ruleLayerDetails = layers.find((f) => f.id === rule.layer)!;
-      const ruleTraitDetails = ruleLayerDetails?.traits.find((f) => f.id === rule.trait)!;
-      if (ruleTraitDetails === undefined) continue;
+      const ruleLayerDetails = layers.find((f) => f.id === rule.layer);
+      const ruleTraitDetails = ruleLayerDetails?.traits.find((f) => f.id === rule.trait);
+      if (!ruleLayerDetails || !ruleTraitDetails) continue;
       if (rule.type === 'force') {
         previewItem.traits[ruleLayerDetails.name] = {
           trait_type: ruleLayerDetails.name,
@@ -135,12 +134,12 @@ export function handleForceTraits(previewItem: PreviewItemT, layers: LayerT[]) {
 export function handleBlockTraits(previewItem: PreviewItemT, layers: LayerT[]) {
   Object.values(previewItem.traits).forEach((trait) => {
     const layer = layers.find((f) => f.name === trait.trait_type);
-    const traitDetails = layer?.traits.find((f) => f.name === trait.value)!;
+    const traitDetails = layer?.traits.find((f) => f.name === trait.value);
     const traitRules = traitDetails?.rules || [];
     for (const rule of traitRules) {
-      const ruleLayerDetails = layers.find((f) => f.id === rule.layer)!;
-      const ruleTraitDetails = ruleLayerDetails?.traits.find((f) => f.id === rule.trait)!;
-      if (ruleTraitDetails === undefined) continue;
+      const ruleLayerDetails = layers.find((f) => f.id === rule.layer);
+      const ruleTraitDetails = ruleLayerDetails?.traits.find((f) => f.id === rule.trait);
+      if (!ruleLayerDetails || !ruleTraitDetails) continue;
       if (rule.type === 'block') {
         const targetLayer = layers.find((f) => f.name === ruleLayerDetails.name);
         const hasTargetTrait = Object.values(previewItem.traits).find((f) => f.trait_type === targetLayer?.name && f.value === ruleTraitDetails.name);
