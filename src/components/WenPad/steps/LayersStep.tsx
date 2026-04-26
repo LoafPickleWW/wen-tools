@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useProject } from '../ProjectProvider';
+import { useProject } from '../ProjectContext';
 import { MdAdd, MdDelete, MdSave, MdRefresh } from 'react-icons/md';
 import { v4 as uuid } from 'uuid';
 import TraitPreviewGrid from './TraitPreviewGrid';

@@ -1,5 +1,5 @@
 import { MdSettings, MdAutoFixHigh, MdVisibility, MdRocketLaunch, MdLayers } from 'react-icons/md';
-import { useProject } from './ProjectProvider';
+import { useProject } from './ProjectContext';
 
 const WenPadStepper = () => {
   const { activeStep, selectStep, project, previewItems } = useProject();

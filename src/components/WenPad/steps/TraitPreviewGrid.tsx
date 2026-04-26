@@ -1,4 +1,4 @@
-import { useProject } from '../ProjectProvider';
+import { useProject } from '../ProjectContext';
 import { MdDelete, MdAutoFixHigh } from 'react-icons/md';
 import { RarityType } from '../WenPadTypes';
 

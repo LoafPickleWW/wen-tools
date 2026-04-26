@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useProject } from '../ProjectProvider';
+import { useProject } from '../ProjectContext';
 import { MdRocketLaunch, MdCheckCircle, MdError, MdHourglassEmpty } from 'react-icons/md';
 import { useWallet } from '@txnlab/use-wallet-react';
 import { toast } from 'react-toastify';

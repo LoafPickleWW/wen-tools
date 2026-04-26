@@ -1,4 +1,4 @@
-import { useProject } from '../ProjectProvider';
+import { useProject } from '../ProjectContext';
 import { MdRocketLaunch, MdArrowForward } from 'react-icons/md';
 
 const SetupStep = () => {

@@ -1,4 +1,4 @@
-import { useProject } from '../ProjectProvider';
+import { useProject } from '../ProjectContext';
 import { MdRefresh } from 'react-icons/md';
 import PreviewImage from '../PreviewImage';
 

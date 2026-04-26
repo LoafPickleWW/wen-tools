@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useProject } from './ProjectProvider';
+import { useProject } from './ProjectContext';
 import { MdEdit, MdCheck, MdClose } from 'react-icons/md';
 import WenPadStepper from './WenPadStepper';
 import SetupStep from './steps/SetupStep';

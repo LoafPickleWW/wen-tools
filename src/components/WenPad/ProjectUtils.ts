@@ -42,7 +42,7 @@ export function addRatings(items: PreviewItemT[], allLayers: LayerT[]) {
   const formattedItems = items.map((item) => {
     const formattedItem = {
       metadata: {
-        properties: {},
+        properties: {} as any,
       },
     };
     Object.values(item.traits).forEach((trait) => {
@@ -52,10 +52,10 @@ export function addRatings(items: PreviewItemT[], allLayers: LayerT[]) {
       const sameAs = traitDetails?.sameAs;
       const sameAsDetails = layer?.traits?.find((t) => t.id === sameAs);
       if (sameAsDetails) {
-        // @ts-expect-error
+
         formattedItem.metadata.properties[trait.trait_type] = sameAsDetails.name;
       } else {
-        // @ts-expect-error
+
         formattedItem.metadata.properties[trait.trait_type] = trait.value;
       }
     });
