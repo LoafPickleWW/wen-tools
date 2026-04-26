@@ -287,4 +287,12 @@ export const TOOLS = [
     category: "asset",
     icon:"/icons/track.png"
   },
+  {
+    id: "wen_pad",
+    label: "Wen Pad",
+    description: "Generate and mint NFT collections for free with automated IPFS pinning.",
+    path: "/wen-pad",
+    category: "mint",
+    icon: "/icons/wenpad.png"
+  },
 ];

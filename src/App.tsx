@@ -40,6 +40,7 @@ import { Analytics } from "@vercel/analytics/react";
 import { ARC62ManagerTool } from "./pages/ARC62ManagerTool";
 import { USAlgo2025TrackerTool } from "./pages/USAlgo2025TrackerTool";
 import { ReallySimpleMint } from "./pages/ReallySimpleMint";
+import { WenPad } from "./pages/WenPad";
 
 const walletManager = new WalletManager({
   wallets: [
@@ -132,6 +133,7 @@ function App() {
               element={<SimpleUpdateClassic />}
             />
             <Route path="/really-simple-mint" element={<ReallySimpleMint />} />
+            <Route path="/wen-pad" element={<WenPad />} />
             <Route path="*" element={<Home />} />
           </Routes>
           <Footer />
