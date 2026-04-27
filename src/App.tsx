@@ -38,9 +38,9 @@ import { BlukClaimTool } from "./pages/BulkClaimTool";
 import ScrollToTop from "./components/ScrollToTop";
 import { Analytics } from "@vercel/analytics/react";
 import { ARC62ManagerTool } from "./pages/ARC62ManagerTool";
-import { USAlgo2025TrackerTool } from "./pages/USAlgo2025TrackerTool";
 import { ReallySimpleMint } from "./pages/ReallySimpleMint";
-import { WenPad } from "./pages/WenPad";
+import { WenPad } from './pages/WenPad';
+import { XGov } from './pages/XGov';
 
 const walletManager = new WalletManager({
   wallets: [
@@ -96,10 +96,6 @@ function App() {
             <Route path="/bulk-claim" element={<BlukClaimTool />} />
             <Route path="/token-manager" element={<ARC62ManagerTool />} />
             <Route
-              path="/usalgo-2025-tracker"
-              element={<USAlgo2025TrackerTool />}
-            />
-            <Route
               path="/find-collection-holders"
               element={<CollectionSnapshot />}
             />
@@ -133,7 +129,8 @@ function App() {
               element={<SimpleUpdateClassic />}
             />
             <Route path="/really-simple-mint" element={<ReallySimpleMint />} />
-            <Route path="/wen-pad" element={<WenPad />} />
+            <Route path='/wen-pad' element={<WenPad />} />
+            <Route path='/xgov' element={<XGov />} />
             <Route path="*" element={<Home />} />
           </Routes>
           <Footer />

@@ -753,7 +753,7 @@ export const ARC62ManagerTool = () => {
             >
               Back
             </button>
-            <div className="focus:outline-nonetext-sm font-light leading-tight text-slate-200 mt-4 md:ml-2">
+            <div className="focus:outline-none text-sm font-light leading-tight text-slate-200 mt-4 md:ml-2">
               Asset:{" "}
               <a
                 className="font-medium text-slate-300 underline hover:text-slate-400 transition"
@@ -920,7 +920,7 @@ export const ARC62ManagerTool = () => {
           {/* ARC62 Labels */}
           {assetData.isArc62 && (
             <div className="border-t border-gray mt-4">
-              <p className="focus:outline-nonetext-sm font-semibold text-lg leading-tight text-gray-200 mt-4">
+              <p className="focus:outline-none text-sm font-semibold text-lg leading-tight text-gray-200 mt-4">
                 ARC62 Labels
               </p>
               {assetData.arc62Data && (
@@ -1023,7 +1023,7 @@ export const ARC62ManagerTool = () => {
           {assetData.manager === activeAddress && (
             <div className="border-t border-gray mt-4">
               <p
-                className={`focus:outline-nonetext-sm font-semibold text-lg leading-tight text-gray-200 mt-4 ${
+                className={`focus:outline-none text-sm font-semibold text-lg leading-tight text-gray-200 mt-4 ${
                   assetData.isArc62 ? "mt-8" : ""
                 }`}
               >

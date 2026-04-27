@@ -1,6 +1,5 @@
 import { Link } from "react-router-dom";
 import { TOOLS } from "../constants";
-import { USAlgo2025Leaderboard } from "./USAlgo2025Leaderboard";
 import CarouselComponent from "./CarouselComponent";
 
 export function SelectToolComponent() {
@@ -20,7 +19,6 @@ export function SelectToolComponent() {
           />
           <CarouselComponent
             images={[
-              { path: "./usalgo.gif", url: "https://algoxnft.com/shuffle/2943" },
               { path: "./AEwebp.webp", url: "https://astroexplorer.co/" },
             ]}
           />
@@ -65,7 +63,7 @@ export function SelectToolComponent() {
             ))}
         </div>
       </div>
-      <USAlgo2025Leaderboard />
+
 
       <div className="col-span-3 text-center text-2xl lg:text-4xl font-semibold tracking-tight text-white font-sans py-4 border-b border-t border-dashed border-secondary-gray">
         all <span className="text-amber-400">asset management</span> tools

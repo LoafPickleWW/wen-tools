@@ -29,6 +29,9 @@ export const CREATOR_WALLETS = [];
 
 export const PREFIXES = [];
 
+// XGOV
+export const XGOV_REGISTRY_APP_ID = 3147789458;
+
 // TOOLS
 export const TOOLS = [
   {
@@ -279,20 +282,19 @@ export const TOOLS = [
     icon:"/icons/manager.png"
   },
   {
-    id: "usalgo_2025_tracker",
-    label: "USAlgo 2025 Tracker",
-    description:
-      "Track your collections from USAlgo 2025",
-    path: "/usalgo-2025-tracker",
-    category: "asset",
-    icon:"/icons/track.png"
-  },
-  {
     id: "wen_pad",
     label: "Wen Pad",
     description: "Generate and mint NFT collections for free with automated IPFS pinning.",
     path: "/wen-pad",
     category: "mint",
     icon: "/icons/wenpad.png"
+  },
+  {
+    id: "xgov_dashboard",
+    label: "xGov Dashboard",
+    description: "Premium dashboard for tracking active xGov proposals, history, and bulk voting.",
+    path: "/xgov",
+    category: "asset",
+    icon: "/icons/xgov.png"
   },
 ];

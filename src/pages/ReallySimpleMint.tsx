@@ -57,24 +57,26 @@ export function ReallySimpleMint() {
     const totalSupply = searchParams.get("totalSupply");
     const decimals = searchParams.get("decimals");
     const format = searchParams.get("format");
-    const imageUrl = searchParams.get("image_url");
+    const imageUrl = searchParams.get("imageUrl") || searchParams.get("image_url");
     const exFee = searchParams.get("extraFee");
     const exFeeAddr = searchParams.get("extraFeeAddress");
     const autoMint = searchParams.get("autoMint");
 
-    const newFormData = { ...formData };
-    if (name) newFormData.name = name;
-    if (unitName) newFormData.unitName = unitName;
-    if (description) newFormData.description = description;
-    if (external_url) newFormData.external_url = external_url;
-    if (totalSupply) newFormData.totalSupply = parseInt(totalSupply);
-    if (decimals) newFormData.decimals = parseInt(decimals);
-    if (format) newFormData.format = format;
+    if (name || unitName || description || external_url || totalSupply || decimals || format) {
+      setFormData((prev: any) => ({
+        ...prev,
+        name: name || prev.name,
+        unitName: unitName || prev.unitName,
+        description: description || prev.description,
+        external_url: external_url || prev.external_url,
+        totalSupply: totalSupply ? parseInt(totalSupply) : prev.totalSupply,
+        decimals: decimals ? parseInt(decimals) : prev.decimals,
+        format: format || prev.format,
+      }));
+    }
 
     if (exFee) setExtraFee(parseInt(exFee));
     if (exFeeAddr) setExtraFeeAddress(exFeeAddr);
-
-    setFormData(newFormData);
 
     if (imageUrl) {
       fetch(imageUrl)
@@ -90,22 +92,23 @@ export function ReallySimpleMint() {
     const handleMessage = (event: MessageEvent) => {
       if (event.data.type === "WEN_TOOLS_MINT_REQUEST") {
         const { data } = event.data;
-        const msgFormData = { ...formData };
-        if (data.name) msgFormData.name = data.name;
-        if (data.unitName) msgFormData.unitName = data.unitName;
-        if (data.description) msgFormData.description = data.description;
-        if (data.external_url) msgFormData.external_url = data.external_url;
-        if (data.totalSupply) msgFormData.totalSupply = data.totalSupply;
-        if (data.decimals) msgFormData.decimals = data.decimals;
-        if (data.format) msgFormData.format = data.format;
-        else msgFormData.format = "ARC69";
-        if (data.image) msgFormData.image = data.image; // Should be a File or Blob
+        setFormData((prev: any) => {
+          const msgFormData = { ...prev };
+          if (data.name) msgFormData.name = data.name;
+          if (data.unitName) msgFormData.unitName = data.unitName;
+          if (data.description) msgFormData.description = data.description;
+          if (data.external_url) msgFormData.external_url = data.external_url;
+          if (data.totalSupply) msgFormData.totalSupply = data.totalSupply;
+          if (data.decimals) msgFormData.decimals = data.decimals;
+          if (data.format) msgFormData.format = data.format;
+          else if (!msgFormData.format) msgFormData.format = "ARC69";
+          if (data.image) msgFormData.image = data.image; // Should be a File or Blob
+          return msgFormData;
+        });
 
         if (data.extraFee) setExtraFee(data.extraFee);
         if (data.extraFeeAddress) setExtraFeeAddress(data.extraFeeAddress);
 
-        setFormData(msgFormData);
-        
         if (data.autoMint) {
            // Small delay to ensure state update
            setTimeout(() => {
@@ -127,7 +130,7 @@ export function ReallySimpleMint() {
     }
 
     return () => window.removeEventListener("message", handleMessage);
-  }, [formData, searchParams, setFormData]);
+  }, [searchParams, setFormData]);
 
   const IntegratorPortal = () => {
     return (
@@ -397,7 +400,7 @@ wen.contentWindow.postMessage({
             maxLength={32}
             required
             value={formData.name}
-            onChange={(e) => setFormData({...formData, name: e.target.value})}
+            onChange={(e) => setFormData(prev => ({...prev, name: e.target.value}))}
           />
         </div>
       </div>

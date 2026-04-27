@@ -508,7 +508,7 @@ export function SimpleUpdate() {
             >
               Back
             </button>
-            <div className="focus:outline-nonetext-sm font-light leading-tight text-slate-200 mt-4 md:ml-2">
+            <div className="focus:outline-none text-sm font-light leading-tight text-slate-200 mt-4 md:ml-2">
               Asset:{" "}
               <a
                 className="font-medium text-slate-300 underline hover:text-slate-400 transition"
@@ -638,16 +638,16 @@ export function SimpleUpdate() {
               autoPlay
             />
           )}
-          <p className="focus:outline-nonetext-sm font-semibold text-lg leading-tight text-gray-200 mt-2">
+          <p className="focus:outline-none text-sm font-semibold text-lg leading-tight text-gray-200 mt-2">
             Property Metadata
           </p>
           {formData.format !== "Token" && ["external_url", "description"].map((key) => {
             return (
-              <div className="mb-2">
+              <div className="mb-2" key={key}>
                 <input
                   type="text"
                   disabled
-                  id={key}
+                  id={`${key}-label`}
                   className="w-24 md:w-28 bg-gray-300 text-sm font-medium text-center leading-none text-black placeholder:text-black/30 placeholder:text-xs px-3 py-2 border rounded border-gray-200"
                   value={key}
                 />
@@ -667,7 +667,7 @@ export function SimpleUpdate() {
           })}
           {formData.format !== "Token" && (
             <>
-              <p className="focus:outline-nonetext-sm font-light leading-tight text-gray-200 mt-2">
+              <p className="focus:outline-none text-sm font-light leading-tight text-gray-200 mt-2">
                 Traits
               </p>
               <div className="md:flex flex-col items-center text-start justify-center">
@@ -706,10 +706,10 @@ export function SimpleUpdate() {
           )}
           {formData.format !== "Token" && (
             <>
-              <p className="focus:outline-nonetext-sm font-semibold text-xl leading-tight text-gray-200 mt-2">
+              <p className="focus:outline-none text-sm font-semibold text-xl leading-tight text-gray-200 mt-2">
                 Non-Rarity Filters
               </p>
-              <p className="focus:outline-nonetext-sm font-light leading-tight text-gray-200 mt-2">
+              <p className="focus:outline-none text-sm font-light leading-tight text-gray-200 mt-2">
                 Filters
               </p>
               <div className="md:flex flex-col items-center text-start justify-center">
@@ -749,7 +749,7 @@ export function SimpleUpdate() {
           {formData.format !== "Token" && (
             <>
               <div className="border-b-2 border-gray-400 w-1/2 my-4"></div>
-              <p className="focus:outline-nonetext-sm font-light leading-tight text-gray-200">
+              <p className="focus:outline-none text-sm font-light leading-tight text-gray-200">
                 Extras
               </p>
               <div className="md:flex flex-col items-center text-start justify-center">
@@ -788,7 +788,7 @@ export function SimpleUpdate() {
           )}
           {(formData.freeze || formData.clawback) && (
             <div className="mt-4 flex flex-col items-center justify-center gap-y-2">
-              <p className="focus:outline-nonetext-sm font-semibold text-xl leading-tight text-gray-200">
+              <p className="focus:outline-none text-sm font-semibold text-xl leading-tight text-gray-200">
                 Asset Capabilities
               </p>
               <div className="flex flex-row gap-x-6">

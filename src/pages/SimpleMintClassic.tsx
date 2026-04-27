@@ -545,16 +545,16 @@ export function SimpleMintClassic() {
           Default Frozen
         </span>
       </label>
-      <p className="focus:outline-nonetext-sm font-semibold text-lg leading-tight text-gray-200 mt-2">
+      <p className="focus:outline-none text-sm font-semibold text-lg leading-tight text-gray-200 mt-2">
         Property Metadata
       </p>
       {["external_url", "description"].map((key) => {
         return (
-          <div className="mb-2">
+          <div className="mb-2" key={key}>
             <input
               type="text"
               disabled
-              id={key}
+              id={`${key}-label`}
               className="w-24 md:w-28 bg-gray-300 text-sm font-medium text-center leading-none text-black placeholder:text-black/30 placeholder:text-xs px-3 py-2 border rounded border-gray-200"
               value={key}
             />
@@ -571,7 +571,7 @@ export function SimpleMintClassic() {
           </div>
         );
       })}
-      <p className="focus:outline-nonetext-sm font-semibold text-xl leading-tight text-gray-200 mt-2">
+      <p className="focus:outline-none text-sm font-semibold text-xl leading-tight text-gray-200 mt-2">
         Rarity Traits
       </p>
       <div className="md:flex flex-col items-center text-start justify-center">
@@ -604,10 +604,10 @@ export function SimpleMintClassic() {
       >
         +
       </button>
-      <p className="focus:outline-nonetext-sm font-semibold text-xl leading-tight text-gray-200 mt-2">
+      <p className="focus:outline-none text-sm font-semibold text-xl leading-tight text-gray-200 mt-2">
         Non-Rarity Traits
       </p>
-      <p className="focus:outline-nonetext-sm font-light leading-tight text-gray-200 mt-2">
+      <p className="focus:outline-none text-sm font-light leading-tight text-gray-200 mt-2">
         Filters
       </p>
       <div className="md:flex flex-col items-center text-start justify-center">
@@ -641,7 +641,7 @@ export function SimpleMintClassic() {
         +
       </button>
       <div className="border-b-2 border-gray-400 w-1/2 my-4"></div>
-      <p className="focus:outline-nonetext-sm font-light leading-tight text-gray-200">
+      <p className="focus:outline-none text-sm font-light leading-tight text-gray-200">
         Extras
       </p>
       <div className="md:flex flex-col items-center text-start justify-center">
