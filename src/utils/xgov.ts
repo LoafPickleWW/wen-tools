@@ -189,9 +189,8 @@ export async function fetchRegistryPower(userAddress: string): Promise<number> {
 export async function fetchVoterData(appId: number, userAddress: string): Promise<{ power: number; voted: boolean; choice?: "APPROVE" | "REJECT" | "BOYCOTT" | "ABSTAIN" | "SPLIT" }> {
   try {
     const addrBytes = algosdk.decodeAddress(userAddress).publicKey;
-    const proposalPrefix = new Uint8Array([0x56]); // 'V'
     const proposalBoxKey = new Uint8Array(33);
-    proposalBoxKey[0] = 0x56;
+    proposalBoxKey[0] = 0x56; // 'V' prefix
     proposalBoxKey.set(addrBytes, 1);
     const proposalBoxKeyBase64 = Buffer.from(proposalBoxKey).toString('base64');
     

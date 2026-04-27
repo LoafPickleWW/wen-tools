@@ -400,7 +400,7 @@ wen.contentWindow.postMessage({
             maxLength={32}
             required
             value={formData.name}
-            onChange={(e) => setFormData(prev => ({...prev, name: e.target.value}))}
+            onChange={(e) => setFormData((prev: any) => ({...prev, name: e.target.value}))}
           />
         </div>
       </div>
