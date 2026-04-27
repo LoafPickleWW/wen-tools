@@ -10,6 +10,7 @@ import {
   checkIsXGov,
   fetchAllXGovs,
   fetchProposalVoters,
+  fetchUserVoteChoice,
   XGovVoter
 } from '../utils/xgov';
 import { XGOV_REGISTRY_APP_ID } from '../constants';
@@ -88,14 +89,39 @@ export function XGov() {
       const batch = proposals.slice(i, i + batchSize);
       const batchResults = await Promise.all(batch.map(async (p) => {
         try {
-          // Use fetchVoterData for ALL proposals - it reads the voter box directly
-          // which is more reliable than scanning transaction history
+          // Primary: read the voter box directly from the proposal app
           const powerData = await fetchVoterData(p.appId, activeAddress);
+          
+          if (powerData.voted) {
+            console.log(`[xGov] Vote found via box for app ${p.appId}: choice=${powerData.choice}, power=${powerData.power}`);
+            return { 
+              appId: p.appId, 
+              power: powerData.power, 
+              voted: true, 
+              choice: powerData.choice || 'APPROVE' 
+            };
+          }
+          
+          // Fallback: if box says not voted, also check transaction history
+          // This catches cases where the box prefix might differ or box was cleaned up
+          try {
+            const txChoice = await fetchUserVoteChoice(p.appId, activeAddress);
+            if (txChoice) {
+              console.log(`[xGov] Vote found via txn scan for app ${p.appId}: choice=${txChoice}`);
+              return {
+                appId: p.appId,
+                power: powerData.power,
+                voted: true,
+                choice: txChoice
+              };
+            }
+          } catch { /* txn scan failed, that's OK */ }
+          
           return { 
             appId: p.appId, 
             power: powerData.power, 
-            voted: powerData.voted, 
-            choice: (powerData as any).choice || null 
+            voted: false, 
+            choice: null 
           };
         } catch {
           return null;
@@ -109,12 +135,14 @@ export function XGov() {
       batchResults.forEach(res => {
         if (res) {
           if (res.power > 0) newPower[res.appId] = res.power;
-          if (res.voted) newVoted[res.appId] = res.voted;
-          if (res.choice) newChoices[res.appId] = res.choice;
+          if (res.voted) {
+            newVoted[res.appId] = true;
+            newChoices[res.appId] = res.choice || 'APPROVE';
+          }
         }
       });
 
-      console.log(`[xGov] Batch complete. Found ${Object.keys(newVoted).length} votes in this batch.`);
+      console.log(`[xGov] Batch ${Math.floor(i/batchSize)+1} complete. Found ${Object.keys(newVoted).length} votes in this batch.`);
 
       setVotingPower(prev => ({ ...prev, ...newPower }));
       setHasVoted(prev => ({ ...prev, ...newVoted }));

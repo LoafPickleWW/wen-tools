@@ -69,42 +69,57 @@ export async function fetchAllProposals(): Promise<XGovProposal[]> {
         const globalState = app.params["global-state"] || [];
         const stateMap: Record<string, any> = {};
 
+        // Parse global state with proper handling for ABI-encoded keys.
+        // AlgoKit/ABI contracts may prefix keys with 2-byte length headers or
+        // use raw UTF-8 strings. We try both approaches and store under all
+        // possible decoded key names.
         globalState.forEach((item: any) => {
+          const rawKeyBytes = Buffer.from(item.key, 'base64');
+          const value = item.value.uint !== undefined ? item.value.uint : item.value.bytes;
+          
+          // Store under base64 key as fallback
+          stateMap[item.key] = value;
+          
+          // Try decoding as raw UTF-8
           try {
-            // Use standard atob-like decoding to be browser-safe
-            const key = Buffer.from(item.key, 'base64').toString('utf8').replace(/\0/g, '').trim();
-            const value = item.value.uint !== undefined ? item.value.uint : item.value.bytes;
-            stateMap[key] = value;
-            stateMap[key.toLowerCase()] = value;
-          } catch {
-            stateMap[item.key] = item.value.uint !== undefined ? item.value.uint : item.value.bytes;
+            const utf8Key = rawKeyBytes.toString('utf8').replace(/\0/g, '').trim();
+            if (utf8Key.length > 0) {
+              stateMap[utf8Key] = value;
+              stateMap[utf8Key.toLowerCase()] = value;
+            }
+          } catch { /* ignore */ }
+          
+          // Try ABI-style decoding: skip first 2 bytes (uint16 length prefix)
+          // This is how AlgoKit-generated contracts often store state keys
+          if (rawKeyBytes.length > 2) {
+            try {
+              const abiKey = rawKeyBytes.slice(2).toString('utf8').replace(/\0/g, '').trim();
+              if (abiKey.length > 0) {
+                stateMap[abiKey] = value;
+                stateMap[abiKey.toLowerCase()] = value;
+              }
+            } catch { /* ignore */ }
+          }
+          
+          // Also try skipping just 1 byte prefix (some contracts use single-byte tags)
+          if (rawKeyBytes.length > 1) {
+            try {
+              const prefixed = rawKeyBytes.slice(1).toString('utf8').replace(/\0/g, '').trim();
+              if (prefixed.length > 0 && /^[a-zA-Z_]/.test(prefixed)) {
+                stateMap[prefixed] = value;
+                stateMap[prefixed.toLowerCase()] = value;
+              }
+            } catch { /* ignore */ }
           }
         });
 
-        let title = "";
-        try {
-          const titleKeys = ["title", "t", "name", "metadata", "proposal_title", "proposaltitle", "subject"];
-          for (const k of titleKeys) {
-            const val = stateMap[k];
-            if (val && typeof val === 'string') {
-              let decoded = "";
-              try {
-                // Try base64 decoding first
-                const buf = Buffer.from(val, 'base64');
-                decoded = buf.toString('utf8').replace(/\0/g, '').trim();
-              } catch {
-                decoded = val.replace(/\0/g, '').trim();
-              }
-              if (decoded && decoded.length > 2) {
-                title = decoded;
-                break;
-              }
-            }
-          }
-        } catch {
-          // Ignore title parsing errors
+        // Log all keys once per first app for debugging
+        if (i === 0 && batch.indexOf(appListing) === 0) {
+          console.log(`[xGov DEBUG] Global state keys for app ${app.id}:`, Object.keys(stateMap).filter(k => k.length < 50));
         }
 
+        // --- GET PROPOSER ---
+        // 1) Try from global state first (the SC stores proposer address in state)
         let proposerAddr = "";
         try {
           const proposerKeys = ["proposer", "p", "creator", "owner", "author"];
@@ -117,19 +132,90 @@ export async function fetchAllProposals(): Promise<XGovProposal[]> {
                   proposerAddr = algosdk.encodeAddress(bytes);
                   break;
                 }
-              } catch {
-                // Not a valid address
-              }
+              } catch { /* Not a valid address */ }
             }
           }
-        } catch {
-          // Ignore proposer parsing errors
+        } catch { /* ignore */ }
+        
+        // 2) Fall back to app creator from indexer (but this might be the registry)
+        if (!proposerAddr) {
+          proposerAddr = app.params?.creator || "";
         }
 
-        const approvals = stateMap["approvals"] || 0;
-        const rejections = stateMap["rejections"] || 0;
-        const boycotts = stateMap["boycotts"] || 0;
-        const voterCount = stateMap["voted_members"] || stateMap["assigned_members"] || 0;
+        // --- GET TITLE ---
+        let title = "";
+        
+        // Try all plausible global state key names for title
+        const titleKeys = ["title", "t", "name", "metadata", "proposal_title", "proposaltitle", "subject"];
+        for (const k of titleKeys) {
+          const val = stateMap[k];
+          if (val !== undefined && val !== null) {
+            let decoded = "";
+            if (typeof val === 'string' && val.length > 0) {
+              try {
+                const buf = Buffer.from(val, 'base64');
+                decoded = buf.toString('utf8').replace(/\0/g, '').trim();
+              } catch {
+                decoded = val.replace(/\0/g, '').trim();
+              }
+            } else if (typeof val === 'number') {
+              // Title wouldn't be a number, skip
+              continue;
+            }
+            if (decoded && decoded.length > 2 && decoded.length < 200) {
+              title = decoded;
+              break;
+            }
+          }
+        }
+        
+        // If still no title, scan ALL state values for anything that looks like a title string
+        if (!title) {
+          for (const [key, val] of Object.entries(stateMap)) {
+            if (typeof val === 'string' && val.length > 4) {
+              try {
+                const buf = Buffer.from(val as string, 'base64');
+                const decoded = buf.toString('utf8').replace(/\0/g, '').trim();
+                // Heuristic: looks like a readable title (printable chars, reasonable length)
+                if (decoded.length > 3 && decoded.length < 200 && /^[\x20-\x7E]+$/.test(decoded) && !/^[A-Z2-7]{58}$/.test(decoded)) {
+                  title = decoded;
+                  console.log(`[xGov] Found title in key "${key}" for app ${app.id}: "${decoded}"`);
+                  break;
+                }
+              } catch { /* skip */ }
+            }
+          }
+        }
+
+        // If title still not found from global state, try to get it from the metadata box
+        if (!title) {
+          try {
+            const metadataBoxKey = Buffer.from("M");
+            const metaRes = await axios.get(
+              `${MAINNET_ALGONODE_INDEXER}/v2/applications/${app.id}/box?name=b64:${encodeURIComponent(metadataBoxKey.toString('base64'))}`
+            );
+            const raw = Buffer.from(metaRes.data.value, 'base64').toString('utf8');
+            try {
+              const parsed = JSON.parse(raw);
+              if (parsed.title && parsed.title.length > 2) {
+                title = parsed.title;
+              } else if (parsed.name && parsed.name.length > 2) {
+                title = parsed.name;
+              }
+            } catch {
+              const firstLine = raw.split('\n')[0].replace(/\0/g, '').trim();
+              if (firstLine.length > 2 && firstLine.length <= 120) {
+                title = firstLine;
+              }
+            }
+          } catch { /* Metadata box doesn't exist — that's OK */ }
+        }
+
+        // Look for vote tallies under various possible key names
+        const approvals = stateMap["approvals"] || stateMap["total_approvals"] || stateMap["approval_votes"] || stateMap["yes"] || stateMap["approve"] || 0;
+        const rejections = stateMap["rejections"] || stateMap["total_rejections"] || stateMap["rejection_votes"] || stateMap["no"] || stateMap["reject"] || 0;
+        const boycotts = stateMap["boycotts"] || stateMap["total_boycotts"] || stateMap["boycott_votes"] || stateMap["boycott"] || 0;
+        const voterCount = stateMap["voted_members"] || stateMap["assigned_members"] || stateMap["voter_count"] || stateMap["voters"] || 0;
 
         proposals.push({
           appId: app.id,
@@ -193,79 +279,94 @@ export async function fetchRegistryPower(userAddress: string): Promise<number> {
 }
 
 export async function fetchVoterData(appId: number, userAddress: string): Promise<{ power: number; voted: boolean; choice?: "APPROVE" | "REJECT" | "BOYCOTT" | "ABSTAIN" | "SPLIT" }> {
+  const addrBytes = algosdk.decodeAddress(userAddress).publicKey;
+  const proposalBoxKey = new Uint8Array(33);
+  proposalBoxKey[0] = 0x56; // 'V' prefix
+  proposalBoxKey.set(addrBytes, 1);
+  const proposalBoxKeyBase64 = Buffer.from(proposalBoxKey).toString('base64');
+  
+  // Try fetching the voter box directly - handle 404 gracefully
   try {
-    const addrBytes = algosdk.decodeAddress(userAddress).publicKey;
-    const proposalBoxKey = new Uint8Array(33);
-    proposalBoxKey[0] = 0x56; // 'V' prefix
-    proposalBoxKey.set(addrBytes, 1);
-    const proposalBoxKeyBase64 = Buffer.from(proposalBoxKey).toString('base64');
+    const valRes = await axios.get(
+      `${MAINNET_ALGONODE_INDEXER}/v2/applications/${appId}/box?name=b64:${encodeURIComponent(proposalBoxKeyBase64)}`
+    );
+    const buf = Buffer.from(valRes.data.value, 'base64');
     
-    // Try fetching the box directly - handle 404 gracefully instead of 
-    // listing all boxes (which causes 400 errors on some proposal apps)
-    try {
-      const valRes = await axios.get(
-        `${MAINNET_ALGONODE_INDEXER}/v2/applications/${appId}/box?name=b64:${encodeURIComponent(proposalBoxKeyBase64)}`
-      );
-      const buf = Buffer.from(valRes.data.value, 'base64');
-      
-      let power = 0;
-      let choice: "APPROVE" | "REJECT" | "BOYCOTT" | "ABSTAIN" | "SPLIT" = "APPROVE";
+    let power = 0;
+    let choice: "APPROVE" | "REJECT" | "BOYCOTT" | "ABSTAIN" | "SPLIT" = "APPROVE";
 
-      // v3.0.0 format: 24 bytes = [approvals(8) | rejections(8) | boycotts(8)]
-      if (buf.length >= 24) {
-        const approvals = Number(buf.readBigUInt64BE(0));
-        const rejections = Number(buf.readBigUInt64BE(8));
-        const boycotts = Number(buf.readBigUInt64BE(16));
-        power = approvals + rejections + boycotts;
-        if (boycotts > 0 && approvals === 0 && rejections === 0) choice = "BOYCOTT";
-        else if (rejections > 0 && approvals === 0) choice = "REJECT";
-        else if (approvals > 0 && rejections === 0) choice = "APPROVE";
-        else if (approvals > 0 || rejections > 0 || boycotts > 0) choice = "SPLIT";
-      }
-      // v2 format: 16 bytes = [approvals(8) | rejections(8)]
-      else if (buf.length >= 16) {
-        const approvals = Number(buf.readBigUInt64BE(0));
-        const rejections = Number(buf.readBigUInt64BE(8));
-        power = approvals + rejections;
-        if (rejections > 0 && approvals === 0) choice = "REJECT";
-        else if (approvals > 0 && rejections > 0) choice = "SPLIT";
-        else choice = "APPROVE";
-      }
-      // Older format: 8 bytes = single uint64 (power or choice enum)
-      else if (buf.length >= 8) {
-        const val = Number(buf.readBigUInt64BE(0));
-        // Small values (0-3) are likely choice enums, not power
-        if (val <= 3) {
-          if (val === 0) choice = "ABSTAIN";
-          else if (val === 1) choice = "APPROVE";
-          else if (val === 2) choice = "REJECT";
-          else if (val === 3) choice = "BOYCOTT";
-          // For enum-style boxes, get actual power from registry
+    // v3.0.0 format: 24 bytes = [approvals(8) | rejections(8) | boycotts(8)]
+    if (buf.length >= 24) {
+      const approvals = Number(buf.readBigUInt64BE(0));
+      const rejections = Number(buf.readBigUInt64BE(8));
+      const boycotts = Number(buf.readBigUInt64BE(16));
+      power = approvals + rejections + boycotts;
+      if (boycotts > 0 && approvals === 0 && rejections === 0) choice = "BOYCOTT";
+      else if (rejections > 0 && approvals === 0) choice = "REJECT";
+      else if (approvals > 0 && rejections === 0) choice = "APPROVE";
+      else if (approvals > 0 || rejections > 0 || boycotts > 0) choice = "SPLIT";
+    }
+    // v2 format: 16 bytes = [approvals(8) | rejections(8)]
+    else if (buf.length >= 16) {
+      const approvals = Number(buf.readBigUInt64BE(0));
+      const rejections = Number(buf.readBigUInt64BE(8));
+      power = approvals + rejections;
+      if (rejections > 0 && approvals === 0) choice = "REJECT";
+      else if (approvals > 0 && rejections > 0) choice = "SPLIT";
+      else choice = "APPROVE";
+    }
+    // Older format: 8 bytes = single uint64 (power or choice enum)
+    else if (buf.length >= 8) {
+      const val = Number(buf.readBigUInt64BE(0));
+      // Small values (0-3) are likely choice enums, not power
+      if (val <= 3) {
+        if (val === 0) choice = "ABSTAIN";
+        else if (val === 1) choice = "APPROVE";
+        else if (val === 2) choice = "REJECT";
+        else if (val === 3) choice = "BOYCOTT";
+        // For enum-style boxes, get actual power from registry
+        try {
           const registryPower = await fetchRegistryPower(userAddress);
           return { power: registryPower, voted: true, choice };
-        } else {
-          power = val;
-          choice = "APPROVE";
+        } catch {
+          // Even if registry power fails, we KNOW they voted (box exists!)
+          return { power: 0, voted: true, choice };
         }
+      } else {
+        power = val;
+        choice = "APPROVE";
       }
-      
-      // Safety check: if power is unreasonably high (more than total ALGO supply), 
-      // it might be a different data format in the box. Fallback to registry power.
-      if (power > 10_000_000_000_000_000) {
+    }
+    
+    // Safety check: if power is unreasonably high (more than total ALGO supply), 
+    // it might be a different data format in the box. Fallback to registry power.
+    if (power > 10_000_000_000_000_000) {
+      try {
         const registryPower = await fetchRegistryPower(userAddress);
         return { power: registryPower, voted: true, choice };
+      } catch {
+        // Even if registry lookup fails, the box EXISTS so they voted
+        return { power: 0, voted: true, choice };
       }
+    }
 
-      return { power, voted: true, choice };
-    } catch (boxErr: any) {
-      // 404 means box doesn't exist = user hasn't voted
-      if (boxErr?.response?.status === 404 || boxErr?.response?.status === 400) {
+    // Box exists => user has voted, regardless of power value
+    return { power, voted: true, choice };
+  } catch (boxErr: any) {
+    // 404 means box doesn't exist = user hasn't voted
+    // 400 can also mean the box doesn't exist for some indexer implementations
+    if (boxErr?.response?.status === 404 || boxErr?.response?.status === 400) {
+      try {
         const registryPower = await fetchRegistryPower(userAddress);
         return { power: registryPower, voted: false };
+      } catch {
+        return { power: 0, voted: false };
       }
-      throw boxErr;
     }
-  } catch {
+    // For any other error (network timeout, 500, etc.), 
+    // we can't determine vote status — return unknown/not-voted
+    // but log it so it can be debugged
+    console.error(`[fetchVoterData] Unexpected error for app ${appId}, user ${userAddress}:`, boxErr?.message || boxErr);
     return { power: 0, voted: false };
   }
 }
@@ -413,19 +514,28 @@ export async function fetchProposalVoters(appId: number): Promise<XGovVoter[]> {
             const rejections = Number(buf.readBigUInt64BE(8));
             const boycotts = Number(buf.readBigUInt64BE(16));
             power = approvals + rejections + boycotts;
-            if (boycotts > 0 && approvals === 0 && rejections === 0) choice = "BOYCOTT";
-            else if (approvals > 0 && rejections > 0) choice = "SPLIT";
-            else if (approvals >= rejections) choice = "APPROVE";
-            else choice = "REJECT";
+            
+            if (power === 0) {
+              choice = "ABSTAIN";
+            } else if (boycotts > 0 && approvals === 0 && rejections === 0) {
+              choice = "BOYCOTT";
+            } else if (approvals > 0 && rejections === 0 && boycotts === 0) {
+              choice = "APPROVE";
+            } else if (rejections > 0 && approvals === 0 && boycotts === 0) {
+              choice = "REJECT";
+            } else {
+              choice = "SPLIT";
+            }
           }
           // v2 format: 16 bytes = [approvals(8) | rejections(8)]
           else if (buf.length >= 16) {
             const approvals = Number(buf.readBigUInt64BE(0));
             const rejections = Number(buf.readBigUInt64BE(8));
             power = approvals + rejections;
-            if (approvals > 0 && rejections > 0) choice = "SPLIT";
-            else if (approvals >= rejections) choice = "APPROVE";
-            else choice = "REJECT";
+            if (power === 0) choice = "ABSTAIN";
+            else if (approvals > 0 && rejections > 0) choice = "SPLIT";
+            else if (rejections > 0) choice = "REJECT";
+            else choice = "APPROVE";
           }
           // Older format: 8 bytes
           else if (buf.length >= 8) {
@@ -435,7 +545,7 @@ export async function fetchProposalVoters(appId: number): Promise<XGovVoter[]> {
               if (val === 1) choice = "APPROVE";
               else if (val === 2) choice = "REJECT";
               else choice = "ABSTAIN";
-              power = 0; // Can't determine power from enum-style box
+              power = 0;
             } else {
               power = val;
               choice = "APPROVE";
