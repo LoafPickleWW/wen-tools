@@ -76,7 +76,7 @@ export async function fetchAllProposals(): Promise<XGovProposal[]> {
             const value = item.value.uint !== undefined ? item.value.uint : item.value.bytes;
             stateMap[key] = value;
             stateMap[key.toLowerCase()] = value;
-          } catch (e) {
+          } catch {
             stateMap[item.key] = item.value.uint !== undefined ? item.value.uint : item.value.bytes;
           }
         });
@@ -101,7 +101,9 @@ export async function fetchAllProposals(): Promise<XGovProposal[]> {
               }
             }
           }
-        } catch {}
+        } catch {
+          // Ignore title parsing errors
+        }
 
         let proposerAddr = "";
         try {
@@ -115,10 +117,14 @@ export async function fetchAllProposals(): Promise<XGovProposal[]> {
                   proposerAddr = algosdk.encodeAddress(bytes);
                   break;
                 }
-              } catch {}
+              } catch {
+                // Not a valid address
+              }
             }
           }
-        } catch {}
+        } catch {
+          // Ignore proposer parsing errors
+        }
 
         const approvals = stateMap["approvals"] || 0;
         const rejections = stateMap["rejections"] || 0;
@@ -259,7 +265,7 @@ export async function fetchVoterData(appId: number, userAddress: string): Promis
       }
       throw boxErr;
     }
-  } catch (e: any) {
+  } catch {
     return { power: 0, voted: false };
   }
 }
