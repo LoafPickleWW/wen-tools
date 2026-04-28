@@ -1,3 +1,4 @@
+// Simple Batch Mint Tool
 import { useState } from "react";
 
 import algosdk from "algosdk";
@@ -16,9 +17,7 @@ import Papa from "papaparse";
 import InfinityModeComponent from "../components/InfinityModeComponent";
 import FaqSectionComponent from "../components/FaqSectionComponent";
 import { isCrustAuth } from "../crust-auth";
-import { pinImageToCrust, makeCrustPinTx } from "../crust";
 import { useWallet } from "@txnlab/use-wallet-react";
-import "react-json-view-lite/dist/index.css";
 import { PreviewAssetComponent } from "../components/PreviewAssetComponent";
 import ConnectButton from "../components/ConnectButton";
 
