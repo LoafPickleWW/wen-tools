@@ -40,6 +40,31 @@ export const XGOV_STATUS = {
   BLOCKED: 60,
 };
 
+/**
+ * Decode an ABI-encoded bytes value from the Algorand global state.
+ * AlgoKit/ABI contracts store byte strings with a 2-byte uint16 length prefix:
+ *   [length_high_byte, length_low_byte, ...actual_bytes]
+ * This function strips that prefix if detected.
+ */
+function decodeAbiBytes(base64Val: string): Buffer {
+  const buf = Buffer.from(base64Val, 'base64');
+  if (buf.length >= 2) {
+    const declaredLen = (buf[0] << 8) | buf[1];
+    // If the first 2 bytes encode a length that matches the remaining bytes, strip them
+    if (declaredLen === buf.length - 2 && declaredLen > 0) {
+      return buf.slice(2);
+    }
+  }
+  return buf;
+}
+
+/**
+ * Decode an ABI-encoded string value from global state.
+ */
+function decodeAbiString(base64Val: string): string {
+  return decodeAbiBytes(base64Val).toString('utf8').replace(/\0/g, '').trim();
+}
+
 export async function fetchAllProposals(): Promise<XGovProposal[]> {
   const registryAddress = algosdk.getApplicationAddress(XGOV_REGISTRY_APP_ID);
   let allApps: any[] = [];
@@ -69,153 +94,52 @@ export async function fetchAllProposals(): Promise<XGovProposal[]> {
         const globalState = app.params["global-state"] || [];
         const stateMap: Record<string, any> = {};
 
-        // Parse global state with proper handling for ABI-encoded keys.
-        // AlgoKit/ABI contracts may prefix keys with 2-byte length headers or
-        // use raw UTF-8 strings. We try both approaches and store under all
-        // possible decoded key names.
         globalState.forEach((item: any) => {
-          const rawKeyBytes = Buffer.from(item.key, 'base64');
-          const value = item.value.uint !== undefined ? item.value.uint : item.value.bytes;
-          
-          // Store under base64 key as fallback
-          stateMap[item.key] = value;
-          
-          // Try decoding as raw UTF-8
           try {
-            const utf8Key = rawKeyBytes.toString('utf8').replace(/\0/g, '').trim();
-            if (utf8Key.length > 0) {
-              stateMap[utf8Key] = value;
-              stateMap[utf8Key.toLowerCase()] = value;
-            }
-          } catch { /* ignore */ }
-          
-          // Try ABI-style decoding: skip first 2 bytes (uint16 length prefix)
-          // This is how AlgoKit-generated contracts often store state keys
-          if (rawKeyBytes.length > 2) {
-            try {
-              const abiKey = rawKeyBytes.slice(2).toString('utf8').replace(/\0/g, '').trim();
-              if (abiKey.length > 0) {
-                stateMap[abiKey] = value;
-                stateMap[abiKey.toLowerCase()] = value;
-              }
-            } catch { /* ignore */ }
-          }
-          
-          // Also try skipping just 1 byte prefix (some contracts use single-byte tags)
-          if (rawKeyBytes.length > 1) {
-            try {
-              const prefixed = rawKeyBytes.slice(1).toString('utf8').replace(/\0/g, '').trim();
-              if (prefixed.length > 0 && /^[a-zA-Z_]/.test(prefixed)) {
-                stateMap[prefixed] = value;
-                stateMap[prefixed.toLowerCase()] = value;
-              }
-            } catch { /* ignore */ }
+            const key = Buffer.from(item.key, 'base64').toString('utf8').replace(/\0/g, '').trim();
+            const value = item.value.type === 2 ? item.value.uint : item.value.bytes;
+            stateMap[key] = value;
+            stateMap[key.toLowerCase()] = value;
+          } catch {
+            const value = item.value.type === 2 ? item.value.uint : item.value.bytes;
+            stateMap[item.key] = value;
           }
         });
 
-        // Log all keys once per first app for debugging
-        if (i === 0 && batch.indexOf(appListing) === 0) {
-          console.log(`[xGov DEBUG] Global state keys for app ${app.id}:`, Object.keys(stateMap).filter(k => k.length < 50));
+        // --- GET TITLE ---
+        // The title is stored as ABI-encoded bytes in global state under key "title".
+        // ABI encoding = [2-byte uint16 length prefix][actual string bytes]
+        let title = "";
+        const titleVal = stateMap["title"];
+        if (titleVal && typeof titleVal === 'string') {
+          try {
+            title = decodeAbiString(titleVal);
+          } catch { /* ignore */ }
         }
 
         // --- GET PROPOSER ---
-        // 1) Try from global state first (the SC stores proposer address in state)
+        // The proposer address is stored as ABI-encoded bytes: [0, 32, ...32 address bytes]
+        // Total = 34 bytes. We need to strip the 2-byte ABI prefix to get the 32-byte public key.
         let proposerAddr = "";
-        try {
-          const proposerKeys = ["proposer", "p", "creator", "owner", "author"];
-          for (const k of proposerKeys) {
-            const val = stateMap[k];
-            if (val && typeof val === 'string') {
-              try {
-                const bytes = Buffer.from(val, 'base64');
-                if (bytes.length === 32) {
-                  proposerAddr = algosdk.encodeAddress(bytes);
-                  break;
-                }
-              } catch { /* Not a valid address */ }
+        const proposerVal = stateMap["proposer"];
+        if (proposerVal && typeof proposerVal === 'string') {
+          try {
+            const addrBytes = decodeAbiBytes(proposerVal);
+            if (addrBytes.length === 32) {
+              proposerAddr = algosdk.encodeAddress(addrBytes);
             }
-          }
-        } catch { /* ignore */ }
+          } catch { /* ignore */ }
+        }
         
-        // 2) Fall back to app creator from indexer (but this might be the registry)
+        // Fallback: use app creator from indexer
         if (!proposerAddr) {
           proposerAddr = app.params?.creator || "";
         }
 
-        // --- GET TITLE ---
-        let title = "";
-        
-        // Try all plausible global state key names for title
-        const titleKeys = ["title", "t", "name", "metadata", "proposal_title", "proposaltitle", "subject"];
-        for (const k of titleKeys) {
-          const val = stateMap[k];
-          if (val !== undefined && val !== null) {
-            let decoded = "";
-            if (typeof val === 'string' && val.length > 0) {
-              try {
-                const buf = Buffer.from(val, 'base64');
-                decoded = buf.toString('utf8').replace(/\0/g, '').trim();
-              } catch {
-                decoded = val.replace(/\0/g, '').trim();
-              }
-            } else if (typeof val === 'number') {
-              // Title wouldn't be a number, skip
-              continue;
-            }
-            if (decoded && decoded.length > 2 && decoded.length < 200) {
-              title = decoded;
-              break;
-            }
-          }
-        }
-        
-        // If still no title, scan ALL state values for anything that looks like a title string
-        if (!title) {
-          for (const [key, val] of Object.entries(stateMap)) {
-            if (typeof val === 'string' && val.length > 4) {
-              try {
-                const buf = Buffer.from(val as string, 'base64');
-                const decoded = buf.toString('utf8').replace(/\0/g, '').trim();
-                // Heuristic: looks like a readable title (printable chars, reasonable length)
-                if (decoded.length > 3 && decoded.length < 200 && /^[\x20-\x7E]+$/.test(decoded) && !/^[A-Z2-7]{58}$/.test(decoded)) {
-                  title = decoded;
-                  console.log(`[xGov] Found title in key "${key}" for app ${app.id}: "${decoded}"`);
-                  break;
-                }
-              } catch { /* skip */ }
-            }
-          }
-        }
-
-        // If title still not found from global state, try to get it from the metadata box
-        if (!title) {
-          try {
-            const metadataBoxKey = Buffer.from("M");
-            const metaRes = await axios.get(
-              `${MAINNET_ALGONODE_INDEXER}/v2/applications/${app.id}/box?name=b64:${encodeURIComponent(metadataBoxKey.toString('base64'))}`
-            );
-            const raw = Buffer.from(metaRes.data.value, 'base64').toString('utf8');
-            try {
-              const parsed = JSON.parse(raw);
-              if (parsed.title && parsed.title.length > 2) {
-                title = parsed.title;
-              } else if (parsed.name && parsed.name.length > 2) {
-                title = parsed.name;
-              }
-            } catch {
-              const firstLine = raw.split('\n')[0].replace(/\0/g, '').trim();
-              if (firstLine.length > 2 && firstLine.length <= 120) {
-                title = firstLine;
-              }
-            }
-          } catch { /* Metadata box doesn't exist — that's OK */ }
-        }
-
-        // Look for vote tallies under various possible key names
-        const approvals = stateMap["approvals"] || stateMap["total_approvals"] || stateMap["approval_votes"] || stateMap["yes"] || stateMap["approve"] || 0;
-        const rejections = stateMap["rejections"] || stateMap["total_rejections"] || stateMap["rejection_votes"] || stateMap["no"] || stateMap["reject"] || 0;
-        const boycotts = stateMap["boycotts"] || stateMap["total_boycotts"] || stateMap["boycott_votes"] || stateMap["boycott"] || 0;
-        const voterCount = stateMap["voted_members"] || stateMap["assigned_members"] || stateMap["voter_count"] || stateMap["voters"] || 0;
+        const approvals = stateMap["approvals"] || 0;
+        const rejections = stateMap["rejections"] || 0;
+        const boycotts = stateMap["boycotts"] || stateMap["boycotted_members"] || 0;
+        const voterCount = stateMap["voted_members"] || stateMap["assigned_members"] || 0;
 
         proposals.push({
           appId: app.id,
@@ -489,8 +413,15 @@ export async function fetchProposalVoters(appId: number): Promise<XGovVoter[]> {
     
     const voterBoxes = boxes.filter((b: any) => {
       const nameBytes = Buffer.from(b.name, 'base64');
-      return nameBytes[0] === 0x56 && nameBytes.length === 33; // 'V' prefix + 32-byte address
+      // Accept boxes with 'V' (0x56) prefix + 32-byte address = 33 bytes total
+      // Also accept boxes that are exactly 32 bytes (just the address, no prefix)
+      // Also accept 'v' (0x76) prefix in case of case variation
+      if (nameBytes.length === 33 && (nameBytes[0] === 0x56 || nameBytes[0] === 0x76)) return true;
+      if (nameBytes.length === 32) return true;
+      return false;
     });
+    
+    console.log(`[xGov] App ${appId}: Found ${boxes.length} total boxes, ${voterBoxes.length} voter boxes`);
 
     const voters: XGovVoter[] = [];
     const batchSize = 15;
@@ -503,7 +434,10 @@ export async function fetchProposalVoters(appId: number): Promise<XGovVoter[]> {
             `${MAINNET_ALGONODE_INDEXER}/v2/applications/${appId}/box?name=b64:${encodeURIComponent(boxNameB64)}`
           );
           const buf = Buffer.from(valRes.data.value, 'base64');
-          const address = algosdk.encodeAddress(Buffer.from(b.name, 'base64').slice(1));
+          const nameBytes = Buffer.from(b.name, 'base64');
+          // Extract address: skip prefix byte if present
+          const addrBytes = nameBytes.length === 33 ? nameBytes.slice(1) : nameBytes;
+          const address = algosdk.encodeAddress(addrBytes);
           
           let power = 0;
           let choice: XGovVoter['choice'] = "ABSTAIN";
@@ -540,10 +474,10 @@ export async function fetchProposalVoters(appId: number): Promise<XGovVoter[]> {
           // Older format: 8 bytes
           else if (buf.length >= 8) {
             const val = Number(buf.readBigUInt64BE(0));
-            // Small values are likely choice enums
             if (val <= 3) {
               if (val === 1) choice = "APPROVE";
               else if (val === 2) choice = "REJECT";
+              else if (val === 3) choice = "BOYCOTT";
               else choice = "ABSTAIN";
               power = 0;
             } else {
