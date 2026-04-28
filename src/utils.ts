@@ -28,12 +28,13 @@ import {
   TESTNET_NFD_API_BASE_URL,
 } from "./constants";
 import * as mfsha2 from "multiformats/hashes/sha2";
-import * as digest from "multiformats/hashes/digest";
 import {
+  makeCrustPinTx,
+  pinJSONToCrust,
   buildAssetMintAtomicTransactionComposer,
   mnemonicSignerCreator,
-  pinJSONToCrust,
 } from "./crust";
+import * as digest from "multiformats/hashes/digest";
 import { NetworkId } from "@txnlab/use-wallet-react";
 import * as algokit from "@algorandfoundation/algokit-utils";
 
@@ -403,7 +404,7 @@ export async function createARC3AssetMintArrayV2Batch(
       suggestedParams.flatFee = true;
       suggestedParams.fee = 2000 * 4; // set fee
 
-      // build ATC (no longer includes Crust pin)
+      // build ATC
       await buildAssetMintAtomicTransactionComposer(
         atc,
         address,
@@ -412,6 +413,11 @@ export async function createARC3AssetMintArrayV2Batch(
         data_for_txns[i],
         suggestedParams,
         cid
+      );
+
+      // Bundle the Crust pin transaction into the same group
+      atc.addMethodCall(
+        await makeCrustPinTx(cid, txSigner, address, algodClient)
       );
 
       txnsArray.push(getTxnGroupFromATC(atc));
@@ -623,7 +629,7 @@ export async function createARC19AssetMintArrayV2Batch(
       suggestedParams.flatFee = true;
       suggestedParams.fee = 2000 * 4; // set fee
 
-      // build ATC (no longer includes Crust pin)
+      // build ATC
       await buildAssetMintAtomicTransactionComposer(
         atc,
         address,
@@ -632,6 +638,11 @@ export async function createARC19AssetMintArrayV2Batch(
         data_for_txns[i],
         suggestedParams,
         cid
+      );
+
+      // Bundle the Crust pin transaction into the same group
+      atc.addMethodCall(
+        await makeCrustPinTx(cid, txSigner, address, algodClient)
       );
 
       txnsArray.push(getTxnGroupFromATC(atc));

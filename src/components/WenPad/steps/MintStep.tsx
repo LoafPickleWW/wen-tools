@@ -119,15 +119,18 @@ const MintStep = () => {
       let txnsGroups: algosdk.Transaction[][] = [];
       
       if (standard === 'ARC3') {
-        txnsGroups = await createARC3AssetMintArrayV2Batch(mintedData, activeAccount.address, algodClient, transactionSigner);
+        const { txnsArray } = await createARC3AssetMintArrayV2Batch(mintedData, activeAccount.address, algodClient, transactionSigner);
+        txnsGroups = txnsArray;
       } else if (standard === 'ARC19') {
-        txnsGroups = await createARC19AssetMintArrayV2Batch(mintedData, activeAccount.address, algodClient, transactionSigner);
+        const { txnsArray } = await createARC19AssetMintArrayV2Batch(mintedData, activeAccount.address, algodClient, transactionSigner);
+        txnsGroups = txnsArray;
       } else {
         // ARC69 or Standard
         // We'll need a generic batch creator if we want to support ARC69 in batch
         // For now let's focus on ARC19/3 as they are most requested
         toast.warning('ARC69 batch minting coming soon. Using ARC19 instead for this demo.');
-        txnsGroups = await createARC19AssetMintArrayV2Batch(mintedData, activeAccount.address, algodClient, transactionSigner);
+        const { txnsArray } = await createARC19AssetMintArrayV2Batch(mintedData, activeAccount.address, algodClient, transactionSigner);
+        txnsGroups = txnsArray;
       }
 
       // 3. Signing Loop
