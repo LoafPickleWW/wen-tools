@@ -31,7 +31,6 @@ import * as mfsha2 from "multiformats/hashes/sha2";
 import * as digest from "multiformats/hashes/digest";
 import {
   buildAssetMintAtomicTransactionComposer,
-  makeCrustPinTx,
   mnemonicSignerCreator,
   pinJSONToCrust,
 } from "./crust";
@@ -53,13 +52,26 @@ export function sliceIntoChunks(arr: any[], chunkSize: number) {
 
 export async function walletSign(
   txns: algosdk.Transaction[] | algosdk.Transaction[][],
-  signer: algosdk.TransactionSigner
+  signer: algosdk.TransactionSigner,
+  isLedger: boolean = false
 ) {
-  const flattened = txns.flat();
+  const groups = Array.isArray(txns[0])
+    ? (txns as algosdk.Transaction[][])
+    : [txns as algosdk.Transaction[]];
   const signedTxns: Uint8Array[] = [];
-  for (const txn of flattened) {
-    const signed = await signer([txn], [0]);
-    signedTxns.push(signed[0]);
+
+  for (const group of groups) {
+    if (isLedger) {
+      // Sequential signing for Ledger to avoid the 16-byte signature bug
+      for (let i = 0; i < group.length; i++) {
+        const signed = await signer(group, [i]);
+        signedTxns.push(signed[0]);
+      }
+    } else {
+      // Batch signing for other wallets (single prompt)
+      const signed = await signer(group, Array.from(group.keys()));
+      signedTxns.push(...signed);
+    }
   }
   return signedTxns;
 }
@@ -204,21 +216,10 @@ export async function createAssetMintArrayV2(
     }
   }
 
-  // extra pinning
-  if (extraPinCids) {
-    for (let i = 0; i < extraPinCids.length; i++) {
-      atc.addMethodCall(
-        await makeCrustPinTx(
-          extraPinCids[i],
-          transactionSigner,
-          address,
-          algodClient
-        )
-      );
-    }
-  }
-
-  return atc;
+  // NOTE: Crust pin transactions are no longer added to the mint ATC.
+  // They are returned as pinCids so the caller can execute them separately.
+  // This fixes Pera "Missing transaction(s)" and Ledger signature errors.
+  return { atc, pinCids: extraPinCids || [] };
 }
 
 export async function createAssetMintArray(
@@ -301,6 +302,9 @@ export async function createARC3AssetMintArrayV2(
     throw Error("txSigner is not defined");
   }
 
+  // Collect all CIDs that need pinning (JSON metadata CIDs + image CIDs)
+  const allPinCids: string[] = [];
+
   for (let i = 0; i < data_for_txns.length; i++) {
     try {
       const jsonString = JSON.stringify(data_for_txns[i].ipfs_data);
@@ -308,16 +312,16 @@ export async function createARC3AssetMintArrayV2(
       const authBasic = localStorage.getItem("authBasic");
       // upload to Crust
       const cid = await pinJSONToCrust(authBasic, jsonString);
+      allPinCids.push(cid);
 
       const suggestedParams = await algodClient.getTransactionParams().do();
       suggestedParams.flatFee = true;
       suggestedParams.fee = 2000 * 4; // set fee
 
-      // build ATC
+      // build ATC (no longer includes Crust pin txns)
       await buildAssetMintAtomicTransactionComposer(
         atc,
         address,
-        algodClient,
         "ARC3",
         txSigner,
         data_for_txns[i],
@@ -344,16 +348,13 @@ export async function createARC3AssetMintArrayV2(
     }
   }
 
-  // extra pinning
+  // Add extra image pin CIDs
   if (extraPinCids) {
-    for (let i = 0; i < extraPinCids.length; i++) {
-      atc.addMethodCall(
-        await makeCrustPinTx(extraPinCids[i], txSigner, address, algodClient)
-      );
-    }
+    allPinCids.push(...extraPinCids);
   }
 
-  return atc;
+  // Return mint ATC + pinCids separately for sequential execution
+  return { atc, pinCids: allPinCids };
 }
 
 export function getTxnGroupFromATC(atc: algosdk.AtomicTransactionComposer) {
@@ -385,6 +386,7 @@ export async function createARC3AssetMintArrayV2Batch(
   }
 
   const txnsArray = [];
+  const pinCids = [];
   for (let i = 0; i < data_for_txns.length; i++) {
     // create new atomic transaction composer
     const atc = new algosdk.AtomicTransactionComposer();
@@ -395,16 +397,16 @@ export async function createARC3AssetMintArrayV2Batch(
       const authBasic = localStorage.getItem("authBasic");
       // upload to Crust
       const cid = await pinJSONToCrust(authBasic, jsonString);
+      pinCids.push(cid);
 
       const suggestedParams = await algodClient.getTransactionParams().do();
       suggestedParams.flatFee = true;
       suggestedParams.fee = 2000 * 4; // set fee
 
-      // build ATC
+      // build ATC (no longer includes Crust pin)
       await buildAssetMintAtomicTransactionComposer(
         atc,
         address,
-        algodClient,
         "ARC3",
         txSigner,
         data_for_txns[i],
@@ -421,7 +423,7 @@ export async function createARC3AssetMintArrayV2Batch(
     }
   }
 
-  return txnsArray;
+  return { txnsArray, pinCids };
 }
 
 export async function createARC3AssetMintArray(
@@ -526,6 +528,9 @@ export async function createARC19AssetMintArrayV2(
     throw Error("txSigner is not defined");
   }
 
+  // Collect all CIDs that need pinning
+  const allPinCids: string[] = [];
+
   for (let i = 0; i < data_for_txns.length; i++) {
     try {
       const jsonString = JSON.stringify(data_for_txns[i].ipfs_data);
@@ -533,16 +538,16 @@ export async function createARC19AssetMintArrayV2(
       const authBasic = localStorage.getItem("authBasic");
       // upload to Crust
       const cid = await pinJSONToCrust(authBasic, jsonString);
+      allPinCids.push(cid);
 
       const suggestedParams = await algodClient.getTransactionParams().do();
       suggestedParams.flatFee = true;
       suggestedParams.fee = 2000 * 4; // set fee
 
-      // build ATC
+      // build ATC (no longer includes Crust pin txns)
       await buildAssetMintAtomicTransactionComposer(
         atc,
         address,
-        algodClient,
         "ARC19",
         txSigner,
         data_for_txns[i],
@@ -569,16 +574,13 @@ export async function createARC19AssetMintArrayV2(
     }
   }
 
-  // extra pinning
+  // Add extra image pin CIDs
   if (extraPinCids) {
-    for (let i = 0; i < extraPinCids.length; i++) {
-      atc.addMethodCall(
-        await makeCrustPinTx(extraPinCids[i], txSigner, address, algodClient)
-      );
-    }
+    allPinCids.push(...extraPinCids);
   }
 
-  return atc;
+  // Return mint ATC + pinCids separately for sequential execution
+  return { atc, pinCids: allPinCids };
 }
 
 export async function createARC19AssetMintArrayV2Batch(
@@ -604,6 +606,7 @@ export async function createARC19AssetMintArrayV2Batch(
   }
 
   const txnsArray = [];
+  const pinCids = [];
   for (let i = 0; i < data_for_txns.length; i++) {
     // create atomic transaction composer
     const atc = new algosdk.AtomicTransactionComposer();
@@ -614,16 +617,16 @@ export async function createARC19AssetMintArrayV2Batch(
       const authBasic = localStorage.getItem("authBasic");
       // upload to Crust
       const cid = await pinJSONToCrust(authBasic, jsonString);
+      pinCids.push(cid);
 
       const suggestedParams = await algodClient.getTransactionParams().do();
       suggestedParams.flatFee = true;
       suggestedParams.fee = 2000 * 4; // set fee
 
-      // build ATC
+      // build ATC (no longer includes Crust pin)
       await buildAssetMintAtomicTransactionComposer(
         atc,
         address,
-        algodClient,
         "ARC19",
         txSigner,
         data_for_txns[i],
@@ -640,7 +643,7 @@ export async function createARC19AssetMintArrayV2Batch(
     }
   }
 
-  return txnsArray;
+  return { txnsArray, pinCids };
 }
 
 export async function createARC19AssetMintArray(
@@ -733,6 +736,13 @@ export async function updateARC19AssetMintArrayV2(
     txSigner = transactionSigner;
   }
 
+  if (txSigner === null) {
+    throw Error("txSigner is not defined");
+  }
+
+  // Collect all CIDs that need pinning
+  const allPinCids: string[] = [];
+
   for (let i = 0; i < data_for_txns.length; i++) {
     try {
       const assetURL = await getAssetUrl(
@@ -753,6 +763,7 @@ export async function updateARC19AssetMintArrayV2(
         cidVersion,
         cidCodec
       );
+      allPinCids.push(cid);
 
       const { reserveAddress } = createReserveAddressFromIpfsCid(cid);
 
@@ -781,9 +792,6 @@ export async function updateARC19AssetMintArrayV2(
 
       atc.addTransaction({ txn: update_tx, signer: txSigner });
       atc.addTransaction({ txn: fee_tx, signer: txSigner });
-      atc.addMethodCall(
-        await makeCrustPinTx(cid, txSigner, address, algodClient)
-      );
 
       toast.info(`Asset ${i + 1} of ${data_for_txns.length} uploaded to IPFS`, {
         autoClose: 200,
@@ -796,20 +804,13 @@ export async function updateARC19AssetMintArrayV2(
     }
   }
 
-  // extra pinning
+  // Add extra image pin CIDs
   if (extraPinCids) {
-    for (let i = 0; i < extraPinCids.length; i++) {
-      const pinTxn = await makeCrustPinTx(
-        extraPinCids[i],
-        txSigner,
-        address,
-        algodClient
-      );
-      atc.addMethodCall(pinTxn);
-    }
+    allPinCids.push(...extraPinCids);
   }
 
-  return atc;
+  // Return mint ATC + pinCids separately for sequential execution
+  return { atc, pinCids: allPinCids };
 }
 
 export async function updateARC19AssetMintArray(

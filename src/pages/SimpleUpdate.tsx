@@ -16,7 +16,7 @@ import {
 } from "../utils";
 import { TOOLS, IPFS_ENDPOINT, ASSET_PREVIEW } from "../constants";
 import { isCrustAuth } from "../crust-auth";
-import { pinImageToCrust } from "../crust";
+import { pinImageToCrust, makeCrustPinTx } from "../crust";
 import { useWallet } from "@txnlab/use-wallet-react";
 import "react-json-view-lite/dist/index.css";
 import { PreviewAssetComponent } from "../components/PreviewAssetComponent";
@@ -386,26 +386,21 @@ export function SimpleUpdate() {
         // }
         // setTransaction(unsignedAssetTransactions);
 
-        // V2
-        const ledgerSafeSigner: algosdk.TransactionSigner = async (txnGroup: algosdk.Transaction[], indexesToSign: number[]) => {
-          const signedTxns: Uint8Array[] = [];
-          for (const idx of indexesToSign) {
-            const signed = await transactionSigner([txnGroup[idx]], [0]);
-            signedTxns.push(signed[0]);
-          }
-          return signedTxns;
-        };
-
-        // add basic tx
-        const batchATC = await updateARC19AssetMintArrayV2(
+        const { atc, pinCids: cids } = await updateARC19AssetMintArrayV2(
           [transaction_data],
           activeAddress,
           algodClient,
-          ledgerSafeSigner,
+          transactionSigner,
           imageCid ? [imageCid] : []
         );
 
-        setBatchATC(batchATC);
+        // Bundle pins into the same group
+        for (const cid of cids) {
+          atc.addMethodCall(
+            await makeCrustPinTx(cid, transactionSigner, activeAddress, algodClient)
+          );
+        }
+        setBatchATC(atc);
       } else if (formData.format === "ARC69") {
         metadata.properties = metadata.properties.traits;
         const transaction_data = {
@@ -467,16 +462,9 @@ export function SimpleUpdate() {
 
       // use ATC batch, test asset ID: 2315438437
       if (formData.format === "ARC19") {
-        // Split sign and submit for better Ledger compatibility
-        const signedTxns = await batchATC.gatherSignatures();
-        const txnGroup = batchATC.buildGroup();
-        const encodedSignedTxns = signedTxns.map((s: Uint8Array, i: number) => {
-          return algosdk.encodeObj({
-            txn: txnGroup[i].txn.get_obj_for_encoding(),
-            sig: s,
-          });
-        });
-        const { txId } = await algodClient.sendRawTransaction(encodedSignedTxns).do();
+        // Use atc.execute for robust signing and submission of the entire group
+        const { txIDs } = await batchATC.execute(algodClient, 4);
+        const txId = txIDs[0];
         await algosdk.waitForConfirmation(algodClient, txId, 4);
       } else {
         // other formats
@@ -495,6 +483,12 @@ export function SimpleUpdate() {
       }
 
       toast.success("Asset updated successfully!");
+      if (window.parent) {
+        window.parent.postMessage({
+          type: "WEN_TOOLS_MINT_SUCCESS",
+          assetID: assetID,
+        }, "*");
+      }
       setProcessStep(4);
     } catch (error) {
       console.log("----> sign: ", error);

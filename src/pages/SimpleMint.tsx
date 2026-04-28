@@ -13,7 +13,7 @@ import {
 } from "../utils";
 import { ASSET_PREVIEW, TOOLS } from "../constants";
 import FaqSectionComponent from "../components/FaqSectionComponent";
-import { pinImageToCrust } from "../crust";
+import { pinImageToCrust, makeCrustPinTx } from "../crust";
 import { useWallet } from "@txnlab/use-wallet-react";
 import "react-json-view-lite/dist/index.css";
 import { PreviewAssetComponent } from "../components/PreviewAssetComponent";
@@ -61,7 +61,6 @@ export function SimpleMint() {
 
   const [createdAssetID, setCreatedAssetID] = useState(null);
 
-  // batchATC is a AtomicTransactionComposer to batch and send all transactions
   const [batchATC, setBatchATC] = useState(null as any);
   const { activeAddress, algodClient, transactionSigner } = useWallet();
   const [previewAsset, setPreviewAsset] = useState(null as any);
@@ -440,53 +439,54 @@ wen.contentWindow.postMessage({
         ipfs_data: metadata,
         image: imageURLForPreview,
       };
-      const ledgerSafeSigner: algosdk.TransactionSigner = async (txnGroup: algosdk.Transaction[], indexesToSign: number[]) => {
-        const signedTxns: Uint8Array[] = [];
-        for (const idx of indexesToSign) {
-          const signed = await transactionSigner([txnGroup[idx]], [0]);
-          signedTxns.push(signed[0]);
-        }
-        return signedTxns;
-      };
-
       if (formData.format === "ARC3") {
-        // V1
-        // unsignedAssetTransaction = await createARC3AssetMintArray(
-        //   [metadataForIPFS],
-        //   token
-        // );
-
-        // V2 here, AtomicTransactionComposer will be used
-        const batchATC = await createARC3AssetMintArrayV2(
+        const { atc, pinCids: cids } = await createARC3AssetMintArrayV2(
           [metadataForIPFS],
           activeAddress,
           algodClient,
-          ledgerSafeSigner,
+          transactionSigner,
           [imageCID],
           undefined,
           extraFee || undefined,
           extraFeeAddress || undefined
         );
-        setBatchATC(batchATC);
+
+        // Bundle IPFS pins into the same atomic group (max 16 txns)
+        for (const cid of cids) {
+          atc.addMethodCall(
+            await makeCrustPinTx(
+              cid,
+              transactionSigner,
+              activeAddress,
+              algodClient
+            )
+          );
+        }
+
+        setBatchATC(atc);
       } else if (formData.format === "ARC19") {
-        // V1
-        // unsignedAssetTransaction = await createARC19AssetMintArray(
-        //   [metadataForIPFS],activeAddress, algodClient,
-        //   token
-        // );
-
-        // V2 here, AtomicTransactionComposer will be used
-        const batchATC = await createARC19AssetMintArrayV2(
+        const { atc, pinCids: cids } = await createARC19AssetMintArrayV2(
           [metadataForIPFS],
           activeAddress,
           algodClient,
-          ledgerSafeSigner,
+          transactionSigner,
           [imageCID],
           undefined,
           extraFee || undefined,
           extraFeeAddress || undefined
         );
-        setBatchATC(batchATC);
+
+        for (const cid of cids) {
+          atc.addMethodCall(
+            await makeCrustPinTx(
+              cid,
+              transactionSigner,
+              activeAddress,
+              algodClient
+            )
+          );
+        }
+        setBatchATC(atc);
       } else if (formData.format === "ARC69" || formData.format === "Token") {
         metadata.properties = metadata.properties.traits;
         metadataForIPFS = {
@@ -494,36 +494,51 @@ wen.contentWindow.postMessage({
           asset_note: metadata,
           asset_url: imageURL,
         };
-        // V1
-        // unsignedAssetTransaction = await createAssetMintArray(
-        //   [metadataForIPFS],
-        //   "",
-        //   false
-        // );
 
-        // V2
         if (formData.format === "ARC69") {
-          const batchATC = await createAssetMintArrayV2(
+          const { atc, pinCids: cids } = await createAssetMintArrayV2(
             [metadataForIPFS],
             activeAddress,
             algodClient,
-            ledgerSafeSigner,
+            transactionSigner,
             [imageCID],
             extraFee || undefined,
             extraFeeAddress || undefined
           );
-          setBatchATC(batchATC);
+
+          for (const cid of cids) {
+            atc.addMethodCall(
+              await makeCrustPinTx(
+                cid,
+                transactionSigner,
+                activeAddress,
+                algodClient
+              )
+            );
+          }
+          setBatchATC(atc);
         } else {
-          const batchATC = await createAssetMintArrayV2(
+          const { atc, pinCids: cids } = await createAssetMintArrayV2(
             [metadataForIPFS],
             activeAddress,
             algodClient,
-            ledgerSafeSigner,
+            transactionSigner,
             undefined,
             extraFee || undefined,
             extraFeeAddress || undefined
           );
-          setBatchATC(batchATC);
+
+          for (const cid of cids) {
+            atc.addMethodCall(
+              await makeCrustPinTx(
+                cid,
+                transactionSigner,
+                activeAddress,
+                algodClient
+              )
+            );
+          }
+          setBatchATC(atc);
         }
       } else {
         toast.error("Invalid ARC format");
@@ -551,16 +566,9 @@ wen.contentWindow.postMessage({
       }
       setProcessStep(3);
 
-      // Split sign and submit for better Ledger compatibility
-      const signedTxns = await batchATC.gatherSignatures();
-      const txnGroup = batchATC.buildGroup();
-      const encodedSignedTxns = signedTxns.map((s: Uint8Array, i: number) => {
-        return algosdk.encodeObj({
-          txn: txnGroup[i].txn.get_obj_for_encoding(),
-          sig: s,
-        });
-      });
-      const { txId } = await algodClient.sendRawTransaction(encodedSignedTxns).do();
+      // Use atc.execute for robust signing and submission of the entire group
+      const { txIDs } = await batchATC.execute(algodClient, 4);
+      const txId = txIDs[0];
       const result = await algosdk.waitForConfirmation(
         algodClient,
         txId,
@@ -568,15 +576,16 @@ wen.contentWindow.postMessage({
       );
 
       setCreatedAssetID(result["asset-index"]);
+      toast.success("Asset created successfully!");
 
-      removeStoredData(); // Remove stored data now that mint is complete
-      toast.success("Asset updated successfully!");
       if (window.parent) {
         window.parent.postMessage({
           type: "WEN_TOOLS_MINT_SUCCESS",
-          assetID: createdAssetID
+          assetID: result["asset-index"],
         }, "*");
       }
+
+      removeStoredData();
       setProcessStep(4);
     } catch (error) {
       console.log("Something went wrong: ", error);

@@ -16,6 +16,7 @@ import Papa from "papaparse";
 import InfinityModeComponent from "../components/InfinityModeComponent";
 import FaqSectionComponent from "../components/FaqSectionComponent";
 import { isCrustAuth } from "../crust-auth";
+import { buildCrustPinAtomicTransactionComposer } from "../crust";
 import { useWallet } from "@txnlab/use-wallet-react";
 import "react-json-view-lite/dist/index.css";
 import { PreviewAssetComponent } from "../components/PreviewAssetComponent";
@@ -54,9 +55,10 @@ export function SimpleBatchMint() {
   const [assetTransactions, setAssetTransactions] = useState(
     [] as algosdk.Transaction[][]
   );
+  const [pinCids, setPinCids] = useState<string[]>([]);
 
   const [previewAsset, setPreviewAsset] = useState(null as any);
-  const { activeAddress, algodClient, transactionSigner } = useWallet();
+  const { activeAddress, algodClient, transactionSigner, activeWallet } = useWallet();
 
   const TraitMetadataInputField = (key: string) => {
     return (
@@ -300,24 +302,28 @@ export function SimpleBatchMint() {
       console.log(formData.collectionFormat);
       if (formData.collectionFormat === "ARC3") {
         toast.info("Creating ARC3 transactions...");
-        unsignedAssetTransaction = await createARC3AssetMintArrayV2Batch(
+        const { txnsArray, pinCids } = await createARC3AssetMintArrayV2Batch(
           data_for_txns,
           activeAddress,
           algodClient,
           transactionSigner,
           mnemonic
         );
+        unsignedAssetTransaction = txnsArray;
+        setPinCids(pinCids);
         setProcessStep(CREATE_TRANSACTIONS_PROCESS);
       } else if (formData.collectionFormat === "ARC19") {
         toast.info("Creating ARC19 transactions...");
         setProcessStep(CREATE_TRANSACTIONS_PROCESS);
-        unsignedAssetTransaction = await createARC19AssetMintArrayV2Batch(
+        const { txnsArray, pinCids } = await createARC19AssetMintArrayV2Batch(
           data_for_txns,
           activeAddress,
           algodClient,
           transactionSigner,
           mnemonic
         );
+        unsignedAssetTransaction = txnsArray;
+        setPinCids(pinCids);
       } else if (formData.collectionFormat === "ARC69") {
         toast.info("Creating ARC69 transactions...");
         setProcessStep(CREATE_TRANSACTIONS_PROCESS);
@@ -371,7 +377,8 @@ export function SimpleBatchMint() {
       } else {
         signedAssetTransactions = await walletSign(
           assetTransactions,
-          transactionSigner
+          transactionSigner,
+          activeWallet?.id === ("ledger" as any)
         );
       }
 
@@ -409,6 +416,34 @@ export function SimpleBatchMint() {
       }
       setProcessStep(COMPLETED);
       toast.success("All transactions confirmed!");
+      
+      // Step 2: Execute Crust pin transactions separately (non-blocking)
+      if (pinCids.length > 0) {
+        toast.info("Submitting IPFS pin transaction(s)...");
+        try {
+          const pinATCs = await buildCrustPinAtomicTransactionComposer(
+            pinCids,
+            transactionSigner,
+            activeAddress,
+            algodClient
+          );
+          let pinCount = 0;
+          for (const pinATC of pinATCs) {
+            await pinATC.execute(algodClient, 4);
+            pinCount++;
+            if (pinCount % 5 === 0) {
+              toast.info(`Pinned ${pinCount} of ${pinCids.length} to IPFS...`);
+            }
+          }
+          toast.success("All IPFS pins confirmed!");
+        } catch (pinError) {
+          console.warn("Crust pin transaction failed (non-critical):", pinError);
+          toast.warning(
+            "Assets minted successfully, but some IPFS pin transactions failed. Files are already on IPFS."
+          );
+        }
+      }
+      
       toast.info("You can support by donating :)");
     } catch (err) {
       console.error(err);

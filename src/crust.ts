@@ -101,7 +101,6 @@ export const mnemonicSignerCreator = (mnemonic: string) => {
 export async function buildAssetMintAtomicTransactionComposer(
   atc: algosdk.AtomicTransactionComposer,
   address: string,
-  algodClient: algosdk.Algodv2,
   type: string,
   txSigner: algosdk.TransactionSigner,
   data_for_txn: any,
@@ -151,7 +150,30 @@ export async function buildAssetMintAtomicTransactionComposer(
 
   atc.addTransaction({ txn: asset_create_tx, signer: txSigner });
   atc.addTransaction({ txn: fee_tx, signer: txSigner });
-  atc.addMethodCall(await makeCrustPinTx(cid, txSigner, address, algodClient));
+  // NOTE: Crust pin is no longer added to the mint ATC.
+  // It is now executed as a separate ATC after the mint succeeds.
+  // This fixes Pera "Missing transaction(s)" and Ledger "incorrect
+  // signature length" errors caused by large atomic groups.
+}
+
+/**
+ * Build a separate ATC for Crust pinning transactions.
+ * Each pin CID gets its own ATC to keep group sizes small
+ * for hardware wallet and mobile wallet compatibility.
+ */
+export async function buildCrustPinAtomicTransactionComposer(
+  cids: string[],
+  txSigner: algosdk.TransactionSigner,
+  address: string,
+  algodClient: algosdk.Algodv2
+) {
+  const pinATCs: algosdk.AtomicTransactionComposer[] = [];
+  for (const cid of cids) {
+    const atc = new algosdk.AtomicTransactionComposer();
+    atc.addMethodCall(await makeCrustPinTx(cid, txSigner, address, algodClient));
+    pinATCs.push(atc);
+  }
+  return pinATCs;
 }
 
 const CRUST_GATEWAYS = [

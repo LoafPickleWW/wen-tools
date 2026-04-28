@@ -9,7 +9,7 @@ import { Button } from "@mui/material";
 import { createAssetMintArrayV2 } from "../utils";
 import { ASSET_PREVIEW, TOOLS } from "../constants";
 import FaqSectionComponent from "../components/FaqSectionComponent";
-import { pinImageToCrust } from "../crust";
+import { pinImageToCrust, makeCrustPinTx } from "../crust";
 import { useWallet } from "@txnlab/use-wallet-react";
 import "react-json-view-lite/dist/index.css";
 import { PreviewAssetComponent } from "../components/PreviewAssetComponent";
@@ -314,25 +314,24 @@ wen.contentWindow.postMessage({
       asset_url: imageURL,
     };
 
-    const ledgerSafeSigner: algosdk.TransactionSigner = async (txnGroup: algosdk.Transaction[], indexesToSign: number[]) => {
-      const signedTxns: Uint8Array[] = [];
-      for (const idx of indexesToSign) {
-        const signed = await transactionSigner([txnGroup[idx]], [0]);
-        signedTxns.push(signed[0]);
-      }
-      return signedTxns;
-    };
-
-    const batchATC = await createAssetMintArrayV2(
+    const { atc, pinCids: cids } = await createAssetMintArrayV2(
       [metadataForIPFS],
       activeAddress,
       algodClient,
-      ledgerSafeSigner,
+      transactionSigner,
       [imageCID],
       extraFee || undefined,
       extraFeeAddress || undefined
     );
-    setBatchATC(batchATC);
+
+    // Bundle pins into the same group
+    for (const cid of cids) {
+      atc.addMethodCall(
+        await makeCrustPinTx(cid, transactionSigner, activeAddress, algodClient)
+      );
+    }
+
+    setBatchATC(atc);
     setPreviewAsset(metadataForIPFS);
 
     toast.info("Please sign the transaction");
@@ -345,36 +344,29 @@ wen.contentWindow.postMessage({
         toast.error("Please connect your wallet");
         return;
       }
-
       if (!batchATC) {
         toast.error("Please create the transaction first");
         return;
       }
-
       setProcessStep(3);
 
-      // Split sign and submit for better Ledger compatibility
-      const signedTxns = await batchATC.gatherSignatures();
-      const txnGroup = batchATC.buildGroup();
-      const encodedSignedTxns = signedTxns.map((s: Uint8Array, i: number) => {
-        return algosdk.encodeObj({
-          txn: txnGroup[i].txn.get_obj_for_encoding(),
-          sig: s,
-        });
-      });
-      const { txId } = await algodClient.sendRawTransaction(encodedSignedTxns).do();
+      // Use atc.execute for robust signing and submission of the entire group
+      const { txIDs } = await batchATC.execute(algodClient, 4);
+      const txId = txIDs[0];
       const confirmed = await algosdk.waitForConfirmation(algodClient, txId, 4);
       const newAssetID = confirmed["asset-index"];
 
       setCreatedAssetID(newAssetID);
-      removeStoredData(); // Remove stored data now that mint is complete
       toast.success("Asset created successfully!");
+
       if (window.parent) {
         window.parent.postMessage({
           type: "WEN_TOOLS_MINT_SUCCESS",
           assetID: newAssetID
         }, "*");
       }
+
+      removeStoredData();
       setProcessStep(4);
     } catch (error) {
       console.error("Something went wrong: ", error);

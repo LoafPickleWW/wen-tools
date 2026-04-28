@@ -303,15 +303,6 @@ export function XGov() {
         returns: { type: "void" }
       });
 
-      const ledgerSafeSigner: algosdk.TransactionSigner = async (txnGroup: algosdk.Transaction[], indexesToSign: number[]) => {
-        const signedTxns: Uint8Array[] = [];
-        for (const idx of indexesToSign) {
-          const signed = await transactionSigner([txnGroup[idx]], [0]);
-          signedTxns.push(signed[0]);
-        }
-        return signedTxns;
-      };
-
       for (const appId of selectedIds) {
         const proposal = proposals.find(p => p.appId === appId);
         if (!proposal) continue;
@@ -337,7 +328,7 @@ export function XGov() {
           method: abiMethod,
           methodArgs: [appId, activeAddress, approvalVotes, rejectionVotes],
           sender: activeAddress,
-          signer: ledgerSafeSigner,
+          signer: transactionSigner,
           suggestedParams,
           appForeignApps: [appId],
           appAccounts: [activeAddress],
@@ -357,14 +348,7 @@ export function XGov() {
       
       // Split sign and submit for better Ledger compatibility
       const signedTxns = await atc.gatherSignatures();
-      const txnGroup = atc.buildGroup();
-      const encodedSignedTxns = signedTxns.map((s: Uint8Array, i: number) => {
-        return algosdk.encodeObj({
-          txn: txnGroup[i].txn.get_obj_for_encoding(),
-          sig: s,
-        });
-      });
-      const { txId } = await algodClient.sendRawTransaction(encodedSignedTxns).do();
+      const { txId } = await algodClient.sendRawTransaction(signedTxns).do();
       await algosdk.waitForConfirmation(algodClient, txId, 4);
       toast.success(`Successfully cast votes! TxID: ${txId}`);
       
