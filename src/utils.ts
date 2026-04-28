@@ -55,8 +55,13 @@ export async function walletSign(
   txns: algosdk.Transaction[] | algosdk.Transaction[][],
   signer: algosdk.TransactionSigner
 ) {
-  const all = Array.from(Array(txns.flat().length).keys());
-  return signer(txns.flat(), all);
+  const flattened = txns.flat();
+  const signedTxns: Uint8Array[] = [];
+  for (const txn of flattened) {
+    const signed = await signer([txn], [0]);
+    signedTxns.push(signed[0]);
+  }
+  return signedTxns;
 }
 
 export function getIndexerURL(activeNetwork: NetworkId) {

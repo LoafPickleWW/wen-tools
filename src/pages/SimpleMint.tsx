@@ -440,6 +440,15 @@ wen.contentWindow.postMessage({
         ipfs_data: metadata,
         image: imageURLForPreview,
       };
+      const ledgerSafeSigner: algosdk.TransactionSigner = async (txnGroup: algosdk.Transaction[], indexesToSign: number[]) => {
+        const signedTxns: Uint8Array[] = [];
+        for (const idx of indexesToSign) {
+          const signed = await transactionSigner([txnGroup[idx]], [0]);
+          signedTxns.push(signed[0]);
+        }
+        return signedTxns;
+      };
+
       if (formData.format === "ARC3") {
         // V1
         // unsignedAssetTransaction = await createARC3AssetMintArray(
@@ -452,7 +461,7 @@ wen.contentWindow.postMessage({
           [metadataForIPFS],
           activeAddress,
           algodClient,
-          transactionSigner,
+          ledgerSafeSigner,
           [imageCID],
           undefined,
           extraFee || undefined,
@@ -471,7 +480,7 @@ wen.contentWindow.postMessage({
           [metadataForIPFS],
           activeAddress,
           algodClient,
-          transactionSigner,
+          ledgerSafeSigner,
           [imageCID],
           undefined,
           extraFee || undefined,
@@ -498,7 +507,7 @@ wen.contentWindow.postMessage({
             [metadataForIPFS],
             activeAddress,
             algodClient,
-            transactionSigner,
+            ledgerSafeSigner,
             [imageCID],
             extraFee || undefined,
             extraFeeAddress || undefined
@@ -509,7 +518,7 @@ wen.contentWindow.postMessage({
             [metadataForIPFS],
             activeAddress,
             algodClient,
-            transactionSigner,
+            ledgerSafeSigner,
             undefined,
             extraFee || undefined,
             extraFeeAddress || undefined
@@ -542,24 +551,20 @@ wen.contentWindow.postMessage({
       }
       setProcessStep(3);
 
-      const txres = await batchATC.execute(algodClient, 4);
-
-      if (!txres || !txres.txIDs || txres.txIDs.length === 0) {
-        // err tx
-        console.error(
-          "transaction submit error, batchATC.execute return : ",
-          txres
-        );
-        toast.error("transaction submit error");
-        return;
-      }
-
-      const assetCreateTxID = txres.txIDs[0];
-
+      // Split sign and submit for better Ledger compatibility
+      const signedTxns = await batchATC.gatherSignatures();
+      const txnGroup = batchATC.buildGroup();
+      const encodedSignedTxns = signedTxns.map((s: Uint8Array, i: number) => {
+        return algosdk.encodeObj({
+          txn: txnGroup[i].txn.get_obj_for_encoding(),
+          sig: s,
+        });
+      });
+      const { txId } = await algodClient.sendRawTransaction(encodedSignedTxns).do();
       const result = await algosdk.waitForConfirmation(
         algodClient,
-        assetCreateTxID,
-        3
+        txId,
+        4
       );
 
       setCreatedAssetID(result["asset-index"]);

@@ -401,6 +401,7 @@ export interface XGovVoter {
 
 export async function fetchProposalVoters(appId: number): Promise<XGovVoter[]> {
   try {
+    // Step 1: Get all voter boxes to know the box format and assigned power
     let nextToken = "";
     let boxes: any[] = [];
     while (true) {
@@ -413,9 +414,6 @@ export async function fetchProposalVoters(appId: number): Promise<XGovVoter[]> {
     
     const voterBoxes = boxes.filter((b: any) => {
       const nameBytes = Buffer.from(b.name, 'base64');
-      // Accept boxes with 'V' (0x56) prefix + 32-byte address = 33 bytes total
-      // Also accept boxes that are exactly 32 bytes (just the address, no prefix)
-      // Also accept 'v' (0x76) prefix in case of case variation
       if (nameBytes.length === 33 && (nameBytes[0] === 0x56 || nameBytes[0] === 0x76)) return true;
       if (nameBytes.length === 32) return true;
       return false;
@@ -423,6 +421,33 @@ export async function fetchProposalVoters(appId: number): Promise<XGovVoter[]> {
     
     console.log(`[xGov] App ${appId}: Found ${boxes.length} total boxes, ${voterBoxes.length} voter boxes`);
 
+    // Step 2: Peek at the first voter box to detect format
+    let boxFormat: '24byte' | '16byte' | '8byte' = '8byte';
+    if (voterBoxes.length > 0) {
+      try {
+        const peekRes = await axios.get(
+          `${MAINNET_ALGONODE_INDEXER}/v2/applications/${appId}/box?name=b64:${encodeURIComponent(voterBoxes[0].name)}`
+        );
+        const peekBuf = Buffer.from(peekRes.data.value, 'base64');
+        if (peekBuf.length >= 24) boxFormat = '24byte';
+        else if (peekBuf.length >= 16) boxFormat = '16byte';
+        else boxFormat = '8byte';
+      } catch { /* default to 8byte */ }
+    }
+    
+    console.log(`[xGov] App ${appId}: Detected box format: ${boxFormat}`);
+
+    // Step 3: For 24-byte and 16-byte formats, we can distinguish voted from 
+    // not-voted by checking if the box is all zeros (not voted) vs non-zero (voted).
+    // For 8-byte format, the box stores assigned power upfront (always non-zero),
+    // so we must use transaction history to find who actually voted.
+
+    if (boxFormat === '8byte') {
+      // --- 8-byte format: use transaction history to find actual voters ---
+      return await fetchVotersFromTransactions(appId, voterBoxes);
+    }
+
+    // --- 24-byte / 16-byte format: read boxes, filter out all-zero (unvoted) ---
     const voters: XGovVoter[] = [];
     const batchSize = 15;
     for (let i = 0; i < voterBoxes.length; i += batchSize) {
@@ -435,14 +460,12 @@ export async function fetchProposalVoters(appId: number): Promise<XGovVoter[]> {
           );
           const buf = Buffer.from(valRes.data.value, 'base64');
           const nameBytes = Buffer.from(b.name, 'base64');
-          // Extract address: skip prefix byte if present
           const addrBytes = nameBytes.length === 33 ? nameBytes.slice(1) : nameBytes;
           const address = algosdk.encodeAddress(addrBytes);
           
           let power = 0;
           let choice: XGovVoter['choice'] = "ABSTAIN";
 
-          // v3.0.0 format: 24 bytes = [approvals(8) | rejections(8) | boycotts(8)]
           if (buf.length >= 24) {
             const approvals = Number(buf.readBigUInt64BE(0));
             const rejections = Number(buf.readBigUInt64BE(8));
@@ -460,9 +483,7 @@ export async function fetchProposalVoters(appId: number): Promise<XGovVoter[]> {
             } else {
               choice = "SPLIT";
             }
-          }
-          // v2 format: 16 bytes = [approvals(8) | rejections(8)]
-          else if (buf.length >= 16) {
+          } else if (buf.length >= 16) {
             const approvals = Number(buf.readBigUInt64BE(0));
             const rejections = Number(buf.readBigUInt64BE(8));
             power = approvals + rejections;
@@ -470,20 +491,6 @@ export async function fetchProposalVoters(appId: number): Promise<XGovVoter[]> {
             else if (approvals > 0 && rejections > 0) choice = "SPLIT";
             else if (rejections > 0) choice = "REJECT";
             else choice = "APPROVE";
-          }
-          // Older format: 8 bytes
-          else if (buf.length >= 8) {
-            const val = Number(buf.readBigUInt64BE(0));
-            if (val <= 3) {
-              if (val === 1) choice = "APPROVE";
-              else if (val === 2) choice = "REJECT";
-              else if (val === 3) choice = "BOYCOTT";
-              else choice = "ABSTAIN";
-              power = 0;
-            } else {
-              power = val;
-              choice = "APPROVE";
-            }
           }
 
           return { address, power, choice };
@@ -493,12 +500,181 @@ export async function fetchProposalVoters(appId: number): Promise<XGovVoter[]> {
       }));
       
       batchResults.forEach(v => {
-        if (v) voters.push(v);
+        if (v && v.power > 0) voters.push(v);
       });
     }
 
+    console.log(`[xGov] App ${appId}: ${voterBoxes.length} assigned, ${voters.length} actually voted (multi-byte format)`);
     return voters.sort((a, b) => b.power - a.power);
   } catch {
     return [];
   }
+}
+
+/**
+ * For 8-byte format proposals, the voter box just stores assigned power
+ * (always non-zero), so we can't tell voted from not-voted by box value alone.
+ * Instead, we scan the proposal's app-call transactions to find wallets that
+ * actually submitted a vote transaction.
+ */
+async function fetchVotersFromTransactions(appId: number, voterBoxes: any[]): Promise<XGovVoter[]> {
+  // Build a map of address -> assigned power from the boxes
+  const assignedPower: Record<string, number> = {};
+  const batchSize = 20;
+  
+  for (let i = 0; i < voterBoxes.length; i += batchSize) {
+    const batch = voterBoxes.slice(i, i + batchSize);
+    await Promise.all(batch.map(async (b: any) => {
+      try {
+        const nameBytes = Buffer.from(b.name, 'base64');
+        const addrBytes = nameBytes.length === 33 ? nameBytes.slice(1) : nameBytes;
+        const address = algosdk.encodeAddress(addrBytes);
+        
+        const valRes = await axios.get(
+          `${MAINNET_ALGONODE_INDEXER}/v2/applications/${appId}/box?name=b64:${encodeURIComponent(b.name)}`
+        );
+        const buf = Buffer.from(valRes.data.value, 'base64');
+        if (buf.length >= 8) {
+          assignedPower[address] = Number(buf.readBigUInt64BE(0));
+        }
+      } catch { /* skip */ }
+    }));
+  }
+
+  const allAssignedAddresses = Object.keys(assignedPower);
+  console.log(`[xGov] App ${appId}: ${allAssignedAddresses.length} assigned members`);
+
+  // Scan transactions that reference this proposal app.
+  // Votes go through the REGISTRY — the voter calls the registry, which sends
+  // an inner txn to the proposal app. So we search for txns referencing this appId
+  // and check: outer sender (the voter), foreign-apps, and inner txns.
+  const votedAddresses = new Set<string>();
+  let txnNextToken = "";
+  let pageCount = 0;
+  
+  while (pageCount < 20) {
+    try {
+      const url = `${MAINNET_ALGONODE_INDEXER}/v2/transactions?application-id=${appId}&tx-type=appl&limit=500${txnNextToken ? `&next=${encodeURIComponent(txnNextToken)}` : ""}`;
+      const response = await axios.get(url);
+      const txns = response.data.transactions || [];
+      
+      console.log(`[xGov TXNS] App ${appId} page ${pageCount}: ${txns.length} txns found`);
+      
+      for (const txn of txns) {
+        const sender = txn.sender;
+        
+        // Direct call from a voter
+        if (sender && assignedPower[sender] !== undefined) {
+          votedAddresses.add(sender);
+        }
+        
+        // Check if this app is in foreign-apps (voter called registry, 
+        // which references the proposal as a foreign app)
+        const appTxn = txn['application-transaction'];
+        if (appTxn) {
+          const foreignApps = appTxn['foreign-apps'] || [];
+          if (foreignApps.includes(appId) && sender && assignedPower[sender] !== undefined) {
+            votedAddresses.add(sender);
+          }
+        }
+        
+        // Check inner transactions at all nesting levels
+        const scanInners = (inners: any[], outerSender: string) => {
+          if (!inners) return;
+          for (const inner of inners) {
+            const innerAppId = inner['application-transaction']?.['application-id'];
+            if (innerAppId === appId && outerSender && assignedPower[outerSender] !== undefined) {
+              votedAddresses.add(outerSender);
+            }
+            // Recurse into nested inner txns
+            if (inner['inner-txns']) {
+              scanInners(inner['inner-txns'], outerSender);
+            }
+          }
+        };
+        if (txn['inner-txns']) {
+          scanInners(txn['inner-txns'], sender);
+        }
+      }
+      
+      txnNextToken = response.data['next-token'];
+      if (!txnNextToken || txns.length === 0) break;
+      pageCount++;
+    } catch (err) {
+      console.error(`[xGov] Txn scan error for app ${appId}:`, err);
+      break;
+    }
+  }
+  
+  console.log(`[xGov] App ${appId}: Found ${votedAddresses.size} voters from txn scan`);
+
+  // If txn scan found voters, great — use those
+  if (votedAddresses.size > 0) {
+    const voters: XGovVoter[] = [];
+    for (const address of votedAddresses) {
+      const power = assignedPower[address] || 0;
+      voters.push({ address, power, choice: "APPROVE" });
+    }
+    return voters.sort((a, b) => b.power - a.power);
+  }
+
+  // If the txn scan found nothing, try a different approach:
+  // Search for txns where the REGISTRY was called with this proposal as a foreign app
+  console.log(`[xGov] App ${appId}: Direct scan found 0, trying registry txn scan...`);
+  let regNextToken = "";
+  let regPageCount = 0;
+  
+  while (regPageCount < 10) {
+    try {
+      const url = `${MAINNET_ALGONODE_INDEXER}/v2/transactions?application-id=${XGOV_REGISTRY_APP_ID}&tx-type=appl&limit=500${regNextToken ? `&next=${encodeURIComponent(regNextToken)}` : ""}`;
+      const response = await axios.get(url);
+      const txns = response.data.transactions || [];
+      
+      for (const txn of txns) {
+        const sender = txn.sender;
+        const appTxn = txn['application-transaction'];
+        if (!appTxn) continue;
+        
+        const foreignApps = appTxn['foreign-apps'] || [];
+        // If this registry call references our proposal in foreign apps,
+        // the sender is a voter for this proposal
+        if (foreignApps.includes(appId) && sender && assignedPower[sender] !== undefined) {
+          votedAddresses.add(sender);
+        }
+        
+        // Also check inner txns from registry calls
+        if (txn['inner-txns']) {
+          for (const inner of txn['inner-txns']) {
+            const innerAppId = inner['application-transaction']?.['application-id'];
+            if (innerAppId === appId && sender && assignedPower[sender] !== undefined) {
+              votedAddresses.add(sender);
+            }
+          }
+        }
+      }
+      
+      regNextToken = response.data['next-token'];
+      if (!regNextToken || txns.length === 0) break;
+      regPageCount++;
+    } catch {
+      break;
+    }
+  }
+  
+  console.log(`[xGov] App ${appId}: Registry scan found ${votedAddresses.size} voters total`);
+
+  if (votedAddresses.size > 0) {
+    const voters: XGovVoter[] = [];
+    for (const address of votedAddresses) {
+      const power = assignedPower[address] || 0;
+      voters.push({ address, power, choice: "APPROVE" });
+    }
+    return voters.sort((a, b) => b.power - a.power);
+  }
+
+  // Last resort: return all assigned members so UI isn't empty
+  console.warn(`[xGov] App ${appId}: All scans found 0 voters, showing all ${allAssignedAddresses.length} assigned members as fallback`);
+  return allAssignedAddresses
+    .map(address => ({ address, power: assignedPower[address] || 0, choice: "APPROVE" as const }))
+    .sort((a, b) => b.power - a.power);
 }

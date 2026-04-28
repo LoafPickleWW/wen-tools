@@ -1,4 +1,5 @@
 import { useState } from "react";
+import algosdk from "algosdk";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import axios from "axios";
@@ -386,12 +387,21 @@ export function SimpleUpdate() {
         // setTransaction(unsignedAssetTransactions);
 
         // V2
+        const ledgerSafeSigner: algosdk.TransactionSigner = async (txnGroup: algosdk.Transaction[], indexesToSign: number[]) => {
+          const signedTxns: Uint8Array[] = [];
+          for (const idx of indexesToSign) {
+            const signed = await transactionSigner([txnGroup[idx]], [0]);
+            signedTxns.push(signed[0]);
+          }
+          return signedTxns;
+        };
+
         // add basic tx
         const batchATC = await updateARC19AssetMintArrayV2(
           [transaction_data],
           activeAddress,
           algodClient,
-          transactionSigner,
+          ledgerSafeSigner,
           imageCid ? [imageCid] : []
         );
 
@@ -457,8 +467,17 @@ export function SimpleUpdate() {
 
       // use ATC batch, test asset ID: 2315438437
       if (formData.format === "ARC19") {
-        // ARC19 use ATC batch transactions
-        await batchATC.execute(algodClient, 4);
+        // Split sign and submit for better Ledger compatibility
+        const signedTxns = await batchATC.gatherSignatures();
+        const txnGroup = batchATC.buildGroup();
+        const encodedSignedTxns = signedTxns.map((s: Uint8Array, i: number) => {
+          return algosdk.encodeObj({
+            txn: txnGroup[i].txn.get_obj_for_encoding(),
+            sig: s,
+          });
+        });
+        const { txId } = await algodClient.sendRawTransaction(encodedSignedTxns).do();
+        await algosdk.waitForConfirmation(algodClient, txId, 4);
       } else {
         // other formats
         const signedAssetTransaction = await walletSign(
