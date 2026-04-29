@@ -660,13 +660,25 @@ export function XGov() {
                                 proposalVoters[p.appId].voters.map((v, i) => (
                                   <div key={i} className="bg-white/5 border border-white/5 p-4 rounded-2xl flex items-center justify-between hover:border-amber-400/20 transition-all">
                                     <div className="flex items-center gap-3">
-                                      <div className={`p-2 rounded-lg ${v.choice === 'REJECT' ? 'bg-red-500/10 text-red-400' : (v.choice === 'ABSTAIN' ? 'bg-gray-500/10 text-gray-400' : (v.choice === 'BOYCOTT' ? 'bg-yellow-500/10 text-yellow-400' : 'bg-green-500/10 text-green-400'))}`}>
+                                      <div className={`p-2 rounded-lg ${
+                                        v.choice === 'REJECT' ? 'bg-red-500/10 text-red-400' : 
+                                        v.choice === 'APPROVE' ? 'bg-green-500/10 text-green-400' : 
+                                        v.choice === 'BOYCOTT' ? 'bg-yellow-500/10 text-yellow-400' : 
+                                        v.choice === 'SPLIT' ? 'bg-blue-500/10 text-blue-400' :
+                                        'bg-gray-500/10 text-gray-400'
+                                      }`}>
                                         <MdVerified size={14} />
                                       </div>
                                       <span className="text-xs font-mono text-gray-400">{v.address.slice(0, 8)}...{v.address.slice(-8)}</span>
                                     </div>
-                                    <div className={`text-[9px] font-black tracking-widest uppercase px-2 py-0.5 rounded ${v.choice === 'REJECT' ? 'bg-red-500/10 text-red-400' : (v.choice === 'ABSTAIN' ? 'bg-gray-500/10 text-gray-400' : (v.choice === 'BOYCOTT' ? 'bg-yellow-500/10 text-yellow-400' : 'bg-green-500/10 text-green-400'))}`}>
-                                      {v.choice}
+                                    <div className={`text-[9px] font-black tracking-widest uppercase px-2 py-0.5 rounded ${
+                                      v.choice === 'REJECT' ? 'bg-red-500/20 text-red-400' : 
+                                      v.choice === 'APPROVE' ? 'bg-green-500/20 text-green-400' : 
+                                      v.choice === 'BOYCOTT' ? 'bg-yellow-500/20 text-yellow-400' : 
+                                      v.choice === 'SPLIT' ? 'bg-blue-500/20 text-blue-400' :
+                                      'bg-gray-500/20 text-gray-400'
+                                    }`}>
+                                      {v.choice || 'VOTED'}
                                     </div>
                                   </div>
                                 ))

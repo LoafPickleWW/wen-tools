@@ -30,7 +30,7 @@ export const CREATOR_WALLETS = [];
 export const PREFIXES = [];
 
 // XGOV
-export const XGOV_REGISTRY_APP_IDS = [3147789458, 3511048537];
+export const XGOV_REGISTRY_APP_IDS = [3147789458];
 
 // TOOLS
 export const TOOLS = [
