@@ -202,6 +202,21 @@ export function XGov() {
     }
   }
 
+  // Synchronize hasVoted state if we found a vote in the deep scan
+  useEffect(() => {
+    if (!activeAddress) return;
+    Object.entries(proposalVoters).forEach(([idStr, voters]) => {
+      const id = Number(idStr);
+      const userVote = voters.find(v => v.address === activeAddress);
+      if (userVote && !hasVoted[id]) {
+        console.log(`[xGov] Deep scan found missing vote for app ${id}: ${userVote.choice}`);
+        setHasVoted(prev => ({ ...prev, [id]: true }));
+        setUserVotes(prev => ({ ...prev, [id]: userVote.choice || 'APPROVE' }));
+        if (userVote.power > 0) setVotingPower(prev => ({ ...prev, [id]: userVote.power }));
+      }
+    });
+  }, [proposalVoters, activeAddress, hasVoted]);
+
   const filteredProposals = useMemo(() => {
     const matched = proposals.filter(p => {
       const isMatch = p.title.toLowerCase().includes(searchQuery.toLowerCase()) || 

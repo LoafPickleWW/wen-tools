@@ -1,6 +1,6 @@
 import * as algosdk from "algosdk";
 import axios from "axios";
-import { MAINNET_ALGONODE_INDEXER, XGOV_REGISTRY_APP_ID } from "../constants";
+import { MAINNET_ALGONODE_INDEXER, XGOV_REGISTRY_APP_ID, XGOV_REGISTRY_APP_IDS } from "../constants";
 
 export interface XGovProposal {
   appId: number;
@@ -66,21 +66,29 @@ function decodeAbiString(base64Val: string): string {
 }
 
 export async function fetchAllProposals(): Promise<XGovProposal[]> {
-  const registryAddress = algosdk.getApplicationAddress(XGOV_REGISTRY_APP_ID);
-  let allApps: any[] = [];
-  let nextToken = "";
+  const allApps: any[] = [];
   
-  // Fetch up to 1000 apps (or handle with limit if needed)
-  while (true) {
-    const url = `${MAINNET_ALGONODE_INDEXER}/v2/applications?creator=${registryAddress}&limit=100${nextToken ? `&next=${encodeURIComponent(nextToken)}` : ""}`;
-    const response = await axios.get(url);
-    allApps = [...allApps, ...response.data.applications];
-    nextToken = response.data['next-token'];
-    if (!nextToken || allApps.length >= 1000) break;
+  for (const registryId of XGOV_REGISTRY_APP_IDS) {
+    const registryAddress = algosdk.getApplicationAddress(registryId);
+    let nextToken = "";
+    
+    // Fetch up to 1000 apps (or handle with limit if needed)
+    while (true) {
+      try {
+        const url = `${MAINNET_ALGONODE_INDEXER}/v2/applications?creator=${registryAddress}&limit=100${nextToken ? `&next=${encodeURIComponent(nextToken)}` : ""}`;
+        const response = await axios.get(url);
+        allApps.push(...response.data.applications);
+        nextToken = response.data['next-token'];
+        if (!nextToken || allApps.length >= 2000) break;
+      } catch (e) {
+        console.error(`Failed to fetch apps for registry ${registryId}`, e);
+        break;
+      }
+    }
   }
 
   // Reverse to get newest first (highest ID first)
-  allApps.reverse();
+  allApps.sort((a, b) => b.id - a.id);
 
   const proposals: XGovProposal[] = [];
   const batchSize = 10;
@@ -323,41 +331,21 @@ export async function checkHasVoted(appId: number, userAddress: string): Promise
 
 export async function fetchUserVoteChoice(appId: number, userAddress: string): Promise<string | null> {
   try {
-    // Search for transactions to the Registry app by this user that involve this proposal
-    // We filter by Registry App ID and the proposal ID in the args
-    const url = `${MAINNET_ALGONODE_INDEXER}/v2/transactions?address=${userAddress}&application-id=${XGOV_REGISTRY_APP_ID}&tx-type=appl&limit=100`;
+    // Search for transactions to ANY Registry app by this user that involve this proposal
+    const url = `${MAINNET_ALGONODE_INDEXER}/v2/transactions?address=${userAddress}&tx-type=appl&limit=100`;
     const response = await axios.get(url);
     const txns = response.data.transactions || [];
 
     for (const txn of txns) {
-      // const logs = txn.logs || [];
-      const appArgs = txn['application-transaction']['application-args'] || [];
-      
-      // The Registry's vote_proposal method has a specific selector
-      // vote_proposal(uint64,address,uint64,uint64) -> first 4 bytes of SHA512_256
-      // But we can also just check if the first arg is the proposal appId (uint64)
-      // and the second arg is the userAddress (32 bytes)
-      
-      if (appArgs.length >= 2) {
-        try {
-          const argIdBuf = Buffer.from(appArgs[1], 'base64');
-          const argId = Number(argIdBuf.readBigUInt64BE());
-          
-          if (argId === appId) {
-            // Found the transaction for this proposal!
-            // Now check approval_votes vs rejection_votes in args 3 and 4
-            const approvalsBuf = Buffer.from(appArgs[3], 'base64');
-            const rejectionsBuf = Buffer.from(appArgs[4], 'base64');
-            const approvals = Number(approvalsBuf.readBigUInt64BE());
-            const rejections = Number(rejectionsBuf.readBigUInt64BE());
-            
-            if (approvals > 0) return "APPROVE";
-            if (rejections > 0) return "REJECT";
-            return "ABSTAIN";
-          }
-        } catch {
-          continue;
-        }
+      // Check top-level txn
+      const choice = parseVoteFromTxn(txn, appId);
+      if (choice) return choice;
+
+      // Check inner txns
+      const innerTxns = txn['inner-txns'] || [];
+      for (const itxn of innerTxns) {
+        const iChoice = parseVoteFromTxn(itxn, appId);
+        if (iChoice) return iChoice;
       }
     }
     return null;
@@ -366,30 +354,79 @@ export async function fetchUserVoteChoice(appId: number, userAddress: string): P
   }
 }
 
-export async function fetchAllXGovs(): Promise<string[]> {
-  try {
-    let allBoxes: any[] = [];
-    let nextToken = "";
-    
-    while (true) {
-      const url = `${MAINNET_ALGONODE_INDEXER}/v2/applications/${XGOV_REGISTRY_APP_ID}/boxes?limit=1000${nextToken ? `&next=${encodeURIComponent(nextToken)}` : ""}`;
-      const response = await axios.get(url);
-      const boxes = response.data.boxes || [];
-      allBoxes = [...allBoxes, ...boxes];
-      nextToken = response.data['next-token'];
-      if (!nextToken || allBoxes.length >= 10000) break; // Increased limit
-    }
+/**
+ * Helper to parse a vote choice from a transaction object (top-level or inner)
+ */
+function parseVoteFromTxn(txn: any, appId: number): string | null {
+  const appCall = txn['application-transaction'];
+  if (!appCall) return null;
+  
+  const targetId = appCall['application-id'];
+  if (!XGOV_REGISTRY_APP_IDS.includes(targetId)) return null;
 
-    return allBoxes
-      .filter(b => {
-        const nameBytes = Buffer.from(b.name, 'base64');
-        // 'x' (0x78) or 'X' (0x58) prefix, length 33
-        const isXGov = (nameBytes[0] === 0x78 || nameBytes[0] === 0x58) && nameBytes.length === 33;
-        return isXGov;
-      })
-      .map(b => algosdk.encodeAddress(Buffer.from(b.name, 'base64').slice(1)));
+  const appArgs = appCall['application-args'] || [];
+  if (appArgs.length >= 2) {
+    try {
+      const argIdBuf = Buffer.from(appArgs[1], 'base64');
+      const argId = Number(argIdBuf.readBigUInt64BE());
+      
+      if (argId === appId) {
+        // Found the transaction for this proposal!
+        let choice: string = "APPROVE";
+        
+        if (appArgs.length >= 5) {
+          const approvals = Number(Buffer.from(appArgs[3], 'base64').readBigUInt64BE());
+          const rejections = Number(Buffer.from(appArgs[4], 'base64').readBigUInt64BE());
+          
+          if (rejections > 0 && approvals === 0) choice = "REJECT";
+          else if (approvals > 0 && rejections === 0) choice = "APPROVE";
+          else if (approvals > 0 && rejections > 0) choice = "SPLIT";
+          else choice = "ABSTAIN";
+        }
+
+        // Boycott check (v3 format)
+        if (appArgs.length >= 6) {
+          const boycotts = Number(Buffer.from(appArgs[5], 'base64').readBigUInt64BE());
+          if (boycotts > 0) {
+            const approvals = Number(Buffer.from(appArgs[3], 'base64').readBigUInt64BE());
+            const rejections = Number(Buffer.from(appArgs[4], 'base64').readBigUInt64BE());
+            if (approvals === 0 && rejections === 0) choice = "BOYCOTT";
+            else choice = "SPLIT";
+          }
+        }
+        return choice;
+      }
+    } catch { /* ignore */ }
+  }
+  return null;
+}
+
+export async function fetchAllXGovs(): Promise<string[]> {
+  const xGovMap: Record<string, boolean> = {};
+  
+  try {
+    for (const registryId of XGOV_REGISTRY_APP_IDS) {
+      let nextToken = "";
+      while (true) {
+        const url = `${MAINNET_ALGONODE_INDEXER}/v2/applications/${registryId}/boxes?limit=1000${nextToken ? `&next=${encodeURIComponent(nextToken)}` : ""}`;
+        const response = await axios.get(url);
+        const boxes = response.data.boxes || [];
+        
+        boxes.forEach((b: any) => {
+          const nameBytes = Buffer.from(b.name, 'base64');
+          if ((nameBytes[0] === 0x78 || nameBytes[0] === 0x58) && nameBytes.length === 33) {
+            const address = algosdk.encodeAddress(nameBytes.slice(1));
+            xGovMap[address] = true;
+          }
+        });
+
+        nextToken = response.data['next-token'];
+        if (!nextToken) break;
+      }
+    }
+    return Object.keys(xGovMap);
   } catch {
-    return [];
+    return Object.keys(xGovMap);
   }
 }
 
@@ -439,13 +476,11 @@ export async function fetchProposalVoters(appId: number): Promise<XGovVoter[]> {
 
     // Step 3: For 24-byte and 16-byte formats, we can distinguish voted from 
     // not-voted by checking if the box is all zeros (not voted) vs non-zero (voted).
-    // For 8-byte format, the box stores assigned power upfront (always non-zero),
-    // so we must use transaction history to find who actually voted.
-
-    if (boxFormat === '8byte') {
-      // --- 8-byte format: use transaction history to find actual voters ---
-      return await fetchVotersFromTransactions(appId, voterBoxes);
-    }
+    // For 8-byte format, or to be 100% thorough as per user feedback, 
+    // we use the master xGov list and check transaction history.
+    
+    const allXGovs = await fetchAllXGovs();
+    return await fetchVotersFromTransactions(appId, voterBoxes, allXGovs);
 
     // --- 24-byte / 16-byte format: read boxes, filter out all-zero (unvoted) ---
     const voters: XGovVoter[] = [];
@@ -512,18 +547,20 @@ export async function fetchProposalVoters(appId: number): Promise<XGovVoter[]> {
 }
 
 /**
- * For 8-byte format proposals, the voter box just stores assigned power
- * (always non-zero), so we can't tell voted from not-voted by box value alone.
- * Instead, we scan the proposal's app-call transactions to find wallets that
- * actually submitted a vote transaction.
+ * For 8-byte format proposals, the voter box stores assigned power upfront
+ * (always non-zero), so we can't distinguish voted vs not-voted from box data.
+ * 
+ * Instead, for each assigned voter we check their account's transaction history
+ * against the registry to see if they submitted a vote for this proposal.
+ * Same approach as fetchUserVoteChoice, applied to all ~87 assigned voters.
  */
-async function fetchVotersFromTransactions(appId: number, voterBoxes: any[]): Promise<XGovVoter[]> {
+async function fetchVotersFromTransactions(appId: number, voterBoxes: any[], allXGovs: string[]): Promise<XGovVoter[]> {
   // Build a map of address -> assigned power from the boxes
   const assignedPower: Record<string, number> = {};
-  const batchSize = 20;
+  const addrBatchSize = 30;
   
-  for (let i = 0; i < voterBoxes.length; i += batchSize) {
-    const batch = voterBoxes.slice(i, i + batchSize);
+  for (let i = 0; i < voterBoxes.length; i += addrBatchSize) {
+    const batch = voterBoxes.slice(i, i + addrBatchSize);
     await Promise.all(batch.map(async (b: any) => {
       try {
         const nameBytes = Buffer.from(b.name, 'base64');
@@ -541,140 +578,46 @@ async function fetchVotersFromTransactions(appId: number, voterBoxes: any[]): Pr
     }));
   }
 
-  const allAssignedAddresses = Object.keys(assignedPower);
-  console.log(`[xGov] App ${appId}: ${allAssignedAddresses.length} assigned members`);
+  console.log(`[xGov] App ${appId}: Checking ${allXGovs.length} total xGovs for vote txns...`);
 
-  // Scan transactions that reference this proposal app.
-  // Votes go through the REGISTRY — the voter calls the registry, which sends
-  // an inner txn to the proposal app. So we search for txns referencing this appId
-  // and check: outer sender (the voter), foreign-apps, and inner txns.
-  const votedAddresses = new Set<string>();
-  let txnNextToken = "";
-  let pageCount = 0;
+  const voters: XGovVoter[] = [];
+  const checkBatchSize = 10;
   
-  while (pageCount < 20) {
-    try {
-      const url = `${MAINNET_ALGONODE_INDEXER}/v2/transactions?application-id=${appId}&tx-type=appl&limit=500${txnNextToken ? `&next=${encodeURIComponent(txnNextToken)}` : ""}`;
-      const response = await axios.get(url);
-      const txns = response.data.transactions || [];
-      
-      console.log(`[xGov TXNS] App ${appId} page ${pageCount}: ${txns.length} txns found`);
-      
-      for (const txn of txns) {
-        const sender = txn.sender;
+  for (let i = 0; i < allXGovs.length; i += checkBatchSize) {
+    const batch = allXGovs.slice(i, i + checkBatchSize);
+    const batchResults = await Promise.all(batch.map(async (address) => {
+      try {
+        const url = `${MAINNET_ALGONODE_INDEXER}/v2/transactions?address=${address}&tx-type=appl&limit=100`;
+        const response = await axios.get(url);
+        const txns = response.data.transactions || [];
         
-        // Direct call from a voter
-        if (sender && assignedPower[sender] !== undefined) {
-          votedAddresses.add(sender);
-        }
-        
-        // Check if this app is in foreign-apps (voter called registry, 
-        // which references the proposal as a foreign app)
-        const appTxn = txn['application-transaction'];
-        if (appTxn) {
-          const foreignApps = appTxn['foreign-apps'] || [];
-          if (foreignApps.includes(appId) && sender && assignedPower[sender] !== undefined) {
-            votedAddresses.add(sender);
+        for (const txn of txns) {
+          const choice = parseVoteFromTxn(txn, appId);
+          if (choice) {
+            // Found a vote! Use assigned power if available, otherwise 0
+            return { address, power: assignedPower[address] || 0, choice: choice as XGovVoter['choice'] };
           }
-        }
-        
-        // Check inner transactions at all nesting levels
-        const scanInners = (inners: any[], outerSender: string) => {
-          if (!inners) return;
-          for (const inner of inners) {
-            const innerAppId = inner['application-transaction']?.['application-id'];
-            if (innerAppId === appId && outerSender && assignedPower[outerSender] !== undefined) {
-              votedAddresses.add(outerSender);
-            }
-            // Recurse into nested inner txns
-            if (inner['inner-txns']) {
-              scanInners(inner['inner-txns'], outerSender);
+
+          const innerTxns = txn['inner-txns'] || [];
+          for (const itxn of innerTxns) {
+            const iChoice = parseVoteFromTxn(itxn, appId);
+            if (iChoice) {
+              return { address, power: assignedPower[address] || 0, choice: iChoice as XGovVoter['choice'] };
             }
           }
-        };
-        if (txn['inner-txns']) {
-          scanInners(txn['inner-txns'], sender);
         }
+        return null; 
+      } catch {
+        return null;
       }
-      
-      txnNextToken = response.data['next-token'];
-      if (!txnNextToken || txns.length === 0) break;
-      pageCount++;
-    } catch (err) {
-      console.error(`[xGov] Txn scan error for app ${appId}:`, err);
-      break;
+    }));
+    
+    batchResults.forEach(v => { if (v) voters.push(v); });
+    
+    if (i + checkBatchSize < allXGovs.length) {
+      await new Promise(resolve => setTimeout(resolve, 50));
     }
   }
-  
-  console.log(`[xGov] App ${appId}: Found ${votedAddresses.size} voters from txn scan`);
 
-  // If txn scan found voters, great — use those
-  if (votedAddresses.size > 0) {
-    const voters: XGovVoter[] = [];
-    for (const address of votedAddresses) {
-      const power = assignedPower[address] || 0;
-      voters.push({ address, power, choice: "APPROVE" });
-    }
-    return voters.sort((a, b) => b.power - a.power);
-  }
-
-  // If the txn scan found nothing, try a different approach:
-  // Search for txns where the REGISTRY was called with this proposal as a foreign app
-  console.log(`[xGov] App ${appId}: Direct scan found 0, trying registry txn scan...`);
-  let regNextToken = "";
-  let regPageCount = 0;
-  
-  while (regPageCount < 10) {
-    try {
-      const url = `${MAINNET_ALGONODE_INDEXER}/v2/transactions?application-id=${XGOV_REGISTRY_APP_ID}&tx-type=appl&limit=500${regNextToken ? `&next=${encodeURIComponent(regNextToken)}` : ""}`;
-      const response = await axios.get(url);
-      const txns = response.data.transactions || [];
-      
-      for (const txn of txns) {
-        const sender = txn.sender;
-        const appTxn = txn['application-transaction'];
-        if (!appTxn) continue;
-        
-        const foreignApps = appTxn['foreign-apps'] || [];
-        // If this registry call references our proposal in foreign apps,
-        // the sender is a voter for this proposal
-        if (foreignApps.includes(appId) && sender && assignedPower[sender] !== undefined) {
-          votedAddresses.add(sender);
-        }
-        
-        // Also check inner txns from registry calls
-        if (txn['inner-txns']) {
-          for (const inner of txn['inner-txns']) {
-            const innerAppId = inner['application-transaction']?.['application-id'];
-            if (innerAppId === appId && sender && assignedPower[sender] !== undefined) {
-              votedAddresses.add(sender);
-            }
-          }
-        }
-      }
-      
-      regNextToken = response.data['next-token'];
-      if (!regNextToken || txns.length === 0) break;
-      regPageCount++;
-    } catch {
-      break;
-    }
-  }
-  
-  console.log(`[xGov] App ${appId}: Registry scan found ${votedAddresses.size} voters total`);
-
-  if (votedAddresses.size > 0) {
-    const voters: XGovVoter[] = [];
-    for (const address of votedAddresses) {
-      const power = assignedPower[address] || 0;
-      voters.push({ address, power, choice: "APPROVE" });
-    }
-    return voters.sort((a, b) => b.power - a.power);
-  }
-
-  // Last resort: return all assigned members so UI isn't empty
-  console.warn(`[xGov] App ${appId}: All scans found 0 voters, showing all ${allAssignedAddresses.length} assigned members as fallback`);
-  return allAssignedAddresses
-    .map(address => ({ address, power: assignedPower[address] || 0, choice: "APPROVE" as const }))
-    .sort((a, b) => b.power - a.power);
+  return voters.sort((a, b) => b.power - a.power);
 }
