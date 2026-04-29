@@ -393,7 +393,7 @@ function parseVoteFromTxn(txn: any, appId: number): string | null {
         }
       }
     }
-  } catch (e) {
+  } catch {
     return null;
   }
 
@@ -410,7 +410,7 @@ function parseVoteFromTxn(txn: any, appId: number): string | null {
         else if (approvals > 0 && rejections === 0) choice = "APPROVE";
         else if (approvals > 0 && rejections > 0) choice = "SPLIT";
         else choice = "ABSTAIN";
-      } catch (e) { /* ignore */ }
+      } catch { /* ignore */ }
     }
 
     // Boycott check (v3 format)
@@ -423,7 +423,7 @@ function parseVoteFromTxn(txn: any, appId: number): string | null {
           if (approvals === 0 && rejections === 0) choice = "BOYCOTT";
           else choice = "SPLIT";
         }
-      } catch (e) { /* ignore */ }
+      } catch { /* ignore */ }
     }
     return choice;
   }
