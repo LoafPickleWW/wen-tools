@@ -1,6 +1,6 @@
 import * as algosdk from "algosdk";
 import axios from "axios";
-import { MAINNET_ALGONODE_INDEXER, XGOV_REGISTRY_APP_ID, XGOV_REGISTRY_APP_IDS } from "../constants";
+import { MAINNET_ALGONODE_INDEXER, XGOV_REGISTRY_APP_IDS } from "../constants";
 
 export interface XGovProposal {
   appId: number;
@@ -196,18 +196,10 @@ export async function fetchProposalDescription(appId: number): Promise<XGovPropo
 }
 
 export async function fetchRegistryPower(userAddress: string): Promise<number> {
-  const addrBytes = algosdk.decodeAddress(userAddress).publicKey;
-  const prefix = Buffer.from("x");
-  const boxKeyBase64 = Buffer.concat([prefix, addrBytes]).toString('base64');
-  
-  try {
-    const valRes = await axios.get(`${MAINNET_ALGONODE_INDEXER}/v2/applications/${XGOV_REGISTRY_APP_ID}/box?name=b64:${encodeURIComponent(boxKeyBase64)}`);
-    const buf = Buffer.from(valRes.data.value, 'base64');
-    // xGov registry box value is usually a uint64 of committed ALGOs (in microalgos)
-    return Number(buf.readBigUInt64BE());
-  } catch {
-    return 0;
-  }
+  // xGov power is not stored in the registry boxes (which contain metadata).
+  // It is assigned per-proposal in the proposal's voter boxes.
+  // We return 0 here to avoid reading garbage data from metadata boxes.
+  return 0;
 }
 
 export async function fetchVoterData(appId: number, userAddress: string): Promise<{ power: number; voted: boolean; choice?: "APPROVE" | "REJECT" | "BOYCOTT" | "ABSTAIN" | "SPLIT" }> {
@@ -233,19 +225,25 @@ export async function fetchVoterData(appId: number, userAddress: string): Promis
       const rejections = Number(buf.readBigUInt64BE(8));
       const boycotts = Number(buf.readBigUInt64BE(16));
       power = approvals + rejections + boycotts;
-      if (boycotts > 0 && approvals === 0 && rejections === 0) choice = "BOYCOTT";
-      else if (rejections > 0 && approvals === 0) choice = "REJECT";
-      else if (approvals > 0 && rejections === 0) choice = "APPROVE";
-      else if (approvals > 0 || rejections > 0 || boycotts > 0) choice = "SPLIT";
+      if (power > 0) {
+        if (boycotts > 0 && approvals === 0 && rejections === 0) choice = "BOYCOTT";
+        else if (rejections > 0 && approvals === 0) choice = "REJECT";
+        else if (approvals > 0 && rejections === 0) choice = "APPROVE";
+        else choice = "SPLIT";
+        return { power, voted: true, choice };
+      }
     }
     // v2 format: 16 bytes = [approvals(8) | rejections(8)]
     else if (buf.length >= 16) {
       const approvals = Number(buf.readBigUInt64BE(0));
       const rejections = Number(buf.readBigUInt64BE(8));
       power = approvals + rejections;
-      if (rejections > 0 && approvals === 0) choice = "REJECT";
-      else if (approvals > 0 && rejections > 0) choice = "SPLIT";
-      else choice = "APPROVE";
+      if (power > 0) {
+        if (rejections > 0 && approvals === 0) choice = "REJECT";
+        else if (approvals > 0 && rejections > 0) choice = "SPLIT";
+        else choice = "APPROVE";
+        return { power, voted: true, choice };
+      }
     }
     // Older format: 8 bytes = single uint64 (power or choice enum)
     else if (buf.length >= 8) {
@@ -282,11 +280,16 @@ export async function fetchVoterData(appId: number, userAddress: string): Promis
       }
     }
 
-    // Box exists => user has voted, regardless of power value
-    return { power, voted: true, choice };
+    // Box exists but might be empty (8-byte format or unvoted 16/24-byte).
+    // Use transaction scan to confirm if they actually voted.
+    const txChoice = await fetchUserVoteChoice(appId, userAddress);
+    if (txChoice) {
+      return { power, voted: true, choice: txChoice as any };
+    }
+
+    return { power, voted: false };
   } catch (boxErr: any) {
-    // 404 means box doesn't exist = user hasn't voted
-    // 400 can also mean the box doesn't exist for some indexer implementations
+    // 404/400 means box doesn't exist - definitely not voted
     if (boxErr?.response?.status === 404 || boxErr?.response?.status === 400) {
       try {
         const registryPower = await fetchRegistryPower(userAddress);
@@ -295,9 +298,6 @@ export async function fetchVoterData(appId: number, userAddress: string): Promis
         return { power: 0, voted: false };
       }
     }
-    // For any other error (network timeout, 500, etc.), 
-    // we can't determine vote status — return unknown/not-voted
-    // but log it so it can be debugged
     console.error(`[fetchVoterData] Unexpected error for app ${appId}, user ${userAddress}:`, boxErr?.message || boxErr);
     return { power: 0, voted: false };
   }
@@ -305,16 +305,20 @@ export async function fetchVoterData(appId: number, userAddress: string): Promis
 
 export async function checkIsXGov(userAddress: string): Promise<boolean> {
   const addrBytes = algosdk.decodeAddress(userAddress).publicKey;
-  const prefix = Buffer.from("x"); // 0x78
-  const boxKey = Buffer.concat([prefix, addrBytes]);
+  const prefixes = [Buffer.from("x"), Buffer.from("X")];
   
-  try {
-    // For registry, we still might get 404 if not registered, but it's only once per session
-    await axios.get(`${MAINNET_ALGONODE_INDEXER}/v2/applications/${XGOV_REGISTRY_APP_ID}/box?name=b64:${encodeURIComponent(Buffer.from(boxKey).toString('base64'))}`);
-    return true;
-  } catch {
-    return false;
+  for (const registryId of XGOV_REGISTRY_APP_IDS) {
+    for (const prefix of prefixes) {
+      const boxKey = Buffer.concat([prefix, addrBytes]);
+      try {
+        await axios.get(`${MAINNET_ALGONODE_INDEXER}/v2/applications/${registryId}/box?name=b64:${encodeURIComponent(boxKey.toString('base64'))}`);
+        return true;
+      } catch {
+        continue;
+      }
+    }
   }
+  return false;
 }
 
 
@@ -365,38 +369,63 @@ function parseVoteFromTxn(txn: any, appId: number): string | null {
   if (!XGOV_REGISTRY_APP_IDS.includes(targetId)) return null;
 
   const appArgs = appCall['application-args'] || [];
-  if (appArgs.length >= 2) {
-    try {
-      const argIdBuf = Buffer.from(appArgs[1], 'base64');
-      const argId = Number(argIdBuf.readBigUInt64BE());
-      
-      if (argId === appId) {
-        // Found the transaction for this proposal!
-        let choice: string = "APPROVE";
+  if (appArgs.length < 2) return null;
+
+  let foundAppId = 0;
+  try {
+    const arg1 = appArgs[1];
+    const arg1Buf = Buffer.from(arg1, 'base64');
+
+    if (arg1Buf.length === 8) {
+      // Raw uint64
+      foundAppId = Number(arg1Buf.readBigUInt64BE());
+    } else if (arg1Buf.length === 1) {
+      // ABI application reference index:
+      // Index 0 = the called application itself (application-id)
+      // Index N (N>=1) = foreign-apps[N-1]
+      const index = arg1Buf[0];
+      if (index === 0) {
+        foundAppId = appCall['application-id'];
+      } else {
+        const foreignApps = appCall['foreign-apps'] || [];
+        if (index - 1 < foreignApps.length) {
+          foundAppId = foreignApps[index - 1];
+        }
+      }
+    }
+  } catch (e) {
+    return null;
+  }
+
+  if (foundAppId === appId) {
+    // Found the transaction for this proposal!
+    let choice: string = "APPROVE";
+    
+    if (appArgs.length >= 5) {
+      try {
+        const approvals = Number(Buffer.from(appArgs[3], 'base64').readBigUInt64BE());
+        const rejections = Number(Buffer.from(appArgs[4], 'base64').readBigUInt64BE());
         
-        if (appArgs.length >= 5) {
+        if (rejections > 0 && approvals === 0) choice = "REJECT";
+        else if (approvals > 0 && rejections === 0) choice = "APPROVE";
+        else if (approvals > 0 && rejections > 0) choice = "SPLIT";
+        else choice = "ABSTAIN";
+      } catch (e) { /* ignore */ }
+    }
+
+    // Boycott check (v3 format)
+    if (appArgs.length >= 6) {
+      try {
+        const boycotts = Number(Buffer.from(appArgs[5], 'base64').readBigUInt64BE());
+        if (boycotts > 0) {
           const approvals = Number(Buffer.from(appArgs[3], 'base64').readBigUInt64BE());
           const rejections = Number(Buffer.from(appArgs[4], 'base64').readBigUInt64BE());
-          
-          if (rejections > 0 && approvals === 0) choice = "REJECT";
-          else if (approvals > 0 && rejections === 0) choice = "APPROVE";
-          else if (approvals > 0 && rejections > 0) choice = "SPLIT";
-          else choice = "ABSTAIN";
+          if (approvals === 0 && rejections === 0) choice = "BOYCOTT";
+          else choice = "SPLIT";
         }
-
-        // Boycott check (v3 format)
-        if (appArgs.length >= 6) {
-          const boycotts = Number(Buffer.from(appArgs[5], 'base64').readBigUInt64BE());
-          if (boycotts > 0) {
-            const approvals = Number(Buffer.from(appArgs[3], 'base64').readBigUInt64BE());
-            const rejections = Number(Buffer.from(appArgs[4], 'base64').readBigUInt64BE());
-            if (approvals === 0 && rejections === 0) choice = "BOYCOTT";
-            else choice = "SPLIT";
-          }
-        }
-        return choice;
-      }
-    } catch { /* ignore */ }
+      } catch (e) { /* ignore */ }
+    }
+    return choice;
   }
   return null;
 }
@@ -436,185 +465,82 @@ export interface XGovVoter {
   choice?: "APPROVE" | "REJECT" | "ABSTAIN" | "BOYCOTT" | "SPLIT";
 }
 
-export async function fetchProposalVoters(appId: number): Promise<XGovVoter[]> {
+export interface ProposalVotersResponse {
+  voters: XGovVoter[];
+  assignedVoters: string[];
+}
+
+export async function fetchProposalVoters(appId: number): Promise<ProposalVotersResponse> {
   try {
-    // Step 1: Get all voter boxes to know the box format and assigned power
-    let nextToken = "";
-    let boxes: any[] = [];
-    while (true) {
-      const url = `${MAINNET_ALGONODE_INDEXER}/v2/applications/${appId}/boxes?limit=1000${nextToken ? `&next=${encodeURIComponent(nextToken)}` : ""}`;
-      const response = await axios.get(url);
-      boxes = [...boxes, ...(response.data.boxes || [])];
-      nextToken = response.data['next-token'];
-      if (!nextToken) break;
-    }
-    
-    const voterBoxes = boxes.filter((b: any) => {
-      const nameBytes = Buffer.from(b.name, 'base64');
-      if (nameBytes.length === 33 && (nameBytes[0] === 0x56 || nameBytes[0] === 0x76)) return true;
-      if (nameBytes.length === 32) return true;
-      return false;
-    });
-    
-    console.log(`[xGov] App ${appId}: Found ${boxes.length} total boxes, ${voterBoxes.length} voter boxes`);
-
-    // Step 2: Peek at the first voter box to detect format
-    let boxFormat: '24byte' | '16byte' | '8byte' = '8byte';
-    if (voterBoxes.length > 0) {
-      try {
-        const peekRes = await axios.get(
-          `${MAINNET_ALGONODE_INDEXER}/v2/applications/${appId}/box?name=b64:${encodeURIComponent(voterBoxes[0].name)}`
-        );
-        const peekBuf = Buffer.from(peekRes.data.value, 'base64');
-        if (peekBuf.length >= 24) boxFormat = '24byte';
-        else if (peekBuf.length >= 16) boxFormat = '16byte';
-        else boxFormat = '8byte';
-      } catch { /* default to 8byte */ }
-    }
-    
-    console.log(`[xGov] App ${appId}: Detected box format: ${boxFormat}`);
-
-    // Step 3: For 24-byte and 16-byte formats, we can distinguish voted from 
-    // not-voted by checking if the box is all zeros (not voted) vs non-zero (voted).
-    // For 8-byte format, or to be 100% thorough as per user feedback, 
-    // we use the master xGov list and check transaction history.
-    
-    const allXGovs = await fetchAllXGovs();
-    return await fetchVotersFromTransactions(appId, voterBoxes, allXGovs);
-
-    // --- 24-byte / 16-byte format: read boxes, filter out all-zero (unvoted) ---
-    const voters: XGovVoter[] = [];
-    const batchSize = 15;
-    for (let i = 0; i < voterBoxes.length; i += batchSize) {
-      const batch = voterBoxes.slice(i, i + batchSize);
-      const batchResults = await Promise.all(batch.map(async (b: any) => {
-        try {
-          const boxNameB64 = b.name;
-          const valRes = await axios.get(
-            `${MAINNET_ALGONODE_INDEXER}/v2/applications/${appId}/box?name=b64:${encodeURIComponent(boxNameB64)}`
-          );
-          const buf = Buffer.from(valRes.data.value, 'base64');
-          const nameBytes = Buffer.from(b.name, 'base64');
-          const addrBytes = nameBytes.length === 33 ? nameBytes.slice(1) : nameBytes;
-          const address = algosdk.encodeAddress(addrBytes);
-          
-          let power = 0;
-          let choice: XGovVoter['choice'] = "ABSTAIN";
-
-          if (buf.length >= 24) {
-            const approvals = Number(buf.readBigUInt64BE(0));
-            const rejections = Number(buf.readBigUInt64BE(8));
-            const boycotts = Number(buf.readBigUInt64BE(16));
-            power = approvals + rejections + boycotts;
-            
-            if (power === 0) {
-              choice = "ABSTAIN";
-            } else if (boycotts > 0 && approvals === 0 && rejections === 0) {
-              choice = "BOYCOTT";
-            } else if (approvals > 0 && rejections === 0 && boycotts === 0) {
-              choice = "APPROVE";
-            } else if (rejections > 0 && approvals === 0 && boycotts === 0) {
-              choice = "REJECT";
-            } else {
-              choice = "SPLIT";
-            }
-          } else if (buf.length >= 16) {
-            const approvals = Number(buf.readBigUInt64BE(0));
-            const rejections = Number(buf.readBigUInt64BE(8));
-            power = approvals + rejections;
-            if (power === 0) choice = "ABSTAIN";
-            else if (approvals > 0 && rejections > 0) choice = "SPLIT";
-            else if (rejections > 0) choice = "REJECT";
-            else choice = "APPROVE";
-          }
-
-          return { address, power, choice };
-        } catch {
-          return null;
-        }
-      }));
-      
-      batchResults.forEach(v => {
-        if (v && v.power > 0) voters.push(v);
-      });
-    }
-
-    console.log(`[xGov] App ${appId}: ${voterBoxes.length} assigned, ${voters.length} actually voted (multi-byte format)`);
-    return voters.sort((a, b) => b.power - a.power);
+    // Get assigned voters directly from the proposal's own boxes ('V' prefix).
+    // This is both faster and more accurate than scanning all xGov txn histories.
+    const assignedAddresses = await fetchProposalAssignedVoters(appId);
+    const voters = await fetchVotersFromBoxes(appId, assignedAddresses);
+    return { voters, assignedVoters: assignedAddresses };
   } catch {
-    return [];
+    return { voters: [], assignedVoters: [] };
   }
 }
 
 /**
- * For 8-byte format proposals, the voter box stores assigned power upfront
- * (always non-zero), so we can't distinguish voted vs not-voted from box data.
- * 
- * Instead, for each assigned voter we check their account's transaction history
- * against the registry to see if they submitted a vote for this proposal.
- * Same approach as fetchUserVoteChoice, applied to all ~87 assigned voters.
+ * List all voter boxes on the proposal app to find who is assigned to vote.
+ * Voter boxes use the 'V' (0x56) prefix + 32-byte address = 33 bytes total.
  */
-async function fetchVotersFromTransactions(appId: number, voterBoxes: any[], allXGovs: string[]): Promise<XGovVoter[]> {
-  // Build a map of address -> assigned power from the boxes
-  const assignedPower: Record<string, number> = {};
-  const addrBatchSize = 30;
-  
-  for (let i = 0; i < voterBoxes.length; i += addrBatchSize) {
-    const batch = voterBoxes.slice(i, i + addrBatchSize);
-    await Promise.all(batch.map(async (b: any) => {
-      try {
+async function fetchProposalAssignedVoters(appId: number): Promise<string[]> {
+  const addresses: string[] = [];
+  let nextToken = "";
+
+  while (true) {
+    try {
+      const url = `${MAINNET_ALGONODE_INDEXER}/v2/applications/${appId}/boxes?limit=1000${nextToken ? `&next=${encodeURIComponent(nextToken)}` : ""}`;
+      const response = await axios.get(url);
+      const boxes = response.data.boxes || [];
+
+      boxes.forEach((b: any) => {
         const nameBytes = Buffer.from(b.name, 'base64');
-        const addrBytes = nameBytes.length === 33 ? nameBytes.slice(1) : nameBytes;
-        const address = algosdk.encodeAddress(addrBytes);
-        
-        const valRes = await axios.get(
-          `${MAINNET_ALGONODE_INDEXER}/v2/applications/${appId}/box?name=b64:${encodeURIComponent(b.name)}`
-        );
-        const buf = Buffer.from(valRes.data.value, 'base64');
-        if (buf.length >= 8) {
-          assignedPower[address] = Number(buf.readBigUInt64BE(0));
+        // 'V' prefix (0x56) + 32-byte public key = 33 bytes
+        if (nameBytes[0] === 0x56 && nameBytes.length === 33) {
+          const address = algosdk.encodeAddress(nameBytes.slice(1));
+          addresses.push(address);
         }
-      } catch { /* skip */ }
-    }));
+      });
+
+      nextToken = response.data['next-token'];
+      if (!nextToken) break;
+    } catch {
+      break;
+    }
   }
 
-  console.log(`[xGov] App ${appId}: Checking ${allXGovs.length} total xGovs for vote txns...`);
+  return addresses;
+}
 
+/**
+ * For each assigned voter, read their voter box data from the proposal app
+ * to determine power and vote choice. The box format stores vote allocations
+ * directly — all-zeros means assigned but hasn't voted yet.
+ */
+async function fetchVotersFromBoxes(appId: number, addresses: string[]): Promise<XGovVoter[]> {
   const voters: XGovVoter[] = [];
-  const checkBatchSize = 10;
-  
-  for (let i = 0; i < allXGovs.length; i += checkBatchSize) {
-    const batch = allXGovs.slice(i, i + checkBatchSize);
+  const batchSize = 10;
+
+  for (let i = 0; i < addresses.length; i += batchSize) {
+    const batch = addresses.slice(i, i + batchSize);
     const batchResults = await Promise.all(batch.map(async (address) => {
       try {
-        const url = `${MAINNET_ALGONODE_INDEXER}/v2/transactions?address=${address}&tx-type=appl&limit=100`;
-        const response = await axios.get(url);
-        const txns = response.data.transactions || [];
-        
-        for (const txn of txns) {
-          const choice = parseVoteFromTxn(txn, appId);
-          if (choice) {
-            // Found a vote! Use assigned power if available, otherwise 0
-            return { address, power: assignedPower[address] || 0, choice: choice as XGovVoter['choice'] };
-          }
-
-          const innerTxns = txn['inner-txns'] || [];
-          for (const itxn of innerTxns) {
-            const iChoice = parseVoteFromTxn(itxn, appId);
-            if (iChoice) {
-              return { address, power: assignedPower[address] || 0, choice: iChoice as XGovVoter['choice'] };
-            }
-          }
+        const data = await fetchVoterData(appId, address);
+        if (data.voted && data.power > 0) {
+          return { address, power: data.power, choice: data.choice } as XGovVoter;
         }
-        return null; 
+        return null;
       } catch {
         return null;
       }
     }));
-    
+
     batchResults.forEach(v => { if (v) voters.push(v); });
-    
-    if (i + checkBatchSize < allXGovs.length) {
+
+    if (i + batchSize < addresses.length) {
       await new Promise(resolve => setTimeout(resolve, 50));
     }
   }

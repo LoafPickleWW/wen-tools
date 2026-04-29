@@ -11,9 +11,9 @@ import {
   fetchAllXGovs,
   fetchProposalVoters,
   fetchUserVoteChoice,
-  XGovVoter
+  ProposalVotersResponse
 } from '../utils/xgov';
-import { XGOV_REGISTRY_APP_ID } from '../constants';
+import { XGOV_REGISTRY_APP_IDS } from '../constants';
 import { toast } from 'react-toastify';
 import { 
   MdSearch, 
@@ -47,7 +47,7 @@ export function XGov() {
   const [descriptions, setDescriptions] = useState<Record<number, XGovProposal['parsedDescription']>>({});
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [allXGovs, setAllXGovs] = useState<string[]>([]);
-  const [proposalVoters, setProposalVoters] = useState<Record<number, XGovVoter[]>>({});
+  const [proposalVoters, setProposalVoters] = useState<Record<number, ProposalVotersResponse>>({});
   const [expandedTab, setExpandedTab] = useState<Record<number, 'brief' | 'voters' | 'pending'>>({});
   const [loadingVoters, setLoadingVoters] = useState<Record<number, boolean>>({});
 
@@ -205,9 +205,9 @@ export function XGov() {
   // Synchronize hasVoted state if we found a vote in the deep scan
   useEffect(() => {
     if (!activeAddress) return;
-    Object.entries(proposalVoters).forEach(([idStr, voters]) => {
+    Object.entries(proposalVoters).forEach(([idStr, data]) => {
       const id = Number(idStr);
-      const userVote = voters.find(v => v.address === activeAddress);
+      const userVote = data.voters.find(v => v.address === activeAddress);
       if (userVote && !hasVoted[id]) {
         console.log(`[xGov] Deep scan found missing vote for app ${id}: ${userVote.choice}`);
         setHasVoted(prev => ({ ...prev, [id]: true }));
@@ -305,6 +305,8 @@ export function XGov() {
       const algodClient = new algosdk.Algodv2('', 'https://mainnet-api.algonode.cloud', '');
       const atc = new algosdk.AtomicTransactionComposer();
       const suggestedParams = await algodClient.getTransactionParams().do();
+      suggestedParams.fee = 2000;
+      suggestedParams.flatFee = true;
 
       // Simplified ABI for vote_proposal
       const abiMethod = new algosdk.ABIMethod({
@@ -333,13 +335,15 @@ export function XGov() {
         const approvalVotes = choice === 'approve' ? power : 0;
         const rejectionVotes = choice === 'reject' ? power : 0;
 
-        // Box keys
+        // Box keys - ensure Uint8Array for SDK compatibility
         const addrBytes = algosdk.decodeAddress(activeAddress).publicKey;
-        const registryBoxKey = Buffer.concat([Buffer.from("x"), addrBytes]);
-        const proposalBoxKey = Buffer.concat([Buffer.from("V"), addrBytes]);
+        // Prefix 'x' (120) for registry, 'V' (86) for proposal
+        const registryBoxKey = new Uint8Array([120, ...addrBytes]); 
+        const proposalBoxKey = new Uint8Array([86, ...addrBytes]); 
 
+        const registryId = XGOV_REGISTRY_APP_IDS[0];
         atc.addMethodCall({
-          appID: Number(XGOV_REGISTRY_APP_ID),
+          appID: Number(registryId),
           method: abiMethod,
           methodArgs: [appId, activeAddress, approvalVotes, rejectionVotes],
           sender: activeAddress,
@@ -349,7 +353,7 @@ export function XGov() {
           appAccounts: [activeAddress],
           boxes: [
             { appIndex: 0, name: registryBoxKey },
-            { appIndex: 1, name: proposalBoxKey }
+            { appIndex: appId, name: proposalBoxKey }
           ]
         });
       }
@@ -663,8 +667,8 @@ export function XGov() {
                             </div>
                           ) : (
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                              {(proposalVoters[p.appId] || []).length > 0 ? (
-                                proposalVoters[p.appId].map((v, i) => (
+                              {(proposalVoters[p.appId]?.voters || []).length > 0 ? (
+                                proposalVoters[p.appId].voters.map((v, i) => (
                                   <div key={i} className="bg-white/5 border border-white/5 p-4 rounded-2xl flex items-center justify-between hover:border-amber-400/20 transition-all">
                                     <div className="flex items-center gap-3">
                                       <div className={`p-2 rounded-lg ${v.choice === 'REJECT' ? 'bg-red-500/10 text-red-400' : (v.choice === 'ABSTAIN' ? 'bg-gray-500/10 text-gray-400' : (v.choice === 'BOYCOTT' ? 'bg-yellow-500/10 text-yellow-400' : 'bg-green-500/10 text-green-400'))}`}>
@@ -696,11 +700,11 @@ export function XGov() {
                             <>
                               <div className="flex justify-between items-center mb-6">
                                 <h5 className="text-xs font-black text-gray-500 uppercase tracking-widest">
-                                  {allXGovs.filter(addr => !(proposalVoters[p.appId] || []).some(v => v.address === addr)).length} Pending Wallets
+                                  {(proposalVoters[p.appId]?.assignedVoters || []).filter(addr => !(proposalVoters[p.appId]?.voters || []).some(v => v.address === addr)).length} Pending Wallets
                                 </h5>
                                 <button 
                                   onClick={() => {
-                                    const pending = allXGovs.filter(addr => !(proposalVoters[p.appId] || []).some(v => v.address === addr));
+                                    const pending = (proposalVoters[p.appId]?.assignedVoters || []).filter(addr => !(proposalVoters[p.appId]?.voters || []).some(v => v.address === addr));
                                     navigator.clipboard.writeText(pending.join('\n'));
                                     toast.success("Copied pending addresses to clipboard!");
                                   }}
@@ -711,9 +715,9 @@ export function XGov() {
                                 </button>
                               </div>
                               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                {allXGovs.filter(addr => !(proposalVoters[p.appId] || []).some(v => v.address === addr)).length > 0 ? (
-                                  allXGovs
-                                    .filter(addr => !(proposalVoters[p.appId] || []).some(v => v.address === addr))
+                                {((proposalVoters[p.appId]?.assignedVoters || []).filter(addr => !(proposalVoters[p.appId]?.voters || []).some(v => v.address === addr))).length > 0 ? (
+                                  (proposalVoters[p.appId]?.assignedVoters || [])
+                                    .filter(addr => !(proposalVoters[p.appId]?.voters || []).some(v => v.address === addr))
                                     .map((addr, i) => (
                                       <div key={i} className="bg-white/5 border border-white/5 p-4 rounded-2xl flex items-center gap-3 hover:border-amber-400/20 transition-all">
                                         <div className="bg-orange-500/10 p-2 rounded-lg text-orange-400">
