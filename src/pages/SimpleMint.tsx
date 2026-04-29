@@ -10,6 +10,7 @@ import {
   createARC3AssetMintArrayV2,
   createARC19AssetMintArrayV2,
   createAssetMintArrayV2,
+  walletSign,
 } from "../utils";
 import { ASSET_PREVIEW, TOOLS } from "../constants";
 import FaqSectionComponent from "../components/FaqSectionComponent";
@@ -62,12 +63,14 @@ export function SimpleMint() {
   const [createdAssetID, setCreatedAssetID] = useState(null);
 
   const [batchATC, setBatchATC] = useState(null as any);
+  const [pinCids, setPinCids] = useState<string[]>([]);
   const { activeAddress, algodClient, transactionSigner } = useWallet();
   const [previewAsset, setPreviewAsset] = useState(null as any);
   const [showIntegratorPortal, setShowIntegratorPortal] = useState(false);
   const [searchParams] = useSearchParams();
   const [extraFee, setExtraFee] = useState<number | null>(null);
   const [extraFeeAddress, setExtraFeeAddress] = useState<string | null>(null);
+  const [isLedger, setIsLedger] = useState(false);
 
   useEffect(() => {
     // Handle query parameters
@@ -451,18 +454,7 @@ wen.contentWindow.postMessage({
           extraFeeAddress || undefined
         );
 
-        // Bundle IPFS pins into the same atomic group (max 16 txns)
-        for (const cid of cids) {
-          atc.addMethodCall(
-            await makeCrustPinTx(
-              cid,
-              transactionSigner,
-              activeAddress,
-              algodClient
-            )
-          );
-        }
-
+        setPinCids(cids);
         setBatchATC(atc);
       } else if (formData.format === "ARC19") {
         const { atc, pinCids: cids } = await createARC19AssetMintArrayV2(
@@ -476,16 +468,7 @@ wen.contentWindow.postMessage({
           extraFeeAddress || undefined
         );
 
-        for (const cid of cids) {
-          atc.addMethodCall(
-            await makeCrustPinTx(
-              cid,
-              transactionSigner,
-              activeAddress,
-              algodClient
-            )
-          );
-        }
+        setPinCids(cids);
         setBatchATC(atc);
       } else if (formData.format === "ARC69" || formData.format === "Token") {
         metadata.properties = metadata.properties.traits;
@@ -506,16 +489,7 @@ wen.contentWindow.postMessage({
             extraFeeAddress || undefined
           );
 
-          for (const cid of cids) {
-            atc.addMethodCall(
-              await makeCrustPinTx(
-                cid,
-                transactionSigner,
-                activeAddress,
-                algodClient
-              )
-            );
-          }
+          setPinCids(cids);
           setBatchATC(atc);
         } else {
           const { atc, pinCids: cids } = await createAssetMintArrayV2(
@@ -528,16 +502,7 @@ wen.contentWindow.postMessage({
             extraFeeAddress || undefined
           );
 
-          for (const cid of cids) {
-            atc.addMethodCall(
-              await makeCrustPinTx(
-                cid,
-                transactionSigner,
-                activeAddress,
-                algodClient
-              )
-            );
-          }
+          setPinCids(cids);
           setBatchATC(atc);
         }
       } else {
@@ -566,16 +531,53 @@ wen.contentWindow.postMessage({
       }
       setProcessStep(3);
 
-      // Use atc.execute for robust signing and submission of the entire group
-      const { txIDs } = await batchATC.execute(algodClient, 4);
-      const txId = txIDs[0];
-      const result = await algosdk.waitForConfirmation(
-        algodClient,
-        txId,
-        4
-      );
+      // Gather all transactions to sign in one batch for better UX
+      const mintTxns = batchATC.buildGroup().map((t: any) => t.txn);
+      const pinTxns: algosdk.Transaction[] = [];
+      
+      for (const cid of pinCids) {
+        const pinAtc = new algosdk.AtomicTransactionComposer();
+        pinAtc.addMethodCall(
+          await makeCrustPinTx(
+            cid,
+            transactionSigner,
+            activeAddress,
+            algodClient
+          )
+        );
+        const group = pinAtc.buildGroup();
+        pinTxns.push(...group.map((t: any) => t.txn));
+      }
 
+      const allTxns = [...mintTxns, ...pinTxns];
+      
+      // Sign everything in one go (or one-by-one if Ledger Mode is on)
+      const signedTxns = await walletSign(allTxns, transactionSigner, isLedger);
+      
+      if (!signedTxns || signedTxns.length === 0) {
+        setProcessStep(2);
+        return;
+      }
+
+      // 1. Send Mint Group
+      const mintSigned = signedTxns.slice(0, mintTxns.length);
+      const { txId } = await algodClient.sendRawTransaction(mintSigned).do();
+      const result = await algosdk.waitForConfirmation(algodClient, txId, 4);
       setCreatedAssetID(result["asset-index"]);
+
+      // 2. Send Pin Transactions
+      const pinSigned = signedTxns.slice(mintTxns.length);
+      if (pinSigned.length > 0) {
+        toast.info("Sending IPFS Pin transactions...");
+        for (const signed of pinSigned) {
+          try {
+            await algodClient.sendRawTransaction(signed).do();
+          } catch (pinErr) {
+            console.error("Pinning failed:", pinErr);
+          }
+        }
+      }
+
       toast.success("Asset created successfully!");
 
       if (window.parent) {
@@ -965,7 +967,7 @@ wen.contentWindow.postMessage({
         ) : processStep === 3 ? (
           <>
             <p className="pt-4 text-green-500 animate-pulse text-sm">
-              Sending transaction...
+              Processing transactions...
             </p>
           </>
         ) : processStep === 2 ? (
@@ -973,9 +975,21 @@ wen.contentWindow.postMessage({
             <p className="mt-1 text-green-200/60 text-sm animate-pulse">
               Transaction created!
             </p>
+            <div className="flex items-center gap-2 mb-2">
+              <input 
+                type="checkbox" 
+                id="ledger-mode" 
+                checked={isLedger} 
+                onChange={(e) => setIsLedger(e.target.checked)}
+                className="w-4 h-4 rounded border-gray-300 text-primary-orange focus:ring-primary-orange"
+              />
+              <label htmlFor="ledger-mode" className="text-xs text-slate-300 cursor-pointer">
+                Ledger Mode (Sign one-by-one)
+              </label>
+            </div>
             <button
               id="create_transactions_id"
-              className="rounded bg-secondary-orange hover:bg-secondary-orange/80 transition text-black/90 font-semibold px-4 py-1 mt-2"
+              className="rounded bg-secondary-orange hover:bg-secondary-orange/80 transition text-black/90 font-semibold px-4 py-1"
               onClick={() => {
                 sendTransaction();
               }}
