@@ -297,4 +297,12 @@ export const TOOLS = [
     category: "asset",
     icon: "/icons/xgov.png"
   },
+  {
+    id: "jukebox",
+    label: "Jukebox",
+    description: "Scan your wallet for music NFTs and play them directly.",
+    path: "/jukebox",
+    category: "asset",
+    icon: "/icons/jukebox.png"
+  },
 ];

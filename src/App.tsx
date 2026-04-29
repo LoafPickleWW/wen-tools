@@ -41,6 +41,7 @@ import { ARC62ManagerTool } from "./pages/ARC62ManagerTool";
 import { ReallySimpleMint } from "./pages/ReallySimpleMint";
 import { WenPad } from './pages/WenPad';
 import { XGov } from './pages/XGov';
+import { Jukebox } from './pages/Jukebox';
 
 const walletManager = new WalletManager({
   wallets: [
@@ -131,6 +132,7 @@ function App() {
             <Route path="/really-simple-mint" element={<ReallySimpleMint />} />
             <Route path='/wen-pad' element={<WenPad />} />
             <Route path='/xgov' element={<XGov />} />
+            <Route path='/jukebox' element={<Jukebox />} />
             <Route path="*" element={<Home />} />
           </Routes>
           <Footer />
@@ -141,3 +143,4 @@ function App() {
   );
 }
 export default App;
+

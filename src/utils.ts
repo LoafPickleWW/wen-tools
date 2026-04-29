@@ -1178,6 +1178,7 @@ export class Arc69 {
     for (const transaction of transactions) {
       try {
         const noteBase64 = transaction.note;
+        if (!noteBase64) continue;
         const noteString = atob(noteBase64)
           .trim()
           .replace(/[^ -~]+/g, "");
