@@ -8,7 +8,6 @@ import {
   fetchProposalDescription,
   fetchVoterData,
   checkIsXGov,
-  fetchAllXGovs,
   fetchProposalVoters,
   fetchUserVoteChoice,
   ProposalVotersResponse
@@ -46,24 +45,14 @@ export function XGov() {
   const [userVotes, setUserVotes] = useState<Record<number, string>>({});
   const [descriptions, setDescriptions] = useState<Record<number, XGovProposal['parsedDescription']>>({});
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [allXGovs, setAllXGovs] = useState<string[]>([]);
   const [proposalVoters, setProposalVoters] = useState<Record<number, ProposalVotersResponse>>({});
   const [expandedTab, setExpandedTab] = useState<Record<number, 'brief' | 'voters' | 'pending'>>({});
   const [loadingVoters, setLoadingVoters] = useState<Record<number, boolean>>({});
 
   useEffect(() => {
     loadProposals();
-    loadAllXGovs();
   }, []);
 
-  async function loadAllXGovs() {
-    try {
-      const data = await fetchAllXGovs();
-      setAllXGovs(data);
-    } catch (e) {
-      console.error("Failed to load all xGovs", e);
-    }
-  }
 
   const checkRegistration = useCallback(async () => {
     if (!activeAddress) return;
@@ -691,10 +680,10 @@ export function XGov() {
 
                       {expandedTab[p.appId] === 'pending' && (
                         <div className="animate-fadeIn">
-                          {allXGovs.length === 0 ? (
+                          {loadingVoters[p.appId] ? (
                             <div className="flex items-center justify-center py-20 gap-3 text-gray-600">
                               <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-amber-400"></div>
-                              <span className="text-sm font-mono tracking-widest uppercase">Indexing_Registry_State</span>
+                              <span className="text-sm font-mono tracking-widest uppercase">Fetching_Voter_Records</span>
                             </div>
                           ) : (
                             <>

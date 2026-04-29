@@ -195,7 +195,7 @@ export async function fetchProposalDescription(appId: number): Promise<XGovPropo
   }
 }
 
-export async function fetchRegistryPower(userAddress: string): Promise<number> {
+export async function fetchRegistryPower(_userAddress: string): Promise<number> {
   // xGov power is not stored in the registry boxes (which contain metadata).
   // It is assigned per-proposal in the proposal's voter boxes.
   // We return 0 here to avoid reading garbage data from metadata boxes.
