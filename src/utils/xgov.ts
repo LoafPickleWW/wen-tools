@@ -194,7 +194,6 @@ export async function fetchVoterData(appId: number, userAddress: string): Promis
       }
     } catch {
       // Box missing usually means it was deleted after voting for 8-byte proposals
-      boxExists = false;
     }
 
     if (txChoice) {
