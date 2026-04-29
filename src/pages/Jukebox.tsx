@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useWallet } from "@txnlab/use-wallet-react";
 import { 
   getAssetsFromAddress, 
@@ -58,23 +58,7 @@ export function Jukebox() {
     }
   }, [volume]);
 
-  useEffect(() => {
-    if (activeAddress) {
-      fetchAssets();
-    } else {
-      setAssets([]);
-      setSongs([]);
-    }
-  }, [activeAddress, activeNetwork]);
-
-  // Auto-scan when assets are loaded
-  useEffect(() => {
-    if (assets.length > 0 && songs.length === 0 && !scanning) {
-      scanForMusic();
-    }
-  }, [assets]);
-
-  async function fetchAssets() {
+  const fetchAssets = useCallback(async () => {
     if (!activeAddress) return;
     setLoading(true);
     try {
@@ -86,7 +70,16 @@ export function Jukebox() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [activeAddress, activeNetwork]);
+
+  useEffect(() => {
+    if (activeAddress) {
+      fetchAssets();
+    } else {
+      setAssets([]);
+      setSongs([]);
+    }
+  }, [activeAddress, activeNetwork, fetchAssets]);
 
   const ipfsToGateway = (url: string) => {
     if (!url) return "";
@@ -99,7 +92,7 @@ export function Jukebox() {
     return url;
   };
 
-  async function scanForMusic() {
+  const scanForMusic = useCallback(async () => {
     if (assets.length === 0) {
       toast.info("No assets found in wallet.");
       return;
@@ -135,7 +128,9 @@ export function Jukebox() {
                 try {
                     const resp = await axios.get(ipfsToGateway(url), { timeout: 5000 });
                     metadata = resp.data;
-                } catch (e) {}
+                } catch {
+                    // Silently fail for individual metadata fetch
+                }
             }
           }
 
@@ -168,8 +163,8 @@ export function Jukebox() {
               return song;
             }
           }
-        } catch (error) {
-          // console.error(`Error scanning asset ${assetId}:`, error);
+        } catch {
+          // Silently fail for individual assets
         }
         return null;
       });
@@ -194,7 +189,14 @@ export function Jukebox() {
     } else {
       toast.success(`Found ${foundSongs.length} songs!`);
     }
-  }
+  }, [algodClient, assets, activeNetwork, arc69]);
+
+  // Auto-scan when assets are loaded
+  useEffect(() => {
+    if (assets.length > 0 && songs.length === 0 && !scanning) {
+      scanForMusic();
+    }
+  }, [assets, songs.length, scanning, scanForMusic]);
 
   const togglePlay = () => {
     if (!audioRef.current || currentSongIndex === null) return;
@@ -229,7 +231,7 @@ export function Jukebox() {
 
   const prevSong = () => {
     if (songs.length === 0) return;
-    let prevIndex = (currentSongIndex! - 1 + songs.length) % songs.length;
+    const prevIndex = (currentSongIndex! - 1 + songs.length) % songs.length;
     playSong(prevIndex);
   };
 
