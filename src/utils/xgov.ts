@@ -165,11 +165,9 @@ export async function fetchVoterData(appId: number, userAddress: string): Promis
     const boxKeyB64 = Buffer.from(boxKey).toString('base64');
     
     let power = 0;
-    let boxExists = false;
     try {
       const boxRes = await axios.get(`${MAINNET_ALGONODE_INDEXER}/v2/applications/${appId}/box?name=b64:${encodeURIComponent(boxKeyB64)}`);
       const buf = Buffer.from(boxRes.data.value, 'base64');
-      boxExists = true;
       if (buf.length === 24) power = Number(buf.readBigUInt64BE(0)) + Number(buf.readBigUInt64BE(8)) + Number(buf.readBigUInt64BE(16));
       else if (buf.length === 16) power = Number(buf.readBigUInt64BE(0)) + Number(buf.readBigUInt64BE(8));
       else if (buf.length === 8) power = Number(buf.readBigUInt64BE(0));
