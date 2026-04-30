@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useWallet } from "@txnlab/use-wallet-react";
+import algosdk from "algosdk";
 import { SignalClient } from "@algorandfoundation/liquid-client";
 import { toBase64URL } from "@algorandfoundation/liquid-client/encoding";
 import nacl from "tweetnacl";
@@ -42,7 +43,7 @@ interface ChatMessage {
 type Phase = "setup" | "waiting" | "connecting" | "chat";
 
 export function P2PChat() {
-  const { activeAddress } = useWallet();
+  const { activeAddress, algodClient, signTransactions } = useWallet();
   const [phase, setPhase] = useState<Phase>("setup");
   const [requestId, setRequestId] = useState("");
   const [remoteRequestId, setRemoteRequestId] = useState("");
@@ -191,9 +192,53 @@ export function P2PChat() {
   }, [resetConnection]);
 
 
+  const authenticateWallet = useCallback(async () => {
+    if (!activeAddress || !signTransactions) {
+      toast.error("Please connect your wallet first.");
+      return false;
+    }
+    
+    setConnectionStatus("Please sign the verification transaction in your wallet...");
+    try {
+      const suggestedParams = await algodClient.getTransactionParams().do();
+      const noteStr = `Wen Tools P2P Auth: ${Date.now()}`;
+      const note = new TextEncoder().encode(noteStr);
+      
+      const txn = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
+        from: activeAddress,
+        to: activeAddress,
+        amount: 0,
+        note,
+        suggestedParams,
+      });
+
+      const encodedTxn = algosdk.encodeUnsignedTransaction(txn);
+      const signedResult = await signTransactions([encodedTxn]);
+      
+      if (!signedResult || !signedResult[0]) {
+        throw new Error("Transaction signature was empty or cancelled.");
+      }
+      
+      return true;
+    } catch (err: any) {
+      console.error("Auth failed:", err);
+      toast.error("Authentication failed or cancelled.");
+      resetConnection();
+      return false;
+    }
+  }, [activeAddress, signTransactions, algodClient, resetConnection]);
+
+
   const startOfferSession = useCallback(async () => {
+    if (!activeAddress) {
+      toast.error("Please connect your wallet first.");
+      return;
+    }
     try {
       setPhase("waiting");
+      
+      const isAuthenticated = await authenticateWallet();
+      if (!isAuthenticated) return;
       setConnectionStatus("Generating session...");
 
       const client = new SignalClient(LIQUID_SERVER);
@@ -239,7 +284,7 @@ export function P2PChat() {
       toast.error("Failed to start session: " + err.message);
       resetConnection();
     }
-  }, [handleDataChannel, resetConnection]);
+  }, [handleDataChannel, resetConnection, authenticateWallet, activeAddress]);
 
   const joinSession = useCallback(async (overrideSessionId?: any) => {
     const targetSessionId = typeof overrideSessionId === "string" ? overrideSessionId : remoteRequestId;
@@ -249,8 +294,16 @@ export function P2PChat() {
       return;
     }
 
+    if (!activeAddress) {
+      toast.error("Please connect your wallet first.");
+      return;
+    }
+
     try {
       setPhase("connecting");
+      
+      const isAuthenticated = await authenticateWallet();
+      if (!isAuthenticated) return;
       setConnectionStatus("Authenticating via passkey...");
 
       const client = new SignalClient(LIQUID_SERVER);
@@ -290,7 +343,7 @@ export function P2PChat() {
       toast.error("Failed to join: " + err.message);
       resetConnection();
     }
-  }, [remoteRequestId, activeAddress, handleDataChannel, resetConnection]);
+  }, [remoteRequestId, activeAddress, handleDataChannel, resetConnection, authenticateWallet]);
 
   const hasAutoJoined = useRef(false);
 
