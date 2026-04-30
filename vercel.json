@@ -1,3 +1,7 @@
 {
-  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
+  "rewrites": [
+    { "source": "/socket.io/(.*)", "destination": "https://debug.liquidauth.com/socket.io/$1" },
+    { "source": "/attestation/(.*)", "destination": "https://debug.liquidauth.com/attestation/$1" },
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
 }
