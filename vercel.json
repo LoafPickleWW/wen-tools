@@ -1,7 +1,7 @@
 {
   "rewrites": [
-    { "source": "/socket.io/(.*)", "destination": "https://debug.liquidauth.com/socket.io/$1" },
-    { "source": "/attestation/(.*)", "destination": "https://debug.liquidauth.com/attestation/$1" },
+    { "source": "/socket.io/(.*)", "destination": "https://wen-liquid-auth.onrender.com/socket.io/$1" },
+    { "source": "/attestation/(.*)", "destination": "https://wen-liquid-auth.onrender.com/attestation/$1" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
 }

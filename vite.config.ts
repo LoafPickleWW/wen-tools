@@ -9,13 +9,13 @@ export default defineConfig({
   server: {
     proxy: {
       '/socket.io': {
-        target: 'https://debug.liquidauth.com',
+        target: 'https://wen-liquid-auth.onrender.com',
         changeOrigin: true,
         secure: false,
         ws: true,
       },
       '/attestation': {
-        target: 'https://debug.liquidauth.com',
+        target: 'https://wen-liquid-auth.onrender.com',
         changeOrigin: true,
         secure: false,
       }

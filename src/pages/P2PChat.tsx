@@ -6,7 +6,7 @@ import { toBase64URL } from "@algorandfoundation/liquid-client/encoding";
 import nacl from "tweetnacl";
 import { toast } from "react-toastify";
 
-const LIQUID_SERVER = "https://wen-liquid-auth.onrender.com";
+const LIQUID_SERVER = typeof window !== "undefined" ? window.location.origin : "https://wen-liquid-auth.onrender.com";
 
 const RTC_CONFIG: RTCConfiguration = {
   iceServers: [
