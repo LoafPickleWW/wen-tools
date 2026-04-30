@@ -7,6 +7,19 @@ import nacl from "tweetnacl";
 import { toast } from "react-toastify";
 
 const LIQUID_SERVER = "https://wen-liquid-auth.onrender.com";
+ 
+ // Patch global fetch to ensure credentials (cookies) are sent to the custom signaling server
+ if (typeof window !== "undefined") {
+   const originalFetch = window.fetch;
+   window.fetch = (...args) => {
+     const [resource, config] = args;
+     if (typeof resource === "string" && resource.includes("onrender.com")) {
+       const newConfig = { ...config, credentials: "include" as const };
+       return originalFetch(resource, newConfig);
+     }
+     return originalFetch(...args);
+   };
+ }
 
 const RTC_CONFIG: RTCConfiguration = {
   iceServers: [
