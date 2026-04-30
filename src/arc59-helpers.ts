@@ -201,7 +201,7 @@ export const createArc59GroupTxns = async (
             receiver: receiver,
             additionalReceiverFunds: receiverAlgoNeededForClaim,
           },
-          { sendParams: { fee }, boxes, accounts, assets }
+          { sendParams: { fee: fee as any }, boxes, accounts, assets }
         );
         // asset send txn fee
         amount += algosdk.ALGORAND_MIN_TX_FEE;
@@ -415,7 +415,7 @@ export const generateARC59ClaimTxns = async (
       boxes: [algosdk.decodeAddress(claimer).publicKey],
       accounts: [claimer, inboxAddress],
       assets: [Number(assetId)],
-      sendParams: { fee: algokit.microAlgos(1000 * totalTxns) },
+      sendParams: { fee: algokit.microAlgos(1000 * totalTxns) as any },
     }
   );
 

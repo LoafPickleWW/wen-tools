@@ -311,6 +311,6 @@ export const TOOLS = [
     description: "End-to-end encrypted peer-to-peer chat & file transfer via LiquidAuth.",
     path: "/p2p-chat",
     category: "asset",
-    icon: "/icons/p2pchat.png"
+    icon: "/icons/p2pchat.svg"
   },
 ];
