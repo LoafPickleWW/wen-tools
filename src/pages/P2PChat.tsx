@@ -238,8 +238,7 @@ export function P2PChat() {
       setPhase("waiting");
       
       setConnectionStatus("Generating session...");
-      const client = new SignalClient(window.location.origin);
-      (client as any).socket.io.uri = LIQUID_SERVER;
+      const client = new SignalClient(LIQUID_SERVER);
       clientRef.current = client;
       const newRequestId = SignalClient.generateRequestId();
       setRequestId(newRequestId);
@@ -301,8 +300,7 @@ export function P2PChat() {
       setPhase("connecting");
       
       setConnectionStatus("Authenticating via passkey...");
-      const client = new SignalClient(window.location.origin);
-      (client as any).socket.io.uri = LIQUID_SERVER;
+      const client = new SignalClient(LIQUID_SERVER);
       clientRef.current = client;
 
       // Generate a keypair for the liquid extension signature
@@ -315,7 +313,7 @@ export function P2PChat() {
           const signature = nacl.sign.detached(challenge, keypair.secretKey);
           return {
             requestId: targetSessionId.trim(),
-            origin: window.location.origin,
+            origin: LIQUID_SERVER,
             type: "algorand",
             address: activeAddress || "anonymous",
             signature: toBase64URL(signature),
