@@ -6,7 +6,7 @@ import { toBase64URL } from "@algorandfoundation/liquid-client/encoding";
 import nacl from "tweetnacl";
 import { toast } from "react-toastify";
 
-const LIQUID_SERVER = "https://wen-liquid-auth.onrender.com";
+const LIQUID_SERVER = "https://debug.liquidauth.com";
 
 const RTC_CONFIG: RTCConfiguration = {
   iceServers: [
@@ -304,7 +304,7 @@ export function P2PChat() {
       
       const isAuthenticated = await authenticateWallet();
       if (!isAuthenticated) return;
-      setConnectionStatus("Authenticating via passkey...");
+      setConnectionStatus("Connecting to P2P network...");
 
       const client = new SignalClient(LIQUID_SERVER);
       clientRef.current = client;
@@ -354,8 +354,8 @@ export function P2PChat() {
     if (session && !hasAutoJoined.current) {
       hasAutoJoined.current = true;
       setRemoteRequestId(session);
-      // Slight delay to allow state to settle
-      setTimeout(() => joinSession(session), 100);
+      // We do not auto-join here because mobile browsers require direct user 
+      // interaction (a button click) to launch the wallet deep link successfully.
     }
   }, [joinSession]);
 
@@ -521,13 +521,8 @@ export function P2PChat() {
                 </div>
                 <div className="mt-3">
                   <p className="text-gray-500 text-xs">
-                    🔑 Authenticates via passkey (Pera, platform authenticator)
+                    🔐 Requires wallet signature to join
                   </p>
-                  {!window.isSecureContext && (
-                    <p className="text-red-400 text-xs mt-1 font-medium">
-                      ⚠️ WebAuthn requires HTTPS. Passkeys will fail on insecure HTTP connections.
-                    </p>
-                  )}
                 </div>
               </div>
             </div>
