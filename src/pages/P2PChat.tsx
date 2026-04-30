@@ -6,7 +6,7 @@ import { toBase64URL } from "@algorandfoundation/liquid-client/encoding";
 import nacl from "tweetnacl";
 import { toast } from "react-toastify";
 
-const LIQUID_SERVER = "https://debug.liquidauth.com";
+const LIQUID_SERVER = typeof window !== "undefined" ? window.location.origin : "https://debug.liquidauth.com";
 
 const RTC_CONFIG: RTCConfiguration = {
   iceServers: [
