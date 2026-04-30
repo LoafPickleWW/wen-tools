@@ -241,7 +241,9 @@ export function P2PChat() {
       if (!isAuthenticated) return;
       setConnectionStatus("Generating session...");
 
-      const client = new SignalClient(LIQUID_SERVER);
+      const client = new SignalClient("https://wen-liquid-auth.onrender.com");
+      // @ts-ignore - "Hack" to make fetch calls use the proxy while socket uses the direct URL
+      (client as any).url = window.location.origin;
       clientRef.current = client;
       const newRequestId = SignalClient.generateRequestId();
       setRequestId(newRequestId);
@@ -306,7 +308,9 @@ export function P2PChat() {
       if (!isAuthenticated) return;
       setConnectionStatus("Authenticating via passkey...");
 
-      const client = new SignalClient(LIQUID_SERVER);
+      const client = new SignalClient("https://wen-liquid-auth.onrender.com");
+      // @ts-ignore - "Hack" to make fetch calls use the proxy while socket uses the direct URL
+      (client as any).url = window.location.origin;
       clientRef.current = client;
 
       // Generate a keypair for the liquid extension signature
