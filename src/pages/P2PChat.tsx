@@ -5,7 +5,7 @@ import { toBase64URL } from "@algorandfoundation/liquid-client/encoding";
 import nacl from "tweetnacl";
 import { toast } from "react-toastify";
 
-const LIQUID_SERVER = typeof window !== "undefined" ? window.location.origin : "https://debug.liquidauth.com";
+const LIQUID_SERVER = "https://wen-liquid-auth.onrender.com";
 
 const RTC_CONFIG: RTCConfiguration = {
   iceServers: [
@@ -77,6 +77,23 @@ export function P2PChat() {
       if (dcRef.current) dcRef.current.close();
       if (clientRef.current) clientRef.current.close(true);
     };
+  }, []);
+
+  const resetConnection = useCallback(() => {
+    if (heartbeatRef.current) clearInterval(heartbeatRef.current);
+    if (dcRef.current) dcRef.current.close();
+    if (clientRef.current) clientRef.current.close(true);
+    dcRef.current = null;
+    clientRef.current = null;
+    setPhase("setup");
+    setIsConnected(false);
+    setMessages([]);
+    setQrDataUrl("");
+    setDeepLinkUrl("");
+    setPeerAddress("");
+    setConnectionStatus("");
+    // Clear URL params
+    window.history.replaceState({}, "", window.location.pathname);
   }, []);
 
   const handleDataChannel = useCallback((dataChannel: RTCDataChannel) => {
@@ -171,24 +188,8 @@ export function P2PChat() {
       toast.error("Connection error");
       resetConnection();
     };
-  }, []);
+  }, [resetConnection]);
 
-  const resetConnection = useCallback(() => {
-    if (heartbeatRef.current) clearInterval(heartbeatRef.current);
-    if (dcRef.current) dcRef.current.close();
-    if (clientRef.current) clientRef.current.close(true);
-    dcRef.current = null;
-    clientRef.current = null;
-    setPhase("setup");
-    setIsConnected(false);
-    setMessages([]);
-    setQrDataUrl("");
-    setDeepLinkUrl("");
-    setPeerAddress("");
-    setConnectionStatus("");
-    // Clear URL params
-    window.history.replaceState({}, "", window.location.pathname);
-  }, []);
 
   const startOfferSession = useCallback(async () => {
     try {

@@ -11,10 +11,6 @@ export function ChatBubble({ isActive, unreadCount = 0 }: ChatBubbleProps) {
   const location = useLocation();
   const [pulse, setPulse] = useState(false);
 
-  // Don't show on the chat page itself
-  if (location.pathname === "/p2p-chat") return null;
-  if (!isActive) return null;
-
   useEffect(() => {
     if (unreadCount > 0) {
       setPulse(true);
@@ -22,6 +18,10 @@ export function ChatBubble({ isActive, unreadCount = 0 }: ChatBubbleProps) {
       return () => clearTimeout(t);
     }
   }, [unreadCount]);
+
+  // Don't show on the chat page itself
+  if (location.pathname === "/p2p-chat") return null;
+  if (!isActive) return null;
 
   return (
     <button

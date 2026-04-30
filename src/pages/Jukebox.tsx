@@ -50,7 +50,6 @@ export function Jukebox() {
   const [scanProgress, setScanProgress] = useState({ current: 0, total: 0 });
   
   const audioRef = useRef<HTMLAudioElement>(null);
-  const arc69 = new Arc69();
 
   useEffect(() => {
     if (audioRef.current) {
@@ -102,6 +101,7 @@ export function Jukebox() {
     const assetsToScan = [...assets].sort((a, b) => b - a);
     setScanProgress({ current: 0, total: assetsToScan.length });
 
+    const arc69 = new Arc69();
     const foundSongs: MusicNFT[] = [];
     const batchSize = 10; // Process in small batches to respect rate limits
     
@@ -189,7 +189,7 @@ export function Jukebox() {
     } else {
       toast.success(`Found ${foundSongs.length} songs!`);
     }
-  }, [algodClient, assets, activeNetwork, arc69]);
+  }, [algodClient, assets, activeNetwork]);
 
   // Auto-scan when assets are loaded
   useEffect(() => {
