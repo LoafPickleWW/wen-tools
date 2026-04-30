@@ -305,4 +305,12 @@ export const TOOLS = [
     category: "asset",
     icon: "/icons/jukebox.png"
   },
+  {
+    id: "p2p_chat",
+    label: "P2P Chat",
+    description: "End-to-end encrypted peer-to-peer chat & file transfer via LiquidAuth.",
+    path: "/p2p-chat",
+    category: "asset",
+    icon: "/icons/p2pchat.png"
+  },
 ];
