@@ -237,13 +237,8 @@ export function P2PChat() {
     try {
       setPhase("waiting");
       
-      const isAuthenticated = await authenticateWallet();
-      if (!isAuthenticated) return;
       setConnectionStatus("Generating session...");
-
-      const client = new SignalClient("https://wen-liquid-auth.onrender.com");
-      // @ts-ignore - "Hack" to make fetch calls use the proxy while socket uses the direct URL
-      (client as any).url = window.location.origin;
+      const client = new SignalClient(LIQUID_SERVER);
       clientRef.current = client;
       const newRequestId = SignalClient.generateRequestId();
       setRequestId(newRequestId);
@@ -286,7 +281,7 @@ export function P2PChat() {
       toast.error("Failed to start session: " + err.message);
       resetConnection();
     }
-  }, [handleDataChannel, resetConnection, authenticateWallet, activeAddress]);
+  }, [handleDataChannel, resetConnection, activeAddress]);
 
   const joinSession = useCallback(async (overrideSessionId?: any) => {
     const targetSessionId = typeof overrideSessionId === "string" ? overrideSessionId : remoteRequestId;
@@ -304,13 +299,8 @@ export function P2PChat() {
     try {
       setPhase("connecting");
       
-      const isAuthenticated = await authenticateWallet();
-      if (!isAuthenticated) return;
       setConnectionStatus("Authenticating via passkey...");
-
-      const client = new SignalClient("https://wen-liquid-auth.onrender.com");
-      // @ts-ignore - "Hack" to make fetch calls use the proxy while socket uses the direct URL
-      (client as any).url = window.location.origin;
+      const client = new SignalClient(LIQUID_SERVER);
       clientRef.current = client;
 
       // Generate a keypair for the liquid extension signature
