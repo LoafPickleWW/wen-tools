@@ -98,25 +98,22 @@ export function P2PChat() {
           const { txnB64, sigB64, nonce } = data;
           const signedTxn = algosdk.decodeSignedTransaction(Buffer.from(sigB64, 'base64'));
           const unsignedBytes = Buffer.from(txnB64, 'base64');
-          const txn = signedTxn.txn;
           
+          // Re-hydrate the transaction and ensure its type is set for bytesToSign()
+          const txn = algosdk.decodeUnsignedTransaction(unsignedBytes);
+          (txn as any).type = "pay"; 
+
           // Verify Note matches our nonce
           const noteStr = new TextDecoder().decode(txn.note);
           if (!noteStr.includes(nonce)) {
             throw new Error("Invalid nonce in handshake");
           }
 
-          // Verify signature locally using the raw unsigned bytes
-          // Transaction signatures are always over "TX" + msgpack(txn)
-          const txPrefix = new Uint8Array([84, 88]); // "TX"
-          const dataToVerify = new Uint8Array(txPrefix.length + unsignedBytes.length);
-          dataToVerify.set(txPrefix);
-          dataToVerify.set(unsignedBytes, txPrefix.length);
+          const msgBytes = txn.bytesToSign();
+          const signature = signedTxn.sig!;
+          const address = algosdk.encodeAddress(txn.from.publicKey);
 
-          const publicKey = algosdk.decodeAddress(algosdk.encodeAddress(txn.from.publicKey)).publicKey;
-          const signature = new Uint8Array(signedTxn.sig!);
-
-          const isValid = algosdk.verifyBytes(dataToVerify, signature, algosdk.encodeAddress(publicKey));
+          const isValid = algosdk.verifyBytes(msgBytes, signature, address);
           
           if (isValid) {
             setPeerAddress(algosdk.encodeAddress(txn.from.publicKey));
