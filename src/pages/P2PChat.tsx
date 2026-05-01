@@ -95,8 +95,9 @@ export function P2PChat() {
       // Handle Handshake
       if (data.type === "handshake") {
         try {
-          const { sigB64, nonce } = data;
+          const { txnB64, sigB64, nonce } = data;
           const signedTxn = algosdk.decodeSignedTransaction(Buffer.from(sigB64, 'base64'));
+          const unsignedBytes = Buffer.from(txnB64, 'base64');
           const txn = signedTxn.txn;
           
           // Verify Note matches our nonce
@@ -105,9 +106,11 @@ export function P2PChat() {
             throw new Error("Invalid nonce in handshake");
           }
 
-          // Verify signature locally (Off-Chain)
+          // Verify signature locally using the raw unsigned bytes
+          // Transaction signatures are always over "TX" + msgpack(txn)
+          const dataToVerify = Buffer.concat([Buffer.from("TX"), unsignedBytes]);
           const isValid = algosdk.verifyBytes(
-            txn.bytesToSign() as any, 
+            dataToVerify, 
             signedTxn.sig as any, 
             txn.from.publicKey as any
           );
