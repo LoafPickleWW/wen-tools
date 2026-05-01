@@ -1,46 +1,18 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useWallet } from "@txnlab/use-wallet-react";
 import algosdk from "algosdk";
-import { SignalClient } from "@algorandfoundation/liquid-client";
-import { toBase64URL } from "@algorandfoundation/liquid-client/encoding";
-import nacl from "tweetnacl";
+import { Peer, type DataConnection } from "peerjs";
 import { toast } from "react-toastify";
 
-const LIQUID_SERVER = "https://wen-liquid-auth.onrender.com";
- 
- // Patch global fetch to ensure credentials (cookies) are sent to the custom signaling server
- if (typeof window !== "undefined") {
-   const originalFetch = window.fetch;
-   window.fetch = (...args) => {
-     const [resource, config] = args;
-     if (typeof resource === "string" && resource.includes("onrender.com")) {
-       const newConfig = { ...config, credentials: "include" as const };
-       return originalFetch(resource, newConfig);
-     }
-     return originalFetch(...args);
-   };
- }
+/* 
+  LEGACY LIQUIDAUTH IMPORTS (Preserved for reference)
+  import { SignalClient } from "@algorandfoundation/liquid-client";
+  import { toBase64URL } from "@algorandfoundation/liquid-client/encoding";
+  import nacl from "tweetnacl";
+  const LIQUID_SERVER = "https://wen-liquid-auth.onrender.com";
+*/
 
-const RTC_CONFIG: RTCConfiguration = {
-  iceServers: [
-    {
-      urls: [
-        "stun:stun.l.google.com:19302",
-        "stun:stun1.l.google.com:19302",
-        "stun:stun2.l.google.com:19302",
-      ],
-    },
-    {
-      urls: [
-        "turn:global.turn.nodely.network:80?transport=tcp",
-        "turns:global.turn.nodely.network:443?transport=tcp",
-      ],
-      username: "username",
-      credential: "credential",
-    },
-  ],
-  iceCandidatePoolSize: 10,
-};
+
 
 interface ChatMessage {
   text: string;
@@ -68,8 +40,8 @@ export function P2PChat() {
   const [isConnected, setIsConnected] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState("");
 
-  const clientRef = useRef<SignalClient | null>(null);
-  const dcRef = useRef<RTCDataChannel | null>(null);
+  const peerRef = useRef<Peer | null>(null);
+  const connRef = useRef<DataConnection | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const heartbeatRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const fileChunksRef = useRef<Map<string, Uint8Array[]>>(new Map());
@@ -88,17 +60,17 @@ export function P2PChat() {
   useEffect(() => {
     return () => {
       if (heartbeatRef.current) clearInterval(heartbeatRef.current);
-      if (dcRef.current) dcRef.current.close();
-      if (clientRef.current) clientRef.current.close(true);
+      if (connRef.current) connRef.current.close();
+      if (peerRef.current) peerRef.current.destroy();
     };
   }, []);
 
   const resetConnection = useCallback(() => {
     if (heartbeatRef.current) clearInterval(heartbeatRef.current);
-    if (dcRef.current) dcRef.current.close();
-    if (clientRef.current) clientRef.current.close(true);
-    dcRef.current = null;
-    clientRef.current = null;
+    if (connRef.current) connRef.current.close();
+    if (peerRef.current) peerRef.current.destroy();
+    connRef.current = null;
+    peerRef.current = null;
     setPhase("setup");
     setIsConnected(false);
     setMessages([]);
@@ -106,138 +78,175 @@ export function P2PChat() {
     setDeepLinkUrl("");
     setPeerAddress("");
     setConnectionStatus("");
-    // Clear URL params
     window.history.replaceState({}, "", window.location.pathname);
   }, []);
 
-  const handleDataChannel = useCallback((dataChannel: RTCDataChannel) => {
-    dcRef.current = dataChannel;
-    setPhase("chat");
-    setIsConnected(true);
-    setConnectionStatus("Connected");
-    toast.success("P2P connection established!");
+  const handleConnection = useCallback((conn: DataConnection) => {
+    connRef.current = conn;
+    
+    conn.on("open", () => {
+      // PeerJS is open, but we wait for handshake for chat phase
+      setConnectionStatus("Verifying identity...");
+    });
 
-    heartbeatRef.current = setInterval(() => {
-      if (dataChannel.readyState === "open") {
-        dataChannel.send(JSON.stringify({ type: "heartbeat" }));
+    conn.on("data", (data: any) => {
+      if (!data) return;
+      
+      // Handle Handshake
+      if (data.type === "handshake") {
+        try {
+          const { sigB64, nonce } = data;
+          const signedTxn = algosdk.decodeSignedTransaction(Buffer.from(sigB64, 'base64'));
+          const txn = signedTxn.txn;
+          
+          // Verify Note matches our nonce
+          const noteStr = new TextDecoder().decode(txn.note);
+          if (!noteStr.includes(nonce)) {
+            throw new Error("Invalid nonce in handshake");
+          }
+
+          // Verify signature locally (Off-Chain)
+          const isValid = algosdk.verifyBytes(
+            txn.bytesToSign() as any, 
+            signedTxn.sig as any, 
+            txn.from.publicKey as any
+          );
+          
+          if (isValid) {
+            setPeerAddress(algosdk.encodeAddress(txn.from.publicKey));
+            setPhase("chat");
+            setIsConnected(true);
+            setConnectionStatus("Connected");
+            conn.send({ type: "handshake-success" });
+            toast.success("Identity verified! Connection established.");
+          } else {
+            throw new Error("Invalid signature");
+          }
+        } catch (err: any) {
+          console.error("Handshake failed:", err);
+          toast.error("Handshake failed: " + err.message);
+          conn.close();
+        }
+        return;
       }
-    }, 15000);
 
-    dataChannel.onmessage = (e) => {
-      if (!e.data) return;
-      try {
-        const parsed = JSON.parse(e.data);
-        if (parsed.type === "heartbeat") return;
-        if (parsed.type === "file-meta") {
-          fileChunksRef.current.set(parsed.fileId, []);
+      if (data.type === "handshake-success") {
+        setPhase("chat");
+        setIsConnected(true);
+        setConnectionStatus("Connected");
+        toast.success("P2P connection established!");
+        return;
+      }
+
+      if (data.type === "heartbeat") return;
+      
+      if (data.type === "file-meta") {
+        fileChunksRef.current.set(data.fileId, []);
+        setMessages((prev) => [
+          ...prev,
+          {
+            text: `📎 Receiving file: ${data.fileName} (${formatFileSize(data.fileSize)})`,
+            sender: "peer",
+            timestamp: Date.now(),
+            type: "file-meta",
+            fileName: data.fileName,
+            fileSize: data.fileSize,
+            fileType: data.fileType,
+            fileId: data.fileId,
+          },
+        ]);
+        return;
+      }
+
+      if (data.type === "file-chunk") {
+        const chunks = fileChunksRef.current.get(data.fileId);
+        if (chunks) {
+          chunks.push(new Uint8Array(data.data));
+        }
+        return;
+      }
+
+      if (data.type === "file-complete") {
+        const chunks = fileChunksRef.current.get(data.fileId);
+        if (chunks) {
+          const blob = new Blob(chunks.map(c => new Uint8Array(c)) as BlobPart[], { type: data.fileType });
+          const url = URL.createObjectURL(blob);
           setMessages((prev) => [
             ...prev,
             {
-              text: `📎 Receiving file: ${parsed.fileName} (${formatFileSize(parsed.fileSize)})`,
+              text: `📥 File ready: ${data.fileName}`,
               sender: "peer",
               timestamp: Date.now(),
-              type: "file-meta",
-              fileName: parsed.fileName,
-              fileSize: parsed.fileSize,
-              fileType: parsed.fileType,
-              fileId: parsed.fileId,
+              type: "file-complete",
+              fileName: data.fileName,
+              fileId: data.fileId,
             },
           ]);
-          return;
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = data.fileName;
+          a.click();
+          fileChunksRef.current.delete(data.fileId);
         }
-        if (parsed.type === "file-chunk") {
-          const chunks = fileChunksRef.current.get(parsed.fileId);
-          if (chunks) {
-            chunks.push(new Uint8Array(parsed.data));
-          }
-          return;
-        }
-        if (parsed.type === "file-complete") {
-          const chunks = fileChunksRef.current.get(parsed.fileId);
-          if (chunks) {
-            const blob = new Blob(chunks.map(c => new Uint8Array(c)) as BlobPart[], { type: parsed.fileType });
-            const url = URL.createObjectURL(blob);
-            setMessages((prev) => [
-              ...prev,
-              {
-                text: `📥 File ready: ${parsed.fileName}`,
-                sender: "peer",
-                timestamp: Date.now(),
-                type: "file-complete",
-                fileName: parsed.fileName,
-                fileId: parsed.fileId,
-              },
-            ]);
-            // Auto-download
-            const a = document.createElement("a");
-            a.href = url;
-            a.download = parsed.fileName;
-            a.click();
-            fileChunksRef.current.delete(parsed.fileId);
-          }
-          return;
-        }
-        // Regular text message
-        setMessages((prev) => [
-          ...prev,
-          { text: parsed.text || e.data, sender: "peer", timestamp: Date.now(), type: "text" },
-        ]);
-      } catch {
-        // Plain text fallback
-        setMessages((prev) => [
-          ...prev,
-          { text: e.data, sender: "peer", timestamp: Date.now(), type: "text" },
-        ]);
+        return;
       }
-    };
 
-    dataChannel.onclose = () => {
+      setMessages((prev) => [
+        ...prev,
+        { text: data.text || "Message received", sender: "peer", timestamp: Date.now(), type: "text" },
+      ]);
+    });
+
+    conn.on("close", () => {
       setIsConnected(false);
       setConnectionStatus("Disconnected");
       toast.info("Peer disconnected");
       resetConnection();
-    };
+    });
 
-    dataChannel.onerror = () => {
+    conn.on("error", (err) => {
+      console.error("Connection error:", err);
       toast.error("Connection error");
       resetConnection();
-    };
+    });
   }, [resetConnection]);
 
 
-  const authenticateWallet = useCallback(async () => {
+  const sendHandshake = useCallback(async (conn: DataConnection, nonce: string) => {
     if (!activeAddress || !signTransactions) {
-      toast.error("Please connect your wallet first.");
-      return false;
+      toast.error("Connect wallet to handshake");
+      return;
     }
     
-    setConnectionStatus("Please sign the verification transaction in your wallet...");
+    setConnectionStatus("Signing handshake...");
     try {
       const suggestedParams = await algodClient.getTransactionParams().do();
-      const noteStr = `Wen Tools P2P Auth: ${Date.now()}`;
+      const noteStr = `Wen Tools P2P Auth:${nonce}:${Date.now()}`;
       const note = new TextEncoder().encode(noteStr);
       
       const txn = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
         from: activeAddress,
-        to: activeAddress,
+        to: activeAddress, // Send to self (off-chain proof)
         amount: 0,
         note,
-        suggestedParams,
+        suggestedParams: { ...suggestedParams, fee: 1000, flatFee: true },
       });
 
       const encodedTxn = algosdk.encodeUnsignedTransaction(txn);
       const signedResult = await signTransactions([encodedTxn]);
       
-      if (!signedResult || !signedResult[0]) {
-        throw new Error("Transaction signature was empty or cancelled.");
-      }
+      if (!signedResult || !signedResult[0]) throw new Error("Cancelled");
       
-      return true;
+      conn.send({
+        type: "handshake",
+        txnB64: Buffer.from(encodedTxn).toString('base64'),
+        sigB64: Buffer.from(signedResult[0]).toString('base64'),
+        nonce
+      });
     } catch (err: any) {
-      console.error("Auth failed:", err);
-      toast.error("Authentication failed or cancelled.");
+      console.error("Handshake sign failed:", err);
+      toast.error("Handshake failed");
       resetConnection();
-      return false;
     }
   }, [activeAddress, signTransactions, algodClient, resetConnection]);
 
@@ -249,52 +258,50 @@ export function P2PChat() {
     }
     try {
       setPhase("waiting");
+      setConnectionStatus("Initializing PeerJS...");
       
-      setConnectionStatus("Generating session...");
-      const client = new SignalClient(LIQUID_SERVER);
-      clientRef.current = client;
-      const newRequestId = SignalClient.generateRequestId();
-      setRequestId(newRequestId);
+      const peer = new Peer();
+      peerRef.current = peer;
 
-      // Generate a web share link that opens the join page
-      const webShareUrl = `${window.location.origin}/p2p-chat?session=${newRequestId}`;
-      setDeepLinkUrl(webShareUrl);
+      peer.on("open", async (id) => {
+        setRequestId(id);
+        const webShareUrl = `${window.location.origin}/p2p-chat?session=${id}`;
+        setDeepLinkUrl(webShareUrl);
 
-      // Generate QR code with the web URL
-      try {
-        const qr = await import("qrcode");
-        const dataUrl = await qr.toDataURL(webShareUrl, {
-          width: 256,
-          margin: 2,
-          color: { dark: "#f57b14", light: "#010002" },
-        });
-        setQrDataUrl(dataUrl);
-      } catch (err) {
-        console.error("QR generation failed:", err);
-      }
+        try {
+          const qr = await import("qrcode");
+          const dataUrl = await qr.toDataURL(webShareUrl, {
+            width: 256,
+            margin: 2,
+            color: { dark: "#f57b14", light: "#010002" },
+          });
+          setQrDataUrl(dataUrl);
+        } catch (err) { console.error(err); }
 
-      setConnectionStatus("Waiting for peer to connect...");
-
-      // Listen for link message
-      client.once("link-message", (data: any) => {
-        if (data?.wallet) {
-          setPeerAddress(data.wallet);
-        }
-        setConnectionStatus("Peer connected, establishing P2P...");
+        setConnectionStatus("Waiting for peer...");
       });
 
-      // Start peering
-      client.peer(newRequestId, "offer", RTC_CONFIG).then(handleDataChannel).catch((err) => {
-        console.error("Offer peer failed:", err);
-        toast.error("Failed to establish connection: " + err.message);
+      peer.on("connection", (conn) => {
+        // Send challenge nonce
+        const nonce = crypto.randomUUID();
+        conn.on("open", () => {
+          conn.send({ type: "challenge", nonce });
+        });
+        handleConnection(conn);
+      });
+
+      peer.on("error", (err) => {
+        console.error("Peer error:", err);
+        toast.error("Peer error: " + err.type);
         resetConnection();
       });
+
     } catch (err: any) {
       console.error("Start session failed:", err);
-      toast.error("Failed to start session: " + err.message);
+      toast.error("Failed to start session");
       resetConnection();
     }
-  }, [handleDataChannel, resetConnection, activeAddress]);
+  }, [handleConnection, resetConnection, activeAddress]);
 
   const joinSession = useCallback(async (overrideSessionId?: any) => {
     const targetSessionId = typeof overrideSessionId === "string" ? overrideSessionId : remoteRequestId;
@@ -311,46 +318,39 @@ export function P2PChat() {
 
     try {
       setPhase("connecting");
+      setConnectionStatus("Connecting to peer...");
       
-      setConnectionStatus("Authenticating via passkey...");
-      const client = new SignalClient(LIQUID_SERVER);
-      clientRef.current = client;
+      const peer = new Peer();
+      peerRef.current = peer;
 
-      // Generate a keypair for the liquid extension signature
-      const keypair = nacl.sign.keyPair();
+      peer.on("open", () => {
+        const conn = peer.connect(targetSessionId.trim());
+        
+        conn.on("open", () => {
+          setConnectionStatus("Connected. Waiting for challenge...");
+        });
 
-      // Perform FIDO2 attestation — this triggers navigator.credentials.create()
-      // which will prompt the user's passkey provider (Pera, platform authenticator, etc.)
-      await client.attestation(
-        async (challenge: Uint8Array) => {
-          const signature = nacl.sign.detached(challenge, keypair.secretKey);
-          return {
-            requestId: targetSessionId.trim(),
-            origin: LIQUID_SERVER,
-            type: "algorand",
-            address: activeAddress || "anonymous",
-            signature: toBase64URL(signature),
-            device: "Wen Tools P2P Chat",
-          };
-        },
-        undefined,
-        true
-      );
+        conn.on("data", (data: any) => {
+          if (data.type === "challenge") {
+            sendHandshake(conn, data.nonce);
+          }
+        });
 
-      setConnectionStatus("Establishing P2P connection...");
+        handleConnection(conn);
+      });
 
-      // Start peering as answer
-      client.peer(targetSessionId.trim(), "answer", RTC_CONFIG).then(handleDataChannel).catch((err) => {
-        console.error("Answer peer failed:", err);
-        toast.error("Failed to connect: " + err.message);
+      peer.on("error", (err) => {
+        console.error("Peer error:", err);
+        toast.error("Connection failed: " + err.type);
         resetConnection();
       });
+
     } catch (err: any) {
       console.error("Join session failed:", err);
-      toast.error("Failed to join: " + err.message);
+      toast.error("Failed to join session");
       resetConnection();
     }
-  }, [remoteRequestId, activeAddress, handleDataChannel, resetConnection, authenticateWallet]);
+  }, [remoteRequestId, activeAddress, handleConnection, resetConnection, sendHandshake]);
 
   const hasAutoJoined = useRef(false);
 
@@ -367,9 +367,8 @@ export function P2PChat() {
   }, [joinSession]);
 
   const sendMessage = useCallback(() => {
-    if (!inputText.trim() || !dcRef.current || dcRef.current.readyState !== "open") return;
-    const msg = JSON.stringify({ type: "text", text: inputText.trim() });
-    dcRef.current.send(msg);
+    if (!inputText.trim() || !connRef.current || !connRef.current.open) return;
+    connRef.current.send({ type: "text", text: inputText.trim() });
     setMessages((prev) => [
       ...prev,
       { text: inputText.trim(), sender: "me", timestamp: Date.now(), type: "text" },
@@ -378,20 +377,17 @@ export function P2PChat() {
   }, [inputText]);
 
   const sendFile = useCallback(async (file: File) => {
-    if (!dcRef.current || dcRef.current.readyState !== "open") return;
+    if (!connRef.current || !connRef.current.open) return;
     const fileId = crypto.randomUUID();
-    const CHUNK_SIZE = 16384; // 16KB chunks
+    const CHUNK_SIZE = 16384; 
 
-    // Send metadata
-    dcRef.current.send(
-      JSON.stringify({
+    connRef.current.send({
         type: "file-meta",
         fileId,
         fileName: file.name,
         fileSize: file.size,
         fileType: file.type,
-      })
-    );
+    });
 
     setMessages((prev) => [
       ...prev,
@@ -406,31 +402,24 @@ export function P2PChat() {
       },
     ]);
 
-    // Read and send chunks
     const buffer = await file.arrayBuffer();
     const data = new Uint8Array(buffer);
     for (let offset = 0; offset < data.length; offset += CHUNK_SIZE) {
       const chunk = data.slice(offset, offset + CHUNK_SIZE);
-      dcRef.current.send(
-        JSON.stringify({
+      connRef.current.send({
           type: "file-chunk",
           fileId,
           data: Array.from(chunk),
-        })
-      );
-      // Small delay to prevent overwhelming the channel
+      });
       await new Promise((r) => setTimeout(r, 10));
     }
 
-    // Send completion
-    dcRef.current.send(
-      JSON.stringify({
+    connRef.current.send({
         type: "file-complete",
         fileId,
         fileName: file.name,
         fileType: file.type,
-      })
-    );
+    });
 
     toast.success(`File sent: ${file.name}`);
   }, []);
@@ -469,7 +458,7 @@ export function P2PChat() {
             🔐 P2P Encrypted Chat
           </h1>
           <p className="text-gray-400 text-sm">
-            End-to-end encrypted via LiquidAuth + WebRTC • Lute & Pera HD Wallets
+            End-to-end encrypted via Off-Chain Handshake + PeerJS • No Fees
           </p>
         </div>
 
@@ -528,13 +517,9 @@ export function P2PChat() {
                 </div>
                 <div className="mt-3">
                   <p className="text-gray-500 text-xs">
-                    🔑 Authenticates via passkey (Pera, platform authenticator)
+                    🔑 Authenticates via Off-Chain Wallet Signature
                   </p>
-                  {!window.isSecureContext && (
-                    <p className="text-red-400 text-xs mt-1 font-medium">
-                      ⚠️ WebAuthn requires HTTPS. Passkeys will fail on insecure HTTP connections.
-                    </p>
-                  )}
+
                 </div>
               </div>
             </div>
