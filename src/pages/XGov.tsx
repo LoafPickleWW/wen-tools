@@ -30,6 +30,7 @@ import {
   MdDoneAll,
   MdContentCopy
 } from 'react-icons/md';
+import { getNfDomainsInBulk } from '../utils';
 
 export function XGov() {
   const { activeAddress, transactionSigner } = useWallet();
@@ -48,6 +49,7 @@ export function XGov() {
   const [proposalVoters, setProposalVoters] = useState<Record<number, ProposalVotersResponse>>({});
   const [expandedTab, setExpandedTab] = useState<Record<number, 'brief' | 'voters' | 'pending'>>({});
   const [loadingVoters, setLoadingVoters] = useState<Record<number, boolean>>({});
+  const [nfdMap, setNfdMap] = useState<Record<string, string>>({});
 
   useEffect(() => {
     loadProposals();
@@ -63,6 +65,10 @@ export function XGov() {
   useEffect(() => {
     if (activeAddress) {
       checkRegistration();
+      // Fetch NFD for active address
+      getNfDomainsInBulk([activeAddress]).then(map => {
+        setNfdMap(prev => ({ ...prev, ...map }));
+      });
     } else {
       setIsXGov(null);
     }
@@ -154,6 +160,14 @@ export function XGov() {
       setLoading(true);
       const data = await fetchAllProposals();
       setProposals(data);
+      
+      // Fetch NFDs for proposers
+      const proposers = Array.from(new Set(data.map(p => p.proposer).filter(Boolean)));
+      if (proposers.length > 0) {
+        getNfDomainsInBulk(proposers).then(map => {
+          setNfdMap(prev => ({ ...prev, ...map }));
+        });
+      }
     } catch {
       toast.error("Failed to load proposals");
     } finally {
@@ -184,6 +198,21 @@ export function XGov() {
       setLoadingVoters(prev => ({ ...prev, [id]: true }));
       const voters = await fetchProposalVoters(id);
       setProposalVoters(prev => ({ ...prev, [id]: voters }));
+      
+      // Fetch NFDs for voters and assigned voters
+      const allAddresses = Array.from(new Set([
+        ...voters.voters.map(v => v.address),
+        ...voters.assignedVoters
+      ]));
+      
+      if (allAddresses.length > 0) {
+        const missing = allAddresses.filter(addr => !nfdMap[addr]);
+        if (missing.length > 0) {
+          getNfDomainsInBulk(missing).then(map => {
+            setNfdMap(prev => ({ ...prev, ...map }));
+          });
+        }
+      }
     } catch (e) {
       console.error("Failed to load voters", e);
     } finally {
@@ -405,7 +434,9 @@ export function XGov() {
           {activeAddress && isXGov === true && (
             <div className="absolute top-0 right-0 hidden lg:flex items-center gap-2 bg-green-500/10 border border-green-500/20 px-4 py-2 rounded-full">
               <MdVerified className="text-green-400" />
-              <span className="text-green-400 text-xs font-bold uppercase tracking-widest">Verified xGov</span>
+              <span className="text-green-400 text-xs font-bold uppercase tracking-widest">
+                {nfdMap[activeAddress] || "Verified xGov"}
+              </span>
             </div>
           )}
         </header>
@@ -532,7 +563,7 @@ export function XGov() {
                                 rel="noreferrer"
                                 className="text-amber-400 hover:text-amber-300 transition-colors font-mono text-xs flex items-center gap-1 group/link"
                               >
-                                {p.proposer.slice(0, 6)}...{p.proposer.slice(-6)}
+                                {nfdMap[p.proposer] || `${p.proposer.slice(0, 6)}...${p.proposer.slice(-6)}`}
                                 <MdLaunch size={12} className="opacity-0 group-hover/link:opacity-100 transition-all" />
                               </a>
                             ) : (
@@ -669,7 +700,9 @@ export function XGov() {
                                       }`}>
                                         <MdVerified size={14} />
                                       </div>
-                                      <span className="text-xs font-mono text-gray-400">{v.address.slice(0, 8)}...{v.address.slice(-8)}</span>
+                                      <span className="text-xs font-mono text-gray-400">
+                                        {nfdMap[v.address] || `${v.address.slice(0, 8)}...${v.address.slice(-8)}`}
+                                      </span>
                                     </div>
                                     <div className={`text-[9px] font-black tracking-widest uppercase px-2 py-0.5 rounded ${
                                       v.choice === 'REJECT' ? 'bg-red-500/20 text-red-400' : 
@@ -724,7 +757,9 @@ export function XGov() {
                                         <div className="bg-orange-500/10 p-2 rounded-lg text-orange-400">
                                           <MdRadioButtonUnchecked size={14} />
                                         </div>
-                                        <span className="text-xs font-mono text-gray-400">{addr.slice(0, 8)}...{addr.slice(-8)}</span>
+                                        <span className="text-xs font-mono text-gray-400">
+                                          {nfdMap[addr] || `${addr.slice(0, 8)}...${addr.slice(-8)}`}
+                                        </span>
                                       </div>
                                     ))
                                 ) : (

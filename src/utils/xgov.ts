@@ -18,6 +18,7 @@ export interface XGovProposal {
   totalRejections: number;
   totalBoycotts: number;
   voterCount: number;
+  nfd?: string;
   parsedDescription?: {
     description?: string;
     team?: string;
@@ -285,6 +286,7 @@ export interface XGovVoter {
   address: string;
   power: number;
   choice?: "APPROVE" | "REJECT" | "ABSTAIN" | "BOYCOTT" | "SPLIT";
+  nfd?: string;
 }
 
 export interface ProposalVotersResponse {
