@@ -112,7 +112,7 @@ export function P2PChat() {
           const isValid = algosdk.verifyBytes(
             dataToVerify, 
             signedTxn.sig as any, 
-            txn.from.publicKey as any
+            algosdk.encodeAddress(txn.from.publicKey)
           );
           
           if (isValid) {
