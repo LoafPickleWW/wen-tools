@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useWallet } from "@txnlab/use-wallet-react";
 import algosdk from "algosdk";
 import { Peer, type DataConnection } from "peerjs";
+import nacl from "tweetnacl";
 import { toast } from "react-toastify";
 
 /* 
@@ -96,27 +97,33 @@ export function P2PChat() {
       if (data.type === "handshake") {
         try {
           const { txnB64, sigB64, nonce } = data;
-          const signedTxn = algosdk.decodeSignedTransaction(Buffer.from(sigB64, 'base64'));
           const unsignedBytes = Buffer.from(txnB64, 'base64');
+          const signedObj: any = algosdk.decodeObj(Buffer.from(sigB64, 'base64'));
           
-          // Re-hydrate the transaction and ensure its type is set for bytesToSign()
-          const txn = algosdk.decodeUnsignedTransaction(unsignedBytes);
-          (txn as any).type = "pay"; 
+          if (!signedObj.sig) throw new Error("No signature found");
 
+          // Re-hydrate only for note/sender extraction
+          const txn = algosdk.decodeUnsignedTransaction(unsignedBytes);
+          
           // Verify Note matches our nonce
           const noteStr = new TextDecoder().decode(txn.note);
           if (!noteStr.includes(nonce)) {
             throw new Error("Invalid nonce in handshake");
           }
 
-          const msgBytes = txn.bytesToSign();
-          const signature = signedTxn.sig!;
-          const address = algosdk.encodeAddress(txn.from.publicKey);
+          // Verify signature using EXACT raw bytes + "TX" prefix
+          const txPrefix = new Uint8Array([84, 88]); // "TX"
+          const msgBytes = new Uint8Array(txPrefix.length + unsignedBytes.length);
+          msgBytes.set(txPrefix);
+          msgBytes.set(unsignedBytes, txPrefix.length);
 
-          const isValid = algosdk.verifyBytes(msgBytes, signature, address);
+          const publicKey = txn.from.publicKey;
+          const signature = signedObj.sig;
+
+          const isValid = nacl.sign.detached.verify(msgBytes, signature, publicKey);
           
           if (isValid) {
-            setPeerAddress(algosdk.encodeAddress(txn.from.publicKey));
+            setPeerAddress(algosdk.encodeAddress(publicKey));
             setPhase("chat");
             setIsConnected(true);
             setConnectionStatus("Connected");
