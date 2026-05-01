@@ -108,12 +108,15 @@ export function P2PChat() {
 
           // Verify signature locally using the raw unsigned bytes
           // Transaction signatures are always over "TX" + msgpack(txn)
-          const dataToVerify = Buffer.concat([Buffer.from("TX"), unsignedBytes]);
-          const isValid = algosdk.verifyBytes(
-            dataToVerify, 
-            signedTxn.sig as any, 
-            algosdk.encodeAddress(txn.from.publicKey)
-          );
+          const txPrefix = new Uint8Array([84, 88]); // "TX"
+          const dataToVerify = new Uint8Array(txPrefix.length + unsignedBytes.length);
+          dataToVerify.set(txPrefix);
+          dataToVerify.set(unsignedBytes, txPrefix.length);
+
+          const publicKey = algosdk.decodeAddress(algosdk.encodeAddress(txn.from.publicKey)).publicKey;
+          const signature = new Uint8Array(signedTxn.sig!);
+
+          const isValid = algosdk.verifyBytes(dataToVerify, signature, algosdk.encodeAddress(publicKey));
           
           if (isValid) {
             setPeerAddress(algosdk.encodeAddress(txn.from.publicKey));
