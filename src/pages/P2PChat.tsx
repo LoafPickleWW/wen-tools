@@ -4,6 +4,7 @@ import algosdk from "algosdk";
 import { Peer, type DataConnection } from "peerjs";
 import nacl from "tweetnacl";
 import { toast } from "react-toastify";
+import QRCode from "qrcode";
 
 /* 
   LEGACY LIQUIDAUTH IMPORTS (Preserved for reference)
@@ -27,6 +28,30 @@ interface ChatMessage {
 }
 
 type Phase = "setup" | "waiting" | "connecting" | "chat";
+
+const PEER_CONFIG = {
+  config: {
+    iceServers: [
+      { urls: "stun:stun.l.google.com:19302" },
+      { urls: "stun:openrelay.metered.ca:80" },
+      {
+        urls: "turn:openrelay.metered.ca:80",
+        username: "openrelayproject",
+        credential: "openrelayproject",
+      },
+      {
+        urls: "turn:openrelay.metered.ca:443",
+        username: "openrelayproject",
+        credential: "openrelayproject",
+      },
+      {
+        urls: "turn:openrelay.metered.ca:443?transport=tcp",
+        username: "openrelayproject",
+        credential: "openrelayproject",
+      },
+    ],
+  },
+};
 
 export function P2PChat() {
   const { activeAddress, algodClient, signTransactions } = useWallet();
@@ -82,18 +107,35 @@ export function P2PChat() {
     window.history.replaceState({}, "", window.location.pathname);
   }, []);
 
-  const handleConnection = useCallback((conn: DataConnection) => {
+  const handleConnection = useCallback((conn: DataConnection, role?: "offerer" | "joiner", nonce?: string) => {
     connRef.current = conn;
     
     conn.on("open", () => {
-      // PeerJS is open, but we wait for handshake for chat phase
-      setConnectionStatus("Verifying identity...");
+      // Start heartbeat
+      if (heartbeatRef.current) clearInterval(heartbeatRef.current);
+      heartbeatRef.current = setInterval(() => {
+        if (connRef.current?.open) {
+          connRef.current.send({ type: "heartbeat" });
+        }
+      }, 15000);
+
+      if (role === "offerer" && nonce) {
+        setConnectionStatus("Sending challenge...");
+        conn.send({ type: "challenge", nonce });
+      } else {
+        setConnectionStatus("Verifying identity...");
+      }
     });
 
     conn.on("data", (data: any) => {
       if (!data) return;
       
       // Handle Handshake
+      if (data.type === "challenge" && role === "joiner") {
+        sendHandshake(conn, data.nonce);
+        return;
+      }
+
       if (data.type === "handshake") {
         try {
           const { txnB64, sigB64, nonce } = data;
@@ -270,7 +312,7 @@ export function P2PChat() {
       setPhase("waiting");
       setConnectionStatus("Initializing PeerJS...");
       
-      const peer = new Peer();
+      const peer = new Peer(PEER_CONFIG);
       peerRef.current = peer;
 
       peer.on("open", async (id) => {
@@ -279,8 +321,7 @@ export function P2PChat() {
         setDeepLinkUrl(webShareUrl);
 
         try {
-          const qr = await import("qrcode");
-          const dataUrl = await qr.toDataURL(webShareUrl, {
+          const dataUrl = await QRCode.toDataURL(webShareUrl, {
             width: 256,
             margin: 2,
             color: { dark: "#f57b14", light: "#010002" },
@@ -292,12 +333,8 @@ export function P2PChat() {
       });
 
       peer.on("connection", (conn) => {
-        // Send challenge nonce
         const nonce = crypto.randomUUID();
-        conn.on("open", () => {
-          conn.send({ type: "challenge", nonce });
-        });
-        handleConnection(conn);
+        handleConnection(conn, "offerer", nonce);
       });
 
       peer.on("error", (err) => {
@@ -330,23 +367,15 @@ export function P2PChat() {
       setPhase("connecting");
       setConnectionStatus("Connecting to peer...");
       
-      const peer = new Peer();
+      const peer = new Peer(PEER_CONFIG);
       peerRef.current = peer;
 
       peer.on("open", () => {
-        const conn = peer.connect(targetSessionId.trim());
-        
-        conn.on("open", () => {
-          setConnectionStatus("Connected. Waiting for challenge...");
+        const conn = peer.connect(targetSessionId.trim(), { 
+          reliable: true,
+          serialization: "json"
         });
-
-        conn.on("data", (data: any) => {
-          if (data.type === "challenge") {
-            sendHandshake(conn, data.nonce);
-          }
-        });
-
-        handleConnection(conn);
+        handleConnection(conn, "joiner");
       });
 
       peer.on("error", (err) => {
@@ -368,13 +397,12 @@ export function P2PChat() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const session = params.get("session");
-    if (session && !hasAutoJoined.current) {
+    if (session && !hasAutoJoined.current && activeAddress) {
       hasAutoJoined.current = true;
       setRemoteRequestId(session);
-      // We do not auto-join here because mobile browsers require direct user 
-      // interaction (a button click) to launch the wallet deep link successfully.
+      joinSession(session);
     }
-  }, [joinSession]);
+  }, [joinSession, activeAddress]);
 
   const sendMessage = useCallback(() => {
     if (!inputText.trim() || !connRef.current || !connRef.current.open) return;
