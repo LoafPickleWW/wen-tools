@@ -14,8 +14,6 @@ import QRCode from "qrcode";
   const LIQUID_SERVER = "https://wen-liquid-auth.onrender.com";
 */
 
-
-
 interface ChatMessage {
   text: string;
   sender: "me" | "peer";
@@ -28,30 +26,6 @@ interface ChatMessage {
 }
 
 type Phase = "setup" | "waiting" | "connecting" | "chat";
-
-const PEER_CONFIG = {
-  config: {
-    iceServers: [
-      { urls: "stun:stun.l.google.com:19302" },
-      { urls: "stun:openrelay.metered.ca:80" },
-      {
-        urls: "turn:openrelay.metered.ca:80",
-        username: "openrelayproject",
-        credential: "openrelayproject",
-      },
-      {
-        urls: "turn:openrelay.metered.ca:443",
-        username: "openrelayproject",
-        credential: "openrelayproject",
-      },
-      {
-        urls: "turn:openrelay.metered.ca:443?transport=tcp",
-        username: "openrelayproject",
-        credential: "openrelayproject",
-      },
-    ],
-  },
-};
 
 export function P2PChat() {
   const { activeAddress, algodClient, signTransactions } = useWallet();
@@ -71,8 +45,6 @@ export function P2PChat() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const heartbeatRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const fileChunksRef = useRef<Map<string, Uint8Array[]>>(new Map());
-
-
 
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -107,35 +79,78 @@ export function P2PChat() {
     window.history.replaceState({}, "", window.location.pathname);
   }, []);
 
-  const handleConnection = useCallback((conn: DataConnection, role?: "offerer" | "joiner", nonce?: string) => {
+  const sendHandshake = useCallback(async (conn: DataConnection, nonce: string) => {
+    if (!activeAddress || !signTransactions) {
+      toast.error("Connect wallet to handshake");
+      return;
+    }
+    
+    setConnectionStatus("Signing handshake...");
+    try {
+      const suggestedParams = await algodClient.getTransactionParams().do();
+      const noteStr = `Wen Tools P2P Auth:${nonce}:${Date.now()}`;
+      const note = new TextEncoder().encode(noteStr);
+      
+      const txn = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
+        from: activeAddress,
+        to: activeAddress,
+        amount: 0,
+        note,
+        suggestedParams: { ...suggestedParams, fee: 1000, flatFee: true },
+      });
+
+      const encodedTxn = algosdk.encodeUnsignedTransaction(txn);
+      const signedResult = await signTransactions([encodedTxn]);
+      
+      if (!signedResult || !signedResult[0]) throw new Error("Cancelled");
+      
+      conn.send({
+        type: "handshake",
+        txnB64: Buffer.from(encodedTxn).toString('base64'),
+        sigB64: Buffer.from(signedResult[0]).toString('base64'),
+        nonce
+      });
+    } catch (err: any) {
+      console.error("Handshake sign failed:", err);
+      toast.error("Handshake failed");
+      resetConnection();
+    }
+  }, [activeAddress, signTransactions, algodClient, resetConnection]);
+
+  const startHeartbeat = useCallback(() => {
+    if (heartbeatRef.current) clearInterval(heartbeatRef.current);
+    heartbeatRef.current = setInterval(() => {
+      if (connRef.current?.open) {
+        connRef.current.send({ type: "heartbeat" });
+      }
+    }, 15_000);
+  }, []);
+
+  const handleConnection = useCallback((conn: DataConnection) => {
     connRef.current = conn;
+    const role = (conn as any)._role as "offerer" | "joiner";
     
     conn.on("open", () => {
-      // Start heartbeat
-      if (heartbeatRef.current) clearInterval(heartbeatRef.current);
-      heartbeatRef.current = setInterval(() => {
-        if (connRef.current?.open) {
-          connRef.current.send({ type: "heartbeat" });
-        }
-      }, 15000);
-
-      if (role === "offerer" && nonce) {
-        setConnectionStatus("Sending challenge...");
+      if (role === "offerer") {
+        // Offerer sends the challenge nonce
+        const nonce = (conn as any)._challengeNonce as string;
         conn.send({ type: "challenge", nonce });
+        setConnectionStatus("Challenge sent. Waiting for handshake...");
       } else {
-        setConnectionStatus("Verifying identity...");
+        setConnectionStatus("Connected. Waiting for challenge...");
       }
     });
 
     conn.on("data", (data: any) => {
       if (!data) return;
-      
-      // Handle Handshake
+
+      // ── Joiner receives challenge and sends handshake ──
       if (data.type === "challenge" && role === "joiner") {
         sendHandshake(conn, data.nonce);
         return;
       }
-
+      
+      // ── Offerer receives and verifies handshake ──
       if (data.type === "handshake") {
         try {
           const { txnB64, sigB64, nonce } = data;
@@ -144,16 +159,13 @@ export function P2PChat() {
           
           if (!signedObj.sig) throw new Error("No signature found");
 
-          // Re-hydrate only for note/sender extraction
           const txn = algosdk.decodeUnsignedTransaction(unsignedBytes);
           
-          // Verify Note matches our nonce
           const noteStr = new TextDecoder().decode(txn.note);
           if (!noteStr.includes(nonce)) {
             throw new Error("Invalid nonce in handshake");
           }
 
-          // Verify signature using EXACT raw bytes + "TX" prefix
           const txPrefix = new Uint8Array([84, 88]); // "TX"
           const msgBytes = new Uint8Array(txPrefix.length + unsignedBytes.length);
           msgBytes.set(txPrefix);
@@ -171,6 +183,7 @@ export function P2PChat() {
             setConnectionStatus("Connected");
             conn.send({ type: "handshake-success" });
             toast.success("Identity verified! Connection established.");
+            startHeartbeat();
           } else {
             throw new Error("Invalid signature");
           }
@@ -187,6 +200,7 @@ export function P2PChat() {
         setIsConnected(true);
         setConnectionStatus("Connected");
         toast.success("P2P connection established!");
+        startHeartbeat();
         return;
       }
 
@@ -261,46 +275,7 @@ export function P2PChat() {
       toast.error("Connection error");
       resetConnection();
     });
-  }, [resetConnection]);
-
-
-  const sendHandshake = useCallback(async (conn: DataConnection, nonce: string) => {
-    if (!activeAddress || !signTransactions) {
-      toast.error("Connect wallet to handshake");
-      return;
-    }
-    
-    setConnectionStatus("Signing handshake...");
-    try {
-      const suggestedParams = await algodClient.getTransactionParams().do();
-      const noteStr = `Wen Tools P2P Auth:${nonce}:${Date.now()}`;
-      const note = new TextEncoder().encode(noteStr);
-      
-      const txn = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
-        from: activeAddress,
-        to: activeAddress, // Send to self (off-chain proof)
-        amount: 0,
-        note,
-        suggestedParams: { ...suggestedParams, fee: 1000, flatFee: true },
-      });
-
-      const encodedTxn = algosdk.encodeUnsignedTransaction(txn);
-      const signedResult = await signTransactions([encodedTxn]);
-      
-      if (!signedResult || !signedResult[0]) throw new Error("Cancelled");
-      
-      conn.send({
-        type: "handshake",
-        txnB64: Buffer.from(encodedTxn).toString('base64'),
-        sigB64: Buffer.from(signedResult[0]).toString('base64'),
-        nonce
-      });
-    } catch (err: any) {
-      console.error("Handshake sign failed:", err);
-      toast.error("Handshake failed");
-      resetConnection();
-    }
-  }, [activeAddress, signTransactions, algodClient, resetConnection]);
+  }, [resetConnection, sendHandshake, startHeartbeat]);
 
 
   const startOfferSession = useCallback(async () => {
@@ -312,7 +287,29 @@ export function P2PChat() {
       setPhase("waiting");
       setConnectionStatus("Initializing PeerJS...");
       
-      const peer = new Peer(PEER_CONFIG);
+      const peer = new Peer({
+        config: {
+          iceServers: [
+            { urls: "stun:stun.l.google.com:19302" },
+            { urls: "stun:stun1.l.google.com:19302" },
+            {
+              urls: "turn:a.relay.metered.ca:80",
+              username: import.meta.env.VITE_TURN_USERNAME ?? "",
+              credential: import.meta.env.VITE_TURN_CREDENTIAL ?? "",
+            },
+            {
+              urls: "turn:a.relay.metered.ca:443",
+              username: import.meta.env.VITE_TURN_USERNAME ?? "",
+              credential: import.meta.env.VITE_TURN_CREDENTIAL ?? "",
+            },
+            {
+              urls: "turn:a.relay.metered.ca:443?transport=tcp",
+              username: import.meta.env.VITE_TURN_USERNAME ?? "",
+              credential: import.meta.env.VITE_TURN_CREDENTIAL ?? "",
+            },
+          ],
+        },
+      });
       peerRef.current = peer;
 
       peer.on("open", async (id) => {
@@ -333,8 +330,10 @@ export function P2PChat() {
       });
 
       peer.on("connection", (conn) => {
-        const nonce = crypto.randomUUID();
-        handleConnection(conn, "offerer", nonce);
+        // Store the nonce on the connection so handleConnection can use it
+        (conn as any)._challengeNonce = crypto.randomUUID();
+        (conn as any)._role = "offerer";
+        handleConnection(conn);
       });
 
       peer.on("error", (err) => {
@@ -367,15 +366,38 @@ export function P2PChat() {
       setPhase("connecting");
       setConnectionStatus("Connecting to peer...");
       
-      const peer = new Peer(PEER_CONFIG);
+      const peer = new Peer({
+        config: {
+          iceServers: [
+            { urls: "stun:stun.l.google.com:19302" },
+            { urls: "stun:stun1.l.google.com:19302" },
+            {
+              urls: "turn:a.relay.metered.ca:80",
+              username: import.meta.env.VITE_TURN_USERNAME ?? "",
+              credential: import.meta.env.VITE_TURN_CREDENTIAL ?? "",
+            },
+            {
+              urls: "turn:a.relay.metered.ca:443",
+              username: import.meta.env.VITE_TURN_USERNAME ?? "",
+              credential: import.meta.env.VITE_TURN_CREDENTIAL ?? "",
+            },
+            {
+              urls: "turn:a.relay.metered.ca:443?transport=tcp",
+              username: import.meta.env.VITE_TURN_USERNAME ?? "",
+              credential: import.meta.env.VITE_TURN_CREDENTIAL ?? "",
+            },
+          ],
+        },
+      });
       peerRef.current = peer;
 
       peer.on("open", () => {
-        const conn = peer.connect(targetSessionId.trim(), { 
+        const conn = peer.connect(targetSessionId.trim(), {
           reliable: true,
-          serialization: "json"
+          serialization: "json",
         });
-        handleConnection(conn, "joiner");
+        (conn as any)._role = "joiner";
+        handleConnection(conn);
       });
 
       peer.on("error", (err) => {
@@ -389,11 +411,11 @@ export function P2PChat() {
       toast.error("Failed to join session");
       resetConnection();
     }
-  }, [remoteRequestId, activeAddress, handleConnection, resetConnection, sendHandshake]);
+  }, [remoteRequestId, activeAddress, handleConnection, resetConnection]);
 
   const hasAutoJoined = useRef(false);
 
-  // Auto-read session param from URL
+  // Auto-read session param from URL & auto-join
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const session = params.get("session");

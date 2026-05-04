@@ -95,6 +95,9 @@ importers:
       tweetnacl:
         specifier: ^1.0.3
         version: 1.0.3
+      tweetnacl-util:
+        specifier: ^0.15.1
+        version: 0.15.1
       uuid:
         specifier: ^14.0.0
         version: 14.0.0
@@ -2507,6 +2510,9 @@ packages:
 
   tty-browserify@0.0.1:
     resolution: {integrity: sha512-C3TaO7K81YvjCgQH9Q1S3R3P3BtN3RIM8n+OvX4il1K1zgE8ZhI0op7kClgkxtutIE8hQrcrHBXvIheqKUUCxw==}
+
+  tweetnacl-util@0.15.1:
+    resolution: {integrity: sha512-RKJBIj8lySrShN4w6i/BonWp2Z/uxwC3h4y7xsRrpP59ZboCd0GpEVsOnMDYLMmKBpYhb5TgHzZXy7wTfYFBRw==}
 
   tweetnacl@1.0.3:
     resolution: {integrity: sha512-6rt+RN7aOi1nGMyC4Xa5DdYiukl2UWCbcJft7YhxReBGQD7OAM8Pbxw6YMo4r2diNEA8FEmu32YOn9rhaiE5yw==}
@@ -5159,6 +5165,8 @@ snapshots:
   tslib@1.14.1: {}
 
   tty-browserify@0.0.1: {}
+
+  tweetnacl-util@0.15.1: {}
 
   tweetnacl@1.0.3: {}
 
