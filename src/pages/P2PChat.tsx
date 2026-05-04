@@ -199,7 +199,7 @@ export function P2PChat() {
 
           // Get the authorized signer's public key.
           // If the account is rekeyed, the signature is valid for the 'sgnr' address.
-          const signerKey = signedTxn.sgnr ? signedTxn.sgnr.publicKey : txn.from.publicKey;
+          const signerKey = signedTxn.sgnr ? signedTxn.sgnr : txn.from.publicKey;
           const verifiedAddr = algosdk.encodeAddress(signerKey);
           
           console.log("[P2P Debug] sender address (from):", senderAddr);
