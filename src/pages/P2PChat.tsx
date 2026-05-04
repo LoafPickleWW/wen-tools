@@ -419,7 +419,6 @@ export function P2PChat() {
       peer.on("open", () => {
         const conn = peer.connect(targetSessionId.trim(), {
           reliable: true,
-          serialization: "json",
         });
         (conn as any)._role = "joiner";
         handleConnection(conn);
@@ -494,7 +493,7 @@ export function P2PChat() {
       connRef.current.send({
           type: "file-chunk",
           fileId,
-          data: Array.from(chunk),
+          data: chunk, // Send raw Uint8Array for performance
       });
       await new Promise((r) => setTimeout(r, 10));
     }
@@ -604,8 +603,22 @@ export function P2PChat() {
                   <p className="text-gray-500 text-xs">
                     🔑 Authenticates via Off-Chain Wallet Signature
                   </p>
-
                 </div>
+              </div>
+
+              {/* About Section */}
+              <div className="p-6 rounded-xl bg-[#111] border border-[#222]">
+                <h3 className="text-sm font-semibold text-gray-300 mb-2 flex items-center gap-2">
+                  <span>ℹ️</span> About this feature
+                </h3>
+                <p className="text-gray-500 text-xs leading-relaxed mb-2">
+                  This chat uses <strong>Direct Peer-to-Peer (WebRTC)</strong> technology. Unlike traditional apps, your messages never touch a central server.
+                </p>
+                <ul className="text-gray-500 text-xs list-disc list-inside space-y-1">
+                  <li><strong>Verified Identity:</strong> Both peers must sign an off-chain transaction to prove they own their Algorand wallet address before the chat starts.</li>
+                  <li><strong>E2E Encrypted:</strong> Communication is secured via a reliable WebRTC data channel.</li>
+                  <li><strong>Zero Cost:</strong> No server infrastructure means this tool is (and always will be) free to use.</li>
+                </ul>
               </div>
             </div>
           </div>

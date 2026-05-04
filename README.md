@@ -2,7 +2,23 @@
 
 No-Code Front End Tooling for Bulk Processes on Algorand. These tools were designed with the aim of onboarding creators, collectors and developers.
 
-## Getting Started
+- Simple Mint
+- Really Simple Mint
+- P2P Encrypted Chat (E2E, Wallet-Verified)
+- And more...
+
+## 🔐 P2P Chat Setup (Vercel / Production)
+
+If you are forking this repo and want the **P2P Chat** to work reliably across different networks (WiFi vs Mobile Data), you should set up a free STUN/TURN server account at [Metered.ca](https://www.metered.ca/stun-turn).
+
+Once you have your credentials, add them to your **Vercel Project Settings > Environment Variables**:
+
+1.  `VITE_TURN_USERNAME`: Your Metered.ca Username
+2.  `VITE_TURN_CREDENTIAL`: Your Metered.ca Password
+
+The application will automatically detect these and enable the relay service for peers behind strict firewalls. If these variables are missing, the chat will still work over local networks using Google's public STUN servers.
+
+## 🚀 Getting Started
 
 ### Prerequisites
 
