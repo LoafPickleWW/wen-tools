@@ -347,7 +347,10 @@ export function P2PChat() {
 
       peer.on("open", async (id) => {
         setRequestId(id);
-        const webShareUrl = `${window.location.origin}/p2p-chat?session=${id}`;
+        
+        // Use the current URL minus existing query params to ensure the path is correct
+        const baseUrl = window.location.href.split("?")[0];
+        const webShareUrl = `${baseUrl}?session=${id}`;
         setDeepLinkUrl(webShareUrl);
 
         try {
@@ -439,16 +442,19 @@ export function P2PChat() {
 
   const hasAutoJoined = useRef(false);
 
-  // Auto-read session param from URL & auto-join
+  // Auto-read session param from URL
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const session = params.get("session");
-    if (session && !hasAutoJoined.current && activeAddress) {
-      hasAutoJoined.current = true;
+    if (session && !remoteRequestId) {
       setRemoteRequestId(session);
-      joinSession(session);
+      // If already connected, trigger join immediately
+      if (activeAddress && !hasAutoJoined.current && phase === "setup") {
+        hasAutoJoined.current = true;
+        joinSession(session);
+      }
     }
-  }, [joinSession, activeAddress]);
+  }, [joinSession, activeAddress, remoteRequestId, phase]);
 
   const sendMessage = useCallback(() => {
     if (!inputText.trim() || !connRef.current || !connRef.current.open) return;
@@ -576,29 +582,38 @@ export function P2PChat() {
               {/* Join Session */}
               <div className="p-6 rounded-xl bg-gradient-to-br from-[#1e1e2e] to-[#12121a] border border-[#2a2a3a]">
                 <h2 className="text-xl font-semibold text-white mb-2">Join a Session</h2>
-                <p className="text-gray-400 text-sm mb-4">
-                  Enter the session ID or paste the shared link
-                </p>
-                <div className="flex flex-col sm:flex-row gap-3">
-                  <input
-                    type="text"
-                    value={remoteRequestId}
-                    onChange={(e) => setRemoteRequestId(e.target.value)}
-                    placeholder="Session ID..."
-                    className="flex-1 py-3 px-4 rounded-xl bg-[#242424] border border-[#333]
-                      text-white placeholder-gray-500 outline-none focus:border-primary-orange
-                      transition-colors"
-                  />
-                  <button
-                    onClick={joinSession}
-                    className="py-3 px-6 rounded-xl font-semibold text-white
-                      bg-gradient-to-r from-[#646cff] to-[#535bf2]
-                      hover:from-[#535bf2] hover:to-[#646cff]
-                      transition-all duration-300 shadow-lg hover:shadow-[#646cff]/30"
-                  >
-                    Join
-                  </button>
-                </div>
+                {remoteRequestId && !activeAddress ? (
+                  <div className="p-4 rounded-lg bg-primary-orange/10 border border-primary-orange/30 text-center">
+                    <p className="text-primary-orange text-sm font-medium mb-1">Session ID Captured!</p>
+                    <p className="text-gray-400 text-xs">Please connect your wallet above to join the chat.</p>
+                  </div>
+                ) : (
+                  <>
+                    <p className="text-gray-400 text-sm mb-4">
+                      Enter the session ID or paste the shared link
+                    </p>
+                    <div className="flex flex-col sm:flex-row gap-3">
+                      <input
+                        type="text"
+                        value={remoteRequestId}
+                        onChange={(e) => setRemoteRequestId(e.target.value)}
+                        placeholder="Session ID..."
+                        className="flex-1 py-3 px-4 rounded-xl bg-[#242424] border border-[#333]
+                          text-white placeholder-gray-500 outline-none focus:border-primary-orange
+                          transition-colors"
+                      />
+                      <button
+                        onClick={() => joinSession()}
+                        className="py-3 px-6 rounded-xl font-semibold text-white
+                          bg-gradient-to-r from-[#646cff] to-[#535bf2]
+                          hover:from-[#535bf2] hover:to-[#646cff]
+                          transition-all duration-300 shadow-lg hover:shadow-[#646cff]/30"
+                      >
+                        Join
+                      </button>
+                    </div>
+                  </>
+                )}
                 <div className="mt-3">
                   <p className="text-gray-500 text-xs">
                     🔑 Authenticates via Off-Chain Wallet Signature
