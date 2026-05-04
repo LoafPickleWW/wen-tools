@@ -41,6 +41,7 @@ interface ChatMessage {
   fileSize?: number;
   fileType?: string;
   fileId?: string;
+  fileUrl?: string;
 }
 
 type Phase = "setup" | "waiting" | "connecting" | "chat";
@@ -283,18 +284,16 @@ export function P2PChat() {
           setMessages((prev) => [
             ...prev,
             {
-              text: `📥 File ready: ${data.fileName}`,
+              text: `📥 File received: ${data.fileName}`,
               sender: "peer",
               timestamp: Date.now(),
               type: "file-complete",
               fileName: data.fileName,
               fileId: data.fileId,
+              fileType: data.fileType,
+              fileUrl: url,
             },
           ]);
-          const a = document.createElement("a");
-          a.href = url;
-          a.download = data.fileName;
-          a.click();
           fileChunksRef.current.delete(data.fileId);
         }
         return;
@@ -481,21 +480,25 @@ export function P2PChat() {
         fileType: file.type,
     });
 
+    const buffer = await file.arrayBuffer();
+    const data = new Uint8Array(buffer);
+    const url = URL.createObjectURL(new Blob([data], { type: file.type }));
+
     setMessages((prev) => [
       ...prev,
       {
-        text: `📎 Sending file: ${file.name} (${formatFileSize(file.size)})`,
+        text: `📎 Sent file: ${file.name}`,
         sender: "me",
         timestamp: Date.now(),
-        type: "file-meta",
+        type: "file-complete",
         fileName: file.name,
         fileSize: file.size,
+        fileType: file.type,
         fileId,
+        fileUrl: url,
       },
     ]);
 
-    const buffer = await file.arrayBuffer();
-    const data = new Uint8Array(buffer);
     for (let offset = 0; offset < data.length; offset += CHUNK_SIZE) {
       const chunk = data.slice(offset, offset + CHUNK_SIZE);
       connRef.current.send({
@@ -781,16 +784,40 @@ export function P2PChat() {
               {messages.map((msg, i) => (
                 <div
                   key={i}
-                  className={`flex ${msg.sender === "me" ? "justify-end" : "justify-start"}`}
+                  className={`flex w-full ${msg.sender === "me" ? "justify-end" : "justify-start"}`}
                 >
                   <div
-                    className={`max-w-[75%] px-4 py-2.5 rounded-2xl text-sm break-words ${
+                    className={`max-w-[85%] sm:max-w-[75%] px-4 py-2.5 rounded-2xl text-sm whitespace-pre-wrap break-words overflow-hidden ${
                       msg.sender === "me"
                         ? "bg-gradient-to-r from-primary-orange to-[#e06b10] text-white rounded-br-md"
                         : "bg-[#2a2a3a] text-gray-100 rounded-bl-md"
-                    } ${msg.type !== "text" ? "italic opacity-80" : ""}`}
+                    } ${msg.type === "file-meta" ? "italic opacity-80" : ""}`}
                   >
+                    {/* Media Preview Logic */}
+                    {msg.type === "file-complete" && msg.fileUrl && (
+                      <div className="mb-2 rounded-lg overflow-hidden border border-white/10 bg-black/20">
+                        {msg.fileType?.startsWith("image/") ? (
+                          <img src={msg.fileUrl} alt={msg.fileName} className="max-w-full h-auto block" />
+                        ) : msg.fileType?.startsWith("video/") ? (
+                          <video src={msg.fileUrl} controls className="max-w-full block" />
+                        ) : (
+                          <div className="p-4 text-center">
+                            <span className="text-3xl block mb-2">📄</span>
+                            <span className="text-xs opacity-70 block truncate">{msg.fileName}</span>
+                          </div>
+                        )}
+                        <a
+                          href={msg.fileUrl}
+                          download={msg.fileName}
+                          className="flex items-center justify-center gap-2 py-2 px-4 bg-white/10 hover:bg-white/20 transition-colors text-xs font-medium border-t border-white/5"
+                        >
+                          📥 Download
+                        </a>
+                      </div>
+                    )}
+                    
                     {msg.text}
+                    
                     <div className={`text-[10px] mt-1 ${msg.sender === "me" ? "text-white/50" : "text-gray-500"}`}>
                       {new Date(msg.timestamp).toLocaleTimeString()}
                     </div>
