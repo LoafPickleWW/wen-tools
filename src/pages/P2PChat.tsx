@@ -179,27 +179,30 @@ export function P2PChat() {
           const { sigB64, nonce } = data;
           const sigBytes = base64ToUint8(sigB64);
           
-          // Decode the signed transaction bytes
+          // Decode the signed transaction envelope
           const stxn = algosdk.decodeSignedTransaction(sigBytes);
           if (!stxn.sig) throw new Error("No signature found");
 
-          // Verify the nonce in the note
-          const noteStr = new TextDecoder().decode(stxn.txn.note);
+          // Extract the transaction and verify the nonce in the note
+          const txn = stxn.txn;
+          const noteStr = new TextDecoder().decode(txn.note);
           if (!noteStr.includes(nonce)) {
             throw new Error("Invalid nonce in handshake");
           }
 
-          // Re-encode the transaction part to get the exact bytes to verify
-          const unsignedBytes = algosdk.encodeUnsignedTransaction(stxn.txn);
-          const txPrefix = new Uint8Array([84, 88]); // "TX"
+          // Use algosdk's canonical encoding to get the exact bytes that were signed
+          const unsignedBytes = algosdk.encodeUnsignedTransaction(txn);
+          const txPrefix = new TextEncoder().encode("TX");
           const msgBytes = new Uint8Array(txPrefix.length + unsignedBytes.length);
           msgBytes.set(txPrefix);
           msgBytes.set(unsignedBytes, txPrefix.length);
 
-          const isValid = nacl.sign.detached.verify(msgBytes, stxn.sig, stxn.txn.from.publicKey);
+          const publicKey = txn.from.publicKey;
+          const signature = new Uint8Array(stxn.sig);
+          const isValid = nacl.sign.detached.verify(msgBytes, signature, publicKey);
           
           if (isValid) {
-            setPeerAddress(algosdk.encodeAddress(stxn.txn.from.publicKey));
+            setPeerAddress(algosdk.encodeAddress(publicKey));
             setPhase("chat");
             setIsConnected(true);
             setConnectionStatus("Connected");
