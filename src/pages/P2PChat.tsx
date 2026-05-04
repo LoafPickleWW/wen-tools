@@ -57,6 +57,7 @@ export function P2PChat() {
   const [peerAddress, setPeerAddress] = useState("");
   const [isConnected, setIsConnected] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState("");
+  const [pendingNonce, setPendingNonce] = useState("");
 
   const peerRef = useRef<Peer | null>(null);
   const connRef = useRef<DataConnection | null>(null);
@@ -162,9 +163,10 @@ export function P2PChat() {
     conn.on("data", (data: any) => {
       if (!data) return;
 
-      // ── Joiner receives challenge and sends handshake ──
+      // ── Joiner receives challenge and waits for manual verification ──
       if (data.type === "challenge" && role === "joiner") {
-        sendHandshake(conn, data.nonce);
+        setPendingNonce(data.nonce);
+        setConnectionStatus("Identity verification required");
         return;
       }
       
@@ -698,12 +700,41 @@ export function P2PChat() {
         {/* ─── CONNECTING PHASE ─── */}
         {phase === "connecting" && (
           <div className="bg-[#1a1a1a] rounded-2xl p-8 border border-[#333] shadow-2xl text-center">
-            <div className="animate-spin w-12 h-12 border-4 border-[#333] border-t-primary-orange rounded-full mx-auto mb-4" />
-            <p className="text-white font-medium">{connectionStatus}</p>
-            <p className="text-gray-500 text-sm mt-2">This may take a moment...</p>
+            {pendingNonce ? (
+              <>
+                <div className="w-16 h-16 bg-primary-orange/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <span className="text-2xl">🔐</span>
+                </div>
+                <h3 className="text-xl font-bold text-white mb-2">Verify Your Identity</h3>
+                <p className="text-gray-400 text-sm mb-6">
+                  To ensure a secure connection, please sign a zero-cost transaction to verify your wallet ownership.
+                </p>
+                <button
+                  onClick={() => {
+                    if (connRef.current && pendingNonce) {
+                      sendHandshake(connRef.current, pendingNonce);
+                      setPendingNonce("");
+                    }
+                  }}
+                  className="w-full py-4 px-6 rounded-xl font-bold text-white
+                    bg-gradient-to-r from-primary-orange to-[#e06b10]
+                    hover:from-[#e06b10] hover:to-primary-orange
+                    transition-all duration-300 shadow-lg hover:shadow-primary-orange/30
+                    flex items-center justify-center gap-2"
+                >
+                  <span>Verify & Join Chat</span>
+                </button>
+              </>
+            ) : (
+              <>
+                <div className="animate-spin w-12 h-12 border-4 border-[#333] border-t-primary-orange rounded-full mx-auto mb-4" />
+                <p className="text-white font-medium">{connectionStatus}</p>
+                <p className="text-gray-500 text-sm mt-2">This may take a moment...</p>
+              </>
+            )}
             <button
               onClick={resetConnection}
-              className="mt-4 text-red-400 hover:text-red-300 text-sm transition-colors"
+              className="mt-6 text-red-400 hover:text-red-300 text-sm transition-colors"
             >
               Cancel
             </button>
