@@ -287,28 +287,24 @@ export function P2PChat() {
       setPhase("waiting");
       setConnectionStatus("Initializing PeerJS...");
       
+      const iceServers: any[] = [
+        { urls: "stun:stun.l.google.com:19302" },
+        { urls: "stun:stun1.l.google.com:19302" },
+      ];
+
+      const turnUser = import.meta.env.VITE_TURN_USERNAME;
+      const turnPass = import.meta.env.VITE_TURN_CREDENTIAL;
+
+      if (turnUser && turnPass) {
+        iceServers.push(
+          { urls: "turn:a.relay.metered.ca:80", username: turnUser, credential: turnPass },
+          { urls: "turn:a.relay.metered.ca:443", username: turnUser, credential: turnPass },
+          { urls: "turn:a.relay.metered.ca:443?transport=tcp", username: turnUser, credential: turnPass }
+        );
+      }
+
       const peer = new Peer({
-        config: {
-          iceServers: [
-            { urls: "stun:stun.l.google.com:19302" },
-            { urls: "stun:stun1.l.google.com:19302" },
-            {
-              urls: "turn:a.relay.metered.ca:80",
-              username: import.meta.env.VITE_TURN_USERNAME ?? "",
-              credential: import.meta.env.VITE_TURN_CREDENTIAL ?? "",
-            },
-            {
-              urls: "turn:a.relay.metered.ca:443",
-              username: import.meta.env.VITE_TURN_USERNAME ?? "",
-              credential: import.meta.env.VITE_TURN_CREDENTIAL ?? "",
-            },
-            {
-              urls: "turn:a.relay.metered.ca:443?transport=tcp",
-              username: import.meta.env.VITE_TURN_USERNAME ?? "",
-              credential: import.meta.env.VITE_TURN_CREDENTIAL ?? "",
-            },
-          ],
-        },
+        config: { iceServers },
       });
       peerRef.current = peer;
 
@@ -366,28 +362,24 @@ export function P2PChat() {
       setPhase("connecting");
       setConnectionStatus("Connecting to peer...");
       
+      const iceServers: any[] = [
+        { urls: "stun:stun.l.google.com:19302" },
+        { urls: "stun:stun1.l.google.com:19302" },
+      ];
+
+      const turnUser = import.meta.env.VITE_TURN_USERNAME;
+      const turnPass = import.meta.env.VITE_TURN_CREDENTIAL;
+
+      if (turnUser && turnPass) {
+        iceServers.push(
+          { urls: "turn:a.relay.metered.ca:80", username: turnUser, credential: turnPass },
+          { urls: "turn:a.relay.metered.ca:443", username: turnUser, credential: turnPass },
+          { urls: "turn:a.relay.metered.ca:443?transport=tcp", username: turnUser, credential: turnPass }
+        );
+      }
+
       const peer = new Peer({
-        config: {
-          iceServers: [
-            { urls: "stun:stun.l.google.com:19302" },
-            { urls: "stun:stun1.l.google.com:19302" },
-            {
-              urls: "turn:a.relay.metered.ca:80",
-              username: import.meta.env.VITE_TURN_USERNAME ?? "",
-              credential: import.meta.env.VITE_TURN_CREDENTIAL ?? "",
-            },
-            {
-              urls: "turn:a.relay.metered.ca:443",
-              username: import.meta.env.VITE_TURN_USERNAME ?? "",
-              credential: import.meta.env.VITE_TURN_CREDENTIAL ?? "",
-            },
-            {
-              urls: "turn:a.relay.metered.ca:443?transport=tcp",
-              username: import.meta.env.VITE_TURN_USERNAME ?? "",
-              credential: import.meta.env.VITE_TURN_CREDENTIAL ?? "",
-            },
-          ],
-        },
+        config: { iceServers },
       });
       peerRef.current = peer;
 
