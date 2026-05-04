@@ -174,33 +174,51 @@ export function P2PChat() {
           const { txnB64, sigB64, nonce } = data;
           const unsignedBytes = base64ToUint8(txnB64);
           const signedBytes = base64ToUint8(sigB64);
-          const signedObj: any = algosdk.decodeObj(signedBytes);
-          
-          if (!signedObj.sig) throw new Error("No signature found");
 
-          // Decode the unsigned txn for note/sender extraction
-          const txn = algosdk.decodeUnsignedTransaction(unsignedBytes);
+          // Decode the signed transaction properly
+          const signedTxn = algosdk.decodeSignedTransaction(signedBytes);
+          const txn = signedTxn.txn;
+
+          console.log("[P2P Debug] signedTxn keys:", Object.keys(signedTxn));
+          console.log("[P2P Debug] has sig:", !!signedTxn.sig);
+          console.log("[P2P Debug] sig length:", signedTxn.sig?.length);
           
-          const noteStr = new TextDecoder().decode(txn.note);
+          if (!signedTxn.sig) throw new Error("No signature found");
+
+          // Verify note contains our nonce
+          const noteBytes = txn.note;
+          const noteStr = noteBytes ? new TextDecoder().decode(noteBytes) : "";
+          console.log("[P2P Debug] note:", noteStr);
+          console.log("[P2P Debug] nonce:", nonce);
           if (!noteStr.includes(nonce)) {
             throw new Error("Invalid nonce in handshake");
           }
 
-          // Re-encode the txn field from the signed object to get the
-          // EXACT canonical bytes the wallet signed over.
-          const canonicalTxnBytes = algosdk.encodeObj(signedObj.txn);
-          const txPrefix = new Uint8Array([84, 88]); // "TX"
-          const msgBytes = new Uint8Array(txPrefix.length + canonicalTxnBytes.length);
-          msgBytes.set(txPrefix);
-          msgBytes.set(canonicalTxnBytes, txPrefix.length);
+          // Get the sender's public key
+          const senderAddr = algosdk.encodeAddress(txn.from.publicKey);
+          console.log("[P2P Debug] sender address:", senderAddr);
 
-          const publicKey = txn.from.publicKey;
-          const signature = signedObj.sig;
-
-          const isValid = nacl.sign.detached.verify(msgBytes, signature, publicKey);
+          // The wallet signs over "TX" + msgpack(txn dictionary)
+          // Use the raw transaction's bytesToSign() which returns exactly
+          // what the wallet signed
+          const rawTxn = algosdk.decodeUnsignedTransaction(unsignedBytes);
+          const bytesToVerify = rawTxn.bytesToSign();
           
+          console.log("[P2P Debug] bytesToVerify length:", bytesToVerify.length);
+          console.log("[P2P Debug] bytesToVerify prefix:", new TextDecoder().decode(bytesToVerify.slice(0, 2)));
+          console.log("[P2P Debug] publicKey length:", txn.from.publicKey.length);
+          console.log("[P2P Debug] signature length:", signedTxn.sig.length);
+
+          const isValid = nacl.sign.detached.verify(
+            bytesToVerify,
+            signedTxn.sig,
+            txn.from.publicKey
+          );
+          
+          console.log("[P2P Debug] isValid:", isValid);
+
           if (isValid) {
-            setPeerAddress(algosdk.encodeAddress(publicKey));
+            setPeerAddress(senderAddr);
             setPhase("chat");
             setIsConnected(true);
             setConnectionStatus("Connected");
