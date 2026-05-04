@@ -27,6 +27,29 @@ interface ChatMessage {
 
 type Phase = "setup" | "waiting" | "connecting" | "chat";
 
+/* ─────────────────── Helpers ─────────────────── */
+
+function uint8ToBase64(bytes: Uint8Array): string {
+  let bin = "";
+  for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+  return btoa(bin);
+}
+
+function base64ToUint8(b64: string): Uint8Array {
+  const bin = atob(b64);
+  const out = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+  return out;
+}
+
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return bytes + " B";
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
+  return (bytes / (1024 * 1024)).toFixed(1) + " MB";
+}
+
+/* ────────────────────── Component ────────────────────── */
+
 export function P2PChat() {
   const { activeAddress, algodClient, signTransactions } = useWallet();
   const [phase, setPhase] = useState<Phase>("setup");
@@ -106,8 +129,8 @@ export function P2PChat() {
       
       conn.send({
         type: "handshake",
-        txnB64: Buffer.from(encodedTxn).toString('base64'),
-        sigB64: Buffer.from(signedResult[0]).toString('base64'),
+        txnB64: uint8ToBase64(encodedTxn),
+        sigB64: uint8ToBase64(new Uint8Array(signedResult[0])),
         nonce
       });
     } catch (err: any) {
@@ -153,31 +176,30 @@ export function P2PChat() {
       // ── Offerer receives and verifies handshake ──
       if (data.type === "handshake") {
         try {
-          const { txnB64, sigB64, nonce } = data;
-          const unsignedBytes = Buffer.from(txnB64, 'base64');
-          const signedObj: any = algosdk.decodeObj(Buffer.from(sigB64, 'base64'));
+          const { sigB64, nonce } = data;
+          const sigBytes = base64ToUint8(sigB64);
           
-          if (!signedObj.sig) throw new Error("No signature found");
+          // Decode the signed transaction bytes
+          const stxn = algosdk.decodeSignedTransaction(sigBytes);
+          if (!stxn.sig) throw new Error("No signature found");
 
-          const txn = algosdk.decodeUnsignedTransaction(unsignedBytes);
-          
-          const noteStr = new TextDecoder().decode(txn.note);
+          // Verify the nonce in the note
+          const noteStr = new TextDecoder().decode(stxn.txn.note);
           if (!noteStr.includes(nonce)) {
             throw new Error("Invalid nonce in handshake");
           }
 
+          // Re-encode the transaction part to get the exact bytes to verify
+          const unsignedBytes = algosdk.encodeUnsignedTransaction(stxn.txn);
           const txPrefix = new Uint8Array([84, 88]); // "TX"
           const msgBytes = new Uint8Array(txPrefix.length + unsignedBytes.length);
           msgBytes.set(txPrefix);
           msgBytes.set(unsignedBytes, txPrefix.length);
 
-          const publicKey = txn.from.publicKey;
-          const signature = signedObj.sig;
-
-          const isValid = nacl.sign.detached.verify(msgBytes, signature, publicKey);
+          const isValid = nacl.sign.detached.verify(msgBytes, stxn.sig, stxn.txn.from.publicKey);
           
           if (isValid) {
-            setPeerAddress(algosdk.encodeAddress(publicKey));
+            setPeerAddress(algosdk.encodeAddress(stxn.txn.from.publicKey));
             setPhase("chat");
             setIsConnected(true);
             setConnectionStatus("Connected");
@@ -747,10 +769,4 @@ export function P2PChat() {
       </div>
     </div>
   );
-}
-
-function formatFileSize(bytes: number): string {
-  if (bytes < 1024) return bytes + " B";
-  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
-  return (bytes / (1024 * 1024)).toFixed(1) + " MB";
 }
