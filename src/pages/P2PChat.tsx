@@ -6,6 +6,24 @@ import nacl from "tweetnacl";
 import { toast } from "react-toastify";
 import QRCode from "qrcode";
 
+// ── Browser-safe base64 helpers (no Buffer dependency) ──
+function uint8ToBase64(bytes: Uint8Array): string {
+  let binary = "";
+  for (let i = 0; i < bytes.length; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return btoa(binary);
+}
+
+function base64ToUint8(b64: string): Uint8Array {
+  const binary = atob(b64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return bytes;
+}
+
 /* 
   LEGACY LIQUIDAUTH IMPORTS (Preserved for reference)
   import { SignalClient } from "@algorandfoundation/liquid-client";
@@ -26,29 +44,6 @@ interface ChatMessage {
 }
 
 type Phase = "setup" | "waiting" | "connecting" | "chat";
-
-/* ─────────────────── Helpers ─────────────────── */
-
-function uint8ToBase64(bytes: Uint8Array): string {
-  let bin = "";
-  for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
-  return btoa(bin);
-}
-
-function base64ToUint8(b64: string): Uint8Array {
-  const bin = atob(b64);
-  const out = new Uint8Array(bin.length);
-  for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
-  return out;
-}
-
-function formatFileSize(bytes: number): string {
-  if (bytes < 1024) return bytes + " B";
-  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
-  return (bytes / (1024 * 1024)).toFixed(1) + " MB";
-}
-
-/* ────────────────────── Component ────────────────────── */
 
 export function P2PChat() {
   const { activeAddress, algodClient, signTransactions } = useWallet();
@@ -103,7 +98,7 @@ export function P2PChat() {
   }, []);
 
   const sendHandshake = useCallback(async (conn: DataConnection, nonce: string) => {
-    if (!activeAddress || !signTransactions) {
+    if (!activeAddress || !signTransactions || !algodClient) {
       toast.error("Connect wallet to handshake");
       return;
     }
@@ -130,7 +125,7 @@ export function P2PChat() {
       conn.send({
         type: "handshake",
         txnB64: uint8ToBase64(encodedTxn),
-        sigB64: uint8ToBase64(new Uint8Array(signedResult[0])),
+        sigB64: uint8ToBase64(signedResult[0] as Uint8Array),
         nonce
       });
     } catch (err: any) {
@@ -176,29 +171,27 @@ export function P2PChat() {
       // ── Offerer receives and verifies handshake ──
       if (data.type === "handshake") {
         try {
-          const { sigB64, nonce } = data;
-          const sigBytes = base64ToUint8(sigB64);
+          const { txnB64, sigB64, nonce } = data;
+          const unsignedBytes = base64ToUint8(txnB64);
+          const signedObj: any = algosdk.decodeObj(base64ToUint8(sigB64));
           
-          // Decode the signed transaction envelope
-          const stxn = algosdk.decodeSignedTransaction(sigBytes);
-          if (!stxn.sig) throw new Error("No signature found");
+          if (!signedObj.sig) throw new Error("No signature found");
 
-          // Extract the transaction and verify the nonce in the note
-          const txn = stxn.txn;
+          const txn = algosdk.decodeUnsignedTransaction(unsignedBytes);
+          
           const noteStr = new TextDecoder().decode(txn.note);
           if (!noteStr.includes(nonce)) {
             throw new Error("Invalid nonce in handshake");
           }
 
-          // Use algosdk's canonical encoding to get the exact bytes that were signed
-          const unsignedBytes = algosdk.encodeUnsignedTransaction(txn);
-          const txPrefix = new TextEncoder().encode("TX");
+          const txPrefix = new Uint8Array([84, 88]); // "TX"
           const msgBytes = new Uint8Array(txPrefix.length + unsignedBytes.length);
           msgBytes.set(txPrefix);
           msgBytes.set(unsignedBytes, txPrefix.length);
 
           const publicKey = txn.from.publicKey;
-          const signature = new Uint8Array(stxn.sig);
+          const signature = signedObj.sig;
+
           const isValid = nacl.sign.detached.verify(msgBytes, signature, publicKey);
           
           if (isValid) {
@@ -316,10 +309,8 @@ export function P2PChat() {
         { urls: "stun:stun.l.google.com:19302" },
         { urls: "stun:stun1.l.google.com:19302" },
       ];
-
       const turnUser = import.meta.env.VITE_TURN_USERNAME;
       const turnPass = import.meta.env.VITE_TURN_CREDENTIAL;
-
       if (turnUser && turnPass) {
         iceServers.push(
           { urls: "turn:a.relay.metered.ca:80", username: turnUser, credential: turnPass },
@@ -328,9 +319,7 @@ export function P2PChat() {
         );
       }
 
-      const peer = new Peer({
-        config: { iceServers },
-      });
+      const peer = new Peer({ config: { iceServers } });
       peerRef.current = peer;
 
       peer.on("open", async (id) => {
@@ -391,10 +380,8 @@ export function P2PChat() {
         { urls: "stun:stun.l.google.com:19302" },
         { urls: "stun:stun1.l.google.com:19302" },
       ];
-
       const turnUser = import.meta.env.VITE_TURN_USERNAME;
       const turnPass = import.meta.env.VITE_TURN_CREDENTIAL;
-
       if (turnUser && turnPass) {
         iceServers.push(
           { urls: "turn:a.relay.metered.ca:80", username: turnUser, credential: turnPass },
@@ -403,9 +390,7 @@ export function P2PChat() {
         );
       }
 
-      const peer = new Peer({
-        config: { iceServers },
-      });
+      const peer = new Peer({ config: { iceServers } });
       peerRef.current = peer;
 
       peer.on("open", () => {
@@ -772,4 +757,10 @@ export function P2PChat() {
       </div>
     </div>
   );
+}
+
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return bytes + " B";
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
+  return (bytes / (1024 * 1024)).toFixed(1) + " MB";
 }
