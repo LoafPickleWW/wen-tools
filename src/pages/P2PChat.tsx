@@ -194,31 +194,31 @@ export function P2PChat() {
             throw new Error("Invalid nonce in handshake");
           }
 
-          // Get the sender's public key
+          // Get the sender's address
           const senderAddr = algosdk.encodeAddress(txn.from.publicKey);
-          console.log("[P2P Debug] sender address:", senderAddr);
+
+          // Get the authorized signer's public key.
+          // If the account is rekeyed, the signature is valid for the 'sgnr' address.
+          const signerKey = signedTxn.sgnr ? signedTxn.sgnr.publicKey : txn.from.publicKey;
+          const verifiedAddr = algosdk.encodeAddress(signerKey);
+          
+          console.log("[P2P Debug] sender address (from):", senderAddr);
+          console.log("[P2P Debug] signer address (sgnr):", verifiedAddr);
 
           // The wallet signs over "TX" + msgpack(txn dictionary)
-          // Use the raw transaction's bytesToSign() which returns exactly
-          // what the wallet signed
           const rawTxn = algosdk.decodeUnsignedTransaction(unsignedBytes);
           const bytesToVerify = rawTxn.bytesToSign();
-          
-          console.log("[P2P Debug] bytesToVerify length:", bytesToVerify.length);
-          console.log("[P2P Debug] bytesToVerify prefix:", new TextDecoder().decode(bytesToVerify.slice(0, 2)));
-          console.log("[P2P Debug] publicKey length:", txn.from.publicKey.length);
-          console.log("[P2P Debug] signature length:", signedTxn.sig.length);
 
           const isValid = nacl.sign.detached.verify(
             bytesToVerify,
             signedTxn.sig,
-            txn.from.publicKey
+            signerKey
           );
           
           console.log("[P2P Debug] isValid:", isValid);
 
           if (isValid) {
-            setPeerAddress(senderAddr);
+            setPeerAddress(verifiedAddr);
             setPhase("chat");
             setIsConnected(true);
             setConnectionStatus("Connected");
