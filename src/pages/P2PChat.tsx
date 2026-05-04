@@ -173,10 +173,12 @@ export function P2PChat() {
         try {
           const { txnB64, sigB64, nonce } = data;
           const unsignedBytes = base64ToUint8(txnB64);
-          const signedObj: any = algosdk.decodeObj(base64ToUint8(sigB64));
+          const signedBytes = base64ToUint8(sigB64);
+          const signedObj: any = algosdk.decodeObj(signedBytes);
           
           if (!signedObj.sig) throw new Error("No signature found");
 
+          // Decode the unsigned txn for note/sender extraction
           const txn = algosdk.decodeUnsignedTransaction(unsignedBytes);
           
           const noteStr = new TextDecoder().decode(txn.note);
@@ -184,10 +186,13 @@ export function P2PChat() {
             throw new Error("Invalid nonce in handshake");
           }
 
+          // Re-encode the txn field from the signed object to get the
+          // EXACT canonical bytes the wallet signed over.
+          const canonicalTxnBytes = algosdk.encodeObj(signedObj.txn);
           const txPrefix = new Uint8Array([84, 88]); // "TX"
-          const msgBytes = new Uint8Array(txPrefix.length + unsignedBytes.length);
+          const msgBytes = new Uint8Array(txPrefix.length + canonicalTxnBytes.length);
           msgBytes.set(txPrefix);
-          msgBytes.set(unsignedBytes, txPrefix.length);
+          msgBytes.set(canonicalTxnBytes, txPrefix.length);
 
           const publicKey = txn.from.publicKey;
           const signature = signedObj.sig;
