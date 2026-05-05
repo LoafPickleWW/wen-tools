@@ -14,17 +14,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   res.setHeader('Access-Control-Allow-Headers', 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version');
 
   // Resolve the best available credentials
-  const url = process.env.KV_REST_API_URL || process.env.REDIS_URL || process.env.STORAGE_REST_API_URL || '';
+  const url = process.env.KV_REST_API_URL || process.env.REDIS_URL || process.env.STORAGE_REST_API_URL || process.env.KV_URL || '';
   const token = process.env.KV_REST_API_TOKEN || process.env.STORAGE_REST_API_TOKEN || '';
 
   // Check for configuration before initializing
   if (!url) {
-    const envKeys = Object.keys(process.env).filter(k => k.includes('URL') || k.includes('TOKEN') || k.includes('REDIS') || k.includes('KV'));
+    const allEnvKeys = Object.keys(process.env);
+    const relatedKeys = allEnvKeys.filter(k => /KV|REDIS|STORAGE|URL|TOKEN/i.test(k));
+    
     return res.status(500).json({ 
-      error: 'Redis/KV Storage not detected. Please click "Connect to Project" in your Vercel Storage dashboard.',
+      error: 'Redis/KV Storage not detected in environment.',
       debug: { 
-        availableEnvKeys: envKeys,
-        message: 'The "Connect to Project" button in your screenshot must be clicked to link this DB to your app.'
+        detectedKeys: relatedKeys,
+        deploymentId: process.env.VERCEL_URL || 'local',
+        tip: 'If you just connected the DB, you MUST re-deploy for the variables to take effect.'
       }
     });
   }
