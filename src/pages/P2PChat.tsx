@@ -6,7 +6,6 @@ import nacl from "tweetnacl";
 import { toast } from "react-toastify";
 import QRCode from "qrcode";
 import { MdContentCopy, MdCheck, MdPerson, MdClose, MdImage } from "react-icons/md";
-import { getNfdDomain } from "../utils";
 
 // ── Browser-safe base64 helpers (no Buffer dependency) ──
 function uint8ToBase64(bytes: Uint8Array): string {
@@ -77,27 +76,21 @@ export function P2PChat() {
   // Fetch NFD Info
   const fetchNfds = useCallback(async (myAddr: string, otherAddr: string) => {
     try {
-      const [myName, otherName] = await Promise.all([
-        getNfdDomain(myAddr),
-        getNfdDomain(otherAddr)
-      ]);
+      // Use the tiny lookup first to get names
+      const res = await fetch(`https://api.nf.domains/nfd/lookup?address=${myAddr}&address=${otherAddr}&view=thumbnail`);
+      const data = await res.json();
       
-      const fetchAvatar = async (name: string) => {
-        if (!name) return undefined;
-        try {
-          const res = await fetch(`https://api.nf.domains/nfd/${name}?view=thumbnail`);
-          const data = await res.json();
-          return data.properties?.userDefined?.avatar || data.caProperties?.avatar;
-        } catch { return undefined; }
-      };
+      const myData = data[myAddr];
+      const otherData = data[otherAddr];
 
-      const [myAvatar, otherAvatar] = await Promise.all([
-        fetchAvatar(myName || ""),
-        fetchAvatar(otherName || "")
-      ]);
-
-      setMyNfd({ name: myName || undefined, avatar: myAvatar });
-      setPeerNfd({ name: otherName || undefined, avatar: otherAvatar });
+      setMyNfd({ 
+        name: myData?.name || undefined, 
+        avatar: myData?.properties?.userDefined?.avatar || myData?.caProperties?.avatar 
+      });
+      setPeerNfd({ 
+        name: otherData?.name || undefined, 
+        avatar: otherData?.properties?.userDefined?.avatar || otherData?.caProperties?.avatar 
+      });
     } catch (err) {
       console.error("NFD Fetch error:", err);
     }
@@ -156,7 +149,8 @@ export function P2PChat() {
         type: "handshake",
         txnB64: uint8ToBase64(encodedTxn),
         sigB64: uint8ToBase64(signedResult[0] as Uint8Array),
-        nonce
+        nonce,
+        address: activeAddress // Explicitly send address to help NFD lookup
       });
     } catch (err: any) {
       console.error("Handshake sign failed:", err);
@@ -221,17 +215,28 @@ export function P2PChat() {
           
           if (isValid) {
             setPeerAddress(verifiedAddr);
-            setPhase("chat");
-            setIsConnected(true);
-            setConnectionStatus("Connected");
-            if (activeAddress) fetchNfds(activeAddress, verifiedAddr);
-            conn.send({ type: "handshake-success" });
-            toast.success("Identity verified! Connection established.");
-            startHeartbeat();
+            
+            // If we are the offerer, we must also send a handshake back for mutual auth
+            if (role === "offerer") {
+              const myNonce = crypto.randomUUID();
+              setPhase("connecting"); // Host now enters connecting phase for their own sign
+              setPendingNonce(myNonce);
+              sendHandshake(conn, myNonce);
+              setConnectionStatus("Handshake verified. Sending mutual proof...");
+            } else {
+              // Joiner side receiving host's mutual handshake
+              setPhase("chat");
+              setIsConnected(true);
+              setConnectionStatus("Connected");
+              if (activeAddress) fetchNfds(activeAddress, verifiedAddr);
+              conn.send({ type: "handshake-success", address: activeAddress });
+              toast.success("Mutual identity verified!");
+              startHeartbeat();
+            }
           } else {
             throw new Error("Invalid signature");
           }
-        } catch (err: any) {
+        } catch {
           toast.error("Handshake failed");
           conn.close();
         }
@@ -239,7 +244,8 @@ export function P2PChat() {
       }
 
       if (data.type === "handshake-success") {
-        if (activeAddress && peerAddress) fetchNfds(activeAddress, peerAddress);
+        setPeerAddress(data.address);
+        if (activeAddress) fetchNfds(activeAddress, data.address);
         setPhase("chat");
         setIsConnected(true);
         setConnectionStatus("Connected");
@@ -450,7 +456,16 @@ export function P2PChat() {
         {phase === "setup" && (
           <div className="bg-[#1a1a1a] rounded-2xl p-8 border border-[#333] shadow-2xl">
             <h1 className="text-3xl font-bold text-white mb-8 text-center">🔐 P2P Encrypted Chat</h1>
-            <button onClick={startOfferSession} className="w-full py-4 bg-primary-orange text-white rounded-xl mb-4">Create Session</button>
+            <div className="p-6 rounded-xl bg-primary-orange/5 border border-primary-orange/20 mb-6 text-center">
+              <p className="text-primary-orange text-sm font-bold mb-2 uppercase tracking-widest">Host Identity Required</p>
+              <p className="text-gray-400 text-xs leading-relaxed">
+                To start a session, you must first verify your wallet identity. 
+                This ensures your peers know exactly who they are connecting with.
+              </p>
+            </div>
+            <button onClick={startOfferSession} className="w-full py-4 bg-primary-orange text-white rounded-xl mb-4 font-bold shadow-lg shadow-primary-orange/20 hover:scale-[1.02] active:scale-[0.98] transition-all">
+              Verify & Create Session
+            </button>
             <div className="flex flex-col gap-3">
               <input type="text" value={remoteRequestId} onChange={(e) => setRemoteRequestId(e.target.value)} placeholder="Session ID..." className="w-full py-3 px-4 bg-[#242424] text-white rounded-xl border border-[#333]" />
               <button onClick={() => joinSession()} className="w-full py-3 bg-[#646cff] text-white rounded-xl">Join</button>
