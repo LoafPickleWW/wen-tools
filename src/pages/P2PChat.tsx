@@ -81,8 +81,9 @@ export function P2PChat() {
       const res = await fetch(`https://api.nf.domains/nfd/lookup?address=${myAddr}&address=${otherAddr}&view=full`);
       const data = await res.json();
       
-      const myData = data[myAddr];
-      const otherData = data[otherAddr];
+      // lookup?address=... returns { "ADDR": [ { ... }, { ... } ] }
+      const myData = data[myAddr]?.[0];
+      const otherData = data[otherAddr]?.[0];
 
       setMyNfd({ 
         name: myData?.name || undefined, 
@@ -643,7 +644,9 @@ export function P2PChat() {
                 <span className={`w-3 h-3 rounded-full ${isConnected ? "bg-green-500 animate-pulse" : "bg-red-500"}`} />
                 <div>
                   <h2 className="text-white font-bold text-sm uppercase tracking-widest">Secure P2P Channel</h2>
-                  <p className="text-gray-500 text-[10px] font-mono">{peerAddress ? shortenAddr(peerAddress) : "Connecting..."}</p>
+                  <p className="text-gray-500 text-[10px] font-mono">
+                    {peerNfd?.name || (peerAddress ? shortenAddr(peerAddress) : "Connecting...")}
+                  </p>
                 </div>
               </div>
               <button
