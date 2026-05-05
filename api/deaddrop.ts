@@ -19,9 +19,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   // Check for configuration before initializing
   if (!url) {
+    const envKeys = Object.keys(process.env).filter(k => k.includes('URL') || k.includes('TOKEN') || k.includes('REDIS') || k.includes('KV'));
     return res.status(500).json({ 
-      error: 'Redis/KV Storage not detected. Please ensure you have connected a database in Vercel.',
-      details: 'Missing URL. Checked: KV_REST_API_URL, REDIS_URL, STORAGE_REST_API_URL'
+      error: 'Redis/KV Storage not detected. Please click "Connect to Project" in your Vercel Storage dashboard.',
+      debug: { 
+        availableEnvKeys: envKeys,
+        message: 'The "Connect to Project" button in your screenshot must be clicked to link this DB to your app.'
+      }
     });
   }
 
