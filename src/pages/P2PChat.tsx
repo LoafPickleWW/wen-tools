@@ -53,11 +53,13 @@ export function P2PChat() {
   const [connectionStatus, setConnectionStatus] = useState("");
   const [pendingNonce, setPendingNonce] = useState("");
   
-  // NFD States
   const [myNfd, setMyNfd] = useState<{name?: string, avatar?: string} | null>(null);
   const [peerNfd, setPeerNfd] = useState<{name?: string, avatar?: string} | null>(null);
   const [showIdentityCard, setShowIdentityCard] = useState<{address: string, nfd?: any} | null>(null);
   const [isCopied, setIsCopied] = useState(false);
+  
+  // Mutual Auth Proofs
+  const [myInitProof, setMyInitProof] = useState<{txnB64: string, sigB64: string, address: string} | null>(null);
 
   const peerRef = useRef<Peer | null>(null);
   const connRef = useRef<DataConnection | null>(null);
@@ -76,8 +78,7 @@ export function P2PChat() {
   // Fetch NFD Info
   const fetchNfds = useCallback(async (myAddr: string, otherAddr: string) => {
     try {
-      // Use the tiny lookup first to get names
-      const res = await fetch(`https://api.nf.domains/nfd/lookup?address=${myAddr}&address=${otherAddr}&view=thumbnail`);
+      const res = await fetch(`https://api.nf.domains/nfd/lookup?address=${myAddr}&address=${otherAddr}&view=full`);
       const data = await res.json();
       
       const myData = data[myAddr];
@@ -175,10 +176,15 @@ export function P2PChat() {
     conn.on("open", () => {
       if (role === "offerer") {
         const nonce = (conn as any)._challengeNonce as string;
-        conn.send({ type: "challenge", nonce });
-        setConnectionStatus("Challenge sent. Waiting for handshake...");
+        // Host sends challenge AND their own initial proof immediately
+        conn.send({ 
+          type: "challenge", 
+          nonce,
+          hostProof: myInitProof 
+        });
+        setConnectionStatus("Challenge sent. Waiting for peer...");
       } else {
-        setConnectionStatus("Connected. Waiting for challenge...");
+        setConnectionStatus("Connected. Waiting for host identity...");
       }
     });
 
@@ -187,6 +193,28 @@ export function P2PChat() {
 
       if (data.type === "challenge" && role === "joiner") {
         setPendingNonce(data.nonce);
+        
+        // Verify host's identity if provided
+        if (data.hostProof) {
+          try {
+            const { txnB64, sigB64, address } = data.hostProof;
+            const unsignedBytes = base64ToUint8(txnB64);
+            const signedBytes = base64ToUint8(sigB64);
+            const signedTxn = algosdk.decodeSignedTransaction(signedBytes);
+            const txn = signedTxn.txn;
+            const accountAddr = algosdk.encodeAddress(txn.from.publicKey);
+            const signerKey = signedTxn.sgnr ? signedTxn.sgnr : txn.from.publicKey;
+            
+            const rawTxn = algosdk.decodeUnsignedTransaction(unsignedBytes);
+            const isValid = nacl.sign.detached.verify(rawTxn.bytesToSign(), signedTxn.sig!, signerKey);
+            
+            if (isValid && accountAddr === address) {
+              setPeerAddress(accountAddr);
+              if (activeAddress) fetchNfds(activeAddress, accountAddr);
+            }
+          } catch (e) { console.error("Host identity verify failed:", e); }
+        }
+
         setConnectionStatus("Identity verification required");
         return;
       }
@@ -205,8 +233,9 @@ export function P2PChat() {
           const noteStr = noteBytes ? new TextDecoder().decode(noteBytes) : "";
           if (!noteStr.includes(nonce)) throw new Error("Invalid nonce");
 
+          const accountAddr = algosdk.encodeAddress(txn.from.publicKey);
           const signerKey = signedTxn.sgnr ? signedTxn.sgnr : txn.from.publicKey;
-          const verifiedAddr = algosdk.encodeAddress(signerKey);
+          const verifiedSignerAddr = algosdk.encodeAddress(signerKey);
           
           const rawTxn = algosdk.decodeUnsignedTransaction(unsignedBytes);
           const bytesToVerify = rawTxn.bytesToSign();
@@ -214,21 +243,23 @@ export function P2PChat() {
           const isValid = nacl.sign.detached.verify(bytesToVerify, signedTxn.sig, signerKey);
           
           if (isValid) {
-            setPeerAddress(verifiedAddr);
+            setPeerAddress(accountAddr); // Use account address for identity
             
-            // If we are the offerer, we must also send a handshake back for mutual auth
             if (role === "offerer") {
-              const myNonce = crypto.randomUUID();
-              setPhase("connecting"); // Host now enters connecting phase for their own sign
-              setPendingNonce(myNonce);
-              sendHandshake(conn, myNonce);
-              setConnectionStatus("Handshake verified. Sending mutual proof...");
-            } else {
-              // Joiner side receiving host's mutual handshake
+              // Offerer already authed at start, just finish up
               setPhase("chat");
               setIsConnected(true);
               setConnectionStatus("Connected");
-              if (activeAddress) fetchNfds(activeAddress, verifiedAddr);
+              if (activeAddress) fetchNfds(activeAddress, accountAddr);
+              conn.send({ type: "handshake-success", address: activeAddress });
+              toast.success("Peer identity verified!");
+              startHeartbeat();
+            } else {
+              // Joiner side receiving host's handshake (if mutual)
+              setPhase("chat");
+              setIsConnected(true);
+              setConnectionStatus("Connected");
+              if (activeAddress) fetchNfds(activeAddress, accountAddr);
               conn.send({ type: "handshake-success", address: activeAddress });
               toast.success("Mutual identity verified!");
               startHeartbeat();
@@ -313,6 +344,12 @@ export function P2PChat() {
         toast.error("Session initialization cancelled.");
         return;
       }
+
+      setMyInitProof({
+        txnB64: uint8ToBase64(algosdk.encodeUnsignedTransaction(initTxn)),
+        sigB64: uint8ToBase64(signedInit[0] as Uint8Array),
+        address: activeAddress
+      });
 
       setPhase("waiting");
       setConnectionStatus("Initializing P2P Engine...");
@@ -691,7 +728,25 @@ export function P2PChat() {
                         </div>
                       )}
                       
-                      {msg.text}
+                      {/* Text Content with Linkify */}
+                      <div className="leading-relaxed">
+                        {msg.text.split(/(\s+)/).map((part, index) => {
+                          if (/^(https?:\/\/[^\s]+)$/.test(part)) {
+                            return (
+                              <a 
+                                key={index} 
+                                href={part} 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                className="text-blue-400 hover:underline break-all"
+                              >
+                                {part}
+                              </a>
+                            );
+                          }
+                          return part;
+                        })}
+                      </div>
                       
                       <div className={`text-[9px] mt-2 opacity-40 flex justify-between items-center font-mono ${isMe ? "text-white" : "text-gray-400"}`}>
                         <span>{new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
