@@ -5,25 +5,12 @@ import { Peer, type DataConnection } from "peerjs";
 import nacl from "tweetnacl";
 import { toast } from "react-toastify";
 import QRCode from "qrcode";
-import { MdContentCopy, MdCheck, MdPerson, MdClose, MdImage } from "react-icons/md";
+import { MdContentCopy, MdCheck, MdPerson, MdClose, MdImage, MdAttachFile } from "react-icons/md";
+import { encryptDeadDrop, fetchNfdEncryptionKey, encryptBinaryDeadDrop, uint8ToBase64, base64ToUint8 } from "../utils/deadDropCrypto";
+import { pinJSONToCrust } from "../crust";
 
 // ── Browser-safe base64 helpers (no Buffer dependency) ──
-function uint8ToBase64(bytes: Uint8Array): string {
-  let binary = "";
-  for (let i = 0; i < bytes.length; i++) {
-    binary += String.fromCharCode(bytes[i]);
-  }
-  return btoa(binary);
-}
-
-function base64ToUint8(b64: string): Uint8Array {
-  const binary = atob(b64);
-  const bytes = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i++) {
-    bytes[i] = binary.charCodeAt(i);
-  }
-  return bytes;
-}
+// Helpers are now imported from deadDropCrypto
 
 interface ChatMessage {
   text: string;
@@ -37,7 +24,7 @@ interface ChatMessage {
   fileUrl?: string;
 }
 
-type Phase = "setup" | "waiting" | "connecting" | "chat";
+type Phase = "setup" | "waiting" | "connecting" | "chat" | "deaddrop";
 
 export function P2PChat() {
   const { activeAddress, algodClient, signTransactions } = useWallet();
@@ -52,6 +39,13 @@ export function P2PChat() {
   const [isConnected, setIsConnected] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState("");
   const [pendingNonce, setPendingNonce] = useState("");
+  
+  // Dead Drop States
+  const [ddRecipient, setDdRecipient] = useState("");
+  const [ddMessage, setDdMessage] = useState("");
+  const [ddFile, setDdFile] = useState<File | null>(null);
+  const [ddLoading, setDdLoading] = useState(false);
+  const [retrievedDrops, setRetrievedDrops] = useState<any[]>([]);
   
   const [myNfd, setMyNfd] = useState<{name?: string, avatar?: string} | null>(null);
   const [peerNfd, setPeerNfd] = useState<{name?: string, avatar?: string} | null>(null);
@@ -525,7 +519,268 @@ export function P2PChat() {
             </button>
             <div className="flex flex-col gap-3">
               <input type="text" value={remoteRequestId} onChange={(e) => setRemoteRequestId(e.target.value)} placeholder="Session ID..." className="w-full py-3 px-4 bg-[#242424] text-white rounded-xl border border-[#333]" />
-              <button onClick={() => joinSession()} className="w-full py-3 bg-[#646cff] text-white rounded-xl">Join</button>
+              <button onClick={() => joinSession()} className="w-full py-3 bg-[#646cff] text-white rounded-xl font-bold">Join Session</button>
+            </div>
+
+            <div className="mt-8 pt-8 border-t border-[#333]">
+              <p className="text-gray-500 text-[10px] font-black uppercase tracking-widest mb-4 text-center">Asynchronous Tools</p>
+              <button 
+                onClick={() => setPhase("deaddrop")}
+                className="w-full py-4 rounded-xl border border-primary-orange/30 text-primary-orange font-bold hover:bg-primary-orange/5 transition-all flex items-center justify-center gap-2"
+              >
+                <span>📦</span> Create or Pick Up Dead Drop
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ─── DEAD DROP PHASE ─── */}
+        {phase === "deaddrop" && (
+          <div className="bg-[#1a1a1a] rounded-2xl p-8 border border-[#333] shadow-2xl">
+            <div className="flex items-center justify-between mb-8">
+              <h1 className="text-2xl font-bold text-white flex items-center gap-2">
+                <span className="text-primary-orange">📦</span> Dead Drop Relay
+              </h1>
+              <button onClick={() => setPhase("setup")} className="text-gray-500 hover:text-white transition-colors">
+                <MdClose size={24} />
+              </button>
+            </div>
+
+            <div className="space-y-6">
+              {/* Drop Form */}
+              <div className="p-6 rounded-xl bg-white/5 border border-white/10">
+                <h3 className="text-sm font-bold text-white mb-4 uppercase tracking-widest">Leave a Drop</h3>
+                <div className="space-y-4">
+                  <input 
+                    type="text" 
+                    value={ddRecipient}
+                    onChange={(e) => setDdRecipient(e.target.value)}
+                    placeholder="Recipient Wallet or .algo name"
+                    className="w-full py-3 px-4 bg-[#242424] text-white rounded-xl border border-[#333] outline-none focus:border-primary-orange transition-all"
+                  />
+                  <div className="flex items-center gap-2">
+                    <textarea 
+                      value={ddMessage}
+                      onChange={(e) => setDdMessage(e.target.value)}
+                      placeholder={ddFile ? `File attached: ${ddFile.name}` : "Your encrypted message..."}
+                      className="flex-1 py-3 px-4 bg-[#242424] text-white rounded-xl border border-[#333] outline-none focus:border-primary-orange transition-all min-h-[60px]"
+                    />
+                    <label className="p-4 bg-[#242424] hover:bg-[#333] text-gray-400 rounded-xl border border-[#333] cursor-pointer transition-all">
+                      <MdAttachFile size={20} />
+                      <input 
+                        type="file" 
+                        className="hidden" 
+                        onChange={(e) => setDdFile(e.target.files?.[0] || null)} 
+                      />
+                    </label>
+                  </div>
+                  {ddFile && (
+                    <div className="flex items-center justify-between px-4 py-2 bg-primary-orange/10 border border-primary-orange/20 rounded-lg text-[10px]">
+                      <span className="text-primary-orange font-bold truncate">{ddFile.name} ({(ddFile.size / 1024).toFixed(1)} KB)</span>
+                      <button onClick={() => setDdFile(null)} className="text-gray-500 hover:text-white"><MdClose size={14} /></button>
+                    </div>
+                  )}
+                  <button 
+                    disabled={ddLoading || !ddRecipient || (!ddMessage && !ddFile)}
+                    onClick={async () => {
+                      if (!activeAddress) {
+                        toast.error("Please connect your wallet");
+                        return;
+                      }
+                      setDdLoading(true);
+                      try {
+                        let targetAddr = ddRecipient;
+                        let nfdKey = null;
+
+                        // 1. Resolve NFD + Signer Authority
+                        if (ddRecipient.toLowerCase().endsWith(".algo")) {
+                          const nfdData = await fetch(`https://api.nf.domains/nfd/${ddRecipient.toLowerCase()}?view=tiny`).then(r => r.json());
+                          if (nfdData.depositAccount) {
+                            targetAddr = nfdData.depositAccount;
+                            nfdKey = await fetchNfdEncryptionKey(ddRecipient);
+                          } else {
+                            throw new Error("Could not resolve NFD");
+                          }
+                        }
+
+                        const accInfo = await algodClient.accountInformation(targetAddr).do();
+                        const authAddr = accInfo['auth-addr'] || targetAddr;
+                        
+                        let payload: any;
+                        
+                        if (ddFile) {
+                          const reader = new FileReader();
+                          const fileData = await new Promise<Uint8Array>((resolve) => {
+                            reader.onload = (e) => resolve(new Uint8Array(e.target?.result as ArrayBuffer));
+                            reader.readAsArrayBuffer(ddFile);
+                          });
+
+                          // 2. Encrypt File locally
+                          const encryptedFile = await encryptBinaryDeadDrop(fileData, authAddr, nfdKey || undefined);
+                          
+                          // 3. Push Encrypted Payload to IPFS (Crust)
+                          const authBasic = localStorage.getItem("authBasic");
+                          const cid = await pinJSONToCrust(authBasic, JSON.stringify(encryptedFile));
+                          
+                          payload = {
+                            type: "file",
+                            cid,
+                            fileName: ddFile.name,
+                            fileSize: ddFile.size,
+                            fileType: ddFile.type,
+                            recipient: targetAddr
+                          };
+                        } else {
+                          // Standard text drop
+                          const encrypted = await encryptDeadDrop(ddMessage, authAddr, nfdKey || undefined);
+                          payload = { ...encrypted, type: "text", recipient: targetAddr };
+                        }
+                        
+                        // 4. Upload Metadata to Relay
+                        const response = await fetch("/api/deaddrop", {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify(payload)
+                        });
+
+                        if (!response.ok) throw new Error("Relay storage failed");
+                        
+                        toast.success("Dead Drop deployed successfully!");
+                        setDdMessage("");
+                        setDdFile(null);
+                      } catch (err: any) {
+                        toast.error(err.message || "Failed to create drop");
+                      } finally {
+                        setDdLoading(false);
+                      }
+                    }}
+                    className="w-full py-4 bg-primary-orange text-white rounded-xl font-bold disabled:opacity-30"
+                  >
+                    {ddLoading ? "Encrypting & Deploying..." : "Initialize Dead Drop"}
+                  </button>
+                </div>
+              </div>
+
+              {/* Pickup Area */}
+              <div className="p-6 rounded-xl bg-primary-orange/5 border border-primary-orange/20">
+                <h3 className="text-sm font-bold text-primary-orange mb-4 uppercase tracking-widest">Pick Up a Drop</h3>
+                
+                {retrievedDrops.length > 0 ? (
+                  <div className="space-y-4 mb-6 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+                    {retrievedDrops.map((drop, idx) => (
+                      <div key={idx} className="p-4 bg-black/40 rounded-xl border border-primary-orange/30 group animate-in fade-in slide-in-from-bottom-2">
+                        <div className="flex items-center justify-between mb-3">
+                          <p className="text-[10px] text-primary-orange font-black uppercase tracking-widest">
+                            {drop.type === 'file' ? '📁 Secure File' : '📝 Encrypted Text'}
+                          </p>
+                          {drop.fileSize && (
+                            <span className="text-[9px] text-gray-500">{(drop.fileSize / 1024).toFixed(1)} KB</span>
+                          )}
+                        </div>
+                        
+                        {drop.isFile && drop.fileType?.startsWith("image/") && (
+                          <div className="mb-3 rounded-lg overflow-hidden border border-white/5">
+                            <img src={drop.fileUrl || "/placeholder-image.png"} alt={drop.fileName} className="w-full h-auto object-cover max-h-[200px]" />
+                          </div>
+                        )}
+
+                        {drop.isFile && drop.fileType?.startsWith("video/") && (
+                          <div className="mb-3 rounded-lg overflow-hidden border border-white/5">
+                            <video src={drop.fileUrl || ""} controls className="w-full max-h-[200px]" />
+                          </div>
+                        )}
+
+                        <p className="text-white text-sm whitespace-pre-wrap break-words leading-relaxed">
+                          {drop.decrypted}
+                        </p>
+                        
+                        {drop.isFile && !drop.fileUrl && (
+                          <button 
+                            className="mt-3 w-full py-2 bg-white/5 hover:bg-white/10 text-[10px] text-gray-400 font-bold rounded-lg transition-all"
+                            onClick={() => toast.info("Decryption logic for offline payloads is being finalized.")}
+                          >
+                            DECRYPT & VIEW {drop.fileName?.toUpperCase()}
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                    <button onClick={() => setRetrievedDrops([])} className="w-full py-2 text-[10px] text-gray-500 uppercase font-black hover:text-white transition-colors">Clear Retrieved Drops</button>
+                  </div>
+                ) : (
+                  <p className="text-xs text-gray-400 mb-6">
+                    Sign a challenge to check if anyone has left an encrypted payload for your wallet. 
+                    Drops self-destruct immediately after retrieval.
+                  </p>
+                )}
+
+                <button 
+                  disabled={ddLoading}
+                  onClick={async () => {
+                    if (!activeAddress) {
+                      toast.error("Please connect your wallet");
+                      return;
+                    }
+                    
+                    setDdLoading(true);
+                    try {
+                      // 1. Sign Identity Proof
+                      const nonce = crypto.randomUUID();
+                      const pickupTxn = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
+                        from: activeAddress,
+                        to: activeAddress,
+                        amount: 0,
+                        note: new TextEncoder().encode(`Dead Drop Pickup: ${nonce}`),
+                        suggestedParams: await algodClient.getTransactionParams().do(),
+                      });
+
+                      const signed = await signTransactions([algosdk.encodeUnsignedTransaction(pickupTxn)]);
+                      if (!signed || !signed[0]) return;
+
+                      const sigB64 = uint8ToBase64((algosdk.decodeSignedTransaction(signed[0])).sig!);
+
+                      // 2. Fetch from Relay
+                      const res = await fetch(`/api/deaddrop?address=${activeAddress}&sig=${sigB64}&txn=${uint8ToBase64(signed[0])}`);
+                      const data = await res.json();
+
+                      if (data.drops && data.drops.length > 0) {
+                        toast.success(`Found ${data.drops.length} drop(s)!`);
+                        
+                        // 3. Process & Resolve drops
+                        const processed = await Promise.all(data.drops.map(async (drop: any) => {
+                          try {
+                            if (drop.type === "file") {
+                              // Fetch from IPFS (Crust/Pinata)
+                              const ipfsUrl = `https://ipfs.io/ipfs/${drop.cid}`;
+                              await fetch(ipfsUrl).then(r => r.json());
+                              
+                              // TODO: Decrypt logic using local secret key
+                              // For now, we simulate the UI container
+                              return { 
+                                ...drop, 
+                                decrypted: `File: ${drop.fileName}`,
+                                isFile: true,
+                                fileUrl: null // Will be set after decryption
+                              };
+                            }
+                            return { ...drop, decrypted: "Encrypted Text Received." };
+                          } catch { return { ...drop, decrypted: "[Resolve Failed]" }; }
+                        }));
+                        setRetrievedDrops(processed);
+                      } else {
+                        toast.info("No drops found for your wallet.");
+                      }
+                      
+                    } catch (err) {
+                      toast.error("Authentication failed");
+                    } finally {
+                      setDdLoading(false);
+                    }
+                  }}
+                  className="w-full py-4 rounded-xl border-2 border-primary-orange text-primary-orange font-bold hover:bg-primary-orange/10 transition-all disabled:opacity-30"
+                >
+                  {ddLoading ? "Verifying..." : "Scan Relay for My Drops"}
+                </button>
+              </div>
             </div>
           </div>
         )}

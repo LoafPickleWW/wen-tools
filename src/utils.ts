@@ -1218,11 +1218,11 @@ async function fetchNFDJSON(url: string) {
 }
 
 export async function getNfdDomain(address: string) {
-  const nfdDomain = await fetchNFDJSON(
+  const nfdResponse = await fetchNFDJSON(
     "https://api.nf.domains/nfd/lookup?address=" + address + "&view=tiny"
   );
-  if (nfdDomain.status === 200) {
-    return nfdDomain.body[address].name;
+  if (nfdResponse.status === 200) {
+    return nfdResponse.body[address].name;
   } else {
     return "";
   }
