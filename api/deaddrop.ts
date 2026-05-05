@@ -1,10 +1,10 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
-import { createClient } from '@vercel/kv';
+import { createClient } from 'redis';
 import algosdk from 'algosdk';
 
 /**
  * Dead Drop Relay API
- * Handles encrypted payload storage and signature-verified retrieval.
+ * Handles encrypted payload storage and signature-verified retrieval using Standard Redis Protocol.
  */
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Enable CORS
@@ -13,26 +13,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
   res.setHeader('Access-Control-Allow-Headers', 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version');
 
-  // Resolve the best available credentials
-  const url = process.env.KV_REST_API_URL || process.env.REDIS_URL || process.env.STORAGE_REST_API_URL || process.env.KV_URL || '';
-  const token = process.env.KV_REST_API_TOKEN || process.env.STORAGE_REST_API_TOKEN || '';
+  // Resolve the best available URL (redis:// or rediss://)
+  const url = process.env.KV_URL || process.env.REDIS_URL || process.env.STORAGE_URL || '';
 
-  // Check for configuration before initializing
   if (!url) {
-    const allEnvKeys = Object.keys(process.env);
-    const relatedKeys = allEnvKeys.filter(k => /KV|REDIS|STORAGE|URL|TOKEN/i.test(k));
-    
     return res.status(500).json({ 
-      error: 'Redis/KV Storage not detected in environment.',
+      error: 'Redis Storage not detected in environment.',
       debug: { 
-        detectedKeys: relatedKeys,
-        deploymentId: process.env.VERCEL_URL || 'local',
-        tip: 'If you just connected the DB, you MUST re-deploy for the variables to take effect.'
+        tip: 'Ensure REDIS_URL or KV_URL is set in your Vercel project.'
       }
     });
   }
 
-  const kv = createClient({ url, token });
+  // Initialize Standard Redis Client
+  const client = createClient({ url });
+  client.on('error', (err) => console.error('Redis Client Error', err));
 
   if (req.method === 'OPTIONS') {
     res.status(200).end();
@@ -40,17 +35,23 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
+    await client.connect();
+
     if (req.method === 'POST') {
       const { recipient, expiry, ...rest } = req.body;
       
       if (!recipient) {
+        await client.disconnect();
         return res.status(400).json({ error: 'Missing recipient' });
       }
 
-      // Store the entire payload in KV
+      // Store the entire payload in Redis
       const key = `dd:${recipient}:${Date.now()}`;
-      await kv.set(key, { ...rest, recipient }, { ex: expiry || 86400 });
+      await client.set(key, JSON.stringify({ ...rest, recipient }), {
+        EX: expiry || 86400 // 24h default
+      });
       
+      await client.disconnect();
       return res.status(200).json({ success: true, id: key });
     }
 
@@ -58,6 +59,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const { address, sig, txn } = req.query;
 
       if (!address || !sig || !txn) {
+        await client.disconnect();
         return res.status(400).json({ error: 'Missing auth parameters' });
       }
 
@@ -72,7 +74,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         if (!validSig) throw new Error('Signature invalid');
 
         // Verify Authority (Handle Rekeying)
-        // We check the Indexer to see if this signer is authorized for the target address
         const indexerUrl = process.env.VITE_NETWORK === 'testnet' 
           ? 'https://testnet-idx.algonode.cloud' 
           : 'https://mainnet-idx.algonode.cloud';
@@ -84,29 +85,36 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           throw new Error('Signer is not authorized for this account');
         }
       } catch (e: any) {
+        await client.disconnect();
         return res.status(401).json({ error: e.message || 'Authentication failed' });
       }
 
-      // 2. Scan KV for drops matching this address
-      const keys = await kv.keys(`dd:${address}:*`);
+      // 2. Scan Redis for drops matching this address
+      const keys = await client.keys(`dd:${address}:*`);
       if (keys.length === 0) {
+        await client.disconnect();
         return res.status(200).json({ drops: [] });
       }
 
       // 3. Fetch and Delete (Burn-on-Read)
       const drops = [];
       for (const key of keys) {
-        const drop = await kv.get(key);
-        drops.push(drop);
-        await kv.del(key); // SELF DESTRUCT
+        const data = await client.get(key);
+        if (data) {
+          drops.push(JSON.parse(data));
+          await client.del(key); // SELF DESTRUCT
+        }
       }
 
+      await client.disconnect();
       return res.status(200).json({ drops });
     }
 
+    await client.disconnect();
     res.status(405).json({ error: 'Method not allowed' });
   } catch (error: any) {
     console.error('Dead Drop Error:', error);
+    try { await client.disconnect(); } catch (e) {}
     res.status(500).json({ error: error.message });
   }
 }
