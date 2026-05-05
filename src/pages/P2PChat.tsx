@@ -290,13 +290,32 @@ export function P2PChat() {
 
 
   const startOfferSession = useCallback(async () => {
-    if (!activeAddress) {
+    if (!activeAddress || !signTransactions || !algodClient) {
       toast.error("Please connect your wallet first.");
       return;
     }
+    
     try {
+      setConnectionStatus("Verifying Host Identity...");
+      
+      // Force a signature BEFORE initializing the session
+      const suggestedParams = await algodClient.getTransactionParams().do();
+      const initTxn = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
+        from: activeAddress,
+        to: activeAddress,
+        amount: 0,
+        note: new TextEncoder().encode(`Wen Tools P2P Session Init:${Date.now()}`),
+        suggestedParams: { ...suggestedParams, fee: 1000, flatFee: true },
+      });
+
+      const signedInit = await signTransactions([algosdk.encodeUnsignedTransaction(initTxn)]);
+      if (!signedInit || !signedInit[0]) {
+        toast.error("Session initialization cancelled.");
+        return;
+      }
+
       setPhase("waiting");
-      setConnectionStatus("Initializing PeerJS...");
+      setConnectionStatus("Initializing P2P Engine...");
       
       const iceServers: any[] = [
         { urls: "stun:stun.l.google.com:19302" },
@@ -331,6 +350,7 @@ export function P2PChat() {
         } catch (err) { console.error(err); }
 
         setConnectionStatus("Waiting for peer...");
+        toast.success("Identity verified. Session live!");
       });
 
       peer.on("connection", (conn) => {
@@ -350,7 +370,7 @@ export function P2PChat() {
       toast.error("Failed to start session");
       resetConnection();
     }
-  }, [handleConnection, resetConnection, activeAddress]);
+  }, [handleConnection, resetConnection, activeAddress, signTransactions, algodClient]);
 
   const joinSession = useCallback(async (overrideSessionId?: any) => {
     const targetSessionId = overrideSessionId || remoteRequestId;
