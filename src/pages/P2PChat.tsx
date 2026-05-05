@@ -235,7 +235,6 @@ export function P2PChat() {
 
           const accountAddr = algosdk.encodeAddress(txn.from.publicKey);
           const signerKey = signedTxn.sgnr ? signedTxn.sgnr : txn.from.publicKey;
-          const verifiedSignerAddr = algosdk.encodeAddress(signerKey);
           
           const rawTxn = algosdk.decodeUnsignedTransaction(unsignedBytes);
           const bytesToVerify = rawTxn.bytesToSign();
