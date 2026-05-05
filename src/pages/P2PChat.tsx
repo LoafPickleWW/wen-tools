@@ -311,7 +311,7 @@ export function P2PChat() {
       setIsConnected(false);
       resetConnection();
     });
-  }, [resetConnection, startHeartbeat, activeAddress, peerAddress, fetchNfds]);
+  }, [resetConnection, startHeartbeat, activeAddress, peerAddress, fetchNfds, requestId, myInitProof]);
 
 
   const startOfferSession = useCallback(async () => {
@@ -770,7 +770,7 @@ export function P2PChat() {
                         toast.info("No drops found for your wallet.");
                       }
                       
-                    } catch (err) {
+                    } catch {
                       toast.error("Authentication failed");
                     } finally {
                       setDdLoading(false);

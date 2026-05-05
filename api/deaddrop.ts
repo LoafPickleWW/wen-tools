@@ -20,15 +20,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   try {
     if (req.method === 'POST') {
-      const { recipient, payload, nonce, ephemeralPk, expiry } = req.body;
+      const { recipient, expiry, ...rest } = req.body;
       
-      if (!recipient || !payload) {
-        return res.status(400).json({ error: 'Missing required fields' });
+      if (!recipient) {
+        return res.status(400).json({ error: 'Missing recipient' });
       }
 
-      // Store in KV with a 24h TTL by default
+      // Store the entire payload in KV
       const key = `dd:${recipient}:${Date.now()}`;
-      await kv.set(key, { payload, nonce, ephemeralPk, recipient }, { ex: expiry || 86400 });
+      await kv.set(key, { ...rest, recipient }, { ex: expiry || 86400 });
       
       return res.status(200).json({ success: true, id: key });
     }
