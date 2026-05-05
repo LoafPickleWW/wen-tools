@@ -8,6 +8,7 @@ import QRCode from "qrcode";
 import { MdContentCopy, MdCheck, MdPerson, MdClose, MdImage, MdAttachFile } from "react-icons/md";
 import { encryptDeadDrop, fetchNfdEncryptionKey, encryptBinaryDeadDrop, uint8ToBase64, base64ToUint8 } from "../utils/deadDropCrypto";
 import { pinJSONToCrust } from "../crust";
+import { getNfdDomain } from "../utils";
 
 // ── Browser-safe base64 helpers (no Buffer dependency) ──
 // Helpers are now imported from deadDropCrypto
@@ -81,11 +82,11 @@ export function P2PChat() {
 
       setMyNfd({ 
         name: myData?.name || undefined, 
-        avatar: myData?.properties?.userDefined?.avatar || myData?.caProperties?.avatar 
+        avatar: myData?.caasPortrait || myData?.properties?.userDefined?.avatar || myData?.caProperties?.avatar 
       });
       setPeerNfd({ 
         name: otherData?.name || undefined, 
-        avatar: otherData?.properties?.userDefined?.avatar || otherData?.caProperties?.avatar 
+        avatar: otherData?.caasPortrait || otherData?.properties?.userDefined?.avatar || otherData?.caProperties?.avatar 
       });
     } catch (err) {
       console.error("NFD Fetch error:", err);
@@ -738,15 +739,33 @@ export function P2PChat() {
 
                       const sigB64 = uint8ToBase64((algosdk.decodeSignedTransaction(signed[0])).sig!);
 
-                      // 2. Fetch from Relay
-                      const res = await fetch(`/api/deaddrop?address=${activeAddress}&sig=${sigB64}&txn=${uint8ToBase64(signed[0])}`);
-                      const data = await res.json();
+                      // 2. Fetch from Relay (Check both raw address and NFD name)
+                      const nfdName = await getNfdDomain(activeAddress);
+                      const scanTargets = [activeAddress];
+                      if (nfdName) scanTargets.push(nfdName);
 
-                      if (data.drops && data.drops.length > 0) {
-                        toast.success(`Found ${data.drops.length} drop(s)!`);
+                      toast.info(`Scanning relay for ${scanTargets.join(" / ")}...`);
+
+                      const allDrops: any[] = [];
+                      for (const target of scanTargets) {
+                        const query = new URLSearchParams({
+                          address: target,
+                          sig: sigB64,
+                          txn: uint8ToBase64(signed[0])
+                        }).toString();
+
+                        const res = await fetch(`/api/deaddrop?${query}`);
+                        if (res.ok) {
+                          const data = await res.json();
+                          if (data.drops) allDrops.push(...data.drops);
+                        }
+                      }
+
+                      if (allDrops.length > 0) {
+                        toast.success(`Found ${allDrops.length} drop(s)!`);
                         
                         // 3. Process & Resolve drops
-                        const processed = await Promise.all(data.drops.map(async (drop: any) => {
+                        const processed = await Promise.all(allDrops.map(async (drop: any) => {
                           try {
                             if (drop.type === "file") {
                               // Fetch from IPFS (Crust/Pinata)
