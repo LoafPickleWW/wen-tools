@@ -5,6 +5,8 @@ import { Peer, type DataConnection } from "peerjs";
 import nacl from "tweetnacl";
 import { toast } from "react-toastify";
 import QRCode from "qrcode";
+import { MdContentCopy, MdCheck, MdPerson, MdClose, MdImage } from "react-icons/md";
+import { getNfdDomain } from "../utils";
 
 // ── Browser-safe base64 helpers (no Buffer dependency) ──
 function uint8ToBase64(bytes: Uint8Array): string {
@@ -23,14 +25,6 @@ function base64ToUint8(b64: string): Uint8Array {
   }
   return bytes;
 }
-
-/* 
-  LEGACY LIQUIDAUTH IMPORTS (Preserved for reference)
-  import { SignalClient } from "@algorandfoundation/liquid-client";
-  import { toBase64URL } from "@algorandfoundation/liquid-client/encoding";
-  import nacl from "tweetnacl";
-  const LIQUID_SERVER = "https://wen-liquid-auth.onrender.com";
-*/
 
 interface ChatMessage {
   text: string;
@@ -59,6 +53,12 @@ export function P2PChat() {
   const [isConnected, setIsConnected] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState("");
   const [pendingNonce, setPendingNonce] = useState("");
+  
+  // NFD States
+  const [myNfd, setMyNfd] = useState<{name?: string, avatar?: string} | null>(null);
+  const [peerNfd, setPeerNfd] = useState<{name?: string, avatar?: string} | null>(null);
+  const [showIdentityCard, setShowIdentityCard] = useState<{address: string, nfd?: any} | null>(null);
+  const [isCopied, setIsCopied] = useState(false);
 
   const peerRef = useRef<Peer | null>(null);
   const connRef = useRef<DataConnection | null>(null);
@@ -74,7 +74,35 @@ export function P2PChat() {
     scrollToBottom();
   }, [messages, scrollToBottom]);
 
-  // Cleanup on unmount
+  // Fetch NFD Info
+  const fetchNfds = useCallback(async (myAddr: string, otherAddr: string) => {
+    try {
+      const [myName, otherName] = await Promise.all([
+        getNfdDomain(myAddr),
+        getNfdDomain(otherAddr)
+      ]);
+      
+      const fetchAvatar = async (name: string) => {
+        if (!name) return undefined;
+        try {
+          const res = await fetch(`https://api.nf.domains/nfd/${name}?view=thumbnail`);
+          const data = await res.json();
+          return data.properties?.userDefined?.avatar || data.caProperties?.avatar;
+        } catch { return undefined; }
+      };
+
+      const [myAvatar, otherAvatar] = await Promise.all([
+        fetchAvatar(myName || ""),
+        fetchAvatar(otherName || "")
+      ]);
+
+      setMyNfd({ name: myName || undefined, avatar: myAvatar });
+      setPeerNfd({ name: otherName || undefined, avatar: otherAvatar });
+    } catch (err) {
+      console.error("NFD Fetch error:", err);
+    }
+  }, []);
+
   useEffect(() => {
     return () => {
       if (heartbeatRef.current) clearInterval(heartbeatRef.current);
@@ -152,7 +180,6 @@ export function P2PChat() {
     
     conn.on("open", () => {
       if (role === "offerer") {
-        // Offerer sends the challenge nonce
         const nonce = (conn as any)._challengeNonce as string;
         conn.send({ type: "challenge", nonce });
         setConnectionStatus("Challenge sent. Waiting for handshake...");
@@ -164,67 +191,40 @@ export function P2PChat() {
     conn.on("data", (data: any) => {
       if (!data) return;
 
-      // ── Joiner receives challenge and waits for manual verification ──
       if (data.type === "challenge" && role === "joiner") {
         setPendingNonce(data.nonce);
         setConnectionStatus("Identity verification required");
         return;
       }
       
-      // ── Offerer receives and verifies handshake ──
       if (data.type === "handshake") {
         try {
           const { txnB64, sigB64, nonce } = data;
           const unsignedBytes = base64ToUint8(txnB64);
           const signedBytes = base64ToUint8(sigB64);
-
-          // Decode the signed transaction properly
           const signedTxn = algosdk.decodeSignedTransaction(signedBytes);
           const txn = signedTxn.txn;
 
-          console.log("[P2P Debug] signedTxn keys:", Object.keys(signedTxn));
-          console.log("[P2P Debug] has sig:", !!signedTxn.sig);
-          console.log("[P2P Debug] sig length:", signedTxn.sig?.length);
-          
           if (!signedTxn.sig) throw new Error("No signature found");
 
-          // Verify note contains our nonce
           const noteBytes = txn.note;
           const noteStr = noteBytes ? new TextDecoder().decode(noteBytes) : "";
-          console.log("[P2P Debug] note:", noteStr);
-          console.log("[P2P Debug] nonce:", nonce);
-          if (!noteStr.includes(nonce)) {
-            throw new Error("Invalid nonce in handshake");
-          }
+          if (!noteStr.includes(nonce)) throw new Error("Invalid nonce");
 
-          // Get the sender's address
-          const senderAddr = algosdk.encodeAddress(txn.from.publicKey);
-
-          // Get the authorized signer's public key.
-          // If the account is rekeyed, the signature is valid for the 'sgnr' address.
           const signerKey = signedTxn.sgnr ? signedTxn.sgnr : txn.from.publicKey;
           const verifiedAddr = algosdk.encodeAddress(signerKey);
           
-          console.log("[P2P Debug] sender address (from):", senderAddr);
-          console.log("[P2P Debug] signer address (sgnr):", verifiedAddr);
-
-          // The wallet signs over "TX" + msgpack(txn dictionary)
           const rawTxn = algosdk.decodeUnsignedTransaction(unsignedBytes);
           const bytesToVerify = rawTxn.bytesToSign();
 
-          const isValid = nacl.sign.detached.verify(
-            bytesToVerify,
-            signedTxn.sig,
-            signerKey
-          );
+          const isValid = nacl.sign.detached.verify(bytesToVerify, signedTxn.sig, signerKey);
           
-          console.log("[P2P Debug] isValid:", isValid);
-
           if (isValid) {
             setPeerAddress(verifiedAddr);
             setPhase("chat");
             setIsConnected(true);
             setConnectionStatus("Connected");
+            if (activeAddress) fetchNfds(activeAddress, verifiedAddr);
             conn.send({ type: "handshake-success" });
             toast.success("Identity verified! Connection established.");
             startHeartbeat();
@@ -232,14 +232,14 @@ export function P2PChat() {
             throw new Error("Invalid signature");
           }
         } catch (err: any) {
-          console.error("Handshake failed:", err);
-          toast.error("Handshake failed: " + err.message);
+          toast.error("Handshake failed");
           conn.close();
         }
         return;
       }
 
       if (data.type === "handshake-success") {
+        if (activeAddress && peerAddress) fetchNfds(activeAddress, peerAddress);
         setPhase("chat");
         setIsConnected(true);
         setConnectionStatus("Connected");
@@ -252,27 +252,13 @@ export function P2PChat() {
       
       if (data.type === "file-meta") {
         fileChunksRef.current.set(data.fileId, []);
-        setMessages((prev) => [
-          ...prev,
-          {
-            text: `📎 Receiving file: ${data.fileName} (${formatFileSize(data.fileSize)})`,
-            sender: "peer",
-            timestamp: Date.now(),
-            type: "file-meta",
-            fileName: data.fileName,
-            fileSize: data.fileSize,
-            fileType: data.fileType,
-            fileId: data.fileId,
-          },
-        ]);
+        setMessages((prev) => [...prev, { text: `📎 Receiving file: ${data.fileName} (${formatFileSize(data.fileSize)})`, sender: "peer", timestamp: Date.now(), type: "file-meta", fileName: data.fileName, fileSize: data.fileSize, fileType: data.fileType, fileId: data.fileId }]);
         return;
       }
 
       if (data.type === "file-chunk") {
         const chunks = fileChunksRef.current.get(data.fileId);
-        if (chunks) {
-          chunks.push(new Uint8Array(data.data));
-        }
+        if (chunks) chunks.push(new Uint8Array(data.data));
         return;
       }
 
@@ -281,43 +267,20 @@ export function P2PChat() {
         if (chunks) {
           const blob = new Blob(chunks.map(c => new Uint8Array(c)) as BlobPart[], { type: data.fileType });
           const url = URL.createObjectURL(blob);
-          setMessages((prev) => [
-            ...prev,
-            {
-              text: `📥 File received: ${data.fileName}`,
-              sender: "peer",
-              timestamp: Date.now(),
-              type: "file-complete",
-              fileName: data.fileName,
-              fileId: data.fileId,
-              fileType: data.fileType,
-              fileUrl: url,
-            },
-          ]);
+          setMessages((prev) => [...prev, { text: `📥 File received: ${data.fileName}`, sender: "peer", timestamp: Date.now(), type: "file-complete", fileName: data.fileName, fileId: data.fileId, fileType: data.fileType, fileUrl: url }]);
           fileChunksRef.current.delete(data.fileId);
         }
         return;
       }
 
-      setMessages((prev) => [
-        ...prev,
-        { text: data.text || "Message received", sender: "peer", timestamp: Date.now(), type: "text" },
-      ]);
+      setMessages((prev) => [...prev, { text: data.text || "Message received", sender: "peer", timestamp: Date.now(), type: "text" }]);
     });
 
     conn.on("close", () => {
       setIsConnected(false);
-      setConnectionStatus("Disconnected");
-      toast.info("Peer disconnected");
       resetConnection();
     });
-
-    conn.on("error", (err) => {
-      console.error("Connection error:", err);
-      toast.error("Connection error");
-      resetConnection();
-    });
-  }, [resetConnection, sendHandshake, startHeartbeat]);
+  }, [resetConnection, startHeartbeat, activeAddress, peerAddress, fetchNfds]);
 
 
   const startOfferSession = useCallback(async () => {
@@ -348,8 +311,6 @@ export function P2PChat() {
 
       peer.on("open", async (id) => {
         setRequestId(id);
-        
-        // Use the current URL minus existing query params to ensure the path is correct
         const baseUrl = window.location.href.split("?")[0];
         const webShareUrl = `${baseUrl}?session=${id}`;
         setDeepLinkUrl(webShareUrl);
@@ -367,7 +328,6 @@ export function P2PChat() {
       });
 
       peer.on("connection", (conn) => {
-        // Store the nonce on the connection so handleConnection can use it
         (conn as any)._challengeNonce = crypto.randomUUID();
         (conn as any)._role = "offerer";
         handleConnection(conn);
@@ -387,7 +347,7 @@ export function P2PChat() {
   }, [handleConnection, resetConnection, activeAddress]);
 
   const joinSession = useCallback(async (overrideSessionId?: any) => {
-    const targetSessionId = typeof overrideSessionId === "string" ? overrideSessionId : remoteRequestId;
+    const targetSessionId = overrideSessionId || remoteRequestId;
 
     if (!targetSessionId?.trim()) {
       toast.error("Please enter a session ID");
@@ -447,10 +407,9 @@ export function P2PChat() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const session = params.get("session");
-    if (session && !remoteRequestId) {
+    if (session && !remoteRequestId && !hasAutoJoined.current && phase === "setup") {
       setRemoteRequestId(session);
-      // If already connected, trigger join immediately
-      if (activeAddress && !hasAutoJoined.current && phase === "setup") {
+      if (activeAddress) {
         hasAutoJoined.current = true;
         joinSession(session);
       }
@@ -458,188 +417,43 @@ export function P2PChat() {
   }, [joinSession, activeAddress, remoteRequestId, phase]);
 
   const sendMessage = useCallback(() => {
-    if (!inputText.trim() || !connRef.current || !connRef.current.open) return;
+    if (!inputText.trim() || !connRef.current?.open) return;
     connRef.current.send({ type: "text", text: inputText.trim() });
-    setMessages((prev) => [
-      ...prev,
-      { text: inputText.trim(), sender: "me", timestamp: Date.now(), type: "text" },
-    ]);
+    setMessages((prev) => [...prev, { text: inputText.trim(), sender: "me", timestamp: Date.now(), type: "text" }]);
     setInputText("");
   }, [inputText]);
 
   const sendFile = useCallback(async (file: File) => {
-    if (!connRef.current || !connRef.current.open) return;
+    if (!connRef.current?.open) return;
     const fileId = crypto.randomUUID();
-    const CHUNK_SIZE = 16384; 
-
-    connRef.current.send({
-        type: "file-meta",
-        fileId,
-        fileName: file.name,
-        fileSize: file.size,
-        fileType: file.type,
-    });
-
+    connRef.current.send({ type: "file-meta", fileId, fileName: file.name, fileSize: file.size, fileType: file.type });
     const buffer = await file.arrayBuffer();
     const data = new Uint8Array(buffer);
-    const url = URL.createObjectURL(new Blob([data], { type: file.type }));
-
-    setMessages((prev) => [
-      ...prev,
-      {
-        text: `📎 Sent file: ${file.name}`,
-        sender: "me",
-        timestamp: Date.now(),
-        type: "file-complete",
-        fileName: file.name,
-        fileSize: file.size,
-        fileType: file.type,
-        fileId,
-        fileUrl: url,
-      },
-    ]);
-
-    for (let offset = 0; offset < data.length; offset += CHUNK_SIZE) {
-      const chunk = data.slice(offset, offset + CHUNK_SIZE);
-      connRef.current.send({
-          type: "file-chunk",
-          fileId,
-          data: chunk, // Send raw Uint8Array for performance
-      });
+    setMessages((prev) => [...prev, { text: `📎 Sent file: ${file.name}`, sender: "me", timestamp: Date.now(), type: "file-complete", fileName: file.name, fileSize: file.size, fileType: file.type, fileId, fileUrl: URL.createObjectURL(file) }]);
+    for (let offset = 0; offset < data.length; offset += 16384) {
+      connRef.current.send({ type: "file-chunk", fileId, data: data.slice(offset, offset + 16384) });
       await new Promise((r) => setTimeout(r, 10));
     }
-
-    connRef.current.send({
-        type: "file-complete",
-        fileId,
-        fileName: file.name,
-        fileType: file.type,
-    });
-
-    toast.success(`File sent: ${file.name}`);
+    connRef.current.send({ type: "file-complete", fileId, fileName: file.name, fileType: file.type });
   }, []);
 
-  const handleFileSelect = useCallback(() => {
-    const input = document.createElement("input");
-    input.type = "file";
-    input.onchange = (e) => {
-      const file = (e.target as HTMLInputElement).files?.[0];
-      if (file) {
-        if (file.size > 50 * 1024 * 1024) {
-          toast.error("File too large. Max 50MB.");
-          return;
-        }
-        sendFile(file);
-      }
-    };
-    input.click();
+  const handlePaste = useCallback((e: React.ClipboardEvent) => {
+    const file = e.clipboardData.files[0];
+    if (file?.type.startsWith("image/")) sendFile(file);
   }, [sendFile]);
 
-  const copyShareLink = useCallback(() => {
-    navigator.clipboard.writeText(deepLinkUrl);
-    toast.success("Link copied!");
-  }, [deepLinkUrl]);
+  const shortenAddr = (addr: string) => addr ? `${addr.slice(0, 6)}...${addr.slice(-4)}` : "";
 
-  const shortenAddr = (addr: string) =>
-    addr ? `${addr.slice(0, 6)}...${addr.slice(-4)}` : "";
-
-  // ─── RENDER ───
   return (
     <div className="flex flex-col items-center justify-center w-full px-4 py-8 min-h-[80vh]">
       <div className="w-full max-w-2xl">
-        {/* Header */}
-        <div className="text-center mb-8">
-          <h1 className="text-3xl md:text-4xl font-bold text-white mb-2">
-            🔐 P2P Encrypted Chat
-          </h1>
-          <p className="text-gray-400 text-sm">
-            End-to-end encrypted via Off-Chain Handshake + PeerJS • No Fees
-          </p>
-        </div>
-
-        {/* ─── SETUP PHASE ─── */}
         {phase === "setup" && (
           <div className="bg-[#1a1a1a] rounded-2xl p-8 border border-[#333] shadow-2xl">
-            <div className="flex flex-col gap-6">
-              {/* Create Session */}
-              <div className="p-6 rounded-xl bg-gradient-to-br from-[#1e1e2e] to-[#12121a] border border-[#2a2a3a]">
-                <h2 className="text-xl font-semibold text-white mb-2">Start a Session</h2>
-                <p className="text-gray-400 text-sm mb-4">
-                  Generate a QR code & link to share with someone
-                </p>
-                <button
-                  onClick={startOfferSession}
-                  className="w-full py-3 px-6 rounded-xl font-semibold text-white
-                    bg-gradient-to-r from-primary-orange to-[#e06b10]
-                    hover:from-[#e06b10] hover:to-primary-orange
-                    transition-all duration-300 shadow-lg hover:shadow-primary-orange/30"
-                >
-                  Create Session
-                </button>
-              </div>
-
-              <div className="flex items-center gap-4">
-                <div className="flex-1 h-px bg-[#333]" />
-                <span className="text-gray-500 text-sm">OR</span>
-                <div className="flex-1 h-px bg-[#333]" />
-              </div>
-
-              {/* Join Session */}
-              <div className="p-6 rounded-xl bg-gradient-to-br from-[#1e1e2e] to-[#12121a] border border-[#2a2a3a]">
-                <h2 className="text-xl font-semibold text-white mb-2">Join a Session</h2>
-                {remoteRequestId && !activeAddress ? (
-                  <div className="p-4 rounded-lg bg-primary-orange/10 border border-primary-orange/30 text-center">
-                    <p className="text-primary-orange text-sm font-medium mb-1">Session ID Captured!</p>
-                    <p className="text-gray-400 text-xs">Please connect your wallet above to join the chat.</p>
-                  </div>
-                ) : (
-                  <>
-                    <p className="text-gray-400 text-sm mb-4">
-                      Enter the session ID or paste the shared link
-                    </p>
-                    <div className="flex flex-col sm:flex-row gap-3">
-                      <input
-                        type="text"
-                        value={remoteRequestId}
-                        onChange={(e) => setRemoteRequestId(e.target.value)}
-                        placeholder="Session ID..."
-                        className="flex-1 py-3 px-4 rounded-xl bg-[#242424] border border-[#333]
-                          text-white placeholder-gray-500 outline-none focus:border-primary-orange
-                          transition-colors"
-                      />
-                      <button
-                        onClick={() => joinSession()}
-                        className="py-3 px-6 rounded-xl font-semibold text-white
-                          bg-gradient-to-r from-[#646cff] to-[#535bf2]
-                          hover:from-[#535bf2] hover:to-[#646cff]
-                          transition-all duration-300 shadow-lg hover:shadow-[#646cff]/30"
-                      >
-                        Join
-                      </button>
-                    </div>
-                  </>
-                )}
-                <div className="mt-3">
-                  <p className="text-gray-500 text-xs">
-                    🔑 Authenticates via Off-Chain Wallet Signature
-                  </p>
-                </div>
-              </div>
-
-              {/* About Section */}
-              <div className="p-6 rounded-xl bg-[#111] border border-[#222]">
-                <h3 className="text-sm font-semibold text-gray-300 mb-2 flex items-center gap-2">
-                  <span>ℹ️</span> About this feature
-                </h3>
-                <p className="text-gray-500 text-xs leading-relaxed mb-2">
-                  This chat uses <strong>Direct Peer-to-Peer (WebRTC)</strong> technology. Unlike traditional apps, your messages never touch a central server.
-                </p>
-                <ul className="text-gray-500 text-xs list-disc list-inside space-y-1">
-                  <li><strong>Verified Identity:</strong> Both peers must sign an off-chain transaction to prove they own their Algorand wallet address before the chat starts.</li>
-                  <li><strong>E2E Encrypted:</strong> Communication is secured via a reliable WebRTC data channel.</li>
-                  <li><strong>Zero Cost:</strong> No server infrastructure means this tool is (and always will be) free to use.</li>
-                </ul>
-              </div>
+            <h1 className="text-3xl font-bold text-white mb-8 text-center">🔐 P2P Encrypted Chat</h1>
+            <button onClick={startOfferSession} className="w-full py-4 bg-primary-orange text-white rounded-xl mb-4">Create Session</button>
+            <div className="flex flex-col gap-3">
+              <input type="text" value={remoteRequestId} onChange={(e) => setRemoteRequestId(e.target.value)} placeholder="Session ID..." className="w-full py-3 px-4 bg-[#242424] text-white rounded-xl border border-[#333]" />
+              <button onClick={() => joinSession()} className="w-full py-3 bg-[#646cff] text-white rounded-xl">Join</button>
             </div>
           </div>
         )}
@@ -674,11 +488,14 @@ export function P2PChat() {
             <div className="mb-6">
               <p className="text-gray-400 text-sm mb-2">🌐 Share this link for browser-based join:</p>
               <div className="flex items-center gap-2 bg-[#0a0a0a] rounded-xl p-3 border border-[#222]">
-                <code className="flex-1 text-primary-orange text-xs break-all text-left">
+                <code className="flex-1 text-primary-orange text-[10px] break-all text-left font-mono">
                   {deepLinkUrl}
                 </code>
                 <button
-                  onClick={copyShareLink}
+                  onClick={() => {
+                    navigator.clipboard.writeText(deepLinkUrl);
+                    toast.success("Link copied!");
+                  }}
                   className="px-4 py-2 rounded-lg bg-primary-orange/20 text-primary-orange
                     hover:bg-primary-orange/30 transition-colors text-sm font-medium shrink-0"
                 >
@@ -687,15 +504,15 @@ export function P2PChat() {
               </div>
             </div>
 
-            <p className="text-gray-500 text-xs mb-4">
+            <p className="text-gray-500 text-[10px] mb-4 font-mono">
               Session ID: <code className="text-gray-400">{requestId}</code>
             </p>
 
             <button
               onClick={resetConnection}
-              className="text-red-400 hover:text-red-300 text-sm transition-colors"
+              className="text-red-400 hover:text-red-300 text-sm transition-colors font-bold uppercase tracking-widest"
             >
-              Cancel
+              Cancel Session
             </button>
           </div>
         )}
@@ -716,7 +533,6 @@ export function P2PChat() {
                   onClick={() => {
                     if (connRef.current && pendingNonce) {
                       sendHandshake(connRef.current, pendingNonce);
-                      setPendingNonce("");
                     }
                   }}
                   className="w-full py-4 px-6 rounded-xl font-bold text-white
@@ -725,6 +541,7 @@ export function P2PChat() {
                     transition-all duration-300 shadow-lg hover:shadow-primary-orange/30
                     flex items-center justify-center gap-2"
                 >
+                  <MdCheck size={20} />
                   <span>Verify & Join Chat</span>
                 </button>
               </>
@@ -737,7 +554,7 @@ export function P2PChat() {
             )}
             <button
               onClick={resetConnection}
-              className="mt-6 text-red-400 hover:text-red-300 text-sm transition-colors"
+              className="mt-6 text-red-400 hover:text-red-300 text-sm transition-colors font-bold uppercase tracking-widest"
             >
               Cancel
             </button>
@@ -746,118 +563,265 @@ export function P2PChat() {
 
         {/* ─── CHAT PHASE ─── */}
         {phase === "chat" && (
-          <div className="bg-[#1a1a1a] rounded-2xl border border-[#333] shadow-2xl flex flex-col"
-            style={{ height: "75vh" }}>
+          <div className="bg-[#1a1a1a] rounded-2xl border border-[#333] shadow-2xl flex flex-col w-full overflow-hidden"
+            style={{ height: "80vh" }}>
+            
             {/* Chat Header */}
-            <div className="flex items-center justify-between px-6 py-4 border-b border-[#333]">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-[#333] bg-[#1e1e1e]">
               <div className="flex items-center gap-3">
                 <span className={`w-3 h-3 rounded-full ${isConnected ? "bg-green-500 animate-pulse" : "bg-red-500"}`} />
                 <div>
-                  <h2 className="text-white font-semibold text-lg">Encrypted Chat</h2>
-                  {peerAddress && (
-                    <p className="text-gray-400 text-xs">{shortenAddr(peerAddress)}</p>
-                  )}
+                  <h2 className="text-white font-bold text-sm uppercase tracking-widest">Secure P2P Channel</h2>
+                  <p className="text-gray-500 text-[10px] font-mono">{peerAddress ? shortenAddr(peerAddress) : "Connecting..."}</p>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-gray-500 px-3 py-1 rounded-full bg-[#0a0a0a] border border-[#222]">
-                  🔒 E2E Encrypted
-                </span>
-                <button
-                  onClick={resetConnection}
-                  className="px-4 py-2 rounded-lg text-red-400 border border-red-400/30
-                    hover:bg-red-400/10 transition-colors text-sm"
-                >
-                  Disconnect
-                </button>
-              </div>
+              <button
+                onClick={resetConnection}
+                className="px-4 py-2 rounded-lg text-red-400 border border-red-400/30 hover:bg-red-400/10 transition-colors text-xs font-bold"
+              >
+                Terminate
+              </button>
             </div>
 
             {/* Messages */}
-            <div className="flex-1 overflow-y-auto px-6 py-4 space-y-3">
+            <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-6 space-y-6 bg-[#141414]">
               {messages.length === 0 && (
-                <div className="text-center text-gray-500 text-sm mt-8">
-                  <p>🔐 Connection established!</p>
-                  <p className="mt-1">Messages are end-to-end encrypted and ephemeral.</p>
+                <div className="text-center py-20">
+                  <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-4 border border-white/10">
+                    <span className="text-2xl">🔒</span>
+                  </div>
+                  <p className="text-gray-400 text-sm font-medium">End-to-End Encrypted Session Active</p>
+                  <p className="text-gray-600 text-xs mt-1">Messages are ephemeral and never stored.</p>
                 </div>
               )}
-              {messages.map((msg, i) => (
-                <div
-                  key={i}
-                  className={`flex w-full ${msg.sender === "me" ? "justify-end" : "justify-start"}`}
-                >
+
+              {messages.map((msg, i) => {
+                const isMe = msg.sender === "me";
+                const nfd = isMe ? myNfd : peerNfd;
+                const addr = isMe ? activeAddress : peerAddress;
+                
+                return (
                   <div
-                    className={`max-w-[85%] sm:max-w-[75%] px-4 py-2.5 rounded-2xl text-sm whitespace-pre-wrap break-words overflow-hidden ${
-                      msg.sender === "me"
-                        ? "bg-gradient-to-r from-primary-orange to-[#e06b10] text-white rounded-br-md"
-                        : "bg-[#2a2a3a] text-gray-100 rounded-bl-md"
-                    } ${msg.type === "file-meta" ? "italic opacity-80" : ""}`}
+                    key={i}
+                    className={`flex w-full gap-3 ${isMe ? "flex-row-reverse" : "flex-row"}`}
                   >
-                    {/* Media Preview Logic */}
-                    {msg.type === "file-complete" && msg.fileUrl && (
-                      <div className="mb-2 rounded-lg overflow-hidden border border-white/10 bg-black/20">
-                        {msg.fileType?.startsWith("image/") ? (
-                          <img src={msg.fileUrl} alt={msg.fileName} className="max-w-full h-auto block" />
-                        ) : msg.fileType?.startsWith("video/") ? (
-                          <video src={msg.fileUrl} controls className="max-w-full block" />
-                        ) : (
-                          <div className="p-4 text-center">
-                            <span className="text-3xl block mb-2">📄</span>
-                            <span className="text-xs opacity-70 block truncate">{msg.fileName}</span>
-                          </div>
-                        )}
-                        <a
-                          href={msg.fileUrl}
-                          download={msg.fileName}
-                          className="flex items-center justify-center gap-2 py-2 px-4 bg-white/10 hover:bg-white/20 transition-colors text-xs font-medium border-t border-white/5"
-                        >
-                          📥 Download
-                        </a>
+                    {/* Avatar */}
+                    <div 
+                      onClick={() => addr && setShowIdentityCard({ address: addr, nfd })}
+                      className="flex-shrink-0 w-9 h-9 rounded-full bg-[#222] border border-white/10 overflow-hidden cursor-pointer hover:border-primary-orange transition-all self-end mb-1 shadow-lg"
+                    >
+                      {nfd?.avatar ? (
+                        <img src={nfd.avatar} alt="avatar" className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-gray-600">
+                          <MdPerson size={20} />
+                        </div>
+                      )}
+                    </div>
+
+                    <div
+                      className={`max-w-[85%] sm:max-w-[70%] px-4 py-3 rounded-2xl text-sm whitespace-pre-wrap break-words shadow-md ${
+                        isMe
+                          ? "bg-gradient-to-br from-primary-orange to-[#e06b10] text-white rounded-br-md"
+                          : "bg-[#2a2a3a] text-gray-100 rounded-bl-md"
+                      }`}
+                    >
+                      {/* Name tag for peer */}
+                      {!isMe && nfd?.name && (
+                        <div className="text-[10px] font-black text-primary-orange mb-1 uppercase tracking-tighter">
+                          {nfd.name}
+                        </div>
+                      )}
+
+                      {/* Media Preview Logic */}
+                      {msg.type === "file-complete" && msg.fileUrl && (
+                        <div className="mb-2 rounded-xl overflow-hidden border border-white/10 bg-black/40">
+                          {msg.fileType?.startsWith("image/") ? (
+                            <img src={msg.fileUrl} alt={msg.fileName} className="max-w-full h-auto block" />
+                          ) : msg.fileType?.startsWith("video/") ? (
+                            <video src={msg.fileUrl} controls className="max-w-full block" />
+                          ) : (
+                            <div className="p-6 text-center">
+                              <span className="text-4xl block mb-3">📄</span>
+                              <span className="text-xs opacity-70 block truncate font-mono">{msg.fileName}</span>
+                            </div>
+                          )}
+                          <a
+                            href={msg.fileUrl}
+                            download={msg.fileName}
+                            className="flex items-center justify-center gap-2 py-3 px-4 bg-white/5 hover:bg-white/20 transition-colors text-xs font-bold border-t border-white/5"
+                          >
+                            <MdImage size={14} /> Download
+                          </a>
+                        </div>
+                      )}
+                      
+                      {msg.text}
+                      
+                      <div className={`text-[9px] mt-2 opacity-40 flex justify-between items-center font-mono ${isMe ? "text-white" : "text-gray-400"}`}>
+                        <span>{new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                       </div>
-                    )}
-                    
-                    {msg.text}
-                    
-                    <div className={`text-[10px] mt-1 ${msg.sender === "me" ? "text-white/50" : "text-gray-500"}`}>
-                      {new Date(msg.timestamp).toLocaleTimeString()}
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
               <div ref={messagesEndRef} />
             </div>
 
             {/* Input Area */}
-            <div className="px-6 py-4 border-t border-[#333]">
-              <div className="flex items-center gap-3">
+            <div className="p-4 border-t border-[#333] bg-[#1e1e1e]">
+              <div className="flex items-end gap-2 bg-[#262626] rounded-2xl border border-[#3a3a3a] p-2 focus-within:border-primary-orange/50 transition-all">
                 <button
-                  onClick={handleFileSelect}
-                  className="p-3 rounded-xl bg-[#2a2a3a] text-gray-400 hover:text-white
-                    hover:bg-[#3a3a4a] transition-colors"
+                  onClick={() => {
+                    const input = document.createElement("input");
+                    input.type = "file";
+                    input.onchange = (e) => {
+                      const file = (e.target as HTMLInputElement).files?.[0];
+                      if (file) {
+                        if (file.size > 50 * 1024 * 1024) {
+                          toast.error("File too large. Max 50MB.");
+                          return;
+                        }
+                        sendFile(file);
+                      }
+                    };
+                    input.click();
+                  }}
+                  className="p-3 rounded-xl hover:bg-white/5 text-gray-500 hover:text-primary-orange transition-all"
                   title="Send file (max 50MB)"
                 >
-                  📎
+                  <MdImage size={22} />
                 </button>
-                <input
-                  type="text"
+
+                <textarea
                   value={inputText}
                   onChange={(e) => setInputText(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && sendMessage()}
-                  placeholder="Type a message..."
-                  className="flex-1 py-3 px-5 rounded-2xl bg-[#242424] border border-[#333]
-                    text-white placeholder-gray-500 outline-none focus:border-primary-orange
-                    transition-colors"
+                  onPaste={handlePaste}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      sendMessage();
+                    }
+                  }}
+                  placeholder="Type a message or paste an image..."
+                  className="flex-1 bg-transparent text-white py-3 px-2 outline-none text-sm min-h-[48px] max-h-[150px] resize-none"
+                  rows={1}
                 />
+
                 <button
                   onClick={sendMessage}
                   disabled={!inputText.trim()}
-                  className="p-3 px-5 rounded-xl font-semibold text-white
-                    bg-gradient-to-r from-primary-orange to-[#e06b10]
-                    hover:from-[#e06b10] hover:to-primary-orange
-                    disabled:opacity-30 disabled:cursor-not-allowed
-                    transition-all duration-300"
+                  className="p-3 bg-primary-orange hover:bg-primary-orange/80 disabled:opacity-20 disabled:grayscale rounded-xl text-black transition-all shadow-lg shadow-primary-orange/10"
                 >
-                  Send
+                  <MdCheck size={22} />
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Info & Use Cases Section */}
+        {phase === "setup" && (
+          <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Security Info */}
+            <div className="p-6 rounded-2xl bg-[#1a1a1a] border border-[#333] shadow-xl">
+              <h3 className="text-sm font-bold text-white mb-4 flex items-center gap-2 uppercase tracking-widest">
+                <span className="text-primary-orange">🔒</span> Security Specs
+              </h3>
+              <ul className="space-y-3">
+                <li className="flex gap-3 text-xs text-gray-400 leading-relaxed">
+                  <span className="text-primary-orange font-bold">01.</span>
+                  <span><strong>Wallet-Verified Handshake:</strong> Both peers must sign an off-chain transaction to prove ownership before the pipe opens.</span>
+                </li>
+                <li className="flex gap-3 text-xs text-gray-400 leading-relaxed">
+                  <span className="text-primary-orange font-bold">02.</span>
+                  <span><strong>Direct P2P:</strong> No servers, no logs, and no central databases. Your data exists only in your browser's RAM.</span>
+                </li>
+                <li className="flex gap-3 text-xs text-gray-400 leading-relaxed">
+                  <span className="text-primary-orange font-bold">03.</span>
+                  <span><strong>Encrypted Streams:</strong> Secure WebRTC data channels for all messages and file transfers.</span>
+                </li>
+              </ul>
+            </div>
+
+            {/* Use Cases */}
+            <div className="p-6 rounded-2xl bg-[#1a1a1a] border border-[#333] shadow-xl">
+              <h3 className="text-sm font-bold text-white mb-4 flex items-center gap-2 uppercase tracking-widest">
+                <span className="text-primary-orange">🚀</span> Common Use Cases
+              </h3>
+              <ul className="space-y-3">
+                <li className="flex gap-3 text-xs text-gray-400 leading-relaxed">
+                  <span className="text-primary-orange font-bold">→</span>
+                  <span><strong>Secure OTC Trading:</strong> Verify a wallet owner's identity via NFD before discussing high-value asset swaps.</span>
+                </li>
+                <li className="flex gap-3 text-xs text-gray-400 leading-relaxed">
+                  <span className="text-primary-orange font-bold">→</span>
+                  <span><strong>Confidential Networking:</strong> Connect with "Whales" or Developers directly without exposing your social handles.</span>
+                </li>
+                <li className="flex gap-3 text-xs text-gray-400 leading-relaxed">
+                  <span className="text-primary-orange font-bold">→</span>
+                  <span><strong>Private Support:</strong> Send screenshots or log files directly to a developer for debugging without hosting them on Discord/Telegram.</span>
+                </li>
+              </ul>
+            </div>
+          </div>
+        )}
+
+        {/* Identity Card Modal */}
+        {showIdentityCard && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fadeIn">
+            <div className="bg-[#1a1a1a] border border-white/10 rounded-[2.5rem] w-full max-w-sm overflow-hidden shadow-2xl">
+              <div className="relative p-8 text-center">
+                <button 
+                  onClick={() => setShowIdentityCard(null)}
+                  className="absolute top-6 right-6 text-gray-500 hover:text-white transition-colors"
+                >
+                  <MdClose size={24} />
+                </button>
+
+                <div className="w-24 h-24 rounded-full bg-[#333] border-4 border-primary-orange mx-auto mb-6 overflow-hidden shadow-xl shadow-primary-orange/20">
+                  {showIdentityCard.nfd?.avatar ? (
+                    <img src={showIdentityCard.nfd.avatar} alt="avatar" className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-gray-500">
+                      <MdPerson size={48} />
+                    </div>
+                  )}
+                </div>
+
+                <h3 className="text-2xl font-black text-white mb-1">
+                  {showIdentityCard.nfd?.name || "Anonymous Peer"}
+                </h3>
+                <p className="text-primary-orange text-[10px] font-black uppercase tracking-widest mb-6 px-4 py-1 bg-primary-orange/10 rounded-full inline-block">
+                  {showIdentityCard.nfd?.name ? "Verified NFD Identity" : "Unverified Wallet"}
+                </p>
+
+                <div className="bg-black/40 rounded-2xl p-4 border border-white/5 mb-6">
+                  <p className="text-[10px] text-gray-500 uppercase tracking-widest mb-2">Wallet Address</p>
+                  <p className="text-gray-300 font-mono text-xs break-all leading-relaxed">
+                    {showIdentityCard.address}
+                  </p>
+                </div>
+
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(showIdentityCard.address);
+                    setIsCopied(true);
+                    setTimeout(() => setIsCopied(false), 2000);
+                  }}
+                  className="w-full py-4 rounded-xl font-bold flex items-center justify-center gap-2 transition-all duration-300 bg-white/5 hover:bg-white/10 text-white border border-white/10"
+                >
+                  {isCopied ? (
+                    <>
+                      <MdCheck className="text-green-400" />
+                      <span className="text-green-400">Copied!</span>
+                    </>
+                  ) : (
+                    <>
+                      <MdContentCopy />
+                      <span>Copy Address</span>
+                    </>
+                  )}
                 </button>
               </div>
             </div>
