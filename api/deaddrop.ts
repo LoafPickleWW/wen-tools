@@ -1,5 +1,5 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
-import { kv } from '@vercel/kv';
+import { createClient } from '@vercel/kv';
 import algosdk from 'algosdk';
 
 /**
@@ -13,13 +13,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
   res.setHeader('Access-Control-Allow-Headers', 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version');
 
-  // Check for KV configuration
-  if (!process.env.KV_REST_API_URL || !process.env.KV_REST_API_TOKEN) {
+  // Resolve the best available credentials
+  const url = process.env.KV_REST_API_URL || process.env.REDIS_URL || process.env.STORAGE_REST_API_URL || '';
+  const token = process.env.KV_REST_API_TOKEN || process.env.STORAGE_REST_API_TOKEN || '';
+
+  // Check for configuration before initializing
+  if (!url) {
     return res.status(500).json({ 
-      error: 'KV Storage not configured. Please connect a KV database in the Vercel dashboard.',
-      debug: { hasUrl: !!process.env.KV_REST_API_URL, hasToken: !!process.env.KV_REST_API_TOKEN }
+      error: 'Redis/KV Storage not detected. Please ensure you have connected a database in Vercel.',
+      details: 'Missing URL. Checked: KV_REST_API_URL, REDIS_URL, STORAGE_REST_API_URL'
     });
   }
+
+  const kv = createClient({ url, token });
 
   if (req.method === 'OPTIONS') {
     res.status(200).end();
