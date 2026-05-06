@@ -89,19 +89,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         const indexer = new algosdk.Indexer('', indexerUrl, '');
 
-        let targetAccount = (address as string || '').trim();
+        // Sledgehammer Sanitization: Strip everything except A-Z and 2-7
+        let targetAccount = (address as string || '').toUpperCase().replace(/[^A-Z2-7]/g, '');
 
-        // If it's an NFD, resolve it to the address first
-        if (targetAccount.toLowerCase().endsWith('.algo')) {
-          const nfdRes = await fetch(`https://api.nf.domains/nfd/${targetAccount.toLowerCase()}?view=tiny`).then(r => r.json());
-          if (nfdRes.depositAccount) targetAccount = nfdRes.depositAccount.trim();
+        // If it was an NFD name (which would have been stripped to almost nothing), resolve it
+        if ((address as string || '').toLowerCase().endsWith('.algo')) {
+          const nfdRes = await fetch(`https://api.nf.domains/nfd/${(address as string).toLowerCase()}?view=tiny`).then(r => r.json());
+          if (nfdRes.depositAccount) targetAccount = nfdRes.depositAccount.toUpperCase().replace(/[^A-Z2-7]/g, '');
         }
 
         // Only check Indexer if we have a valid 58-char address
-        if (targetAccount.length === 58) {
+        if (targetAccount.length === 58 && algosdk.isValidAddress(targetAccount)) {
           try {
+            console.log(`[API] 🔍 Requesting Indexer for account: "${targetAccount}"`);
             const accountInfo = await indexer.lookupAccountByID(targetAccount).do();
-            const authorizedSigner = (accountInfo.account['auth-addr'] || targetAccount).trim();
+            const authorizedSigner = (accountInfo.account['auth-addr'] || targetAccount).toUpperCase().replace(/[^A-Z2-7]/g, '');
+            
             if (sgnrAddr !== authorizedSigner) {
               throw new Error(`Signer ${sgnrAddr} is not authorized for ${targetAccount}`);
             }
@@ -109,11 +112,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             console.error(`[API] Indexer Error for ${targetAccount}:`, indexerErr.message);
             // Fallback: If indexer fails (e.g. account doesn't exist), only allow if signer == address
             if (sgnrAddr !== targetAccount) {
-              throw new Error(`Identity mismatch and indexer lookup failed for ${targetAccount}`);
+              throw new Error(`Identity mismatch and indexer lookup failed for ${targetAccount}. Indexer said: ${indexerErr.message}`);
             }
           }
         } else if (sgnrAddr !== targetAccount) {
-          throw new Error('Identity mismatch or invalid identity format');
+          throw new Error(`Identity mismatch or invalid identity format: "${targetAccount}" (Length: ${targetAccount.length})`);
         }
         
         console.log(`[API] ✅ Identity Verified for: ${address} (Signer: ${sgnrAddr})`);
