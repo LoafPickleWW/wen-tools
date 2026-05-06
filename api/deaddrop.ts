@@ -88,35 +88,37 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           : 'https://mainnet-idx.algonode.cloud';
 
         const indexer = new algosdk.Indexer('', indexerUrl, '');
+        let targetAccount = (address as string || '').trim();
 
-        // Sledgehammer Sanitization: Strip everything except A-Z and 2-7
-        let targetAccount = (address as string || '').toUpperCase().replace(/[^A-Z2-7]/g, '');
-
-        // If it was an NFD name (which would have been stripped to almost nothing), resolve it
-        if ((address as string || '').toLowerCase().endsWith('.algo')) {
-          const nfdRes = await fetch(`https://api.nf.domains/nfd/${(address as string).toLowerCase()}?view=tiny`).then(r => r.json());
-          if (nfdRes.depositAccount) targetAccount = nfdRes.depositAccount.toUpperCase().replace(/[^A-Z2-7]/g, '');
+        // 1. Resolve NFD if needed
+        if (targetAccount.toLowerCase().endsWith('.algo')) {
+          console.log(`[API] 🌐 Resolving NFD: ${targetAccount}`);
+          const nfdRes = await fetch(`https://api.nf.domains/nfd/${targetAccount.toLowerCase()}?view=tiny`).then(r => r.json());
+          if (nfdRes.depositAccount) {
+            targetAccount = nfdRes.depositAccount.trim();
+            console.log(`[API] 📍 Resolved to: ${targetAccount}`);
+          }
         }
 
-        // Only check Indexer if we have a valid 58-char address
-        if (targetAccount.length === 58 && algosdk.isValidAddress(targetAccount)) {
-          try {
-            console.log(`[API] 🔍 Requesting Indexer for account: "${targetAccount}"`);
+        // 2. Perform Unified Authority Check (Required for Rekeyed Accounts)
+        try {
+          if (targetAccount.length === 58) {
             const accountInfo = await indexer.lookupAccountByID(targetAccount).do();
-            const authorizedSigner = (accountInfo.account['auth-addr'] || targetAccount).toUpperCase().replace(/[^A-Z2-7]/g, '');
+            const authorizedSigner = accountInfo.account['auth-addr'] || targetAccount;
             
             if (sgnrAddr !== authorizedSigner) {
-              throw new Error(`Signer ${sgnrAddr} is not authorized for ${targetAccount}`);
+              throw new Error(`Signer ${sgnrAddr} is not authorized for ${targetAccount} (Authorized: ${authorizedSigner})`);
             }
-          } catch (indexerErr: any) {
-            console.error(`[API] Indexer Error for ${targetAccount}:`, indexerErr.message);
-            // Fallback: If indexer fails (e.g. account doesn't exist), only allow if signer == address
-            if (sgnrAddr !== targetAccount) {
-              throw new Error(`Identity mismatch and indexer lookup failed for ${targetAccount}. Indexer said: ${indexerErr.message}`);
-            }
+          } else {
+            // Not a 58-char address and not a resolvable NFD
+            if (sgnrAddr !== targetAccount) throw new Error('Identity mismatch');
           }
-        } else if (sgnrAddr !== targetAccount) {
-          throw new Error(`Identity mismatch or invalid identity format: "${targetAccount}" (Length: ${targetAccount.length})`);
+        } catch (indexerErr: any) {
+          // If Indexer fails (e.g. account not found), fallback to direct match
+          console.warn(`[API] Indexer check bypassed/failed: ${indexerErr.message}`);
+          if (sgnrAddr !== targetAccount) {
+            throw new Error(`Identity verification failed. ${indexerErr.message}`);
+          }
         }
         
         console.log(`[API] ✅ Identity Verified for: ${address} (Signer: ${sgnrAddr})`);
@@ -124,7 +126,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         await client.disconnect();
         return res.status(401).json({ 
           error: e.message || 'Authentication failed',
-          version: "2.1.0-hardened"
+          version: "2.2.0-unified-auth"
         });
       }
 
