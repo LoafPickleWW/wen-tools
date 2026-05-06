@@ -68,12 +68,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       // 1. Verify Signature (Proof of Identity)
       try {
         const decodedTxn = algosdk.decodeSignedTransaction(Buffer.from(txn as string, 'base64'));
-        const sgnr = decodedTxn.sgnr ? algosdk.encodeAddress(decodedTxn.sgnr) : algosdk.encodeAddress(decodedTxn.txn.from.publicKey);
+        const sgnrPK = (decodedTxn.sgnr || decodedTxn.txn.from.publicKey) as Uint8Array;
+        const sgnrAddr = algosdk.encodeAddress(sgnrPK);
         
-        // Verify signature is mathematically valid
+        // Verify signature is mathematically valid (Using raw PK bytes)
         const rawTxn = decodedTxn.txn;
-        const validSig = algosdk.verifyBytes(rawTxn.bytesToSign(), decodedTxn.sig!, sgnr);
+        const validSig = (algosdk as any).verifyBytes(
+          rawTxn.bytesToSign(), 
+          decodedTxn.sig!, 
+          sgnrPK
+        );
         if (!validSig) throw new Error('Signature invalid');
+        
+        console.log(`[API] 🕵️ Signature valid for address: ${address}`);
 
         // Verify Authority (Handle Rekeying)
         const indexerUrl = process.env.VITE_NETWORK === 'testnet' 
@@ -83,11 +90,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const accountInfo = await fetch(`${indexerUrl}/v2/accounts/${address}`).then(r => r.json());
         const authorizedSigner = accountInfo.account['auth-addr'] || address;
 
-        if (sgnr !== authorizedSigner) {
+        if (sgnrAddr !== authorizedSigner) {
           throw new Error('Signer is not authorized for this account');
         }
         
-        console.log(`[API] ✅ Identity Verified for: ${address} (Signer: ${sgnr})`);
+        console.log(`[API] ✅ Identity Verified for: ${address} (Signer: ${sgnrAddr})`);
       } catch (e: any) {
         await client.disconnect();
         return res.status(401).json({ error: e.message || 'Authentication failed' });
