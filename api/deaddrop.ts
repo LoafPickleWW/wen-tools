@@ -87,40 +87,42 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           ? 'https://testnet-idx.algonode.cloud' 
           : 'https://mainnet-idx.algonode.cloud';
 
-        let targetAccount = address as string;
+        const indexer = new algosdk.Indexer('', indexerUrl, '');
+
+        let targetAccount = (address as string || '').trim();
 
         // If it's an NFD, resolve it to the address first
-        if (targetAccount.endsWith('.algo')) {
-          console.log(`[API] 🌐 Resolving NFD: ${targetAccount}`);
-          const nfdRes = await fetch(`https://api.nf.domains/nfd/${targetAccount}?view=tiny`).then(r => r.json());
-          if (nfdRes.depositAccount) {
-            targetAccount = nfdRes.depositAccount;
-            console.log(`[API] 📍 NFD resolved to: ${targetAccount}`);
-          }
+        if (targetAccount.toLowerCase().endsWith('.algo')) {
+          const nfdRes = await fetch(`https://api.nf.domains/nfd/${targetAccount.toLowerCase()}?view=tiny`).then(r => r.json());
+          if (nfdRes.depositAccount) targetAccount = nfdRes.depositAccount.trim();
         }
 
         // Only check Indexer if we have a valid 58-char address
         if (targetAccount.length === 58) {
-          console.log(`[API] 🔍 Checking Indexer: ${indexerUrl}/v2/accounts/${targetAccount}`);
-          const accountInfo = await fetch(`${indexerUrl}/v2/accounts/${targetAccount}`).then(r => r.json());
-          
-          if (accountInfo.account) {
-            const authorizedSigner = accountInfo.account['auth-addr'] || targetAccount;
+          try {
+            const accountInfo = await indexer.lookupAccountByID(targetAccount).do();
+            const authorizedSigner = (accountInfo.account['auth-addr'] || targetAccount).trim();
             if (sgnrAddr !== authorizedSigner) {
               throw new Error(`Signer ${sgnrAddr} is not authorized for ${targetAccount}`);
             }
-          } else if (sgnrAddr !== targetAccount) {
-            // Account might not exist on-chain yet, fallback to direct match
-            throw new Error('Identity mismatch and account not found on-chain');
+          } catch (indexerErr: any) {
+            console.error(`[API] Indexer Error for ${targetAccount}:`, indexerErr.message);
+            // Fallback: If indexer fails (e.g. account doesn't exist), only allow if signer == address
+            if (sgnrAddr !== targetAccount) {
+              throw new Error(`Identity mismatch and indexer lookup failed for ${targetAccount}`);
+            }
           }
         } else if (sgnrAddr !== targetAccount) {
-          throw new Error('Identity mismatch');
+          throw new Error('Identity mismatch or invalid identity format');
         }
         
         console.log(`[API] ✅ Identity Verified for: ${address} (Signer: ${sgnrAddr})`);
       } catch (e: any) {
         await client.disconnect();
-        return res.status(401).json({ error: e.message || 'Authentication failed' });
+        return res.status(401).json({ 
+          error: e.message || 'Authentication failed',
+          version: "2.1.0-hardened"
+        });
       }
 
       // 2. Scan Redis for drops matching this address
