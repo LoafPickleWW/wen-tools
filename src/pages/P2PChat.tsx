@@ -312,7 +312,7 @@ export function P2PChat() {
       setIsConnected(false);
       resetConnection();
     });
-  }, [resetConnection, startHeartbeat, activeAddress, peerAddress, fetchNfds, requestId, myInitProof]);
+  }, [resetConnection, startHeartbeat, activeAddress, fetchNfds, myInitProof]);
 
 
   const startOfferSession = useCallback(async () => {

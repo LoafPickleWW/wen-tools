@@ -152,7 +152,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     res.status(405).json({ error: 'Method not allowed' });
   } catch (error: any) {
     console.error('Dead Drop Error:', error);
-    try { await client.disconnect(); } catch (e) {}
+    try { await client.disconnect(); } catch { /* ignore */ }
     res.status(500).json({ error: error.message });
   }
 }
