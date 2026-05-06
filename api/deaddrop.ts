@@ -47,6 +47,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       // Store the entire payload in Redis
       const key = `dd:${recipient}:${Date.now()}`;
+      console.log(`[API] 🚀 Storing drop for: ${recipient} (Key: ${key})`);
+      
       await client.set(key, JSON.stringify({ ...rest, recipient }), {
         EX: expiry || 86400 // 24h default
       });
@@ -84,19 +86,25 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         if (sgnr !== authorizedSigner) {
           throw new Error('Signer is not authorized for this account');
         }
+        
+        console.log(`[API] ✅ Identity Verified for: ${address} (Signer: ${sgnr})`);
       } catch (e: any) {
         await client.disconnect();
         return res.status(401).json({ error: e.message || 'Authentication failed' });
       }
 
       // 2. Scan Redis for drops matching this address
+      console.log(`[API] 🔍 Scanning for drops matching: dd:${address}:*`);
       const keys = await client.keys(`dd:${address}:*`);
+      
       if (keys.length === 0) {
+        console.log(`[API] 📭 No drops found for: ${address}`);
         await client.disconnect();
         return res.status(200).json({ drops: [] });
       }
 
       // 3. Fetch and Delete (Burn-on-Read)
+      console.log(`[API] 📥 Found ${keys.length} keys! Fetching and burning...`);
       const drops = [];
       for (const key of keys) {
         const data = await client.get(key);

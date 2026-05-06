@@ -607,6 +607,10 @@ export function P2PChat() {
                         const accInfo = await algodClient.accountInformation(targetAddr).do();
                         const authAddr = accInfo['auth-addr'] || targetAddr;
                         
+                        console.log(`📦 [Dead Drop] Initializing drop for: ${ddRecipient}`);
+                        console.log(`📍 [Dead Drop] Target Address: ${targetAddr}`);
+                        if (authAddr !== targetAddr) console.log(`🔐 [Dead Drop] Rekey detected! Targeting Auth Signer: ${authAddr}`);
+                        
                         let payload: any;
                         
                         if (ddFile) {
@@ -744,6 +748,8 @@ export function P2PChat() {
                       const scanTargets = [activeAddress];
                       if (nfdName) scanTargets.push(nfdName);
 
+                      console.log("🔍 [Dead Drop] Starting exhaustive scan...");
+                      console.log(`👤 [Dead Drop] Identities to check: ${scanTargets.join(", ")}`);
                       toast.info(`Scanning relay for ${scanTargets.join(" / ")}...`);
 
                       const allDrops: any[] = [];
@@ -754,10 +760,14 @@ export function P2PChat() {
                           txn: uint8ToBase64(signed[0])
                         }).toString();
 
+                        console.log(`📡 [Dead Drop] Querying relay for: ${target}`);
                         const res = await fetch(`/api/deaddrop?${query}`);
                         if (res.ok) {
                           const data = await res.json();
+                          console.log(`📥 [Dead Drop] Relay response for ${target}:`, data);
                           if (data.drops) allDrops.push(...data.drops);
+                        } else {
+                          console.error(`❌ [Dead Drop] Relay error for ${target}:`, await res.text());
                         }
                       }
 
