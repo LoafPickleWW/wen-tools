@@ -82,16 +82,39 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         
         console.log(`[API] 🕵️ Signature valid for address: ${address}`);
 
-        // Verify Authority (Handle Rekeying)
+        // Verify Authority (Handle Rekeying and NFDs)
         const indexerUrl = process.env.VITE_NETWORK === 'testnet' 
           ? 'https://testnet-idx.algonode.cloud' 
           : 'https://mainnet-idx.algonode.cloud';
-          
-        const accountInfo = await fetch(`${indexerUrl}/v2/accounts/${address}`).then(r => r.json());
-        const authorizedSigner = accountInfo.account['auth-addr'] || address;
 
-        if (sgnrAddr !== authorizedSigner) {
-          throw new Error('Signer is not authorized for this account');
+        let targetAccount = address as string;
+
+        // If it's an NFD, resolve it to the address first
+        if (targetAccount.endsWith('.algo')) {
+          console.log(`[API] 🌐 Resolving NFD: ${targetAccount}`);
+          const nfdRes = await fetch(`https://api.nf.domains/nfd/${targetAccount}?view=tiny`).then(r => r.json());
+          if (nfdRes.depositAccount) {
+            targetAccount = nfdRes.depositAccount;
+            console.log(`[API] 📍 NFD resolved to: ${targetAccount}`);
+          }
+        }
+
+        // Only check Indexer if we have a valid 58-char address
+        if (targetAccount.length === 58) {
+          console.log(`[API] 🔍 Checking Indexer: ${indexerUrl}/v2/accounts/${targetAccount}`);
+          const accountInfo = await fetch(`${indexerUrl}/v2/accounts/${targetAccount}`).then(r => r.json());
+          
+          if (accountInfo.account) {
+            const authorizedSigner = accountInfo.account['auth-addr'] || targetAccount;
+            if (sgnrAddr !== authorizedSigner) {
+              throw new Error(`Signer ${sgnrAddr} is not authorized for ${targetAccount}`);
+            }
+          } else if (sgnrAddr !== targetAccount) {
+            // Account might not exist on-chain yet, fallback to direct match
+            throw new Error('Identity mismatch and account not found on-chain');
+          }
+        } else if (sgnrAddr !== targetAccount) {
+          throw new Error('Identity mismatch');
         }
         
         console.log(`[API] ✅ Identity Verified for: ${address} (Signer: ${sgnrAddr})`);
