@@ -89,6 +89,15 @@ function getAlgod(network: NetworkName) {
   return new algosdk.Algodv2("", urls[network], "");
 }
 
+function getIndexer(network: NetworkName) {
+  const urls: Record<NetworkName, string> = {
+    mainnet: "https://mainnet-idx.algonode.cloud",
+    testnet: "https://testnet-idx.algonode.cloud",
+    betanet: "https://betanet-idx.algonode.cloud",
+  };
+  return new algosdk.Indexer("", urls[network], "");
+}
+
 // ---------------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------------
@@ -144,6 +153,44 @@ export async function getBalance(
     return Number(amt);
   } catch {
     return 0;
+  }
+}
+
+export interface TransactionRecord {
+  id: string;
+  sender: string;
+  receiver?: string;
+  amount: number; // microAlgos
+  fee: number;
+  round: number;
+  timestamp: number;
+}
+
+/**
+ * Fetch recent transactions for a given address using the Indexer.
+ */
+export async function getAccountTransactions(
+  address: string,
+  network: NetworkName = "testnet",
+  limit = 10,
+): Promise<TransactionRecord[]> {
+  try {
+    const indexer = getIndexer(network);
+    const response = await indexer.searchForTransactions().address(address).limit(limit).do();
+    const txns = response.transactions || [];
+    
+    return txns.map((tx: any) => ({
+      id: tx.id,
+      sender: tx.sender,
+      receiver: tx["payment-transaction"]?.receiver,
+      amount: Number(tx["payment-transaction"]?.amount || 0),
+      fee: Number(tx.fee || 0),
+      round: Number(tx["confirmed-round"] || 0),
+      timestamp: Number(tx["round-time"] || 0),
+    }));
+  } catch (err) {
+    console.error("Error fetching transactions:", err);
+    return [];
   }
 }
 
@@ -267,10 +314,10 @@ export async function sendFalconPayment(
   ];
 
   // 8. Submit
-  const result = await algod.sendRawTransaction(signedGroup).do();
-  const resultTxId =
-    (result as any).txId ?? (result as any).txid ?? (result as any)["txId"];
-  return resultTxId;
+  await algod.sendRawTransaction(signedGroup).do();
+  
+  // Return the txid of the actual payment transaction, not the first padding txn
+  return paymentTxn.txID().toString();
 }
 
 /**

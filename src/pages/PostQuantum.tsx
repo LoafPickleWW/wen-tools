@@ -6,6 +6,7 @@ import CreateAccountDialog from "../components/falcon/CreateAccountDialog";
 import ImportAccountDialog from "../components/falcon/ImportAccountDialog";
 import SendTransactionPanel from "../components/falcon/SendTransactionPanel";
 import FundAccountPanel from "../components/falcon/FundAccountPanel";
+import TransactionHistoryPanel from "../components/falcon/TransactionHistoryPanel";
 import type { FalconAccount } from "../utils/falcon";
 import { getAllAccounts } from "../db/falconDb";
 
@@ -133,6 +134,12 @@ export default function PostQuantum() {
               account={selectedAccount}
               onSent={() => setRefreshKey((k) => k + 1)}
             />
+            <div className="md:col-span-2">
+              <TransactionHistoryPanel
+                account={selectedAccount}
+                refreshKey={refreshKey}
+              />
+            </div>
           </div>
         </>
       )}
