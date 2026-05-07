@@ -1,6 +1,7 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from 'redis';
 import algosdk from 'algosdk';
+import nacl from 'tweetnacl';
 
 /**
  * Dead Drop Relay API
@@ -71,11 +72,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const sgnrPK = (decodedTxn.sgnr || decodedTxn.txn.from.publicKey) as Uint8Array;
         const sgnrAddr = algosdk.encodeAddress(sgnrPK);
         
-        // Verify signature is mathematically valid (Using raw PK bytes)
+        // Verify signature is mathematically valid (Using raw PK bytes + NaCl)
         const rawTxn = decodedTxn.txn;
-        const validSig = (algosdk as any).verifyBytes(
-          rawTxn.bytesToSign(), 
-          decodedTxn.sig!, 
+        const validSig = nacl.sign.detached.verify(
+          rawTxn.bytesToSign(),
+          decodedTxn.sig!,
           sgnrPK
         );
         if (!validSig) throw new Error('Signature invalid');
