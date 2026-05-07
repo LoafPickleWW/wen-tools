@@ -6,7 +6,7 @@ import nacl from "tweetnacl";
 import { toast } from "react-toastify";
 import QRCode from "qrcode";
 import { MdContentCopy, MdCheck, MdPerson, MdClose, MdImage, MdAttachFile } from "react-icons/md";
-import { encryptDeadDrop, fetchNfdEncryptionKey, encryptBinaryDeadDrop, uint8ToBase64, base64ToUint8 } from "../utils/deadDropCrypto";
+import { encryptDeadDrop, fetchNfdEncryptionKey, encryptBinaryDeadDrop, uint8ToBase64, base64ToUint8, decryptDeadDrop, decryptBinaryDeadDrop } from "../utils/deadDropCrypto";
 import { pinJSONToCrust } from "../crust";
 import { getNfdDomain } from "../utils";
 
@@ -774,25 +774,36 @@ export function P2PChat() {
                       if (allDrops.length > 0) {
                         toast.success(`Found ${allDrops.length} drop(s)!`);
                         
-                        // 3. Process & Resolve drops
+                        // 3. Derive Decryption Key from signature
+                        // We use the signature of the pickup transaction as a seed to derive the X25519 secret key
+                        // This allows the user to decrypt using only their wallet identity
+                        const hashed = nacl.hash(signed[0]);
+                        const derivedKeyPair = nacl.box.keyPair.fromSecretKey(hashed.slice(0, 32));
+
+                        // 4. Process & Resolve drops
                         const processed = await Promise.all(allDrops.map(async (drop: any) => {
                           try {
                             if (drop.type === "file") {
-                              // Fetch from IPFS (Crust/Pinata)
-                              const ipfsUrl = `https://ipfs.io/ipfs/${drop.cid}`;
-                              await fetch(ipfsUrl).then(r => r.json());
+                              const decryptedBytes = decryptBinaryDeadDrop(drop.ciphertext, drop.nonce, drop.ephemeralPk, derivedKeyPair.secretKey);
+                              const blob = new Blob([decryptedBytes as BlobPart], { type: drop.fileType || "application/octet-stream" });
+                              const url = URL.createObjectURL(blob);
                               
-                              // TODO: Decrypt logic using local secret key
-                              // For now, we simulate the UI container
                               return { 
                                 ...drop, 
                                 decrypted: `File: ${drop.fileName}`,
                                 isFile: true,
-                                fileUrl: null // Will be set after decryption
+                                fileUrl: url
                               };
                             }
-                            return { ...drop, decrypted: "Encrypted Text Received." };
-                          } catch { return { ...drop, decrypted: "[Resolve Failed]" }; }
+
+                            // Text Decryption
+                            const text = decryptDeadDrop(drop.ciphertext, drop.nonce, drop.ephemeralPk, derivedKeyPair.secretKey);
+                            return { ...drop, decrypted: text };
+
+                          } catch (err) { 
+                            console.error("Decryption failed:", err);
+                            return { ...drop, decrypted: "Decryption failed. This drop might have been encrypted for a different key or address." }; 
+                          }
                         }));
                         setRetrievedDrops(processed);
                       } else {

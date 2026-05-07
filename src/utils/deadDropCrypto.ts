@@ -103,3 +103,43 @@ export function base64ToUint8(base64: string): Uint8Array {
   }
   return bytes;
 }
+
+/**
+ * Decrypts a text dead drop using the recipient's secret key.
+ */
+export function decryptDeadDrop(
+  ciphertext: string,
+  nonce: string,
+  ephemeralPk: string,
+  secretKey: Uint8Array
+): string {
+  const decrypted = nacl.box.open(
+    base64ToUint8(ciphertext),
+    base64ToUint8(nonce),
+    base64ToUint8(ephemeralPk),
+    secretKey
+  );
+
+  if (!decrypted) throw new Error("Decryption failed");
+  return new TextDecoder().decode(decrypted);
+}
+
+/**
+ * Decrypts a binary dead drop (file).
+ */
+export function decryptBinaryDeadDrop(
+  ciphertext: string,
+  nonce: string,
+  ephemeralPk: string,
+  secretKey: Uint8Array
+): Uint8Array {
+  const decrypted = nacl.box.open(
+    base64ToUint8(ciphertext),
+    base64ToUint8(nonce),
+    base64ToUint8(ephemeralPk),
+    secretKey
+  );
+
+  if (!decrypted) throw new Error("Decryption failed");
+  return decrypted;
+}
