@@ -1,36 +1,33 @@
-import algosdk from "algosdk";
 import nacl from "tweetnacl";
 
 /**
- * Derives a Curve25519 public key from an Ed25519 public key (Algorand address).
- * This allows us to use nacl.box (X25519) encryption targeting an Algorand wallet.
+ * Derives a X25519 keypair from an Algorand transaction signature.
+ * Used during mailbox initialization to create a persistent messaging identity.
  */
-export function ed25519ToCurve25519(ed25519PubKey: Uint8Array): Uint8Array {
-  // This is a simplified wrapper. In a production environment with tweetnacl,
-  // we use the established mapping. Note: tweetnacl doesn't export this directly,
-  // but we can use the 'ed2curve' logic or similar small helper.
-  // For this implementation, we will use the standard tweetnacl box for encryption.
-  return ed25519PubKey; // Placeholder: In practice, we'd use a dedicated ed2curve helper
+export function deriveKeyFromSignature(signature: Uint8Array): nacl.BoxKeyPair {
+  const seed = nacl.hash(signature).slice(0, 32);
+  return nacl.box.keyPair.fromSecretKey(seed);
 }
 
 /**
- * Encrypts a payload for a recipient using their public encryption key.
- * Prioritizes keys found in NFD metadata.
+ * Encrypts a text payload for a recipient using their registered X25519 public key.
+ * The recipientPubKeyB64 MUST be an X25519 key (from the relay registry or NFD).
+ * Using a raw Algorand Ed25519 key here will produce undecryptable output.
  */
 export async function encryptDeadDrop(
   message: string,
   recipientAddress: string,
-  recipientNfdKey?: string // Optional key from NFD metadata
+  recipientPubKeyB64?: string
 ) {
-  const recipientPk = recipientNfdKey 
-    ? base64ToUint8(recipientNfdKey)
-    : algosdk.decodeAddress(recipientAddress).publicKey;
+  if (!recipientPubKeyB64) {
+    throw new Error("Recipient public key is required for encryption. The recipient must initialize their mailbox first.");
+  }
+  const recipientPk = base64ToUint8(recipientPubKeyB64);
 
   const ephemeralKeyPair = nacl.box.keyPair();
   const nonce = nacl.randomBytes(nacl.box.nonceLength);
   const messageUint8 = new TextEncoder().encode(message);
   
-  // We use anonymous box (ephemeral sender)
   const ciphertext = nacl.box(
     messageUint8,
     nonce,
@@ -58,16 +55,17 @@ export async function fetchNfdEncryptionKey(nfdName: string): Promise<string | n
 }
 
 /**
- * Encrypts a binary payload (like a file) for a recipient.
+ * Encrypts a binary payload (like a file) for a recipient using their X25519 public key.
  */
 export async function encryptBinaryDeadDrop(
   data: Uint8Array,
   recipientAddress: string,
-  recipientNfdKey?: string
+  recipientPubKeyB64?: string
 ) {
-  const recipientPk = recipientNfdKey 
-    ? base64ToUint8(recipientNfdKey)
-    : algosdk.decodeAddress(recipientAddress).publicKey;
+  if (!recipientPubKeyB64) {
+    throw new Error("Recipient public key is required for encryption.");
+  }
+  const recipientPk = base64ToUint8(recipientPubKeyB64);
 
   const ephemeralKeyPair = nacl.box.keyPair();
   const nonce = nacl.randomBytes(nacl.box.nonceLength);

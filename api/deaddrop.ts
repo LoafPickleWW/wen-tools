@@ -50,12 +50,29 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const key = `dd:${recipient}:${Date.now()}`;
       console.log(`[API] 🚀 Storing drop for: ${recipient} (Key: ${key})`);
       
+      // Handle Public Key Registration
+      if (rest.registerPubKey) {
+        const pubKeyKey = `dd:pubkey:${rest.address || recipient}`;
+        await client.set(pubKeyKey, rest.registerPubKey);
+        console.log(`[API] 🔑 Registered public key for: ${rest.address || recipient}`);
+        await client.disconnect();
+        return res.status(200).json({ success: true, message: 'Public key registered' });
+      }
+
       await client.set(key, JSON.stringify({ ...rest, recipient }), {
         EX: expiry || 86400 // 24h default
       });
       
       await client.disconnect();
       return res.status(200).json({ success: true, id: key });
+    }
+
+    // Unauthenticated: Public Key Lookup (anyone can look up a public key)
+    if (req.method === 'GET' && req.query.getPubKey) {
+      const address = (req.query.address as string || '').trim();
+      const pubKey = await client.get(`dd:pubkey:${address}`);
+      await client.disconnect();
+      return res.status(200).json({ pubKey });
     }
 
     if (req.method === 'GET') {
