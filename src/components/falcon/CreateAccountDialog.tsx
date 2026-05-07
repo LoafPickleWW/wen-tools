@@ -1,17 +1,4 @@
 import { useState } from "react";
-import {
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Button,
-  TextField,
-  MenuItem,
-  CircularProgress,
-  FormControlLabel,
-  Switch,
-  Collapse,
-} from "@mui/material";
 import { IoLockClosed } from "react-icons/io5";
 import { toast } from "react-toastify";
 import {
@@ -32,7 +19,6 @@ export default function CreateAccountDialog({ open, onClose, onCreated }: Props)
   const [network, setNetwork] = useState<NetworkName>("testnet");
   const [creating, setCreating] = useState(false);
 
-  // Passphrase encryption
   const [usePassphrase, setUsePassphrase] = useState(false);
   const [passphrase, setPassphrase] = useState("");
   const [confirmPassphrase, setConfirmPassphrase] = useState("");
@@ -45,7 +31,6 @@ export default function CreateAccountDialog({ open, onClose, onCreated }: Props)
   };
 
   const handleCreate = async () => {
-    // Validate passphrase if enabled
     if (usePassphrase) {
       if (!passphrase) {
         toast.warning("Please enter a passphrase.");
@@ -94,111 +79,124 @@ export default function CreateAccountDialog({ open, onClose, onCreated }: Props)
     }
   };
 
+  if (!open) return null;
+
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-      <DialogTitle sx={{ fontWeight: 700 }}>
-        Create Post-Quantum Account
-      </DialogTitle>
-      <DialogContent className="flex flex-col gap-4 pt-2">
-        <p className="text-sm opacity-70">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
+      <div className="bg-secondary-gray border border-slate-700 rounded-2xl p-6 max-w-md w-full mx-4 shadow-2xl">
+        <h3 className="text-lg font-bold text-white mb-1">
+          Create Post-Quantum Account
+        </h3>
+        <p className="text-sm text-slate-400 mb-5">
           This generates a Falcon-1024 keypair entirely in your browser using
           WebAssembly. The private key never leaves your device.
         </p>
-        <TextField
-          label="Account Label (optional)"
-          value={label}
-          onChange={(e) => setLabel(e.target.value)}
-          placeholder="e.g. My PQ Test Account"
-          size="small"
-          fullWidth
-        />
-        <TextField
-          select
-          label="Network"
-          value={network}
-          onChange={(e) => setNetwork(e.target.value as NetworkName)}
-          size="small"
-          fullWidth
-          helperText="Use Testnet for experimentation. Do not store real funds."
-        >
-          <MenuItem value="testnet">TestNet</MenuItem>
-          <MenuItem value="mainnet">MainNet (caution!)</MenuItem>
-          <MenuItem value="betanet">BetaNet</MenuItem>
-        </TextField>
 
-        {/* Passphrase protection */}
-        <div className="border border-white/10 rounded-lg p-3 mt-1">
-          <FormControlLabel
-            control={
-              <Switch
+        <div className="flex flex-col gap-4">
+          <input
+            type="text"
+            value={label}
+            onChange={(e) => setLabel(e.target.value)}
+            placeholder="Account Label (optional)"
+            className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-600 focus:border-primary-yellow focus:outline-none transition"
+          />
+
+          <div>
+            <label className="text-xs text-slate-500 font-semibold mb-1 block">
+              Network
+            </label>
+            <select
+              value={network}
+              onChange={(e) => setNetwork(e.target.value as NetworkName)}
+              className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-sm text-white focus:border-primary-yellow focus:outline-none transition appearance-none cursor-pointer"
+            >
+              <option value="testnet">TestNet</option>
+              <option value="mainnet">MainNet (caution!)</option>
+              <option value="betanet">BetaNet</option>
+            </select>
+            <p className="text-xxs text-slate-600 mt-1">
+              Use Testnet for experimentation. Do not store real funds.
+            </p>
+          </div>
+
+          {/* Passphrase protection */}
+          <div className="border border-slate-700 rounded-xl p-4">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
                 checked={usePassphrase}
                 onChange={(e) => setUsePassphrase(e.target.checked)}
-                size="small"
+                className="accent-primary-yellow w-4 h-4"
               />
-            }
-            label={
-              <span className="flex items-center gap-1 text-sm">
-                <IoLockClosed className="opacity-60" />
+              <span className="flex items-center gap-1.5 text-sm text-white font-semibold">
+                <IoLockClosed className="text-slate-500" />
                 Protect with passphrase
               </span>
-            }
-          />
-          <Collapse in={usePassphrase}>
-            <div className="flex flex-col gap-3 mt-3">
-              <p className="text-xs opacity-50">
-                Your secret key will be encrypted with AES-256-GCM before
-                storage. You'll need this passphrase to send transactions or
-                export the account.
-              </p>
-              <TextField
-                label="Passphrase"
-                type="password"
-                value={passphrase}
-                onChange={(e) => setPassphrase(e.target.value)}
-                size="small"
-                fullWidth
-                helperText={
-                  passphrase && passphrase.length < 8
-                    ? "Must be at least 8 characters"
-                    : ""
-                }
-                error={!!passphrase && passphrase.length < 8}
-              />
-              <TextField
-                label="Confirm Passphrase"
-                type="password"
-                value={confirmPassphrase}
-                onChange={(e) => setConfirmPassphrase(e.target.value)}
-                size="small"
-                fullWidth
-                error={
-                  confirmPassphrase !== "" &&
-                  passphrase !== confirmPassphrase
-                }
-                helperText={
-                  confirmPassphrase !== "" &&
-                  passphrase !== confirmPassphrase
-                    ? "Passphrases don't match"
-                    : ""
-                }
-              />
-            </div>
-          </Collapse>
+            </label>
+
+            {usePassphrase && (
+              <div className="flex flex-col gap-3 mt-4">
+                <p className="text-xs text-slate-500">
+                  Your secret key will be encrypted with AES-256-GCM before
+                  storage. You'll need this passphrase to send transactions or
+                  export the account.
+                </p>
+                <input
+                  type="password"
+                  value={passphrase}
+                  onChange={(e) => setPassphrase(e.target.value)}
+                  placeholder="Passphrase (min. 8 characters)"
+                  className={`w-full bg-slate-900 border rounded-xl px-4 py-3 text-sm text-white placeholder-slate-600 focus:outline-none transition ${
+                    passphrase && passphrase.length < 8
+                      ? "border-red-500"
+                      : "border-slate-700 focus:border-primary-yellow"
+                  }`}
+                />
+                <input
+                  type="password"
+                  value={confirmPassphrase}
+                  onChange={(e) => setConfirmPassphrase(e.target.value)}
+                  placeholder="Confirm passphrase"
+                  className={`w-full bg-slate-900 border rounded-xl px-4 py-3 text-sm text-white placeholder-slate-600 focus:outline-none transition ${
+                    confirmPassphrase && passphrase !== confirmPassphrase
+                      ? "border-red-500"
+                      : "border-slate-700 focus:border-primary-yellow"
+                  }`}
+                />
+                {confirmPassphrase && passphrase !== confirmPassphrase && (
+                  <p className="text-xs text-red-400">
+                    Passphrases don't match
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
         </div>
-      </DialogContent>
-      <DialogActions sx={{ px: 3, pb: 2 }}>
-        <Button onClick={onClose} disabled={creating}>
-          Cancel
-        </Button>
-        <Button
-          variant="contained"
-          onClick={handleCreate}
-          disabled={creating}
-          startIcon={creating ? <CircularProgress size={16} /> : null}
-        >
-          {creating ? "Generating Keys…" : "Create Account"}
-        </Button>
-      </DialogActions>
-    </Dialog>
+
+        <div className="flex gap-3 mt-6">
+          <button
+            onClick={() => { resetForm(); onClose(); }}
+            disabled={creating}
+            className="flex-1 py-2.5 rounded-xl border border-slate-700 text-slate-300 hover:border-slate-500 transition font-semibold text-sm disabled:opacity-50"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleCreate}
+            disabled={creating}
+            className="flex-1 py-2.5 rounded-xl bg-primary-yellow text-black font-bold text-sm hover:bg-primary-orange transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+          >
+            {creating ? (
+              <>
+                <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin" />
+                Generating Keys…
+              </>
+            ) : (
+              "Create Account"
+            )}
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }

@@ -1,12 +1,4 @@
 import { useState } from "react";
-import {
-  Card,
-  CardContent,
-  TextField,
-  Button,
-  CircularProgress,
-  InputAdornment,
-} from "@mui/material";
 import { IoSend, IoOpen } from "react-icons/io5";
 import { toast } from "react-toastify";
 import type { FalconAccount } from "../../utils/falcon";
@@ -20,7 +12,6 @@ import PassphraseDialog from "./PassphraseDialog";
 
 interface Props {
   account: FalconAccount;
-  /** Called after a successful send so the parent can refresh balances */
   onSent?: () => void;
 }
 
@@ -88,88 +79,84 @@ export default function SendTransactionPanel({ account, onSent }: Props) {
 
   return (
     <>
-      <Card variant="outlined">
-        <CardContent className="flex flex-col gap-3">
-          <h3 className="font-semibold text-base">Send from Falcon Account</h3>
-          <p className="text-xs opacity-60">
-            Signing happens locally with your Falcon private key via WASM. The
-            signed transaction is submitted directly to an Algorand node.
-          </p>
+      <div className="border border-slate-800 rounded-2xl p-6 bg-primary-black/40 flex flex-col gap-4">
+        <h3 className="font-bold text-base text-white">
+          Send from Falcon Account
+        </h3>
+        <p className="text-xs text-slate-500">
+          Signing happens locally with your Falcon private key via WASM. The
+          signed transaction is submitted directly to an Algorand node.
+        </p>
 
-          <TextField
-            label="Receiver Address"
-            value={receiver}
-            onChange={(e) => setReceiver(e.target.value)}
-            placeholder="ALGO..."
-            size="small"
-            fullWidth
-            InputProps={{
-              sx: { fontFamily: "monospace", fontSize: "0.85rem" },
-            }}
-          />
+        <input
+          type="text"
+          value={receiver}
+          onChange={(e) => setReceiver(e.target.value)}
+          placeholder="Receiver Address (ALGO...)"
+          className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-sm font-mono text-white placeholder-slate-600 focus:border-primary-yellow focus:outline-none transition"
+        />
 
-          <TextField
-            label="Amount"
+        <div className="relative">
+          <input
+            type="number"
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
             placeholder="0.0"
-            size="small"
-            type="number"
-            fullWidth
-            InputProps={{
-              endAdornment: (
-                <InputAdornment position="end">Algo</InputAdornment>
-              ),
-            }}
+            className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 pr-16 text-sm text-white placeholder-slate-600 focus:border-primary-yellow focus:outline-none transition"
           />
+          <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs text-slate-500 font-semibold">
+            Algo
+          </span>
+        </div>
 
-          <TextField
-            label="Note (optional)"
-            value={note}
-            onChange={(e) => setNote(e.target.value)}
-            placeholder="e.g. PQ test payment"
-            size="small"
-            fullWidth
-          />
+        <input
+          type="text"
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+          placeholder="Note (optional)"
+          className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-600 focus:border-primary-yellow focus:outline-none transition"
+        />
 
-          <Button
-            variant="contained"
-            onClick={handleSend}
-            disabled={sending}
-            startIcon={
-              sending ? <CircularProgress size={16} /> : <IoSend />
-            }
-            fullWidth
-          >
-            {sending ? "Signing & Submitting…" : "Send Transaction"}
-          </Button>
-
-          {lastTxId && (
-            <div className="flex items-center gap-2 p-3 rounded-lg bg-green-500/10 border border-green-500/30">
-              <span className="text-sm font-medium text-green-700 dark:text-green-400">
-                Success!
-              </span>
-              <code className="text-xs font-mono truncate flex-1">
-                {lastTxId}
-              </code>
-              <Button
-                size="small"
-                startIcon={<IoOpen />}
-                onClick={() =>
-                  window.open(
-                    getExplorerTxUrl(lastTxId, account.network),
-                    "_blank",
-                  )
-                }
-              >
-                View
-              </Button>
-            </div>
+        <button
+          onClick={handleSend}
+          disabled={sending}
+          className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl bg-primary-yellow text-black font-bold text-sm hover:bg-primary-orange transition disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {sending ? (
+            <>
+              <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin" />
+              Signing & Submitting…
+            </>
+          ) : (
+            <>
+              <IoSend /> Send Transaction
+            </>
           )}
-        </CardContent>
-      </Card>
+        </button>
 
-      {/* Passphrase dialog for encrypted accounts */}
+        {lastTxId && (
+          <div className="flex items-center gap-2 p-3 rounded-xl bg-green-500/10 border border-green-500/30">
+            <span className="text-sm font-bold text-green-400">
+              Success!
+            </span>
+            <code className="text-xs font-mono truncate flex-1 text-green-300">
+              {lastTxId}
+            </code>
+            <button
+              onClick={() =>
+                window.open(
+                  getExplorerTxUrl(lastTxId, account.network),
+                  "_blank",
+                )
+              }
+              className="flex items-center gap-1 text-xs font-semibold text-green-400 hover:text-green-300 transition"
+            >
+              <IoOpen /> View
+            </button>
+          </div>
+        )}
+      </div>
+
       <PassphraseDialog
         open={passphraseOpen}
         onClose={() => setPassphraseOpen(false)}

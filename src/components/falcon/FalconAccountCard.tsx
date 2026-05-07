@@ -1,18 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
 import {
-  Card,
-  CardContent,
-  IconButton,
-  Tooltip,
-  Chip,
-  CircularProgress,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Button,
-} from "@mui/material";
-import {
   IoCopy,
   IoTrash,
   IoOpen,
@@ -37,7 +24,6 @@ interface Props {
   onSelect: (account: FalconAccount) => void;
   onDeleted: () => void;
   selected?: boolean;
-  /** Increment to trigger a balance refresh from outside */
   refreshKey?: number;
 }
 
@@ -67,7 +53,6 @@ export default function FalconAccountCard({
 
   useEffect(() => {
     fetchBalance();
-    // refreshKey triggers re-fetch when parent signals a change
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fetchBalance, refreshKey]);
 
@@ -103,7 +88,7 @@ export default function FalconAccountCard({
     setPassphraseOpen(false);
   };
 
-  // ---- Delete (MUI confirm dialog) ----
+  // ---- Delete ----
   const handleDelete = async () => {
     if (!account.id) return;
     await deleteAccount(account.id);
@@ -116,153 +101,129 @@ export default function FalconAccountCard({
 
   return (
     <>
-      <Card
+      <button
         onClick={() => onSelect(account)}
-        sx={{
-          cursor: "pointer",
-          border: selected ? "2px solid" : "1px solid",
-          borderColor: selected ? "primary.main" : "divider",
-          transition: "all 0.2s",
-          "&:hover": { borderColor: "primary.light" },
-        }}
+        className={`w-full text-left p-4 rounded-2xl border transition-all duration-200 ${
+          selected
+            ? "border-primary-yellow bg-primary-yellow/5"
+            : "border-slate-800 hover:border-slate-600 bg-primary-black/40"
+        }`}
       >
-        <CardContent className="flex flex-col gap-2">
-          {/* Header row */}
-          <div className="flex items-center justify-between">
-            <span className="font-semibold text-sm flex items-center gap-1">
-              {account.encrypted && (
-                <Tooltip title="Passphrase protected">
-                  <span>
-                    <IoLockClosed className="text-amber-500 text-xs" />
-                  </span>
-                </Tooltip>
-              )}
-              {account.label}
-            </span>
-            <Chip
-              label={account.network}
-              size="small"
-              color={account.network === "mainnet" ? "error" : "info"}
-              variant="outlined"
-            />
+        {/* Header row */}
+        <div className="flex items-center justify-between mb-2">
+          <span className="font-bold text-sm text-white flex items-center gap-1.5">
+            {account.encrypted && (
+              <IoLockClosed className="text-primary-orange text-xs" title="Passphrase protected" />
+            )}
+            {account.label}
+          </span>
+          <span
+            className={`text-xxs font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border ${
+              account.network === "mainnet"
+                ? "bg-red-500/10 text-red-400 border-red-500/30"
+                : "bg-primary-blue/10 text-primary-blue border-primary-blue/30"
+            }`}
+          >
+            {account.network}
+          </span>
+        </div>
+
+        {/* Address row */}
+        <div className="flex items-center gap-1.5 mb-3">
+          <code className="text-xs bg-slate-800 px-2 py-1 rounded-lg flex-1 font-mono truncate text-slate-400">
+            {shortAddr}
+          </code>
+          <IconBtn
+            title="Copy address"
+            onClick={(e) => { e.stopPropagation(); handleCopy(); }}
+          >
+            <IoCopy />
+          </IconBtn>
+          <IconBtn
+            title="View in explorer"
+            onClick={(e) => {
+              e.stopPropagation();
+              window.open(
+                getExplorerAddressUrl(account.address, account.network),
+                "_blank",
+              );
+            }}
+          >
+            <IoOpen />
+          </IconBtn>
+        </div>
+
+        {/* Balance row */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-1.5">
+            {loading ? (
+              <div className="w-4 h-4 border-2 border-primary-yellow border-t-transparent rounded-full animate-spin" />
+            ) : (
+              <span className="text-lg font-black text-white">
+                {balance !== null
+                  ? `${microAlgosToAlgos(balance)} Algo`
+                  : "—"}
+              </span>
+            )}
+            <IconBtn
+              title="Refresh balance"
+              onClick={(e) => { e.stopPropagation(); fetchBalance(); }}
+            >
+              <IoRefresh />
+            </IconBtn>
           </div>
 
-          {/* Address row */}
-          <div className="flex items-center gap-1">
-            <code className="text-xs bg-black/5 dark:bg-white/10 px-2 py-1 rounded flex-1 font-mono truncate">
-              {shortAddr}
-            </code>
-            <Tooltip title="Copy address">
-              <IconButton
-                size="small"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleCopy();
-                }}
-              >
-                <IoCopy className="text-sm" />
-              </IconButton>
-            </Tooltip>
-            <Tooltip title="View in explorer">
-              <IconButton
-                size="small"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  window.open(
-                    getExplorerAddressUrl(account.address, account.network),
-                    "_blank",
-                  );
-                }}
-              >
-                <IoOpen className="text-sm" />
-              </IconButton>
-            </Tooltip>
+          {/* Actions */}
+          <div className="flex gap-1">
+            <IconBtn
+              title="Export keys"
+              onClick={(e) => { e.stopPropagation(); handleExport(); }}
+            >
+              <IoDownload />
+            </IconBtn>
+            <IconBtn
+              title="Remove from browser"
+              onClick={(e) => { e.stopPropagation(); setDeleteOpen(true); }}
+              className="text-red-400 hover:text-red-300 hover:bg-red-500/10"
+            >
+              <IoTrash />
+            </IconBtn>
           </div>
-
-          {/* Balance row */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-1">
-              {loading ? (
-                <CircularProgress size={14} />
-              ) : (
-                <span className="text-lg font-bold">
-                  {balance !== null
-                    ? `${microAlgosToAlgos(balance)} Algo`
-                    : "—"}
-                </span>
-              )}
-              <Tooltip title="Refresh balance">
-                <IconButton
-                  size="small"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    fetchBalance();
-                  }}
-                >
-                  <IoRefresh className="text-sm" />
-                </IconButton>
-              </Tooltip>
-            </div>
-
-            {/* Actions */}
-            <div className="flex gap-1">
-              <Tooltip title="Export keys">
-                <IconButton
-                  size="small"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleExport();
-                  }}
-                >
-                  <IoDownload className="text-sm" />
-                </IconButton>
-              </Tooltip>
-              <Tooltip title="Remove from browser">
-                <IconButton
-                  size="small"
-                  color="error"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setDeleteOpen(true);
-                  }}
-                >
-                  <IoTrash className="text-sm" />
-                </IconButton>
-              </Tooltip>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+        </div>
+      </button>
 
       {/* Delete confirmation dialog */}
-      <Dialog
-        open={deleteOpen}
-        onClose={() => setDeleteOpen(false)}
-        maxWidth="xs"
-        fullWidth
-      >
-        <DialogTitle sx={{ fontWeight: 700 }}>Remove Account?</DialogTitle>
-        <DialogContent>
-          <p className="text-sm opacity-80">
-            Are you sure you want to remove{" "}
-            <strong>{account.label}</strong> from your browser?
-          </p>
-          <p className="text-sm opacity-60 mt-2">
-            If you haven't exported this account, the keys will be{" "}
-            <strong>lost forever</strong>. This cannot be undone.
-          </p>
-        </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button onClick={() => setDeleteOpen(false)}>Cancel</Button>
-          <Button
-            variant="contained"
-            color="error"
-            onClick={handleDelete}
-          >
-            Remove Permanently
-          </Button>
-        </DialogActions>
-      </Dialog>
+      {deleteOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
+          <div className="bg-secondary-gray border border-slate-700 rounded-2xl p-6 max-w-sm w-full mx-4 shadow-2xl">
+            <h3 className="text-lg font-bold text-white mb-3">Remove Account?</h3>
+            <p className="text-sm text-slate-400">
+              Are you sure you want to remove{" "}
+              <strong className="text-white">{account.label}</strong> from your
+              browser?
+            </p>
+            <p className="text-sm text-slate-500 mt-2">
+              If you haven't exported this account, the keys will be{" "}
+              <strong className="text-primary-orange">lost forever</strong>. This
+              cannot be undone.
+            </p>
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={() => setDeleteOpen(false)}
+                className="flex-1 py-2.5 rounded-xl border border-slate-700 text-slate-300 hover:border-slate-500 transition font-semibold text-sm"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDelete}
+                className="flex-1 py-2.5 rounded-xl bg-red-600 text-white font-bold text-sm hover:bg-red-500 transition"
+              >
+                Remove Permanently
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Passphrase dialog for encrypted export */}
       <PassphraseDialog
@@ -273,5 +234,28 @@ export default function FalconAccountCard({
         description="Enter your passphrase to decrypt the secret key for export."
       />
     </>
+  );
+}
+
+/** Tiny icon button matching the site's style */
+function IconBtn({
+  children,
+  onClick,
+  title,
+  className = "",
+}: {
+  children: React.ReactNode;
+  onClick: (e: React.MouseEvent) => void;
+  title: string;
+  className?: string;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      title={title}
+      className={`p-1.5 rounded-lg text-slate-500 hover:text-white hover:bg-slate-800 transition text-sm ${className}`}
+    >
+      {children}
+    </button>
   );
 }
