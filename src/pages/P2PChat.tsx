@@ -5,7 +5,7 @@ import { Peer, type DataConnection } from "peerjs";
 import nacl from "tweetnacl";
 import { toast } from "react-toastify";
 import QRCode from "qrcode";
-import { MdContentCopy, MdCheck, MdPerson, MdClose, MdImage, MdAttachFile, MdVpnKey } from "react-icons/md";
+import { MdContentCopy, MdCheck, MdPerson, MdClose, MdImage, MdAttachFile } from "react-icons/md";
 import { encryptDeadDrop, fetchNfdEncryptionKey, encryptBinaryDeadDrop, uint8ToBase64, base64ToUint8, decryptDeadDrop, decryptBinaryDeadDrop, deriveKeyFromSignature } from "../utils/deadDropCrypto";
 import { pinJSONToCrust } from "../crust";
 import { getNfdDomain } from "../utils";
@@ -47,9 +47,8 @@ export function P2PChat() {
   const [ddFile, setDdFile] = useState<File | null>(null);
   const [ddLoading, setDdLoading] = useState(false);
   const [retrievedDrops, setRetrievedDrops] = useState<any[]>([]);
-  const [hasMailbox, setHasMailbox] = useState(false);
-  const [myMessagingKey, setMyMessagingKey] = useState<nacl.BoxKeyPair | null>(null);
   
+
   const [myNfd, setMyNfd] = useState<{name?: string, avatar?: string} | null>(null);
   const [peerNfd, setPeerNfd] = useState<{name?: string, avatar?: string} | null>(null);
   const [showIdentityCard, setShowIdentityCard] = useState<{address: string, nfd?: any} | null>(null);
@@ -734,66 +733,8 @@ export function P2PChat() {
                   </p>
                 )}
 
-                {!hasMailbox && !myMessagingKey && (
-                  <div className="p-5 rounded-2xl bg-orange-500/10 border border-orange-500/30 text-center mb-6">
-                    <MdVpnKey className="mx-auto text-orange-500 mb-3" size={28} />
-                    <h4 className="text-white font-bold mb-2 text-sm">Mailbox Not Initialized</h4>
-                    <p className="text-[10px] text-gray-400 mb-4 leading-relaxed">
-                      Sign once to create your encryption identity. This lets others send you encrypted drops that only your wallet can open.
-                    </p>
-                    <button 
-                      onClick={async () => {
-                        if (!activeAddress || !signTransactions || !algodClient) return;
-                        setDdLoading(true);
-                        try {
-                          const suggestedParams = await algodClient.getTransactionParams().do();
-                          const note = new TextEncoder().encode("Initialize Dead Drop Mailbox");
-                          const txn = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
-                            from: activeAddress,
-                            to: activeAddress,
-                            amount: 0,
-                            suggestedParams,
-                            note
-                          });
-                          const signed = await signTransactions([txn.toByte()]);
-                          if (!signed || !signed[0]) throw new Error("Signing cancelled");
-                          const keyPair = deriveKeyFromSignature(signed[0]);
-                          
-                          // Register public key on relay
-                          const res = await fetch("/api/deaddrop", {
-                            method: "POST",
-                            headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify({ 
-                              recipient: activeAddress,
-                              address: activeAddress, 
-                              registerPubKey: uint8ToBase64(keyPair.publicKey)
-                            })
-                          });
-
-                          if (res.ok) {
-                            localStorage.setItem(`wen_dd_sk_${activeAddress}`, uint8ToBase64(keyPair.secretKey));
-                            setMyMessagingKey(keyPair);
-                            setHasMailbox(true);
-                            toast.success("Mailbox initialized! You can now receive encrypted drops.");
-                          } else {
-                            throw new Error("Failed to register key on relay");
-                          }
-                        } catch (err: any) {
-                          toast.error(err.message || "Initialization failed");
-                        } finally {
-                          setDdLoading(false);
-                        }
-                      }}
-                      disabled={ddLoading}
-                      className="px-6 py-2 bg-orange-500 text-white rounded-lg text-xs font-bold hover:bg-orange-600 transition-colors disabled:opacity-50"
-                    >
-                      {ddLoading ? "Initializing..." : "Open My Mailbox"}
-                    </button>
-                  </div>
-                )}
-
                 <button 
-                  disabled={ddLoading || (!hasMailbox && !myMessagingKey)}
+                  disabled={ddLoading}
                   onClick={async () => {
                     if (!activeAddress) {
                       toast.error("Please connect your wallet");
@@ -817,7 +758,57 @@ export function P2PChat() {
 
                       const sigB64 = uint8ToBase64((algosdk.decodeSignedTransaction(signed[0])).sig!);
 
-                      // 2. Fetch from Relay (Check both raw address and NFD name)
+                      // 2. Auto-initialize mailbox if needed (transparent to user)
+                      let savedSk = localStorage.getItem(`wen_dd_sk_${activeAddress}`);
+                      if (!savedSk) {
+                        // Check if relay already has a key (registered from another device)
+                        let relayHasKey = false;
+                        try {
+                          const pkCheck = await fetch(`/api/deaddrop?address=${activeAddress}&getPubKey=true`);
+                          if (pkCheck.ok) {
+                            const pkData = await pkCheck.json();
+                            relayHasKey = !!pkData.pubKey;
+                          }
+                        } catch { /* relay unreachable */ }
+
+                        if (relayHasKey) {
+                          const reinit = window.confirm(
+                            "⚠️ Your Dead Drop mailbox was set up on a different device.\n\n" +
+                            "Your encryption key is stored locally in your browser — it doesn't travel between devices. " +
+                            "To use Dead Drop here, we'll need to create a new key.\n\n" +
+                            "What this means:\n" +
+                            "• Any UNREAD messages sent to your old key will become unreadable\n" +
+                            "• New messages will work perfectly on this device\n" +
+                            "• Your old device will no longer be able to decrypt new messages\n\n" +
+                            "Continue with new key?"
+                          );
+                          if (!reinit) {
+                            setDdLoading(false);
+                            return;
+                          }
+                        }
+
+                        console.log("🔑 [Dead Drop] Initializing mailbox...");
+                        const keyPair = deriveKeyFromSignature(signed[0]);
+                        
+                        // Register public key on relay
+                        await fetch("/api/deaddrop", {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ 
+                            recipient: activeAddress,
+                            address: activeAddress, 
+                            registerPubKey: uint8ToBase64(keyPair.publicKey)
+                          })
+                        });
+                        
+                        savedSk = uint8ToBase64(keyPair.secretKey);
+                        localStorage.setItem(`wen_dd_sk_${activeAddress}`, savedSk);
+                        console.log("✅ [Dead Drop] Mailbox initialized!");
+                      }
+                      const secretKey = base64ToUint8(savedSk);
+
+                      // 3. Fetch from Relay (Check both raw address and NFD name)
                       const nfdName = await getNfdDomain(activeAddress);
                       const scanTargets = [activeAddress];
                       if (nfdName) scanTargets.push(nfdName);
@@ -848,15 +839,6 @@ export function P2PChat() {
                       if (allDrops.length > 0) {
                         toast.success(`Found ${allDrops.length} drop(s)!`);
                         
-                        // 3. Load decryption key from localStorage (saved during mailbox initialization)
-                        const savedSk = localStorage.getItem(`wen_dd_sk_${activeAddress}`);
-                        if (!savedSk) {
-                          toast.error("No decryption key found. Please re-initialize your mailbox.");
-                          setRetrievedDrops(allDrops.map((d: any) => ({ ...d, decrypted: "No decryption key available." })));
-                          return;
-                        }
-                        const secretKey = base64ToUint8(savedSk);
-
                         // 4. Process & Decrypt drops
                         const processed = await Promise.all(allDrops.map(async (drop: any) => {
                           try {
@@ -879,7 +861,7 @@ export function P2PChat() {
 
                           } catch (err) { 
                             console.error("Decryption failed:", err);
-                            return { ...drop, decrypted: "Decryption failed. This drop may have been sent before you initialized your mailbox." }; 
+                            return { ...drop, decrypted: "Decryption failed. This drop may have been sent before your mailbox was initialized." }; 
                           }
                         }));
                         setRetrievedDrops(processed);
