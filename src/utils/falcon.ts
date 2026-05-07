@@ -238,8 +238,17 @@ export async function sendFalconPayment(
   algosdk.assignGroupID(group);
 
   // 5. Sign the payment (index 3) with the Falcon LogicSig
-  const txid = paymentTxn.txID().toString();
-  const lsig = await sdk.createLogicSig(accountInfo, txid);
+  const programBytes = new Uint8Array(
+    Buffer.from(accountInfo.logicSig.program, "base64"),
+  );
+  const txnIdBytes = paymentTxn.rawTxID();
+  
+  const arg0 = await sdk.falcon.sign(
+    txnIdBytes,
+    Falcon.hexToBytes(accountInfo.falconKeys.secretKey),
+  );
+
+  const lsig = new algosdk.LogicSigAccount(programBytes, [arg0]);
   const signedPayment = algosdk.signLogicSigTransactionObject(
     paymentTxn,
     lsig,
@@ -372,7 +381,7 @@ async function deriveKey(
     ["deriveKey"],
   );
   return crypto.subtle.deriveKey(
-    { name: "PBKDF2", salt, iterations: 600_000, hash: "SHA-256" },
+    { name: "PBKDF2", salt: salt as any, iterations: 600_000, hash: "SHA-256" },
     keyMaterial,
     { name: "AES-GCM", length: 256 },
     false,
@@ -391,7 +400,7 @@ export async function encryptSecretKey(
   const iv = crypto.getRandomValues(new Uint8Array(12));
   const key = await deriveKey(passphrase, salt);
   const encrypted = await crypto.subtle.encrypt(
-    { name: "AES-GCM", iv },
+    { name: "AES-GCM", iv: iv as any },
     key,
     new TextEncoder().encode(secretKeyHex),
   );
@@ -414,7 +423,7 @@ export async function decryptSecretKey(
 ): Promise<string> {
   const key = await deriveKey(passphrase, hexToBytes(salt));
   const decrypted = await crypto.subtle.decrypt(
-    { name: "AES-GCM", iv: hexToBytes(iv) },
+    { name: "AES-GCM", iv: hexToBytes(iv) as any },
     key,
     hexToBytes(ciphertext),
   );
