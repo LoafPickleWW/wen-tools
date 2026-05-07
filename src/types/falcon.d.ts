@@ -25,7 +25,10 @@ declare module "falcon-algo-sdk" {
 
   export default class FalconAlgoSDK {
     constructor(network: NetworkConfig);
-    createFalconAccount(): Promise<any>;
+    createFalconAccount(options?: any): Promise<any>;
     createPayment(params: any, accountInfo: any): Promise<{ blob: Uint8Array }>;
+    createLogicSig(accountInfo: any, txid: string): Promise<any>;
+    signTransaction(transaction: any, accountInfo: any, txid: string): Promise<{ blob: Uint8Array }>;
+    falcon: any;
   }
 }

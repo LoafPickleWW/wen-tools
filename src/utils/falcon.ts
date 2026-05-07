@@ -148,37 +148,120 @@ export async function getBalance(
 }
 
 /**
- * Send Algo from a Falcon-protected account.
- * Returns the confirmed transaction ID.
+ * Resolve an NFD name to an Algorand address.
+ * Returns null if the name doesn't exist.
  */
-export async function sendTransaction(
+export async function resolveNfd(
+  name: string,
+  network: NetworkName = "mainnet",
+): Promise<string | null> {
+  const base =
+    network === "mainnet"
+      ? "https://api.nf.domains"
+      : `https://api.${network}.nf.domains`;
+  try {
+    const res = await fetch(`${base}/nfd/${name.toLowerCase()}?view=tiny`);
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data.depositAccount || data.owner || null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Send Algo from a Falcon-protected account.
+ *
+ * Because Falcon LogicSigs are ~3 KB (exceeding the 1000-byte per-tx pool),
+ * we build a 4-transaction group:
+ *   txn 0-2  — zero-pay padding from `funderAddress`, signed by the wallet
+ *   txn 3    — the real payment, signed with the Falcon LogicSig
+ *
+ * The Falcon tx pays all 4 fees via Algorand's fee pooling.
+ *
+ * @param funderAddress  The connected wallet address (signs padding txns)
+ * @param walletSigner   The transactionSigner from use-wallet-react
+ */
+export async function sendFalconPayment(
   account: FalconAccount,
   params: SendParams,
+  funderAddress: string,
+  walletSigner: (
+    txnGroup: any[],
+    indexesToSign: number[],
+  ) => Promise<Uint8Array[]>,
 ): Promise<string> {
   const sdk = getSdk(account.network);
+  const algod = getAlgod(account.network);
   const accountInfo = JSON.parse(account.sdkAccountInfo);
 
-  // Re-hydrate falcon keys (in case the SDK needs them fresh)
   accountInfo.falconKeys = {
     publicKey: account.publicKey,
     secretKey: account.secretKey,
   };
 
-  const payment = await sdk.createPayment(
-    {
-      sender: account.address,
-      receiver: params.receiver,
-      amount: params.amount,
-      note: params.note || "",
-    },
-    accountInfo,
+  // 1. Get suggested params
+  const sp = await algod.getTransactionParams().do();
+  const minFee = Number(sp.fee) || 1000;
+
+  // 2. Build 3 zero-pay padding txns (fee = 0, covered by pooling)
+  const paddingSp = { ...sp, fee: 0, flatFee: true };
+  const paddings = [];
+  for (let i = 0; i < 3; i++) {
+    paddings.push(
+      algosdk.makePaymentTxnWithSuggestedParamsFromObject({
+        from: funderAddress,
+        to: funderAddress,
+        amount: 0,
+        suggestedParams: paddingSp,
+        note: new Uint8Array(
+          new TextEncoder().encode("wen.tools PQ padding"),
+        ),
+      }),
+    );
+  }
+
+  // 3. Build the real payment (fee = 4 × minFee to cover the group)
+  const paymentSp = { ...sp, fee: 4 * minFee, flatFee: true };
+  const paymentTxn = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
+    from: account.address,
+    to: params.receiver,
+    amount: params.amount,
+    suggestedParams: paymentSp,
+    note: params.note
+      ? new Uint8Array(new TextEncoder().encode(params.note))
+      : undefined,
+  });
+
+  // 4. Group all 4 transactions: [pad, pad, pad, payment]
+  const group = [...paddings, paymentTxn];
+  algosdk.assignGroupID(group);
+
+  // 5. Sign the payment (index 3) with the Falcon LogicSig
+  const txid = paymentTxn.txID().toString();
+  const lsig = await sdk.createLogicSig(accountInfo, txid);
+  const signedPayment = algosdk.signLogicSigTransactionObject(
+    paymentTxn,
+    lsig,
   );
 
-  // Submit to network
-  const algod = getAlgod(account.network);
-  const result = await algod.sendRawTransaction(payment.blob).do();
-  const txId = (result as any).txId ?? (result as any).txid ?? (result as any)["txId"];
-  return txId;
+  // 6. Sign the 3 padding txns with the connected wallet
+  const encodedGroup = group.map((txn) => algosdk.encodeUnsignedTransaction(txn));
+  const signedPaddings = await walletSigner(encodedGroup, [0, 1, 2]);
+
+  // 7. Assemble the fully-signed group
+  const signedGroup = [
+    signedPaddings[0]!,
+    signedPaddings[1]!,
+    signedPaddings[2]!,
+    signedPayment.blob,
+  ];
+
+  // 8. Submit
+  const result = await algod.sendRawTransaction(signedGroup).do();
+  const resultTxId =
+    (result as any).txId ?? (result as any).txid ?? (result as any)["txId"];
+  return resultTxId;
 }
 
 /**
