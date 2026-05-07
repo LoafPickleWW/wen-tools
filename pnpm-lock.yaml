@@ -56,6 +56,12 @@ importers:
       dexie:
         specifier: ^4.4.2
         version: 4.4.2
+      falcon-algo-sdk:
+        specifier: ^1.0.5
+        version: 1.0.5
+      falcon-signatures:
+        specifier: ^1.4.0
+        version: 1.4.0
       file-saver:
         specifier: ^2.0.5
         version: 2.0.5
@@ -1402,6 +1408,10 @@ packages:
     resolution: {integrity: sha512-o0n0nLMbTX6SFQdMUk2/2sy50jmEmZk5OTPYSh2aAeP8DUPxrhjMPfwGsYNvaO+qk75MixC2eWpfA9vygCQ/Mg==}
     engines: {node: '>=18.0.0'}
 
+  algosdk@3.5.2:
+    resolution: {integrity: sha512-frhGtZl1JvfrLRKmMvUm880wj4OiWsWo2FhbreNWh7pdFsKuWPj60fV682wt/CYefLI70iwHavPOwGBkTVt0VA==}
+    engines: {node: '>=18.0.0'}
+
   ansi-regex@5.0.1:
     resolution: {integrity: sha512-quJQXlTSUGL2LH9SUXo8VwsY4soanhgo6LNSm84E1LBcE8s3O0wpdiRzyR9z/ZZJMlMWv37qOOb9pdJlMUEKFQ==}
     engines: {node: '>=8'}
@@ -1916,6 +1926,13 @@ packages:
 
   evp_bytestokey@1.0.3:
     resolution: {integrity: sha512-/f2Go4TognH/KvCISP7OUsHn85hT9nUkxxA9BEWxFn+Oj9o8ZNLm/40hdlgSLyuOimsrTKLUMEorQexp/aPQeA==}
+
+  falcon-algo-sdk@1.0.5:
+    resolution: {integrity: sha512-rpfOc7IdNC8Euk9S8m6Y+TmvRw40alONUUq9kea2P7uXeP9Hkeu2oFRzZ/qkLmfYbUzZcJx7YUi10Mk0zeY7/A==}
+    hasBin: true
+
+  falcon-signatures@1.4.0:
+    resolution: {integrity: sha512-ZH/JFP8MfkI9KJegv1GDImEwNyjIzKE5MTAcGiQmI5jNy1FSpxD+R84o2Nbh8xx7plN2SnRXWQrHCKdLJyv1xw==}
 
   fast-deep-equal@3.1.3:
     resolution: {integrity: sha512-f3qQ9oQy9j2AhBe/H9VC91wLmKBCCU/gDOnKNAYG5hswO7BLKj09Hc5HYNz9cGI++xlpDCIgDaitVs03ATR84Q==}
@@ -2802,6 +2819,9 @@ packages:
   reusify@1.0.4:
     resolution: {integrity: sha512-U9nH88a3fc/ekCF1l0/UP1IosiuIjyTh7hBvXVMHYgVcfGvt897Xguj2UOLDeI5BG2m7/uwyaLVT6fbtCwTyzw==}
     engines: {iojs: '>=1.0.0', node: '>=0.10.0'}
+
+  rfc4648@1.5.4:
+    resolution: {integrity: sha512-rRg/6Lb+IGfJqO05HZkN50UtY7K/JhxJag1kP23+zyMfrvoB0B7RWv06MbOzoc79RgCdNTiUaNsTT1AJZ7Z+cg==}
 
   ripemd160@2.0.2:
     resolution: {integrity: sha512-ii4iagi25WusVoiC4B4lq7pbXfAp3D9v5CwfkY33vffw2+pkDjY1D8GaN7spsxvCSx8dkPqOZCEZyfxcmJG2IA==}
@@ -4434,6 +4454,17 @@ snapshots:
       tweetnacl: 1.0.3
       vlq: 2.0.4
 
+  algosdk@3.5.2:
+    dependencies:
+      algorand-msgpack: 1.1.0
+      hi-base32: 0.5.1
+      js-sha256: 0.9.0
+      js-sha3: 0.8.0
+      js-sha512: 0.8.0
+      json-bigint: 1.0.0
+      tweetnacl: 1.0.3
+      vlq: 2.0.4
+
   ansi-regex@5.0.1: {}
 
   ansi-regex@6.1.0: {}
@@ -5043,6 +5074,15 @@ snapshots:
     dependencies:
       md5.js: 1.3.5
       safe-buffer: 5.2.1
+
+  falcon-algo-sdk@1.0.5:
+    dependencies:
+      '@noble/ed25519': 3.1.0
+      algosdk: 3.5.2
+      falcon-signatures: 1.4.0
+      rfc4648: 1.5.4
+
+  falcon-signatures@1.4.0: {}
 
   fast-deep-equal@3.1.3: {}
 
@@ -5883,6 +5923,8 @@ snapshots:
       supports-preserve-symlinks-flag: 1.0.0
 
   reusify@1.0.4: {}
+
+  rfc4648@1.5.4: {}
 
   ripemd160@2.0.2:
     dependencies:

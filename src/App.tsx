@@ -43,6 +43,7 @@ import { WenPad } from './pages/WenPad';
 import { XGov } from './pages/XGov';
 import { Jukebox } from './pages/Jukebox';
 import { P2PChat } from './pages/P2PChat';
+import PostQuantum from './pages/PostQuantum';
 
 const walletManager = new WalletManager({
   wallets: [
@@ -135,6 +136,7 @@ function App() {
             <Route path='/xgov' element={<XGov />} />
             <Route path='/jukebox' element={<Jukebox />} />
             <Route path='/p2p-chat' element={<P2PChat />} />
+            <Route path='/post-quantum' element={<PostQuantum />} />
             <Route path="*" element={<Home />} />
           </Routes>
           <Footer />
