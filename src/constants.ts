@@ -313,4 +313,12 @@ export const TOOLS = [
     category: "asset",
     icon: "/icons/p2pchat.svg"
   },
+  {
+    id: "post_quantum",
+    label: "Post-Quantum Wallet",
+    description: "Create & manage Falcon-1024 post-quantum secured Algorand accounts.",
+    path: "/post-quantum",
+    category: "asset",
+    icon: "/icons/pqwallet.png"
+  },
 ];
