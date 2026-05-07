@@ -215,7 +215,7 @@ export async function sendFalconPayment(
         amount: 0,
         suggestedParams: paddingSp,
         note: new Uint8Array(
-          new TextEncoder().encode("wen.tools PQ padding"),
+          new TextEncoder().encode(`wen.tools PQ padding ${i}-${Date.now()}`),
         ),
       }),
     );
