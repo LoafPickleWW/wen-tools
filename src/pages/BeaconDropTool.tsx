@@ -59,10 +59,12 @@ export function BeaconDropTool() {
               found = true;
               break;
             }
-          } catch (e) {}
+          } catch {
+            // ignore parsing error
+          }
         }
         setIsInitialized(found);
-      } catch (e) {
+      } catch {
         setIsInitialized(false);
       }
     };
@@ -165,7 +167,7 @@ export function BeaconDropTool() {
       try {
         res = await fetch(indexerUrl);
         if (!res.ok) throw new Error("Invalid address");
-      } catch (e) {
+      } catch {
         throw new Error(`Failed to query network for ${targetAddr}. Ensure the address is correct.`);
       }
       
@@ -184,7 +186,9 @@ export function BeaconDropTool() {
              recipientPubKey = payload.wpk;
              break; // Use the most recent announce
           }
-        } catch (e) {}
+        } catch {
+          // ignore parsing error
+        }
       }
 
       if (!recipientPubKey) {
@@ -298,7 +302,7 @@ export function BeaconDropTool() {
           if (drop.recipient && drop.recipient !== activeAddress) continue;
 
           allDrops.push(drop);
-        } catch (e) {
+        } catch {
           // ignore parsing errors for individual notes
         }
       }
@@ -328,7 +332,7 @@ export function BeaconDropTool() {
             const text = decryptDeadDrop(drop.ciphertext, drop.nonce, drop.ephemeralPk, secretKey);
             return { ...drop, decrypted: text };
 
-          } catch (err) { 
+          } catch { 
             return { ...drop, decrypted: "Decryption failed. (Encrypted for a different key or native address key)." }; 
           }
         }));
