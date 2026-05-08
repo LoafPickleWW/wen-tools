@@ -44,12 +44,12 @@ export function BeaconDropTool() {
     }
     const checkInit = async () => {
       try {
-        const indexerUrl = `${MAINNET_ALGONODE_INDEXER}/v2/accounts/${activeAddress}/transactions?note-prefix=${BEACON_PREFIX_B64}&limit=10`;
+        const indexerUrl = `${MAINNET_ALGONODE_INDEXER}/v2/accounts/${activeAddress}/transactions?note-prefix=${BEACON_PREFIX_B64}&limit=100`;
         const res = await fetch(indexerUrl);
         const data = await res.json();
         let found = false;
         for (const tx of data.transactions || []) {
-          if (!tx.note) continue;
+          if (!tx.note || tx["payment-transaction"]?.receiver !== BEACON_PROTOCOL_ADDRESS) continue;
           try {
             const noteStr = new TextDecoder().decode(base64ToUint8(tx.note));
             if (!noteStr.startsWith(BEACON_PREFIX)) continue;
@@ -159,7 +159,7 @@ export function BeaconDropTool() {
       }
 
       // Query Indexer for recipient's announce message to get their wpk
-      const indexerUrl = `${MAINNET_ALGONODE_INDEXER}/v2/accounts/${targetAddr}/transactions?note-prefix=${BEACON_PREFIX_B64}&limit=50`;
+      const indexerUrl = `${MAINNET_ALGONODE_INDEXER}/v2/accounts/${targetAddr}/transactions?note-prefix=${BEACON_PREFIX_B64}&limit=100`;
       
       let res;
       try {
@@ -174,7 +174,7 @@ export function BeaconDropTool() {
       
       let recipientPubKey = "";
       for (const tx of txns) {
-        if (!tx.note) continue;
+        if (!tx.note || tx["payment-transaction"]?.receiver !== BEACON_PROTOCOL_ADDRESS) continue;
         try {
           const noteStr = new TextDecoder().decode(base64ToUint8(tx.note));
           if (!noteStr.startsWith(BEACON_PREFIX)) continue;
@@ -368,7 +368,7 @@ export function BeaconDropTool() {
           <div className="mt-4 px-4 py-2 bg-primary-orange/10 border border-primary-orange/30 rounded-lg flex items-center gap-2 text-xs text-primary-orange max-w-md text-center leading-relaxed">
             <MdInfo size={24} className="shrink-0" />
             <span>
-              Powered by the open <strong>BEACON Protocol</strong>. Your drops are sent as 0 ALGO transactions 
+              Powered by the open <a href="https://github.com/LoafPickleWW/BEACON-Protocol" target="_blank" rel="noopener noreferrer" className="underline hover:text-white transition-colors"><strong>BEACON Protocol</strong></a>. Your drops are sent as 0 ALGO transactions 
               to a shared on-chain noticeboard. No central servers or relays are used.
             </span>
           </div>
