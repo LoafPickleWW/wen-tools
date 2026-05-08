@@ -44,6 +44,7 @@ import { XGov } from './pages/XGov';
 import { Jukebox } from './pages/Jukebox';
 import { P2PChat } from './pages/P2PChat';
 import PostQuantum from './pages/PostQuantum';
+import { BeaconDropTool } from './pages/BeaconDropTool';
 
 const walletManager = new WalletManager({
   wallets: [
@@ -137,6 +138,7 @@ function App() {
             <Route path='/jukebox' element={<Jukebox />} />
             <Route path='/p2p-chat' element={<P2PChat />} />
             <Route path='/post-quantum' element={<PostQuantum />} />
+            <Route path='/beacon-drop' element={<BeaconDropTool />} />
             <Route path="*" element={<Home />} />
           </Routes>
           <Footer />

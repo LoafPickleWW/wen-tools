@@ -1,4 +1,6 @@
 import nacl from "tweetnacl";
+import algosdk from "algosdk";
+import { convertPublicKey } from "ed2curve";
 
 /**
  * Derives a X25519 keypair from an Algorand transaction signature.
@@ -140,4 +142,15 @@ export function decryptBinaryDeadDrop(
 
   if (!decrypted) throw new Error("Decryption failed");
   return decrypted;
+}
+
+/**
+ * BEACON Protocol helper
+ * Converts an Algorand ed25519 public key directly to an X25519 (curve25519) key for encryption.
+ */
+export function algoAddressToCurve25519B64(address: string): string {
+  const decoded = algosdk.decodeAddress(address);
+  const curveKey = convertPublicKey(decoded.publicKey);
+  if (!curveKey) throw new Error("Could not convert Algorand address to encryption key");
+  return uint8ToBase64(curveKey);
 }

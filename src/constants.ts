@@ -22,6 +22,7 @@ export const MINT_FEE_PER_ASA = 0;
 export const UPDATE_FEE_PER_ASA = 0;
 
 export const ALGORAND_ZERO_ADDRESS = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAY5HFKQ";
+export const BEACON_PROTOCOL_ADDRESS = "AEBAGAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEL5PKOY";
 
 export const IPFS_ENDPOINT = "https://ipfs.algonode.dev/ipfs/";
 
@@ -320,5 +321,13 @@ export const TOOLS = [
     path: "/post-quantum",
     category: "asset",
     icon: "/icons/pqwallet.png"
+  },
+  {
+    id: "beacon_drop",
+    label: "BEACON Drop",
+    description: "Serverless, on-chain dead drop powered by the BEACON Protocol.",
+    path: "/beacon-drop",
+    category: "asset",
+    icon: "/icons/drop.png"
   },
 ];

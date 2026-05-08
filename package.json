@@ -26,6 +26,7 @@
     "axios": "^1.7.7",
     "canvas-confetti": "^1.9.4",
     "dexie": "^4.4.2",
+    "ed2curve": "^0.3.0",
     "falcon-algo-sdk": "^1.0.5",
     "falcon-signatures": "^1.4.0",
     "file-saver": "^2.0.5",
