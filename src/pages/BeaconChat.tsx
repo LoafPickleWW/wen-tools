@@ -1387,20 +1387,37 @@ export function BeaconChat() {
                   </div>
                 )}
 
-                {/* Scan Button */}
-                <button
-                  onClick={scanBeacon}
-                  disabled={scanning || !isAnnounced}
-                  className="w-full py-4 rounded-xl border border-primary-orange/30 text-primary-orange
-                    font-bold hover:bg-primary-orange/5 transition-all disabled:opacity-30
-                    flex items-center justify-center gap-2 mb-6"
-                >
-                  <MdRefresh
-                    size={18}
-                    className={scanning ? "animate-spin" : ""}
-                  />
-                  {scanning ? "Scanning chain..." : "Scan for Messages"}
-                </button>
+                {/* Navigation / Actions Bar */}
+                <div className="grid grid-cols-2 gap-3 mb-6">
+                  <button
+                    onClick={scanBeacon}
+                    disabled={scanning || !isAnnounced}
+                    className="py-3 rounded-xl border border-primary-orange/30 text-primary-orange
+                      font-bold hover:bg-primary-orange/5 transition-all disabled:opacity-30
+                      flex items-center justify-center gap-2"
+                  >
+                    <MdRefresh
+                      size={18}
+                      className={scanning ? "animate-spin" : ""}
+                    />
+                    {scanning ? "Scanning..." : "Scan Messages"}
+                  </button>
+
+                  <button
+                    onClick={() => setPhase("bond-requests")}
+                    className="relative py-3 rounded-xl bg-[#1a1a1a] border border-[#222] text-white
+                      font-bold hover:bg-[#222] transition-all flex items-center justify-center gap-2"
+                  >
+                    <MdPersonAdd size={18} />
+                    Requests
+                    {bondRequests.length > 0 && (
+                      <span className="absolute -top-2 -right-2 w-5 h-5 bg-primary-orange text-white text-[10px] 
+                        flex items-center justify-center rounded-full border-2 border-[#111] animate-bounce">
+                        {bondRequests.length}
+                      </span>
+                    )}
+                  </button>
+                </div>
 
                 {/* Pending Offer Banner */}
                 {pendingOffer && (
@@ -1432,57 +1449,7 @@ export function BeaconChat() {
                   </div>
                 )}
 
-                {/* Bond Requests */}
-                {bondRequests.length > 0 && (
-                  <div className="mb-6">
-                    <p className="text-xs text-gray-500 font-bold uppercase tracking-widest mb-3">
-                      Contact Requests ({bondRequests.length})
-                    </p>
-                    <div className="space-y-2">
-                      {bondRequests.map((req) => (
-                        <div
-                          key={req.fromAddress}
-                          className="flex items-center justify-between p-3 rounded-xl bg-[#1a1a1a] border border-[#222]"
-                        >
-                          <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-full bg-primary-orange/10 flex items-center justify-center">
-                              <MdPersonAdd
-                                size={14}
-                                className="text-primary-orange"
-                              />
-                            </div>
-                            <div>
-                              <p className="text-white text-sm font-medium">
-                                {displayName(req.fromAddress, req.nfd)}
-                              </p>
-                              <p className="text-gray-600 text-[10px] font-mono">
-                                {shortenAddr(req.fromAddress)}
-                              </p>
-                            </div>
-                          </div>
-                          <div className="flex gap-2">
-                            <button
-                              onClick={() => acceptBond(req)}
-                              className="px-3 py-1.5 bg-primary-orange/20 text-primary-orange rounded-lg text-xs font-bold
-                                hover:bg-primary-orange/30 transition-colors"
-                            >
-                              Accept
-                            </button>
-                            <button
-                              onClick={() =>
-                                blockContact(req.wpk, req.fromAddress)
-                              }
-                              className="px-3 py-1.5 bg-red-500/10 text-red-400 rounded-lg text-xs
-                                hover:bg-red-500/20 transition-colors"
-                            >
-                              <MdBlock size={14} />
-                            </button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
+
 
                 {/* Contacts List */}
                 <div className="mb-6">
@@ -1546,6 +1513,77 @@ export function BeaconChat() {
                 No Servers · No Brokers · Just the Chain
               </p>
             </div>
+          </div>
+        )}
+
+        {/* ═══════════════════════════════════════════════════════
+            BOND REQUESTS PHASE
+        ═══════════════════════════════════════════════════════ */}
+        {phase === "bond-requests" && (
+          <div className="bg-[#111] rounded-2xl p-8 border border-[#222] shadow-2xl">
+            <div className="flex items-center justify-between mb-8">
+              <h2 className="text-xl font-bold text-white">Contact Requests</h2>
+              <button
+                onClick={() => setPhase("home")}
+                className="text-gray-500 hover:text-white transition-colors"
+              >
+                <MdClose size={24} />
+              </button>
+            </div>
+
+            {bondRequests.length === 0 ? (
+              <div className="p-12 text-center">
+                <div className="w-16 h-16 bg-[#1a1a1a] rounded-full flex items-center justify-center mx-auto mb-4">
+                  <MdPersonAdd size={24} className="text-gray-700" />
+                </div>
+                <p className="text-gray-500 text-sm">No pending requests</p>
+                <button
+                  onClick={scanBeacon}
+                  className="mt-4 text-primary-orange text-xs font-bold uppercase tracking-widest"
+                >
+                  Scan for new requests
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {bondRequests.map((req) => (
+                  <div
+                    key={req.fromAddress}
+                    className="flex items-center justify-between p-4 rounded-xl bg-[#1a1a1a] border border-[#222]"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-primary-orange/10 flex items-center justify-center">
+                        <MdPersonAdd size={18} className="text-primary-orange" />
+                      </div>
+                      <div>
+                        <p className="text-white text-sm font-medium">
+                          {displayName(req.fromAddress, req.nfd)}
+                        </p>
+                        <p className="text-gray-600 text-[10px] font-mono">
+                          {shortenAddr(req.fromAddress)}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => acceptBond(req)}
+                        className="px-4 py-2 bg-primary-orange text-white rounded-lg text-xs font-bold
+                          hover:bg-primary-orange/80 transition-all"
+                      >
+                        Accept
+                      </button>
+                      <button
+                        onClick={() => blockContact(req.wpk, req.fromAddress)}
+                        className="px-3 py-2 bg-red-500/10 text-red-400 rounded-lg text-xs
+                          hover:bg-red-500/20 transition-colors"
+                      >
+                        <MdBlock size={16} />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
