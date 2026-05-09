@@ -315,6 +315,14 @@ export const TOOLS = [
     icon: "/icons/p2pchat.svg"
   },
   {
+    id: "beacon_chat",
+    label: "BEACON Chat",
+    description: "Serverless, on-chain encrypted chat powered by the BEACON Protocol.",
+    path: "/beacon-chat",
+    category: "asset",
+    icon: "/icons/p2pchat.svg"
+  },
+  {
     id: "post_quantum",
     label: "Post-Quantum Wallet",
     description: "Create & manage Falcon-1024 post-quantum secured Algorand accounts.",

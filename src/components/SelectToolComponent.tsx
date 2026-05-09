@@ -32,7 +32,7 @@ export function SelectToolComponent() {
               "Simple Mint",
               "Airdrop",
               "Simple Send",
-              "Multimint Asset Holders",
+              "BEACON Chat",
             ].includes(tool.label)
           )
             .slice(0, 4) // Ensures only 4 tools are shown

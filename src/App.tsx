@@ -43,6 +43,7 @@ import { WenPad } from './pages/WenPad';
 import { XGov } from './pages/XGov';
 import { Jukebox } from './pages/Jukebox';
 import { P2PChat } from './pages/P2PChat';
+import { BeaconChat } from './pages/BeaconChat';
 import PostQuantum from './pages/PostQuantum';
 import { BeaconDropTool } from './pages/BeaconDropTool';
 
@@ -137,6 +138,7 @@ function App() {
             <Route path='/xgov' element={<XGov />} />
             <Route path='/jukebox' element={<Jukebox />} />
             <Route path='/p2p-chat' element={<P2PChat />} />
+            <Route path='/beacon-chat' element={<BeaconChat />} />
             <Route path='/post-quantum' element={<PostQuantum />} />
             <Route path='/beacon-drop' element={<BeaconDropTool />} />
             <Route path="*" element={<Home />} />

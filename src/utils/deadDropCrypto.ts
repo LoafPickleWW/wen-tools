@@ -2,12 +2,14 @@ import nacl from "tweetnacl";
 import algosdk from "algosdk";
 import { convertPublicKey } from "ed2curve";
 
+import { blake2b } from "@noble/hashes/blake2.js";
+
 /**
  * Derives a X25519 keypair from an Algorand transaction signature.
  * Used during mailbox initialization to create a persistent messaging identity.
  */
 export function deriveKeyFromSignature(signature: Uint8Array): nacl.BoxKeyPair {
-  const seed = nacl.hash(signature).slice(0, 32);
+  const seed = blake2b(signature, { dkLen: 32 });
   return nacl.box.keyPair.fromSecretKey(seed);
 }
 
