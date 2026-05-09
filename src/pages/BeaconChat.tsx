@@ -3,7 +3,7 @@ import { useWallet } from "@txnlab/use-wallet-react";
 import algosdk from "algosdk";
 import { Peer, type DataConnection } from "peerjs";
 import nacl from "tweetnacl";
-import { blake2b } from "@noble/hashes/blake2.js";
+
 import { toast } from "react-toastify";
 import {
   MdPerson,
@@ -123,8 +123,8 @@ function deriveSessionToken(
   timestamp: number
 ): string {
   const tsBytes = new TextEncoder().encode(String(timestamp));
-  const hash = blake2b(concatBytes(sharedSecret, tsBytes), { dkLen: 32 });
-  return Array.from(hash.slice(0, 16))
+  const hash = nacl.hash(concatBytes(sharedSecret, tsBytes)).slice(0, 16);
+  return Array.from(hash)
     .map((b) => b.toString(16).padStart(2, "0"))
     .join("");
 }
@@ -268,6 +268,8 @@ export function BeaconChat() {
   const [peerWpk, setPeerWpk] = useState("");
   const [peerNfd, setPeerNfd] = useState<string | undefined>();
   const [myNfd, setMyNfd] = useState<string | undefined>();
+  const [onChainWpk, setOnChainWpk] = useState<string | null>(null);
+  const [identityMismatch, setIdentityMismatch] = useState(false);
 
   // ── Scanning State ──
   const [scanning, setScanning] = useState(false);
@@ -329,8 +331,8 @@ export function BeaconChat() {
       suggestedParams: {
         genesisHash: BEACON_GENESIS_HASH_MAINNET,
         genesisID: "mainnet-v1.0",
-        firstRound: 1,
-        lastRound: 2,
+        firstRound: 10,
+        lastRound: 20,
         fee: 0,
         flatFee: true,
       } as any,
@@ -355,32 +357,49 @@ export function BeaconChat() {
   const checkAnnounceStatus = useCallback(async () => {
     if (!activeAddress) return;
     try {
-      const url = `${MAINNET_ALGONODE_INDEXER}/v2/transactions?address=${BEACON_PROTOCOL_ADDRESS}&address-role=receiver&note-prefix=${BEACON_PREFIX_B64}&limit=100`;
+      const url = `${MAINNET_ALGONODE_INDEXER}/v2/accounts/${activeAddress}/transactions?note-prefix=${BEACON_PREFIX_B64}&limit=50`;
       const res = await fetch(url);
       const data = await res.json();
 
+      let latestWpk: string | null = null;
+
       for (const tx of data.transactions || []) {
-        if (!tx.note || tx.sender !== activeAddress) continue;
+        if (!tx.note || tx["payment-transaction"]?.receiver !== BEACON_PROTOCOL_ADDRESS) continue;
         try {
           const noteStr = new TextDecoder().decode(base64ToUint8(tx.note));
           const payload = parsePlaintextBeaconNote(noteStr);
           if (payload?.type === "announce") {
+            latestWpk = payload.wpk;
             setIsAnnounced(true);
-            return;
+            setOnChainWpk(payload.wpk);
+            break;
           }
-        } catch {
-          /* skip */
-        }
+        } catch { /* skip */ }
       }
-      setIsAnnounced(false);
-    } catch {
-      /* network error, fail silently */
-    }
+
+      if (latestWpk) {
+        // Check for mismatch if keypair is already derived
+        if (beaconKeypairRef.current) {
+          const derivedWpk = uint8ToBase64(beaconKeypairRef.current.publicKey);
+          setIdentityMismatch(derivedWpk !== latestWpk);
+        }
+      } else {
+        setIsAnnounced(false);
+      }
+    } catch { /* skip */ }
   }, [activeAddress]);
 
   useEffect(() => {
     checkAnnounceStatus();
   }, [checkAnnounceStatus]);
+
+  // Check mismatch whenever keypair is derived
+  useEffect(() => {
+    if (onChainWpk && beaconKeypairRef.current) {
+      const derivedWpk = uint8ToBase64(beaconKeypairRef.current.publicKey);
+      setIdentityMismatch(derivedWpk !== onChainWpk);
+    }
+  }, [onChainWpk]);
 
   // ═══════════════════════════════════════════════════════════════
   //  Announce (One-Time Inbox Initialization)
@@ -442,12 +461,12 @@ export function BeaconChat() {
       targetAddress: string
     ): Promise<{ wpk: string; nfd?: string } | null> => {
       try {
-        const url = `${MAINNET_ALGONODE_INDEXER}/v2/transactions?address=${BEACON_PROTOCOL_ADDRESS}&address-role=receiver&note-prefix=${BEACON_PREFIX_B64}&limit=100`;
+        const url = `${MAINNET_ALGONODE_INDEXER}/v2/accounts/${targetAddress}/transactions?note-prefix=${BEACON_PREFIX_B64}&limit=50`;
         const res = await fetch(url);
         const data = await res.json();
 
         for (const tx of data.transactions || []) {
-          if (!tx.note || tx.sender !== targetAddress) continue;
+          if (!tx.note || tx["payment-transaction"]?.receiver !== BEACON_PROTOCOL_ADDRESS) continue;
           try {
             const noteStr = new TextDecoder().decode(base64ToUint8(tx.note));
             const payload = parsePlaintextBeaconNote(noteStr);
@@ -1348,7 +1367,7 @@ export function BeaconChat() {
               </div>
             ) : (
               <>
-                {/* Announce Status */}
+                {/* Announce / Identity Status */}
                 {!isAnnounced ? (
                   <div className="mb-6">
                     <div className="p-6 rounded-xl bg-primary-orange/5 border border-primary-orange/20 mb-4">
@@ -1373,10 +1392,31 @@ export function BeaconChat() {
                         : "Initialize BEACON Inbox"}
                     </button>
                   </div>
+                ) : identityMismatch ? (
+                  <div className="mb-6">
+                    <div className="p-6 rounded-xl bg-red-500/10 border border-red-500/30 mb-4">
+                      <p className="text-red-400 text-xs font-bold uppercase tracking-widest mb-2 flex items-center gap-2">
+                        <MdBlock size={14} /> Identity Mismatch
+                      </p>
+                      <p className="text-gray-400 text-xs leading-relaxed">
+                        Your on-chain key doesn't match your current wallet signature (possibly due to rekeying). 
+                        You must update your identity to receive new messages.
+                      </p>
+                    </div>
+                    <button
+                      onClick={handleAnnounce}
+                      disabled={announcing}
+                      className="w-full py-4 bg-red-500 text-white rounded-xl font-bold
+                        shadow-lg shadow-red-500/20 hover:scale-[1.02] active:scale-[0.98]
+                        transition-all disabled:opacity-40"
+                    >
+                      {announcing ? "Updating..." : "Update BEACON Identity"}
+                    </button>
+                  </div>
                 ) : (
                   <div className="mb-6">
                     <div className="flex items-center gap-2 px-4 py-3 rounded-xl bg-green-500/5 border border-green-500/20">
-                      <span className="w-2 h-2 rounded-full bg-green-500" />
+                      <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
                       <span className="text-green-400 text-xs font-bold uppercase tracking-widest">
                         Inbox Active
                       </span>

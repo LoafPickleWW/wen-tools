@@ -84,8 +84,8 @@ export function BeaconDropTool() {
       suggestedParams: {
         genesisHash: "wGHE2Pwdvd7S12BL5FaOP20EGYesN73ktiC1qzkkit8=", // mainnet
         genesisID: "mainnet-v1.0",
-        firstRound: 1,
-        lastRound: 2,
+        firstRound: 10,
+        lastRound: 20,
         fee: 0,
         flatFee: true,
       } as any
