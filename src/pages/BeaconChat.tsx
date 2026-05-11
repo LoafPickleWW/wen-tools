@@ -570,11 +570,9 @@ export function BeaconChat() {
       const sdp = pc.localDescription?.sdp;
       if (!sdp) throw new Error("Handshake failed");
       const compressedSdp = await compress(filterSdp(sdp));
-
-      const params = await algodClient.getTransactionParams().do();
-      const txns: algosdk.Transaction[] = [];
-
       const now = Date.now();
+      const params = await algodClient.getTransactionParams().do();
+      
       const buildOfferTx = (sdpPart: string, part?: number, total?: number) => {
         const payload: BeaconNote = {
           proto: "BEACON/1",
@@ -597,6 +595,7 @@ export function BeaconChat() {
       };
 
       const baseTx = buildOfferTx(compressedSdp);
+      const finalTxns: algosdk.Transaction[] = [];
 
       if (baseTx.note!.length > 800) {
         const totalParts = Math.ceil(baseTx.note!.length / 800);
@@ -604,16 +603,17 @@ export function BeaconChat() {
         for (let i = 0; i < totalParts; i++) {
           const start = i * charsPerPart;
           const partSdp = compressedSdp.slice(start, start + charsPerPart);
-          txns.push(buildOfferTx(partSdp, i + 1, totalParts));
+          finalTxns.push(buildOfferTx(partSdp, i + 1, totalParts));
         }
-        algosdk.assignGroupID(txns);
+        algosdk.assignGroupID(finalTxns);
       } else {
-        txns.push(baseTx);
+        finalTxns.push(baseTx);
       }
 
-      setConnectionStatus(`Broadcasting offer (${txns.length} tx)...`);
-      const signed = await signTransactions(txns.map(t => algosdk.encodeUnsignedTransaction(t)));
-      if (!signed || signed.length !== txns.length) throw new Error("Cancelled");
+      setConnectionStatus(`Broadcasting offer (${finalTxns.length} tx)...`);
+      const encoded = finalTxns.map(t => t.toByte());
+      const signed = await signTransactions(encoded);
+      if (!signed || signed.length !== finalTxns.length) throw new Error("Cancelled");
       
       const validSigned = signed.filter((s): s is Uint8Array => s !== null);
       await algodClient.sendRawTransaction(validSigned).do();
@@ -689,9 +689,7 @@ export function BeaconChat() {
       const compressedSdp = await compress(filterSdp(sdp));
 
       const params = await algodClient.getTransactionParams().do();
-      const txns: algosdk.Transaction[] = [];
-
-      const buildAnswerTx = (sdpPart?: string, part?: number, total?: number) => {
+      const buildAnswerTx = (sdpPart: string, part?: number, total?: number) => {
         const payload: BeaconNote = {
           proto: "BEACON/1",
           type: "answer",
@@ -712,22 +710,25 @@ export function BeaconChat() {
       };
 
       const baseTx = buildAnswerTx(compressedSdp);
+      const finalTxns: algosdk.Transaction[] = [];
+
       if (baseTx.note!.length > 800) {
         const totalParts = Math.ceil(baseTx.note!.length / 800);
         const charsPerPart = Math.ceil(compressedSdp.length / totalParts);
         for (let i = 0; i < totalParts; i++) {
           const start = i * charsPerPart;
           const partSdp = compressedSdp.slice(start, start + charsPerPart);
-          txns.push(buildAnswerTx(partSdp, i + 1, totalParts));
+          finalTxns.push(buildAnswerTx(partSdp, i + 1, totalParts));
         }
-        algosdk.assignGroupID(txns);
+        algosdk.assignGroupID(finalTxns);
       } else {
-        txns.push(baseTx);
+        finalTxns.push(baseTx);
       }
 
-      setConnectionStatus(`Responding (${txns.length} tx)...`);
-      const signed = await signTransactions(txns.map(t => algosdk.encodeUnsignedTransaction(t)));
-      if (!signed || signed.length !== txns.length) throw new Error("Cancelled");
+      setConnectionStatus(`Responding (${finalTxns.length} tx)...`);
+      const encoded = finalTxns.map(t => t.toByte());
+      const signed = await signTransactions(encoded);
+      if (!signed || signed.length !== finalTxns.length) throw new Error("Cancelled");
       const validSigned = signed.filter((s): s is Uint8Array => s !== null);
       await algodClient.sendRawTransaction(validSigned).do();
       setConnectionStatus("Answer broadcast. Connecting...");
