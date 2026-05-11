@@ -360,8 +360,15 @@ export function BeaconChat() {
 
     const keypair = deriveKeyFromSignature(entropy);
     beaconKeypairRef.current = keypair;
+
+    // Force identity mismatch check now that we have derived the key
+    if (onChainWpk) {
+      const derivedWpk = uint8ToBase64(keypair.publicKey);
+      setIdentityMismatch(derivedWpk !== onChainWpk);
+    }
+
     return keypair;
-  }, [activeAddress, signTransactions]);
+  }, [activeAddress, signTransactions, onChainWpk]);
 
   // ═══════════════════════════════════════════════════════════════
   //  Check Announce Status
@@ -544,6 +551,15 @@ export function BeaconChat() {
         }
 
         const keypair = await getBeaconKeypair();
+
+        // Guard against mismatched identity
+        if (onChainWpk && uint8ToBase64(keypair.publicKey) !== onChainWpk) {
+          setIdentityMismatch(true);
+          toast.error("Identity mismatch — update your BEACON identity first");
+          setSendingBond(false);
+          return;
+        }
+
         const nfdName = myNfd || (await getNfdDomain(activeAddress));
 
         const payload: BeaconNote = {
@@ -707,9 +723,18 @@ export function BeaconChat() {
   const scanBeacon = useCallback(async () => {
     if (!activeAddress) return;
     setScanning(true);
-
     try {
       const keypair = await getBeaconKeypair();
+
+      // Guard against mismatched identity
+      if (onChainWpk && uint8ToBase64(keypair.publicKey) !== onChainWpk) {
+        setIdentityMismatch(true);
+        toast.error("Identity mismatch — update your BEACON identity first");
+        setScanning(false);
+        return;
+      }
+
+      toast.info("Scanning for messages...");
       const blocked = getBlockedWpks();
 
       const url = `${MAINNET_ALGONODE_INDEXER}/v2/transactions?address=${BEACON_PROTOCOL_ADDRESS}&address-role=receiver&note-prefix=${BEACON_PREFIX_B64}&limit=200`;
