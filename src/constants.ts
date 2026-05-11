@@ -317,7 +317,7 @@ export const TOOLS = [
   {
     id: "beacon_chat",
     label: "BEACON Chat",
-    description: "Serverless, on-chain encrypted chat powered by the BEACON Protocol.",
+    description: "Zero-infrastructure, on-chain encrypted chat with serverless P2P signaling via Algorand — No brokers, no middlemen, true sovereign P2P.",
     path: "/beacon-chat",
     category: "asset",
     icon: "/icons/p2pchat.svg"
