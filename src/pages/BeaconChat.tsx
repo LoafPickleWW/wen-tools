@@ -574,13 +574,14 @@ export function BeaconChat() {
       const params = await algodClient.getTransactionParams().do();
       const txns: algosdk.Transaction[] = [];
 
-      const buildOfferTx = (sdpPart?: string, part?: number, total?: number) => {
+      const now = Date.now();
+      const buildOfferTx = (sdpPart: string, part?: number, total?: number) => {
         const payload: BeaconNote = {
           proto: "BEACON/1",
           type: "offer",
           wpk: uint8ToBase64(keypair.publicKey),
-          ts: Date.now(),
-          exp: Date.now() + OFFER_EXPIRY_MS,
+          ts: now,
+          exp: now + OFFER_EXPIRY_MS,
           sdp: sdpPart,
           part,
           total
@@ -596,8 +597,8 @@ export function BeaconChat() {
       };
 
       const baseTx = buildOfferTx(compressedSdp);
+
       if (baseTx.note!.length > 1000) {
-        // Split into two parts
         const half = Math.ceil(compressedSdp.length / 2);
         const sdp1 = compressedSdp.slice(0, half);
         const sdp2 = compressedSdp.slice(half);
@@ -631,7 +632,7 @@ export function BeaconChat() {
                 answerParts.set(decrypted.part, decrypted.sdp || "");
                 if (answerParts.size < decrypted.total) continue;
                 const fullSdp = Array.from({ length: decrypted.total }, (_, i) => answerParts.get(i + 1)).join("");
-                const answerSdp = await decompress(fullSdp);
+                const answerSdp = await decompress(fullSdp || "");
                 await pc.setRemoteDescription({ type: "answer", sdp: answerSdp });
                 clearInterval(pollRef.current!);
                 setConnectionStatus("Finalizing connection...");
@@ -647,7 +648,8 @@ export function BeaconChat() {
         } catch { /* poll error */ }
       }, POLL_INTERVAL_ACTIVE);
     } catch (err: any) {
-      toast.error(err.message);
+      console.error("Offer Error:", err);
+      toast.error(err.message || "Offer failed");
       goHome();
     }
   }, [activeAddress, signTransactions, algodClient, getBeaconKeypair, setupDataChannel, goHome]);
@@ -692,7 +694,7 @@ export function BeaconChat() {
           proto: "BEACON/1",
           type: "answer",
           wpk: uint8ToBase64(keypair.publicKey),
-          ts: offer.ts,
+          ts: offer.ts, // Use offer's TS for consistency
           sdp: sdpPart,
           part,
           total
@@ -726,7 +728,8 @@ export function BeaconChat() {
       await algodClient.sendRawTransaction(validSigned).do();
       setConnectionStatus("Answer broadcast. Connecting...");
     } catch (err: any) {
-      toast.error(err.message);
+      console.error("Answer Error:", err);
+      toast.error(err.message || "Answer failed");
       goHome();
     }
   }, [activeAddress, signTransactions, algodClient, getBeaconKeypair, setupDataChannel, goHome]);
