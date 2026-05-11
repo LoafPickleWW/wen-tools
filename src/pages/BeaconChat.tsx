@@ -50,6 +50,7 @@ interface ChatMessage {
   fileName?: string;
   fileSize?: number;
   fileType?: string;
+  fileUrl?: string;
 }
 
 interface BeaconNote {
@@ -142,6 +143,22 @@ async function decompress(base64: string): Promise<string> {
     chunks.push(value);
   }
   return new TextDecoder().decode(concatBytes(...chunks));
+}
+
+function filterSdp(sdp: string): string {
+  const lines = sdp.split("\n");
+  let keepSection = true;
+  return lines.filter(line => {
+    if (line.startsWith("m=")) {
+      // Only keep the data channel section, strip audio/video
+      keepSection = line.startsWith("m=application");
+    }
+    if (!keepSection) return false;
+    if (line.startsWith("a=candidate:")) {
+      return line.includes(" typ host "); // Only keep local network candidates
+    }
+    return true;
+  }).join("\n");
 }
 
 function encryptBeaconNote(
@@ -283,6 +300,8 @@ export function BeaconChat() {
     setIsConnected(false);
     setMessages([]);
     setPendingOffer(null);
+    setPeerAddress("");
+    setPeerNfd(undefined);
   }, []);
 
   // ── Scroll to Bottom ──
@@ -302,11 +321,13 @@ export function BeaconChat() {
   //  Core Protocol Logic
   // ═══════════════════════════════════════════════════════════════════
 
-  const getBeaconKeypair = useCallback(async (): Promise<nacl.BoxKeyPair> => {
-    if (beaconKeypairRef.current) return beaconKeypairRef.current;
+  const getBeaconKeypair = useCallback(async (forceSign = false): Promise<nacl.BoxKeyPair> => {
+    if (!forceSign && beaconKeypairRef.current) return beaconKeypairRef.current;
     if (!activeAddress || !signTransactions) throw new Error("Wallet not connected");
 
-    const domainTxn = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
+    // We no longer store the signature in localStorage for security.
+    // The user signs once per session to derive their secret identity.
+    const authTxn = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
       from: activeAddress,
       to: activeAddress,
       amount: 0,
@@ -321,17 +342,14 @@ export function BeaconChat() {
       } as any,
     });
 
-    const signed = await signTransactions([algosdk.encodeUnsignedTransaction(domainTxn)]);
+    const signed = await signTransactions([algosdk.encodeUnsignedTransaction(authTxn)]);
     if (!signed?.[0]) throw new Error("Cancelled");
 
     const decoded = algosdk.decodeSignedTransaction(signed[0]);
-    let entropy: Uint8Array | null = null;
-    if (decoded.sig) entropy = decoded.sig;
-    else if (decoded.msig) entropy = nacl.hash(algosdk.encodeObj(decoded.msig));
-    else if (decoded.lsig) entropy = nacl.hash(algosdk.encodeObj(decoded.lsig));
+    const sig = decoded.sig || (decoded.msig ? nacl.hash(algosdk.encodeObj(decoded.msig)) : null);
+    if (!sig) throw new Error("No signature found");
 
-    if (!entropy) throw new Error("No signature found");
-    const keypair = deriveKeyFromSignature(entropy);
+    const keypair = deriveKeyFromSignature(sig);
     beaconKeypairRef.current = keypair;
     return keypair;
   }, [activeAddress, signTransactions]);
@@ -345,7 +363,9 @@ export function BeaconChat() {
         if (tx.sender !== targetAddress) continue;
         const noteStr = new TextDecoder().decode(base64ToUint8(tx.note));
         const payload = parsePlaintextBeaconNote(noteStr);
-        if (payload?.type === "announce") return { wpk: payload.wpk, nfd: payload.nfd };
+        if (payload?.type === "announce" && payload.wpk) {
+          return { wpk: payload.wpk, nfd: payload.nfd };
+        }
       }
       return null;
     } catch { return null; }
@@ -372,26 +392,56 @@ export function BeaconChat() {
   useEffect(() => { checkAnnounceStatus(); }, [checkAnnounceStatus]);
 
   const sendFile = useCallback(async (file: File) => {
-    if (!dcRef.current || !isConnected) return;
-    toast.info(`Sending ${file.name}...`);
-    // Sending metadata first
-    const meta = {
+    if (!dcRef.current || dcRef.current.readyState !== "open") return;
+    const CHUNK_SIZE = 16384;
+    const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
+    const fileId = Math.random().toString(36).substring(7);
+    
+    // Metadata
+    dcRef.current.send(JSON.stringify({
       type: "file-meta",
+      fileId,
       fileName: file.name,
       fileSize: file.size,
       fileType: file.type,
+      totalChunks,
       ts: Date.now()
-    };
-    dcRef.current.send(JSON.stringify(meta));
+    }));
+
+    const reader = new FileReader();
+    let offset = 0;
     
-    // Chunking logic would go here, but for now we just notify the peer
-    setMessages(prev => [...prev, { 
-      text: `Sent file metadata: ${file.name}`, 
-      sender: "me", 
-      timestamp: Date.now(), 
-      type: "file-meta" 
-    }]);
-  }, [isConnected]);
+    reader.onload = async (e) => {
+      if (!e.target?.result || !dcRef.current) return;
+
+      // Backpressure: Wait for the data channel buffer to drain if needed
+      while (dcRef.current && dcRef.current.bufferedAmount > 1_000_000) {
+        await new Promise(r => setTimeout(r, 100));
+      }
+
+      const chunk = uint8ToBase64(new Uint8Array(e.target.result as ArrayBuffer));
+      dcRef.current.send(JSON.stringify({
+        type: "file-chunk",
+        fileId,
+        index: offset / CHUNK_SIZE,
+        data: chunk
+      }));
+      
+      offset += CHUNK_SIZE;
+      if (offset < file.size) {
+        readNext();
+      } else {
+        setMessages(prev => [...prev, { text: `Sent: ${file.name}`, sender: "me", timestamp: Date.now(), type: "text" }]);
+      }
+    };
+
+    const readNext = () => {
+      const slice = file.slice(offset, offset + CHUNK_SIZE);
+      reader.readAsArrayBuffer(slice);
+    };
+
+    readNext();
+  }, []);
 
   const handlePaste = useCallback((e: React.ClipboardEvent) => {
     const items = e.clipboardData.items;
@@ -407,7 +457,11 @@ export function BeaconChat() {
     if (!activeAddress || !signTransactions || !algodClient) return;
     setAnnouncing(true);
     try {
+      // 1. Get (or derive) the persistent identity keypair
+      // This will prompt for "Identity Proof" if not cached. 
+      // This MUST be an off-chain signature to keep the secretKey private.
       const keypair = await getBeaconKeypair();
+      
       const nfdName = await getNfdDomain(activeAddress);
       const payload: BeaconNote = {
         proto: "BEACON/1",
@@ -416,6 +470,7 @@ export function BeaconChat() {
         ts: Date.now(),
         nfd: nfdName || undefined,
       };
+      
       const noteBytes = new TextEncoder().encode(`${BEACON_PREFIX}${btoa(JSON.stringify(payload))}`);
       const params = await algodClient.getTransactionParams().do();
       const txn = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
@@ -425,8 +480,10 @@ export function BeaconChat() {
         note: noteBytes,
         suggestedParams: { ...params, fee: 1000, flatFee: true },
       });
+
       const signed = await signTransactions([algosdk.encodeUnsignedTransaction(txn)]);
       if (!signed?.[0]) throw new Error("Cancelled");
+
       await algodClient.sendRawTransaction(signed[0]).do();
       toast.success("Identity Published!");
       setIsAnnounced(true);
@@ -443,6 +500,8 @@ export function BeaconChat() {
 
   const setupDataChannel = useCallback((channel: RTCDataChannel) => {
     dcRef.current = channel;
+    const fileBuffers = new Map<string, { chunks: string[], meta: any }>();
+
     channel.onopen = () => {
       setPhase("chat");
       setIsConnected(true);
@@ -454,6 +513,26 @@ export function BeaconChat() {
         const msg = JSON.parse(e.data);
         if (msg.type === "text") {
           setMessages((prev) => [...prev, { text: msg.text, sender: "peer", timestamp: msg.ts, type: "text" }]);
+        } else if (msg.type === "file-meta") {
+          fileBuffers.set(msg.fileId, { chunks: new Array(msg.totalChunks), meta: msg });
+          setMessages(prev => [...prev, { text: `Receiving: ${msg.fileName}`, sender: "peer", timestamp: Date.now(), type: "text" }]);
+        } else if (msg.type === "file-chunk") {
+          const entry = fileBuffers.get(msg.fileId);
+          if (entry) {
+            entry.chunks[msg.index] = msg.data;
+            if (entry.chunks.every(c => c !== undefined)) {
+              const blob = new Blob(entry.chunks.map(c => base64ToUint8(c)) as any, { type: entry.meta.fileType });
+              const url = URL.createObjectURL(blob);
+              setMessages(prev => [...prev, { 
+                text: `Received file: ${entry.meta.fileName}`, 
+                sender: "peer", 
+                timestamp: Date.now(), 
+                type: "text",
+                fileUrl: url
+              }]);
+              fileBuffers.delete(msg.fileId);
+            }
+          }
         }
       } catch { /* skip */ }
     };
@@ -479,14 +558,16 @@ export function BeaconChat() {
       await pc.setLocalDescription(offer);
 
       setConnectionStatus("Gathering networking paths...");
-      await new Promise<void>((resolve) => {
-        if (pc.iceGatheringState === "complete") resolve();
-        else pc.onicegatheringstatechange = () => pc.iceGatheringState === "complete" && resolve();
+      await new Promise<void>((resolve, reject) => {
+        const timeout = setTimeout(() => reject(new Error("ICE gathering timed out")), 15_000);
+        const done = () => { clearTimeout(timeout); resolve(); };
+        if (pc.iceGatheringState === "complete") return done();
+        pc.onicegatheringstatechange = () => pc.iceGatheringState === "complete" && done();
       });
 
       const sdp = pc.localDescription?.sdp;
       if (!sdp) throw new Error("Handshake failed");
-      const compressedSdp = await compress(sdp);
+      const compressedSdp = await compress(filterSdp(sdp));
 
       const payload: BeaconNote = {
         proto: "BEACON/1",
@@ -497,8 +578,9 @@ export function BeaconChat() {
         sdp: compressedSdp,
       };
 
-      const noteBytes = new TextEncoder().encode(encryptBeaconNote(payload, base64ToUint8(contact.wpk)));
-      if (noteBytes.length > 1024) throw new Error("Offer too large for Algorand note (1KB)");
+      const encryptedPayload = encryptBeaconNote(payload, base64ToUint8(contact.wpk));
+      const noteBytes = new TextEncoder().encode(encryptedPayload);
+      if (noteBytes.length > 1024) throw new Error(`Offer too large (${noteBytes.length} bytes). ICE-lite failed.`);
 
       const params = await algodClient.getTransactionParams().do();
       const txn = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
@@ -561,14 +643,16 @@ export function BeaconChat() {
       await pc.setLocalDescription(answer);
 
       setConnectionStatus("Gathering paths...");
-      await new Promise<void>((resolve) => {
-        if (pc.iceGatheringState === "complete") resolve();
-        else pc.onicegatheringstatechange = () => pc.iceGatheringState === "complete" && resolve();
+      await new Promise<void>((resolve, reject) => {
+        const timeout = setTimeout(() => reject(new Error("ICE gathering timed out")), 15_000);
+        const done = () => { clearTimeout(timeout); resolve(); };
+        if (pc.iceGatheringState === "complete") return done();
+        pc.onicegatheringstatechange = () => pc.iceGatheringState === "complete" && done();
       });
 
       const sdp = pc.localDescription?.sdp;
       if (!sdp) throw new Error("Answer failed");
-      const compressedSdp = await compress(sdp);
+      const compressedSdp = await compress(filterSdp(sdp));
 
       const payload: BeaconNote = {
         proto: "BEACON/1",
@@ -578,7 +662,9 @@ export function BeaconChat() {
         sdp: compressedSdp,
       };
 
-      const noteBytes = new TextEncoder().encode(encryptBeaconNote(payload, base64ToUint8(offer.wpk)));
+      const encryptedPayload = encryptBeaconNote(payload, base64ToUint8(offer.wpk));
+      const noteBytes = new TextEncoder().encode(encryptedPayload);
+      if (noteBytes.length > 1024) throw new Error(`Answer too large (${noteBytes.length} bytes).`);
       const params = await algodClient.getTransactionParams().do();
       const txn = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
         from: activeAddress,
@@ -612,12 +698,15 @@ export function BeaconChat() {
       const data = await res.json();
       
       const newRequests: BondRequest[] = [];
+      let foundOffer = false;
+
       for (const tx of data.transactions || []) {
         const noteStr = new TextDecoder().decode(base64ToUint8(tx.note));
         const payload = decryptBeaconNote(noteStr, keypair.secretKey);
         if (!payload) continue;
 
         if (payload.type === "bond-request" && tx.sender !== activeAddress) {
+          if (payload.exp && payload.exp < Date.now()) continue;
           newRequests.push({ fromAddress: tx.sender, wpk: payload.wpk, nfd: payload.nfd, ts: payload.ts, round: tx["confirmed-round"] });
         } else if (payload.type === "bond-accept") {
           const current = getContacts(activeAddress);
@@ -627,11 +716,17 @@ export function BeaconChat() {
             setContacts(updated);
             toast.success(`New contact added: ${payload.nfd || shortenAddr(tx.sender)}`);
           }
-        } else if (payload.type === "offer" && tx.sender !== activeAddress) {
-          setPendingOffer({ fromAddress: tx.sender, wpk: payload.wpk, ts: payload.ts, sdp: payload.sdp, nfd: payload.nfd });
+        } else if (payload.type === "offer" && tx.sender !== activeAddress && !foundOffer) {
+          if (!payload.exp || payload.exp >= Date.now()) {
+            setPendingOffer({ fromAddress: tx.sender, wpk: payload.wpk, ts: payload.ts, sdp: payload.sdp, nfd: payload.nfd });
+            foundOffer = true;
+          }
         }
       }
-      setBondRequests(newRequests);
+      setBondRequests(prev => {
+        const combined = [...newRequests, ...prev];
+        return combined.filter((v, i, a) => a.findIndex(t => t.fromAddress === v.fromAddress) === i);
+      });
     } catch { toast.error("Scan failed"); }
     finally { setScanning(false); }
   }, [activeAddress, getBeaconKeypair]);
@@ -641,6 +736,11 @@ export function BeaconChat() {
     setSendingBond(true);
     try {
       let addr = target.trim();
+      if (addr.toLowerCase().endsWith(".algo")) {
+        const nfdData = await fetch(`https://api.nf.domains/nfd/${addr.toLowerCase()}?view=tiny`).then(r => r.json());
+        if (nfdData.depositAccount) addr = nfdData.depositAccount;
+        else throw new Error("Could not resolve NFD");
+      }
       const keypair = await getBeaconKeypair();
       const targetInfo = await lookupWpk(addr);
       if (!targetInfo) throw new Error("Recipient hasn't initialized BEACON");
@@ -753,7 +853,10 @@ export function BeaconChat() {
                   <div className="mb-6">
                     <div className="p-6 rounded-xl bg-primary-orange/5 border border-primary-orange/20 mb-4 text-xs">
                       <p className="text-primary-orange font-bold uppercase mb-2">Initialize Inbox</p>
-                      <p className="text-gray-400 leading-relaxed">Publish your encryption key on-chain to receive messages. Costs 0.001 ALGO. Sign twice to confirm identity.</p>
+                      <p className="text-gray-400 leading-relaxed">
+                        To start, you must initialize your messaging identity. This broadcasts a one-time proof to the Algorand network.
+                        Costs 0.001 ALGO. You may be prompted to confirm your identity before broadcasting.
+                      </p>
                     </div>
                     <button onClick={handleAnnounce} disabled={announcing} className="w-full py-4 bg-primary-orange text-white rounded-xl font-bold transition-all disabled:opacity-40">{announcing ? "Broadcasting..." : "Initialize BEACON Inbox"}</button>
                   </div>
@@ -879,6 +982,9 @@ export function BeaconChat() {
                 <div key={i} className={`flex ${msg.sender === "me" ? "justify-end" : "justify-start"}`}>
                   <div className={`max-w-[75%] rounded-2xl px-4 py-2.5 ${msg.sender === "me" ? "bg-primary-orange text-white rounded-br-md" : "bg-[#1a1a1a] text-gray-200 border border-[#222] rounded-bl-md"}`}>
                     <p className="text-sm whitespace-pre-wrap break-words leading-relaxed">{msg.text}</p>
+                    {msg.fileUrl && (
+                      <a href={msg.fileUrl} download={msg.text.split(": ")[1]} className="mt-2 block py-2 px-3 bg-black/20 rounded-lg text-[10px] font-bold text-primary-orange hover:bg-black/40 transition-all text-center">Download File</a>
+                    )}
                     <p className="text-[9px] mt-1 opacity-40">{new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
                   </div>
                 </div>
