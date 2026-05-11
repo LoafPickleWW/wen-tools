@@ -598,12 +598,14 @@ export function BeaconChat() {
 
       const baseTx = buildOfferTx(compressedSdp);
 
-      if (baseTx.note!.length > 1000) {
-        const half = Math.ceil(compressedSdp.length / 2);
-        const sdp1 = compressedSdp.slice(0, half);
-        const sdp2 = compressedSdp.slice(half);
-        txns.push(buildOfferTx(sdp1, 1, 2));
-        txns.push(buildOfferTx(sdp2, 2, 2));
+      if (baseTx.note!.length > 800) {
+        const totalParts = Math.ceil(baseTx.note!.length / 800);
+        const charsPerPart = Math.ceil(compressedSdp.length / totalParts);
+        for (let i = 0; i < totalParts; i++) {
+          const start = i * charsPerPart;
+          const partSdp = compressedSdp.slice(start, start + charsPerPart);
+          txns.push(buildOfferTx(partSdp, i + 1, totalParts));
+        }
         algosdk.assignGroupID(txns);
       } else {
         txns.push(baseTx);
@@ -710,12 +712,14 @@ export function BeaconChat() {
       };
 
       const baseTx = buildAnswerTx(compressedSdp);
-      if (baseTx.note!.length > 1000) {
-        const half = Math.ceil(compressedSdp.length / 2);
-        const sdp1 = compressedSdp.slice(0, half);
-        const sdp2 = compressedSdp.slice(half);
-        txns.push(buildAnswerTx(sdp1, 1, 2));
-        txns.push(buildAnswerTx(sdp2, 2, 2));
+      if (baseTx.note!.length > 800) {
+        const totalParts = Math.ceil(baseTx.note!.length / 800);
+        const charsPerPart = Math.ceil(compressedSdp.length / totalParts);
+        for (let i = 0; i < totalParts; i++) {
+          const start = i * charsPerPart;
+          const partSdp = compressedSdp.slice(start, start + charsPerPart);
+          txns.push(buildAnswerTx(partSdp, i + 1, totalParts));
+        }
         algosdk.assignGroupID(txns);
       } else {
         txns.push(baseTx);
