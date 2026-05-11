@@ -342,10 +342,23 @@ export function BeaconChat() {
     const signed = await signTransactions([encoded]);
     if (!signed?.[0]) throw new Error("Signature cancelled");
 
-    const sigBytes = algosdk.decodeSignedTransaction(signed[0]).sig;
-    if (!sigBytes) throw new Error("No signature");
+    const decoded = algosdk.decodeSignedTransaction(signed[0]);
+    
+    // Extract entropy from whatever signature type is present
+    let entropy: Uint8Array | null = null;
+    if (decoded.sig) {
+      entropy = decoded.sig;
+    } else if (decoded.msig) {
+      // For multisig, hash the entire msig structure to get a deterministic seed
+      entropy = nacl.hash(algosdk.encodeObj(decoded.msig));
+    } else if (decoded.lsig) {
+      // For logicsig, use the logic + sigs
+      entropy = nacl.hash(algosdk.encodeObj(decoded.lsig));
+    }
 
-    const keypair = deriveKeyFromSignature(sigBytes);
+    if (!entropy) throw new Error("No signature or auth proof found in transaction");
+
+    const keypair = deriveKeyFromSignature(entropy);
     beaconKeypairRef.current = keypair;
     return keypair;
   }, [activeAddress, signTransactions]);
@@ -1398,10 +1411,25 @@ export function BeaconChat() {
                       <p className="text-red-400 text-xs font-bold uppercase tracking-widest mb-2 flex items-center gap-2">
                         <MdBlock size={14} /> Identity Mismatch
                       </p>
-                      <p className="text-gray-400 text-xs leading-relaxed">
-                        Your on-chain key doesn't match your current wallet signature (possibly due to rekeying). 
-                        You must update your identity to receive new messages.
+                      <p className="text-gray-400 text-xs leading-relaxed mb-4">
+                        Your on-chain key doesn't match your current wallet signature. 
+                        This happens if you rekeyed or changed your signing method.
                       </p>
+                      
+                      {/* Diagnostics */}
+                      <div className="p-3 bg-black/40 rounded-lg border border-white/5 space-y-2 mb-4">
+                        <div className="flex justify-between items-center">
+                          <span className="text-[9px] text-gray-500 uppercase font-bold">On-Chain WPK</span>
+                          <span className="text-[9px] text-gray-400 font-mono">{onChainWpk ? shortenAddr(onChainWpk) : "None"}</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-[9px] text-gray-500 uppercase font-bold">Derived WPK</span>
+                          <span className="text-[9px] text-primary-orange font-mono">
+                            {beaconKeypairRef.current ? shortenAddr(uint8ToBase64(beaconKeypairRef.current.publicKey)) : "Not Derived"}
+                          </span>
+                        </div>
+                      </div>
+
                     </div>
                     <button
                       onClick={handleAnnounce}
