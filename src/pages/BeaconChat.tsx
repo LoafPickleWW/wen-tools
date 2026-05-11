@@ -377,14 +377,18 @@ export function BeaconChat() {
   const checkAnnounceStatus = useCallback(async () => {
     if (!activeAddress) return;
     try {
-      const url = `${MAINNET_ALGONODE_INDEXER}/v2/accounts/${activeAddress}/transactions?note-prefix=${BEACON_PREFIX_B64}&limit=50`;
+      // Query the protocol address directly — reliable for rekeyed accounts
+      const url = `${MAINNET_ALGONODE_INDEXER}/v2/transactions?address=${BEACON_PROTOCOL_ADDRESS}&address-role=receiver&note-prefix=${BEACON_PREFIX_B64}&limit=100`;
       const res = await fetch(url);
       const data = await res.json();
 
       let latestWpk: string | null = null;
 
       for (const tx of data.transactions || []) {
-        if (!tx.note || tx["payment-transaction"]?.receiver !== BEACON_PROTOCOL_ADDRESS) continue;
+        // Must be sent FROM our address to the protocol address
+        if (!tx.note || tx.sender !== activeAddress) continue;
+        if (tx["payment-transaction"]?.receiver !== BEACON_PROTOCOL_ADDRESS) continue;
+
         try {
           const noteStr = new TextDecoder().decode(base64ToUint8(tx.note));
           const payload = parsePlaintextBeaconNote(noteStr);
@@ -481,12 +485,16 @@ export function BeaconChat() {
       targetAddress: string
     ): Promise<{ wpk: string; nfd?: string } | null> => {
       try {
-        const url = `${MAINNET_ALGONODE_INDEXER}/v2/accounts/${targetAddress}/transactions?note-prefix=${BEACON_PREFIX_B64}&limit=50`;
+        // Query the protocol address directly for reliable discovery
+        const url = `${MAINNET_ALGONODE_INDEXER}/v2/transactions?address=${BEACON_PROTOCOL_ADDRESS}&address-role=receiver&note-prefix=${BEACON_PREFIX_B64}&limit=50`;
         const res = await fetch(url);
         const data = await res.json();
 
         for (const tx of data.transactions || []) {
+          // Filter by the target sender
+          if (tx.sender !== targetAddress) continue;
           if (!tx.note || tx["payment-transaction"]?.receiver !== BEACON_PROTOCOL_ADDRESS) continue;
+          
           try {
             const noteStr = new TextDecoder().decode(base64ToUint8(tx.note));
             const payload = parsePlaintextBeaconNote(noteStr);
@@ -1415,7 +1423,7 @@ export function BeaconChat() {
                       <p className="text-gray-400 text-xs leading-relaxed">
                         Publish your encryption key on-chain so others can send
                         you encrypted messages. This is a one-time 0.001 ALGO
-                        transaction.
+                        transaction. <strong>You will be prompted to sign twice.</strong>
                       </p>
                     </div>
                     <button
@@ -1439,6 +1447,7 @@ export function BeaconChat() {
                       <p className="text-gray-400 text-xs leading-relaxed mb-4">
                         Your on-chain key doesn't match your current wallet signature. 
                         This happens if you rekeyed or changed your signing method.
+                        <strong> You will be prompted to sign twice to update.</strong>
                       </p>
                       
                       {/* Diagnostics */}
