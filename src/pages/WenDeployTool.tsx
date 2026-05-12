@@ -12,6 +12,7 @@ import "xterm/css/xterm.css";
 // ─── CONSTANTS ────────────────────────────────────────────────────────────────
 
 const GITHUB_CLIENT_ID = import.meta.env.VITE_GITHUB_CLIENT_ID || "";
+const GITHUB_APP_SLUG = import.meta.env.VITE_GITHUB_APP_SLUG || "";
 const GITHUB_REDIRECT_URI = `${window.location.origin}/deploy`;
 
 // Crust Algorand storage contract (mainnet)
@@ -109,8 +110,9 @@ function cidToReserveAddress(cidStr: string): string {
 
 function openGitHubAuth(): Promise<string> {
   return new Promise((resolve, reject) => {
-    const scope = "repo";
-    const authUrl = `https://github.com/login/oauth/authorize?client_id=${GITHUB_CLIENT_ID}&redirect_uri=${encodeURIComponent(GITHUB_REDIRECT_URI)}&scope=${scope}`;
+    // For GitHub Apps, we still use the OAuth authorize URL, 
+    // but the permissions are controlled by the App settings.
+    const authUrl = `https://github.com/login/oauth/authorize?client_id=${GITHUB_CLIENT_ID}&redirect_uri=${encodeURIComponent(GITHUB_REDIRECT_URI)}`;
 
     const popup = window.open(authUrl, "github-auth", "width=600,height=700");
     if (!popup) {
@@ -244,6 +246,11 @@ function DeployView() {
     } catch (e: any) {
       setDeployState({ step: "error", message: e.message, progress: 0, activeStepIndex: -1 });
     }
+  };
+
+  const installGitHubApp = () => {
+    const installUrl = `https://github.com/apps/${GITHUB_APP_SLUG}/installations/new`;
+    window.open(installUrl, "_blank");
   };
 
   useEffect(() => {
@@ -440,13 +447,18 @@ function DeployView() {
                   </svg>
                 </div>
                 <h2 className="text-xl font-bold">Connect your accounts</h2>
-                <p className="text-neutral-500 text-sm max-w-xs">We need your wallet to sign deployments and GitHub to fetch your code.</p>
+                <p className="text-neutral-500 text-sm max-w-xs">We need your wallet to sign deployments and a GitHub App installation to fetch your code securely.</p>
                 <div className="flex flex-col w-full gap-3 max-w-xs">
                   {!activeAddress && <div className="text-xs text-yellow-500 bg-yellow-500/5 py-2 rounded-lg border border-yellow-500/20">Connect Wallet in Sidebar First</div>}
                   {activeAddress && !githubToken && (
-                    <button onClick={connectGitHub} className="w-full py-3 bg-white text-black font-bold rounded-xl hover:bg-neutral-200 transition-colors">
-                      Connect GitHub
-                    </button>
+                    <div className="space-y-3">
+                      <button onClick={connectGitHub} className="w-full py-3 bg-white text-black font-bold rounded-xl hover:bg-neutral-200 transition-colors">
+                        Connect GitHub
+                      </button>
+                      <button onClick={installGitHubApp} className="w-full py-3 bg-neutral-800 text-neutral-300 font-bold rounded-xl hover:bg-neutral-700 transition-colors text-xs">
+                        Install / Manage Repos
+                      </button>
+                    </div>
                   )}
                 </div>
              </div>
