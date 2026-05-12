@@ -46,6 +46,7 @@ import { P2PChat } from './pages/P2PChat';
 import { BeaconChat } from './pages/BeaconChat';
 import PostQuantum from './pages/PostQuantum';
 import { BeaconDropTool } from './pages/BeaconDropTool';
+import WenDeployTool from './pages/WenDeployTool';
 
 const walletManager = new WalletManager({
   wallets: [
@@ -141,6 +142,7 @@ function App() {
             <Route path='/beacon-chat' element={<BeaconChat />} />
             <Route path='/post-quantum' element={<PostQuantum />} />
             <Route path='/beacon-drop' element={<BeaconDropTool />} />
+            <Route path='/deploy' element={<WenDeployTool />} />
             <Route path="*" element={<Home />} />
           </Routes>
           <Footer />

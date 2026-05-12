@@ -338,4 +338,12 @@ export const TOOLS = [
     category: "apps",
     icon: "/icons/drop.png"
   },
+  {
+    id: "wen_deploy",
+    label: "Wen Deploy",
+    description: "Zero-infrastructure, in-browser build & deploy pipeline for GitHub repositories to IPFS & Algorand ARC-19.",
+    path: "/deploy",
+    category: "management",
+    icon: "/icons/devtools.png"
+  },
 ];
