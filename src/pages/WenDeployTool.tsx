@@ -374,27 +374,55 @@ function DeployView() {
       type PkgManager = { bin: string; installArgs: string[]; runArgs: (cmd: string) => string[]; label: string };
       const pm: PkgManager =
         mountedKeys.includes("pnpm-lock.yaml")
-          ? { bin: "npx", installArgs: ["pnpm", "install", "--no-frozen-lockfile", "--force"], runArgs: (s) => ["pnpm", "run", s], label: "pnpm" }
+          ? { bin: "npx", installArgs: ["pnpm", "install", "--no-frozen-lockfile", "--force", "--network-concurrency=4"], runArgs: (s) => ["pnpm", "run", s], label: "pnpm" }
           : mountedKeys.includes("yarn.lock")
-          ? { bin: "npx", installArgs: ["yarn", "install", "--frozen-lockfile"], runArgs: (s) => ["yarn", s], label: "yarn" }
+          ? { bin: "npx", installArgs: ["yarn", "install", "--frozen-lockfile", "--network-concurrency=4"], runArgs: (s) => ["yarn", s], label: "yarn" }
           : { bin: "npm", installArgs: ["install", "--legacy-peer-deps", "--prefer-offline"], runArgs: (s) => ["run", s], label: "npm" };
 
       termWriteln(`\x1b[36m> Detected package manager: ${pm.label}\x1b[0m`);
       setConfig(prev => ({ ...prev, detectedPkgManager: pm.label }));
 
-      setDeployState({ step: "installing", message: `Installing dependencies with ${pm.label}...`, progress: 20, activeStepIndex: 1 });
-      termWriteln(`\x1b[33m> Running ${pm.bin} ${pm.installArgs.join(" ")}...\x1b[0m`);
+      // Write .npmrc for network resilience
+      const npmrc = [
+        "fetch-retries=5",
+        "fetch-retry-mintimeout=20000",
+        "fetch-retry-maxtimeout=120000",
+        "network-concurrency=4",
+        "registry=https://registry.npmjs.org/",
+      ].join("\n");
+      await wc.fs.writeFile("/.npmrc", npmrc);
 
+      setDeployState({ step: "installing", message: `Installing dependencies with ${pm.label}...`, progress: 20, activeStepIndex: 1 });
+      
       let installLog = "";
-      const install = await wc.spawn(pm.bin, pm.installArgs, { cwd: repoFolder });
-      install.output.pipeTo(new WritableStream({
-        write(data) {
-          installLog += data;
-          termWrite(data);
-          setConsoleLog(prev => prev + data);
+      let installExit = 1;
+      const maxRetries = 3;
+
+      for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        if (attempt > 1) {
+          termWriteln(`\x1b[33m> Network hiccup detected. Retry attempt ${attempt}/${maxRetries} in ${5 * attempt}s...\x1b[0m`);
+          await new Promise(r => setTimeout(r, 5000 * attempt));
+          installLog = ""; // reset log for next scan
         }
-      }));
-      if (await install.exit !== 0) {
+        
+        termWriteln(`\x1b[33m> Running ${pm.bin} ${pm.installArgs.join(" ")}...\x1b[0m`);
+        const install = await wc.spawn(pm.bin, pm.installArgs, { cwd: repoFolder });
+        install.output.pipeTo(new WritableStream({
+          write(data) {
+            installLog += data;
+            termWrite(data);
+            setConsoleLog(prev => prev + data);
+          }
+        }));
+        installExit = await install.exit;
+        
+        if (installExit === 0) break;
+        
+        const isNetworkError = installLog.includes("ECONNRESET") || installLog.includes("socket hang up") || installLog.includes("META_FETCH_FAIL");
+        if (!isNetworkError) break; // fail fast for non-network errors
+      }
+
+      if (installExit !== 0) {
         setConsoleLog(prev => prev + "\n\n--- INSTALL FAILED ---\n" + installLog);
         throw new Error(`Installation failed. See log below.`);
       }
