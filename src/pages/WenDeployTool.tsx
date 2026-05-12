@@ -5,6 +5,7 @@ import algosdk from "algosdk";
 import { CID } from "multiformats/cid";
 import * as digest from "multiformats/hashes/digest";
 import { WebContainer } from "@webcontainer/api";
+// fflate is used for client-side gzip decompression — run: npm install fflate
 import { Terminal } from "xterm";
 import { FitAddon } from "xterm-addon-fit";
 import "xterm/css/xterm.css";
@@ -322,7 +323,7 @@ function DeployView() {
       // 3. Decompress gzip + parse tar entirely in JS — WebContainer has no guaranteed tar binary
       term?.writeln("\x1b[33m> Extracting repository...\x1b[0m");
 
-      // Dynamically import fflate
+      // Dynamically import fflate (add to your package.json: "fflate": "^0.8.0")
       const { decompress } = await import("fflate");
       const tarBytes: Uint8Array = await new Promise((res, rej) =>
         decompress(tarGzBuffer, (err, data) => err ? rej(new Error("Gzip decompress failed: " + err.message)) : res(data))
@@ -358,19 +359,45 @@ function DeployView() {
       const fileTree = parseTar(tarBytes);
       const topKeys = Object.keys(fileTree);
       if (topKeys.length === 0) throw new Error("Failed to extract repository: archive is empty.");
-      term?.writeln(`\x1b[32m> Mounting ${topKeys.length} entries into WebContainer...\x1b[0m`);
-      
-      // Clear existing root entries if needed (WebContainer doesn't allow mounting over non-empty)
-      // Actually wc.mount is best on a fresh boot or after a manual clear
-      await wc.mount(fileTree);
-      const repoFolder = ".";
+
+      // Log what the tar parser found so we can debug structure issues
+      term?.writeln(`\x1b[32m> Parsed tar: top-level keys = ${JSON.stringify(topKeys.slice(0, 10))}\x1b[0m`);
+
+      // Detect if package.json landed at root or one level down (GitHub sometimes
+      // emits archives where the first level is already the repo content, sometimes
+      // it's wrapped in an extra owner-repo-hash/ folder that slice(1) fails to strip)
+      let mountTree = fileTree;
+      let repoFolder = ".";
+      if (!fileTree["package.json"] && topKeys.length === 1 && (fileTree[topKeys[0]] as any)?.directory) {
+        // Everything is inside one wrapper folder — unwrap it
+        mountTree = (fileTree[topKeys[0]] as any).directory;
+        term?.writeln(`\x1b[33m> Unwrapped extra folder: ${topKeys[0]}\x1b[0m`);
+      } else if (!fileTree["package.json"]) {
+        term?.writeln(`\x1b[31m> WARNING: package.json not found at root. Keys: ${JSON.stringify(topKeys.slice(0, 20))}\x1b[0m`);
+      }
+
+      term?.writeln(`\x1b[32m> Mounting ${Object.keys(mountTree).length} entries into WebContainer...\x1b[0m`);
+      await wc.mount(mountTree);
 
       // 4. Install
       setDeployState({ step: "installing", message: "Installing dependencies in browser...", progress: 20, activeStepIndex: 1 });
       term?.writeln(`\x1b[33m> Running npm install...\x1b[0m`);
-      const install = await wc.spawn("npm", ["install"], { cwd: repoFolder });
-      install.output.pipeTo(new WritableStream({ write(data) { term?.write(data); } }));
-      if (await install.exit !== 0) throw new Error("Installation failed.");
+
+      // Collect install output into a buffer so it shows even if process exits fast
+      let installLog = "";
+      const install = await wc.spawn("npm", ["install", "--prefer-offline"], { cwd: repoFolder });
+      install.output.pipeTo(new WritableStream({
+        write(data) {
+          installLog += data;
+          term?.write(data);
+        }
+      }));
+      const installExit = await install.exit;
+      if (installExit !== 0) {
+        term?.writeln(`\x1b[31m> npm install exited with code ${installExit}\x1b[0m`);
+        term?.writeln(`\x1b[31m> Last output: ${installLog.slice(-500)}\x1b[0m`);
+        throw new Error(`Installation failed (exit ${installExit}). Check the console above.`);
+      }
 
       // 5. Build
       setDeployState({ step: "building", message: "Running build command...", progress: 50, activeStepIndex: 2 });
