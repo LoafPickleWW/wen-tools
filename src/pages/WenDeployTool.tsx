@@ -321,7 +321,7 @@ function DeployView() {
     if (!config.repo || !githubToken) return;
 
     try {
-      setConsoleLog(""); // Reset log for new run
+      setConsoleLog(""); 
       // 1. Boot WebContainer
       setDeployState({ step: "booting", message: "Booting browser environment...", progress: 5, activeStepIndex: 0 });
       if (!webcontainerInstance) {
@@ -397,10 +397,10 @@ function DeployView() {
 
       // 4. Install
       setDeployState({ step: "installing", message: "Installing dependencies in browser...", progress: 20, activeStepIndex: 1 });
-      termWriteln(`\x1b[33m> Running npm install...\x1b[0m`);
+      termWriteln(`\x1b[33m> Running npm install --legacy-peer-deps...\x1b[0m`);
 
       let installLog = "";
-      const install = await wc.spawn("npm", ["install", "--prefer-offline"], { cwd: repoFolder });
+      const install = await wc.spawn("npm", ["install", "--legacy-peer-deps", "--prefer-offline"], { cwd: repoFolder });
       install.output.pipeTo(new WritableStream({
         write(data) {
           installLog += data;
@@ -648,7 +648,7 @@ function DeployView() {
                    Build Log (last run)
                  </div>
                  <pre className="text-[10px] font-mono text-neutral-400 whitespace-pre-wrap break-all max-h-64 overflow-y-auto leading-relaxed p-4 bg-black/40 rounded-xl custom-scrollbar">
-                   {consoleLog.replace(/\x1b\[[0-9;]*m/g, "").slice(-3000)}
+                   {consoleLog.replace(new RegExp("\x1b\\[[0-9;]*m", "g"), "").slice(-3000)}
                  </pre>
                </div>
              )}
