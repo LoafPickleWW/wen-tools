@@ -142,6 +142,9 @@ function openGitHubAuth(): Promise<string> {
   });
 }
 
+// Global WebContainer instance to prevent "Unable to create more instances" error
+let webcontainerInstance: WebContainer | null = null;
+
 // ─── MAIN COMPONENT ───────────────────────────────────────────────────────────
 
 export default function WenDeployTool() {
@@ -229,8 +232,7 @@ function DeployView() {
   const [showConsole, setShowConsole] = useState(false);
   const [result, setResult] = useState<{ cid: string; asaId: number } | null>(null);
 
-  // WebContainer & Terminal Refs
-  const webcontainerInstance = useRef<WebContainer | null>(null);
+  // Terminal & Container Refs
   const terminalRef = useRef<HTMLDivElement>(null);
   const terminalInstance = useRef<Terminal | null>(null);
 
@@ -302,10 +304,10 @@ function DeployView() {
     try {
       // 1. Boot WebContainer
       setDeployState({ step: "booting", message: "Booting browser environment...", progress: 5, activeStepIndex: 0 });
-      if (!webcontainerInstance.current) {
-        webcontainerInstance.current = await WebContainer.boot();
+      if (!webcontainerInstance) {
+        webcontainerInstance = await WebContainer.boot();
       }
-      const wc = webcontainerInstance.current;
+      const wc = webcontainerInstance;
       const term = terminalInstance.current;
 
       // 2. Fetch & Mount Repo
