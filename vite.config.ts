@@ -10,6 +10,10 @@ export default defineConfig({
     exclude: ["falcon-signatures"],
   },
   server: {
+    headers: {
+      "Cross-Origin-Embedder-Policy": "require-corp",
+      "Cross-Origin-Opener-Policy": "same-origin",
+    },
     proxy: {
       '/socket.io': {
         target: 'https://wen-liquid-auth.onrender.com',
