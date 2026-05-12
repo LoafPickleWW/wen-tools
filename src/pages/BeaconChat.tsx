@@ -68,8 +68,6 @@ interface BeaconNote {
   exp?: number;
   nfd?: string;
   sdp?: string;
-  part?: number;
-  total?: number;
 }
 
 interface EncryptedEnvelope {
@@ -148,18 +146,24 @@ async function decompress(base64: string): Promise<string> {
 }
 
 function filterSdp(sdp: string): string {
+  // Only the fields WebRTC strictly needs to establish a data channel
+  const ESSENTIAL = new Set([
+    "a=ice-ufrag:", "a=ice-pwd:", "a=fingerprint:",
+    "a=setup:", "a=mid:", "a=sctp-port:", "a=max-message-size:"
+  ]);
   const lines = sdp.split("\n");
   let keepSection = true;
   return lines.filter(line => {
     if (line.startsWith("m=")) {
-      // Only keep the data channel section, strip audio/video
       keepSection = line.startsWith("m=application");
     }
     if (!keepSection) return false;
-    if (line.startsWith("a=candidate:")) {
-      return line.includes(" typ host "); // Only keep local network candidates
+    if (line.startsWith("a=")) {
+      if (line.startsWith("a=candidate:")) return line.includes(" typ host ");
+      for (const prefix of ESSENTIAL) if (line.startsWith(prefix)) return true;
+      return false; // drop a=group, a=extmap, a=ice-options, a=msid-semantic, etc.
     }
-    return true;
+    return true; // keep v=, o=, s=, t=, m=, c= lines
   }).join("\n");
 }
 
@@ -570,57 +574,37 @@ export function BeaconChat() {
       const sdp = pc.localDescription?.sdp;
       if (!sdp) throw new Error("Handshake failed");
       const compressedSdp = await compress(filterSdp(sdp));
-      const now = Date.now();
       const params = await algodClient.getTransactionParams().do();
-      
-      const buildOfferTx = (sdpPart: string, part?: number, total?: number) => {
-        const payload: BeaconNote = {
-          proto: "BEACON/1",
-          type: "offer",
-          wpk: uint8ToBase64(keypair.publicKey),
-          ts: now,
-          exp: now + OFFER_EXPIRY_MS,
-          sdp: sdpPart,
-          part,
-          total
-        };
-        const noteBytes = new TextEncoder().encode(encryptBeaconNote(payload, base64ToUint8(contact.wpk)));
-        return algosdk.makePaymentTxnWithSuggestedParamsFromObject({
-          from: activeAddress,
-          to: BEACON_PROTOCOL_ADDRESS,
-          amount: 0,
-          note: noteBytes,
-          suggestedParams: { ...params, fee: 1000, flatFee: true },
-        });
+
+      const payload: BeaconNote = {
+        proto: "BEACON/1",
+        type: "offer",
+        wpk: uint8ToBase64(keypair.publicKey),
+        ts: Date.now(),
+        exp: Date.now() + OFFER_EXPIRY_MS,
+        sdp: compressedSdp,
       };
 
-      const baseTx = buildOfferTx(compressedSdp);
-      const finalTxns: algosdk.Transaction[] = [];
+      const encryptedPayload = encryptBeaconNote(payload, base64ToUint8(contact.wpk));
+      const noteBytes = new TextEncoder().encode(encryptedPayload);
+      if (noteBytes.length > 1024) throw new Error(`Offer too large (${noteBytes.length} bytes).`);
 
-      if (baseTx.note!.length > 800) {
-        const totalParts = Math.ceil(baseTx.note!.length / 800);
-        const charsPerPart = Math.ceil(compressedSdp.length / totalParts);
-        for (let i = 0; i < totalParts; i++) {
-          const start = i * charsPerPart;
-          const partSdp = compressedSdp.slice(start, start + charsPerPart);
-          finalTxns.push(buildOfferTx(partSdp, i + 1, totalParts));
-        }
-        algosdk.assignGroupID(finalTxns);
-      } else {
-        finalTxns.push(baseTx);
-      }
+      const txn = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
+        from: activeAddress,
+        to: BEACON_PROTOCOL_ADDRESS,
+        amount: 0,
+        note: noteBytes,
+        suggestedParams: { ...params, fee: 1000, flatFee: true },
+      });
 
-      setConnectionStatus(`Broadcasting offer (${finalTxns.length} tx)...`);
-      const encoded = finalTxns.map(t => t.toByte());
-      const signed = await signTransactions(encoded);
-      if (!signed || signed.length !== finalTxns.length) throw new Error("Cancelled");
+      setConnectionStatus("Broadcasting offer...");
+      const signed = await signTransactions([algosdk.encodeUnsignedTransaction(txn)]);
+      if (!signed?.[0]) throw new Error("Cancelled");
       
-      const validSigned = signed.filter((s): s is Uint8Array => s !== null);
-      await algodClient.sendRawTransaction(validSigned).do();
+      await algodClient.sendRawTransaction(signed[0]).do();
       setConnectionStatus("Offer broadcast. Waiting for peer...");
 
       if (pollRef.current) clearInterval(pollRef.current);
-      const answerParts = new Map<number, string>();
       pollRef.current = setInterval(async () => {
         try {
           const url = `${MAINNET_ALGONODE_INDEXER}/v2/transactions?address=${BEACON_PROTOCOL_ADDRESS}&address-role=receiver&note-prefix=${BEACON_PREFIX_B64}&limit=20`;
@@ -629,28 +613,17 @@ export function BeaconChat() {
           for (const tx of data.transactions || []) {
             const noteStr = new TextDecoder().decode(base64ToUint8(tx.note));
             const decrypted = decryptBeaconNote(noteStr, keypair.secretKey);
-            if (decrypted?.type === "answer" && tx.sender === contact.address) {
-              if (decrypted.part && decrypted.total) {
-                answerParts.set(decrypted.part, decrypted.sdp || "");
-                if (answerParts.size < decrypted.total) continue;
-                const fullSdp = Array.from({ length: decrypted.total }, (_, i) => answerParts.get(i + 1)).join("");
-                const answerSdp = await decompress(fullSdp || "");
-                await pc.setRemoteDescription({ type: "answer", sdp: answerSdp });
-                clearInterval(pollRef.current!);
-                setConnectionStatus("Finalizing connection...");
-              } else if (decrypted.sdp) {
-                clearInterval(pollRef.current!);
-                setConnectionStatus("Finalizing connection...");
-                const answerSdp = await decompress(decrypted.sdp);
-                await pc.setRemoteDescription({ type: "answer", sdp: answerSdp });
-              }
+            if (decrypted?.type === "answer" && tx.sender === contact.address && decrypted.sdp) {
+              clearInterval(pollRef.current!);
+              setConnectionStatus("Finalizing connection...");
+              const answerSdp = await decompress(decrypted.sdp);
+              await pc.setRemoteDescription({ type: "answer", sdp: answerSdp });
               break;
             }
           }
         } catch { /* poll error */ }
       }, POLL_INTERVAL_ACTIVE);
     } catch (err: any) {
-      console.error("Offer Error:", err);
       toast.error(err.message || "Offer failed");
       goHome();
     }
@@ -687,53 +660,34 @@ export function BeaconChat() {
       const sdp = pc.localDescription?.sdp;
       if (!sdp) throw new Error("Answer failed");
       const compressedSdp = await compress(filterSdp(sdp));
-
       const params = await algodClient.getTransactionParams().do();
-      const buildAnswerTx = (sdpPart: string, part?: number, total?: number) => {
-        const payload: BeaconNote = {
-          proto: "BEACON/1",
-          type: "answer",
-          wpk: uint8ToBase64(keypair.publicKey),
-          ts: offer.ts, // Use offer's TS for consistency
-          sdp: sdpPart,
-          part,
-          total
-        };
-        const noteBytes = new TextEncoder().encode(encryptBeaconNote(payload, base64ToUint8(offer.wpk)));
-        return algosdk.makePaymentTxnWithSuggestedParamsFromObject({
-          from: activeAddress,
-          to: BEACON_PROTOCOL_ADDRESS,
-          amount: 0,
-          note: noteBytes,
-          suggestedParams: { ...params, fee: 1000, flatFee: true },
-        });
+
+      const payload: BeaconNote = {
+        proto: "BEACON/1",
+        type: "answer",
+        wpk: uint8ToBase64(keypair.publicKey),
+        ts: offer.ts,
+        sdp: compressedSdp,
       };
 
-      const baseTx = buildAnswerTx(compressedSdp);
-      const finalTxns: algosdk.Transaction[] = [];
+      const encryptedPayload = encryptBeaconNote(payload, base64ToUint8(offer.wpk));
+      const noteBytes = new TextEncoder().encode(encryptedPayload);
+      if (noteBytes.length > 1024) throw new Error(`Answer too large (${noteBytes.length} bytes).`);
 
-      if (baseTx.note!.length > 800) {
-        const totalParts = Math.ceil(baseTx.note!.length / 800);
-        const charsPerPart = Math.ceil(compressedSdp.length / totalParts);
-        for (let i = 0; i < totalParts; i++) {
-          const start = i * charsPerPart;
-          const partSdp = compressedSdp.slice(start, start + charsPerPart);
-          finalTxns.push(buildAnswerTx(partSdp, i + 1, totalParts));
-        }
-        algosdk.assignGroupID(finalTxns);
-      } else {
-        finalTxns.push(baseTx);
-      }
+      const txn = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
+        from: activeAddress,
+        to: BEACON_PROTOCOL_ADDRESS,
+        amount: 0,
+        note: noteBytes,
+        suggestedParams: { ...params, fee: 1000, flatFee: true },
+      });
 
-      setConnectionStatus(`Responding (${finalTxns.length} tx)...`);
-      const encoded = finalTxns.map(t => t.toByte());
-      const signed = await signTransactions(encoded);
-      if (!signed || signed.length !== finalTxns.length) throw new Error("Cancelled");
-      const validSigned = signed.filter((s): s is Uint8Array => s !== null);
-      await algodClient.sendRawTransaction(validSigned).do();
+      setConnectionStatus("Responding...");
+      const signed = await signTransactions([algosdk.encodeUnsignedTransaction(txn)]);
+      if (!signed?.[0]) throw new Error("Cancelled");
+      await algodClient.sendRawTransaction(signed[0]).do();
       setConnectionStatus("Answer broadcast. Connecting...");
     } catch (err: any) {
-      console.error("Answer Error:", err);
       toast.error(err.message || "Answer failed");
       goHome();
     }
@@ -754,7 +708,6 @@ export function BeaconChat() {
       
       const newRequests: BondRequest[] = [];
       let foundOffer = false;
-      const offerParts = new Map<string, Map<number, string>>();
 
       for (const tx of data.transactions || []) {
         const noteStr = new TextDecoder().decode(base64ToUint8(tx.note));
@@ -774,21 +727,8 @@ export function BeaconChat() {
           }
         } else if (payload.type === "offer" && tx.sender !== activeAddress && !foundOffer) {
           if (payload.exp && payload.exp < Date.now()) continue;
-          
-          if (payload.part && payload.total) {
-            const key = `${tx.sender}_${payload.ts}`;
-            if (!offerParts.has(key)) offerParts.set(key, new Map());
-            offerParts.get(key)!.set(payload.part, payload.sdp || "");
-            
-            if (offerParts.get(key)!.size === payload.total) {
-              const fullSdp = Array.from({ length: payload.total }, (_, i) => offerParts.get(key)!.get(i + 1)).join("");
-              setPendingOffer({ fromAddress: tx.sender, wpk: payload.wpk, ts: payload.ts, sdp: fullSdp, nfd: payload.nfd });
-              foundOffer = true;
-            }
-          } else {
-            setPendingOffer({ fromAddress: tx.sender, wpk: payload.wpk, ts: payload.ts, sdp: payload.sdp, nfd: payload.nfd });
-            foundOffer = true;
-          }
+          setPendingOffer({ fromAddress: tx.sender, wpk: payload.wpk, ts: payload.ts, sdp: payload.sdp, nfd: payload.nfd });
+          foundOffer = true;
         }
       }
       setBondRequests(prev => {
