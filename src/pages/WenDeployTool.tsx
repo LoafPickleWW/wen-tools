@@ -632,6 +632,9 @@ function DeployView() {
                {repos.length === 0 && (
                  <div className="col-span-full py-16 text-center space-y-4 bg-neutral-900/20 rounded-3xl border border-dashed border-neutral-800">
                     <p className="text-neutral-600 text-xs font-mono">No repositories available.</p>
+                    <button onClick={installGitHubApp} className="text-[10px] text-orange-500 font-black hover:text-orange-400 uppercase tracking-[0.2em] border-b border-orange-500/30 pb-0.5">
+                      Install GitHub App
+                    </button>
                  </div>
                )}
              </div>
