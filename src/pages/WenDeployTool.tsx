@@ -81,6 +81,7 @@ interface DeployConfig {
   buildCommand: string;
   outputDir: string;
   existingAsaId: number | null;
+  detectedPkgManager: string | null;
 }
 
 // ─── UTILITY FUNCTIONS ───────────────────────────────────────────────────────
@@ -111,8 +112,6 @@ function cidToReserveAddress(cidStr: string): string {
 
 function openGitHubAuth(): Promise<string> {
   return new Promise((resolve, reject) => {
-    // For GitHub Apps, we still use the OAuth authorize URL, 
-    // but the permissions are controlled by the App settings.
     const authUrl = `https://github.com/login/oauth/authorize?client_id=${GITHUB_CLIENT_ID}&redirect_uri=${encodeURIComponent(GITHUB_REDIRECT_URI)}`;
 
     const popup = window.open(authUrl, "github-auth", "width=600,height=700");
@@ -143,7 +142,6 @@ function openGitHubAuth(): Promise<string> {
   });
 }
 
-// Global WebContainer instance to prevent "Unable to create more instances" error
 let webcontainerInstance: WebContainer | null = null;
 
 // ─── MAIN COMPONENT ───────────────────────────────────────────────────────────
@@ -163,8 +161,6 @@ export default function WenDeployTool() {
 
   return <DeployView />;
 }
-
-// ─── RESOLVER ────────────────────────────────────────────────────────────────
 
 function SiteResolver({ asaId }: { asaId: number }) {
   const [siteInfo, setSiteInfo] = useState<any>(null);
@@ -219,26 +215,22 @@ function SiteResolver({ asaId }: { asaId: number }) {
   );
 }
 
-// ─── DEPLOY VIEW ─────────────────────────────────────────────────────────────
-
 function DeployView() {
   const { activeAddress, signTransactions } = useWallet();
   const [githubToken, setGithubToken] = useState<string | null>(() => sessionStorage.getItem("gh_token"));
   const [repos, setRepos] = useState<GitHubRepo[]>([]);
   const [repoSearch, setRepoSearch] = useState("");
   const [config, setConfig] = useState<DeployConfig>({
-    repo: null, branch: "", buildCommand: "npm run build", outputDir: "dist", existingAsaId: null
+    repo: null, branch: "", buildCommand: "npm run build", outputDir: "dist", existingAsaId: null, detectedPkgManager: null
   });
   const [deployState, setDeployState] = useState<DeployState>({ step: "idle", message: "", progress: 0, activeStepIndex: -1 });
   const [showConsole, setShowConsole] = useState(false);
   const [result, setResult] = useState<{ cid: string; asaId: number } | null>(null);
   const [consoleLog, setConsoleLog] = useState<string>("");
 
-  // Terminal & Container Refs
   const terminalRef = useRef<HTMLDivElement>(null);
   const terminalInstance = useRef<Terminal | null>(null);
 
-  // ─── GitHub Auth ───
   const connectGitHub = async () => {
     try {
       setDeployState({ step: "connecting-github", message: "Connecting to GitHub...", progress: 0, activeStepIndex: -1 });
@@ -282,7 +274,6 @@ function DeployView() {
       });
   }, [githubToken]);
 
-  // ─── Terminal: buffered log so output is never lost ───
   const logBuffer = useRef<string[]>([]);
 
   function termWrite(data: string) {
@@ -294,7 +285,6 @@ function DeployView() {
   }
   function termWriteln(data: string) { termWrite(data + "\r\n"); }
 
-  // Initialise terminal as soon as the ref div is in the DOM
   useEffect(() => {
     if (!terminalRef.current || terminalInstance.current) return;
     const term = new Terminal({
@@ -309,27 +299,23 @@ function DeployView() {
     term.open(terminalRef.current);
     fitAddon.fit();
     terminalInstance.current = term;
-    // Flush anything that was written before the terminal was ready
     if (logBuffer.current.length > 0) {
       logBuffer.current.forEach(d => term.write(d));
       logBuffer.current = [];
     }
   });
 
-  // ─── DEPLOY PIPELINE ───
   const handleDeploy = async () => {
     if (!config.repo || !githubToken) return;
 
     try {
-      setConsoleLog(""); 
-      // 1. Boot WebContainer
+      setConsoleLog("");
       setDeployState({ step: "booting", message: "Booting browser environment...", progress: 5, activeStepIndex: 0 });
       if (!webcontainerInstance) {
         webcontainerInstance = await WebContainer.boot();
       }
       const wc = webcontainerInstance;
 
-      // 2. Fetch tarball via server-side proxy (avoids codeload.github.com CORS)
       termWriteln("\x1b[33m> Fetching repository tarball...\x1b[0m");
       const tarRes = await fetch(
         `/api/tarball?repo=${encodeURIComponent(config.repo.full_name)}&ref=${encodeURIComponent(config.branch)}`,
@@ -338,16 +324,13 @@ function DeployView() {
       if (!tarRes.ok) throw new Error(`Failed to fetch tarball: ${tarRes.status} ${tarRes.statusText}`);
       const tarGzBuffer = new Uint8Array(await tarRes.arrayBuffer());
 
-      // 3. Decompress gzip + parse tar entirely in JS — WebContainer has no guaranteed tar binary
       termWriteln("\x1b[33m> Extracting repository...\x1b[0m");
 
-      // Dynamically import fflate
       const { decompress } = await import("fflate");
       const tarBytes: Uint8Array = await new Promise((res, rej) =>
         decompress(tarGzBuffer, (err, data) => err ? rej(new Error("Gzip decompress failed: " + err.message)) : res(data))
       );
 
-      // Minimal tar parser → WebContainer FileSystemTree
       function parseTar(buf: Uint8Array): Record<string, any> {
         const tree: Record<string, any> = {};
         let off = 0;
@@ -358,7 +341,6 @@ function DeployView() {
           const size = parseInt(dec.decode(buf.slice(off + 124, off + 136)).replace(/\0/g, "").trim() || "0", 8);
           const type = String.fromCharCode(buf[off + 156]);
           off += 512;
-          // Drop the leading GitHub folder prefix (LoafPickleWW-wen-tools-abc123/)
           const parts = name.split("/").slice(1).filter(Boolean);
           if (parts.length && type !== "5") {
             let node = tree;
@@ -378,29 +360,33 @@ function DeployView() {
       const topKeys = Object.keys(fileTree);
       if (topKeys.length === 0) throw new Error("Failed to extract repository: archive is empty.");
 
-      // Log what the tar parser found
-      termWriteln(`\x1b[32m> Parsed tar: top-level keys = ${JSON.stringify(topKeys.slice(0, 10))}\x1b[0m`);
-
-      // Detect if package.json landed at root or one level down
       let mountTree = fileTree;
       const repoFolder = ".";
       if (!fileTree["package.json"] && topKeys.length === 1 && (fileTree[topKeys[0]] as any)?.directory) {
-        // Everything is inside one wrapper folder — unwrap it
         mountTree = (fileTree[topKeys[0]] as any).directory;
         termWriteln(`\x1b[33m> Unwrapped extra folder: ${topKeys[0]}\x1b[0m`);
-      } else if (!fileTree["package.json"]) {
-        termWriteln(`\x1b[31m> WARNING: package.json not found at root. Keys: ${JSON.stringify(topKeys.slice(0, 20))}\x1b[0m`);
       }
 
-      termWriteln(`\x1b[32m> Mounting ${Object.keys(mountTree).length} entries into WebContainer...\x1b[0m`);
+      termWriteln(`\x1b[32m> Mounting repository into WebContainer...\x1b[0m`);
       await wc.mount(mountTree);
 
-      // 4. Install
-      setDeployState({ step: "installing", message: "Installing dependencies in browser...", progress: 20, activeStepIndex: 1 });
-      termWriteln(`\x1b[33m> Running npm install --legacy-peer-deps...\x1b[0m`);
+      const mountedKeys = Object.keys(mountTree);
+      type PkgManager = { bin: string; installArgs: string[]; runArgs: (cmd: string) => string[]; label: string };
+      const pm: PkgManager =
+        mountedKeys.includes("pnpm-lock.yaml")
+          ? { bin: "npx", installArgs: ["pnpm", "install", "--frozen-lockfile"], runArgs: (s) => ["pnpm", "run", s], label: "pnpm" }
+          : mountedKeys.includes("yarn.lock")
+          ? { bin: "npx", installArgs: ["yarn", "install", "--frozen-lockfile"], runArgs: (s) => ["yarn", s], label: "yarn" }
+          : { bin: "npm", installArgs: ["install", "--legacy-peer-deps", "--prefer-offline"], runArgs: (s) => ["run", s], label: "npm" };
+
+      termWriteln(`\x1b[36m> Detected package manager: ${pm.label}\x1b[0m`);
+      setConfig(prev => ({ ...prev, detectedPkgManager: pm.label }));
+
+      setDeployState({ step: "installing", message: `Installing dependencies with ${pm.label}...`, progress: 20, activeStepIndex: 1 });
+      termWriteln(`\x1b[33m> Running ${pm.bin} ${pm.installArgs.join(" ")}...\x1b[0m`);
 
       let installLog = "";
-      const install = await wc.spawn("npm", ["install", "--legacy-peer-deps", "--prefer-offline"], { cwd: repoFolder });
+      const install = await wc.spawn(pm.bin, pm.installArgs, { cwd: repoFolder });
       install.output.pipeTo(new WritableStream({
         write(data) {
           installLog += data;
@@ -408,17 +394,22 @@ function DeployView() {
           setConsoleLog(prev => prev + data);
         }
       }));
-      const installExit = await install.exit;
-      if (installExit !== 0) {
+      if (await install.exit !== 0) {
         setConsoleLog(prev => prev + "\n\n--- INSTALL FAILED ---\n" + installLog);
-        throw new Error(`Installation failed (exit ${installExit}). See log below.`);
+        throw new Error(`Installation failed. See log below.`);
       }
 
-      // 5. Build
       setDeployState({ step: "building", message: "Running build command...", progress: 50, activeStepIndex: 2 });
-      termWriteln(`\x1b[33m> Running ${config.buildCommand}...\x1b[0m`);
+      
+      const buildCmdParts = config.buildCommand.trim().split(/\s+/);
+      const knownBins = ["npm", "pnpm", "yarn", "npx"];
+      const [buildBin, ...buildArgs] = knownBins.includes(buildCmdParts[0])
+        ? buildCmdParts
+        : [pm.bin, ...pm.runArgs(buildCmdParts.join(" "))];
+
+      termWriteln(`\x1b[33m> Running: ${buildBin} ${buildArgs.join(" ")}...\x1b[0m`);
       let buildLog = "";
-      const build = await wc.spawn("npm", ["run", "build"], { cwd: repoFolder });
+      const build = await wc.spawn(buildBin, buildArgs, { cwd: repoFolder });
       build.output.pipeTo(new WritableStream({
         write(data) {
           buildLog += data;
@@ -426,13 +417,11 @@ function DeployView() {
           setConsoleLog(prev => prev + data);
         }
       }));
-      const buildExit = await build.exit;
-      if (buildExit !== 0) {
+      if (await build.exit !== 0) {
         setConsoleLog(prev => prev + "\n\n--- BUILD FAILED ---\n" + buildLog);
-        throw new Error(`Build failed (exit ${buildExit}):\n${buildLog.slice(-2000)}`);
+        throw new Error(`Build failed:\n${buildLog.slice(-2000)}`);
       }
 
-      // 6. Export files for IPFS
       setDeployState({ step: "exporting", message: "Collecting build artifacts...", progress: 75, activeStepIndex: 2 });
       const outputPath = `/${config.outputDir}`;
       if (!(await wc.fs.readdir("/")).includes(config.outputDir)) {
@@ -451,7 +440,6 @@ function DeployView() {
       }
       const files = await collectFiles(outputPath, outputPath);
 
-      // 7. Pin to IPFS
       setDeployState({ step: "pinning", message: "Pinning to Crust IPFS...", progress: 85, activeStepIndex: 3 });
       const crustToken = "YWxnby1CQ0FQV0pBTFdBM04zRUlaUkZDTzU1UFEzWUJZQ1NHUFpYTkRIT09BNlI3Q0dIVElTVjJHQ1NZQzZZOkZyYjl6RWhudVVKZ0ZaY0d1cmRTUE45dW1SL1hHMnRlalc0VFpkb3huN3ZXMTVKOFd6TGMva3R2LytnMklWRVFRMVN4Vnk3N0plZ3laZkVKMkRxaEFRPT0=";
       
@@ -469,7 +457,6 @@ function DeployView() {
       const pinLines = pinText.trim().split("\n");
       const rootCid = JSON.parse(pinLines[pinLines.length - 1]).Hash;
 
-      // 8. Mint/Update ASA
       setDeployState({ step: "minting", message: "Updating Algorand record...", progress: 95, activeStepIndex: 4 });
       const algod = new algosdk.Algodv2("", ALGOD_SERVER, "");
       const params = await algod.getTransactionParams().do();
@@ -529,8 +516,6 @@ function DeployView() {
     if (deployState.activeStepIndex === index) return "active";
     return "pending";
   };
-
-  // ─── RENDER ─────────────────────────────────────────────────────────────────
 
   return (
     <div className="min-h-screen bg-neutral-950 text-white font-sans selection:bg-orange-500/30 overflow-x-hidden">
@@ -593,7 +578,7 @@ function DeployView() {
                   {activeAddress && !githubToken && (
                     <button onClick={connectGitHub} className="group relative w-full py-4 bg-white text-black font-black text-sm rounded-xl hover:bg-neutral-200 transition-all overflow-hidden active:scale-95">
                       <span className="relative z-10">CONNECT GITHUB</span>
-                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-black/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
+                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-black/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
                     </button>
                   )}
                 </div>
@@ -617,7 +602,7 @@ function DeployView() {
                {Array.isArray(repos) && repos.filter(r => r.name.toLowerCase().includes(repoSearch.toLowerCase())).map(repo => (
                  <button 
                    key={repo.id}
-                   onClick={() => setConfig(c => ({ ...c, repo, branch: repo.default_branch }))}
+                   onClick={() => setConfig(c => ({ ...c, repo, branch: repo.default_branch, detectedPkgManager: null }))}
                    className="group text-left bg-neutral-900/30 border border-neutral-800 hover:border-orange-500/40 rounded-2xl p-5 transition-all hover:bg-neutral-900/50"
                  >
                    <div className="flex justify-between items-start mb-2">
@@ -658,8 +643,11 @@ function DeployView() {
                   <div className="w-12 h-12 bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl flex items-center justify-center font-black text-black shadow-lg shadow-orange-500/10 transform -rotate-3">{config.repo.name[0].toUpperCase()}</div>
                   <div>
                     <div className="font-bold text-lg">{config.repo.name}</div>
-                    <div className="text-[10px] text-orange-500/70 font-black tracking-widest uppercase flex items-center gap-1.5">
+                    <div className="text-[10px] text-orange-500/70 font-black tracking-widest uppercase flex items-center gap-2">
                       {config.branch}
+                      {config.detectedPkgManager && (
+                        <span className="px-1.5 py-0.5 bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 rounded text-[8px] font-black tracking-normal uppercase">USING {config.detectedPkgManager}</span>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -797,7 +785,7 @@ function DeployView() {
               </div>
               <div className="p-8 bg-neutral-900/10 border border-neutral-900 rounded-[32px] space-y-4">
                 <div className="text-blue-500/50">
-                  <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.75 17L9 21h6l-.75-4M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
+                  <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.75 17L9 21h6l-.75-4M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 00-2 2z" /></svg>
                 </div>
                 <h4 className="font-bold">Immutable DApps</h4>
                 <p className="text-xs text-neutral-500 leading-relaxed font-mono">Deploy the frontend for your smart contracts. Ensure that the interface is as immutable as the code on-chain.</p>
