@@ -678,7 +678,7 @@ export function BeaconChat() {
       toast.error(err.message || "Offer failed");
       goHome();
     }
-  }, [activeAddress, signTransactions, algodClient, getBeaconKeypair, setupDataChannel, goHome]);
+  }, [activeAddress, signTransactions, algodClient, getBeaconKeypair, setupDataChannel, goHome, sendSdpTxns]);
 
   const answerOffer = useCallback(async (offer: { fromAddress: string; wpk: string; ts: number; sdp?: string }) => {
     if (!activeAddress || !signTransactions || !algodClient || !offer.sdp) return;
@@ -718,7 +718,7 @@ export function BeaconChat() {
       toast.error(err.message || "Answer failed");
       goHome();
     }
-  }, [activeAddress, signTransactions, algodClient, getBeaconKeypair, setupDataChannel, goHome]);
+  }, [activeAddress, signTransactions, algodClient, getBeaconKeypair, setupDataChannel, goHome, sendSdpTxns]);
 
   // ═══════════════════════════════════════════════════════════════════
   //  Bonding & Contacts

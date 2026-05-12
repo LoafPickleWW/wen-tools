@@ -53,7 +53,6 @@ export default function FalconAccountCard({
 
   useEffect(() => {
     fetchBalance();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fetchBalance, refreshKey]);
 
   const handleCopy = () => {

@@ -27,7 +27,7 @@ export function SelectToolComponent() {
   const [searchQuery, setSearchQuery] = useState("");
 
   const filteredTools = useMemo(() => {
-    let tools = TOOLS;
+    const tools = TOOLS;
     
     // If searching, ignore tabs and search globally
     if (searchQuery) {
