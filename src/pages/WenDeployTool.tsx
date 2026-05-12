@@ -384,7 +384,7 @@ function DeployView() {
 
       // Write .npmrc for network resilience
       const npmrc = [
-        "fetch-retries=5",
+        "fetch-retries=8",
         "fetch-retry-mintimeout=20000",
         "fetch-retry-maxtimeout=120000",
         "network-concurrency=4",
@@ -641,7 +641,9 @@ function DeployView() {
                        const filenames: string[] = (treeData.tree || []).map((f: any) => f.path);
                        if (filenames.includes("pnpm-lock.yaml")) buildCommand = "pnpm run build";
                        else if (filenames.includes("yarn.lock")) buildCommand = "yarn build";
-                     } catch {}
+                     } catch {
+                       // ignore scan error
+                     }
                      setConfig(c => ({ ...c, repo, branch: repo.default_branch, buildCommand, detectedPkgManager: null }));
                    }}
                    className="group text-left bg-neutral-900/30 border border-neutral-800 hover:border-orange-500/40 rounded-2xl p-5 transition-all hover:bg-neutral-900/50"
@@ -674,7 +676,7 @@ function DeployView() {
                    Build Log (last run)
                  </div>
                  <pre className="text-[10px] font-mono text-neutral-400 whitespace-pre-wrap break-all max-h-64 overflow-y-auto leading-relaxed p-4 bg-black/40 rounded-xl custom-scrollbar">
-                   {consoleLog.replace(new RegExp("\x1b\\[[0-9;]*m", "g"), "").slice(-3000)}
+                   {consoleLog.replace(/\x1b\[[0-9;]*m/g, "").slice(-3000)}
                  </pre>
                </div>
              )}
