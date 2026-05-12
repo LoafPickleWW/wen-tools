@@ -310,9 +310,9 @@ function DeployView() {
       const wc = webcontainerInstance;
       const term = terminalInstance.current;
 
-      // 2. Fetch & Mount Repo
-      term?.writeln("\x1b[33m> Fetching repository tarball...\x1b[0m");
-      const tarRes = await fetch(`https://api.github.com/repos/${config.repo.full_name}/tarball/${config.branch}`, {
+      // 2. Fetch & Mount Repo via Proxy (needed for COEP/CORP)
+      term?.writeln("\x1b[33m> Fetching repository tarball via proxy...\x1b[0m");
+      const tarRes = await fetch(`/api/tarball?repo=${config.repo.full_name}&ref=${config.branch}`, {
         headers: { Authorization: `Bearer ${githubToken}` }
       });
       const tarBuffer = await tarRes.arrayBuffer();
