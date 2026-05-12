@@ -255,8 +255,27 @@ function DeployView() {
 
   useEffect(() => {
     if (!githubToken) return;
-    fetch("https://api.github.com/user/repos?per_page=100&sort=updated", { headers: { Authorization: `Bearer ${githubToken}` } })
-      .then(r => r.json()).then(setRepos).catch(console.error);
+    fetch("https://api.github.com/user/repos?per_page=100&sort=updated", { 
+      headers: { Authorization: `Bearer ${githubToken}` } 
+    })
+      .then(async r => {
+        if (r.status === 401) {
+          sessionStorage.removeItem("gh_token");
+          setGithubToken(null);
+          throw new Error("GitHub session expired. Please reconnect.");
+        }
+        const data = await r.json();
+        if (Array.isArray(data)) {
+          setRepos(data);
+        } else {
+          console.error("Unexpected response from GitHub:", data);
+          setRepos([]);
+        }
+      })
+      .catch(err => {
+        console.error(err);
+        setRepos([]);
+      });
   }, [githubToken]);
 
   // ─── WebContainer Init ───
@@ -451,14 +470,9 @@ function DeployView() {
                 <div className="flex flex-col w-full gap-3 max-w-xs">
                   {!activeAddress && <div className="text-xs text-yellow-500 bg-yellow-500/5 py-2 rounded-lg border border-yellow-500/20">Connect Wallet in Sidebar First</div>}
                   {activeAddress && !githubToken && (
-                    <div className="space-y-3">
-                      <button onClick={connectGitHub} className="w-full py-3 bg-white text-black font-bold rounded-xl hover:bg-neutral-200 transition-colors">
-                        Connect GitHub
-                      </button>
-                      <button onClick={installGitHubApp} className="w-full py-3 bg-neutral-800 text-neutral-300 font-bold rounded-xl hover:bg-neutral-700 transition-colors text-xs">
-                        Install / Manage Repos
-                      </button>
-                    </div>
+                    <button onClick={connectGitHub} className="w-full py-3 bg-white text-black font-bold rounded-xl hover:bg-neutral-200 transition-colors">
+                      Connect GitHub
+                    </button>
                   )}
                 </div>
              </div>
@@ -475,7 +489,7 @@ function DeployView() {
                />
              </div>
              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
-               {repos.filter(r => r.name.toLowerCase().includes(repoSearch.toLowerCase())).map(repo => (
+               {Array.isArray(repos) && repos.filter(r => r.name.toLowerCase().includes(repoSearch.toLowerCase())).map(repo => (
                  <button 
                    key={repo.id}
                    onClick={() => setConfig(c => ({ ...c, repo, branch: repo.default_branch }))}
@@ -485,6 +499,14 @@ function DeployView() {
                    <div className="text-[10px] text-neutral-500 font-mono">{repo.language || "Unknown"} • {repo.default_branch}</div>
                  </button>
                ))}
+               {repos.length === 0 && (
+                 <div className="col-span-full py-12 text-center space-y-4">
+                    <p className="text-neutral-500 text-sm">No repositories found.</p>
+                    <button onClick={installGitHubApp} className="text-xs text-orange-500 font-bold hover:underline uppercase tracking-widest">
+                      Install App or Manage Repositories
+                    </button>
+                 </div>
+               )}
              </div>
            </div>
         ) : deployState.step === "idle" || deployState.step === "error" ? (
