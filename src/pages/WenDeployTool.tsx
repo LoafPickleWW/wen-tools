@@ -213,7 +213,7 @@ function SiteResolver({ asaId }: { asaId: number }) {
           <a href={siteUrl} target="_blank" rel="noreferrer" className="text-[10px] px-2 py-1 bg-neutral-800 text-neutral-400 rounded-md hover:bg-neutral-700">View Source</a>
         </div>
       </div>
-      <iframe src={siteUrl} className="flex-1 w-full border-0" />
+      <iframe src={siteUrl} className="flex-1 w-full border-0" allow="cross-origin-isolated" />
     </div>
   );
 }
