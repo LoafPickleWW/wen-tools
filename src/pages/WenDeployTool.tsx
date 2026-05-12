@@ -310,32 +310,64 @@ function DeployView() {
       const wc = webcontainerInstance;
       const term = terminalInstance.current;
 
-      // 2. Fetch & Mount Repo (via server-side proxy to avoid CORS on codeload.github.com)
+      // 2. Fetch tarball via server-side proxy (avoids codeload.github.com CORS)
       term?.writeln("\x1b[33m> Fetching repository tarball...\x1b[0m");
       const tarRes = await fetch(
         `/api/tarball?repo=${encodeURIComponent(config.repo.full_name)}&ref=${encodeURIComponent(config.branch)}`,
         { headers: { Authorization: `Bearer ${githubToken}` } }
       );
       if (!tarRes.ok) throw new Error(`Failed to fetch tarball: ${tarRes.status} ${tarRes.statusText}`);
-      const tarBuffer = await tarRes.arrayBuffer();
-      await wc.fs.writeFile("/repo.tar.gz", new Uint8Array(tarBuffer));
+      const tarGzBuffer = new Uint8Array(await tarRes.arrayBuffer());
 
-      // 3. Extract using WebContainer's built-in tar
+      // 3. Decompress gzip + parse tar entirely in JS — WebContainer has no guaranteed tar binary
       term?.writeln("\x1b[33m> Extracting repository...\x1b[0m");
-      const untar = await wc.spawn("tar", ["-xzf", "/repo.tar.gz", "-C", "/"]);
-      untar.output.pipeTo(new WritableStream({ write(data) { term?.write(data); } }));
-      if (await untar.exit !== 0) throw new Error("Failed to extract repository.");
 
-      // Find the extracted folder — GitHub names it owner-repo-<hash>
-      const rootEntries = await wc.fs.readdir("/");
-      const repoFolder = rootEntries.find(
-        (e: string) => typeof e === "string" && e.includes("-") && !e.endsWith(".tar.gz")
+      // Dynamically import fflate
+      const { decompress } = await import("fflate");
+      const tarBytes: Uint8Array = await new Promise((res, rej) =>
+        decompress(tarGzBuffer, (err, data) => err ? rej(new Error("Gzip decompress failed: " + err.message)) : res(data))
       );
-      if (!repoFolder) throw new Error("Could not find repository folder.");
+
+      // Minimal tar parser → WebContainer FileSystemTree
+      function parseTar(buf: Uint8Array): Record<string, any> {
+        const tree: Record<string, any> = {};
+        let off = 0;
+        const dec = new TextDecoder();
+        while (off + 512 <= buf.length) {
+          const name = dec.decode(buf.slice(off, off + 100)).replace(/\0/g, "").trim();
+          if (!name) break;
+          const size = parseInt(dec.decode(buf.slice(off + 124, off + 136)).replace(/\0/g, "").trim() || "0", 8);
+          const type = String.fromCharCode(buf[off + 156]);
+          off += 512;
+          // Drop the leading GitHub folder prefix (LoafPickleWW-wen-tools-abc123/)
+          const parts = name.split("/").slice(1).filter(Boolean);
+          if (parts.length && type !== "5") {
+            let node = tree;
+            for (const dir of parts.slice(0, -1)) {
+              if (!node[dir]) node[dir] = { directory: {} };
+              node = node[dir].directory;
+            }
+            const fname = parts[parts.length - 1];
+            if (fname) node[fname] = { file: { contents: buf.slice(off, off + size) } };
+          }
+          off += Math.ceil(size / 512) * 512;
+        }
+        return tree;
+      }
+
+      const fileTree = parseTar(tarBytes);
+      const topKeys = Object.keys(fileTree);
+      if (topKeys.length === 0) throw new Error("Failed to extract repository: archive is empty.");
+      term?.writeln(`\x1b[32m> Mounting ${topKeys.length} entries into WebContainer...\x1b[0m`);
+      
+      // Clear existing root entries if needed (WebContainer doesn't allow mounting over non-empty)
+      // Actually wc.mount is best on a fresh boot or after a manual clear
+      await wc.mount(fileTree);
+      const repoFolder = ".";
 
       // 4. Install
       setDeployState({ step: "installing", message: "Installing dependencies in browser...", progress: 20, activeStepIndex: 1 });
-      term?.writeln(`\x1b[33m> Running npm install in /${repoFolder}...\x1b[0m`);
+      term?.writeln(`\x1b[33m> Running npm install...\x1b[0m`);
       const install = await wc.spawn("npm", ["install"], { cwd: repoFolder });
       install.output.pipeTo(new WritableStream({ write(data) { term?.write(data); } }));
       if (await install.exit !== 0) throw new Error("Installation failed.");
@@ -349,8 +381,8 @@ function DeployView() {
 
       // 6. Export files for IPFS
       setDeployState({ step: "exporting", message: "Collecting build artifacts...", progress: 75, activeStepIndex: 2 });
-      const outputPath = `/${repoFolder}/${config.outputDir}`;
-      if (!(await wc.fs.readdir(`/${repoFolder}`)).includes(config.outputDir)) {
+      const outputPath = `/${config.outputDir}`;
+      if (!(await wc.fs.readdir("/")).includes(config.outputDir)) {
          throw new Error(`Output directory "${config.outputDir}" not found.`);
       }
 

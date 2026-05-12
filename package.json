@@ -31,6 +31,7 @@
     "ed2curve": "^0.3.0",
     "falcon-algo-sdk": "^1.0.5",
     "falcon-signatures": "^1.4.0",
+    "fflate": "^0.8.2",
     "file-saver": "^2.0.5",
     "jotai": "^2.10.1",
     "lute-connect": "^1.4.1",
