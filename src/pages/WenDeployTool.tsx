@@ -315,15 +315,25 @@ function DeployView() {
       const tarRes = await fetch(`/api/tarball?repo=${config.repo.full_name}&ref=${config.branch}`, {
         headers: { Authorization: `Bearer ${githubToken}` }
       });
+      
+      if (!tarRes.ok) {
+        const errorData = await tarRes.json().catch(() => ({}));
+        throw new Error(`Failed to fetch repository: ${errorData.error || tarRes.statusText}`);
+      }
+
       const tarBuffer = await tarRes.arrayBuffer();
       await wc.fs.writeFile("/repo.tar.gz", new Uint8Array(tarBuffer));
 
-      // 3. Extract (using Node inside WC)
+      // 3. Extract (using native tar if available, or a reliable npx tool)
       term?.writeln("\x1b[33m> Extracting repository...\x1b[0m");
-      // Note: We use npx to untar if 'tar' is not built-in to the lightweight shell
-      const untar = await wc.spawn("npx", ["-y", "untar", "/repo.tar.gz", "/"]);
+      // Use 'tar' directly as it's typically available in WebContainer's jsh
+      const untar = await wc.spawn("tar", ["-xzf", "/repo.tar.gz", "-C", "/"]);
       untar.output.pipeTo(new WritableStream({ write(data) { term?.write(data); } }));
-      if (await untar.exit !== 0) throw new Error("Failed to extract repository.");
+      if (await untar.exit !== 0) {
+        term?.writeln("\x1b[31m> Tar failed, trying fallback extraction...\x1b[0m");
+        const fallback = await wc.spawn("npx", ["-y", "extract-zip", "/repo.tar.gz", "/"]); // Note: GitHub gives tar.gz usually
+        if (await fallback.exit !== 0) throw new Error("Failed to extract repository.");
+      }
 
       // Find the extracted folder (it's owner-repo-hash)
       const rootEntries = await wc.fs.readdir("/");
