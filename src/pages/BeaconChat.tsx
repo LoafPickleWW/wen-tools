@@ -68,6 +68,8 @@ interface BeaconNote {
   exp?: number;
   nfd?: string;
   sdp?: string;
+  part?: number;
+  total?: number;
 }
 
 interface EncryptedEnvelope {
@@ -544,6 +546,64 @@ export function BeaconChat() {
     };
     channel.onclose = () => goHome();
   }, [goHome]);
+  
+  // ── Shared: send SDP as 1 or 2 grouped txns ──────────────────────
+  const sendSdpTxns = useCallback(async (
+    type: "offer" | "answer",
+    compressedSdp: string,
+    recipientWpk: string,
+    extraFields: Partial<BeaconNote>
+  ) => {
+    if (!activeAddress || !signTransactions || !algodClient) throw new Error("Not connected");
+    const keypair = await getBeaconKeypair();
+    const params = await algodClient.getTransactionParams().do();
+
+    const buildNote = (sdpChunk: string, part?: number, total?: number): Uint8Array => {
+      const payload: BeaconNote = {
+        proto: "BEACON/1",
+        type,
+        wpk: uint8ToBase64(keypair.publicKey),
+        ts: Date.now(),
+        sdp: sdpChunk,
+        ...(part !== undefined ? { part, total } : {}),
+        ...extraFields,
+      };
+      return new TextEncoder().encode(encryptBeaconNote(payload, base64ToUint8(recipientWpk)));
+    };
+
+    const buildTxn = (note: Uint8Array) =>
+      algosdk.makePaymentTxnWithSuggestedParamsFromObject({
+        from: activeAddress,
+        to: BEACON_PROTOCOL_ADDRESS,
+        amount: 0,
+        note,
+        suggestedParams: { ...params, fee: 1000, flatFee: true },
+      });
+
+    // Try single tx first
+    const singleNote = buildNote(compressedSdp);
+    if (singleNote.length <= 1024) {
+      const txn = buildTxn(singleNote);
+      const signed = await signTransactions([algosdk.encodeUnsignedTransaction(txn)]);
+      if (!signed?.[0]) throw new Error("Cancelled");
+      await algodClient.sendRawTransaction(signed[0]).do();
+      return;
+    }
+
+    // Split into exactly 2 txns
+    const mid = Math.ceil(compressedSdp.length / 2);
+    const part1Note = buildNote(compressedSdp.slice(0, mid), 1, 2);
+    const part2Note = buildNote(compressedSdp.slice(mid), 2, 2);
+    if (part1Note.length > 1024 || part2Note.length > 1024)
+      throw new Error("SDP too large even after splitting");
+
+    const txn1 = buildTxn(part1Note);
+    const txn2 = buildTxn(part2Note);
+    algosdk.assignGroupID([txn1, txn2]);
+    const signed = await signTransactions([txn1, txn2].map(t => algosdk.encodeUnsignedTransaction(t)));
+    if (!signed?.[0] || !signed?.[1]) throw new Error("Cancelled");
+    await algodClient.sendRawTransaction([signed[0], signed[1]]).do();
+  }, [activeAddress, signTransactions, algodClient, getBeaconKeypair]);
 
   const initiateChat = useCallback(async (contact: { address: string; wpk: string; nfd?: string }) => {
     if (!activeAddress || !signTransactions || !algodClient) return;
@@ -574,52 +634,43 @@ export function BeaconChat() {
       const sdp = pc.localDescription?.sdp;
       if (!sdp) throw new Error("Handshake failed");
       const compressedSdp = await compress(filterSdp(sdp));
-      const params = await algodClient.getTransactionParams().do();
-
-      const payload: BeaconNote = {
-        proto: "BEACON/1",
-        type: "offer",
-        wpk: uint8ToBase64(keypair.publicKey),
-        ts: Date.now(),
-        exp: Date.now() + OFFER_EXPIRY_MS,
-        sdp: compressedSdp,
-      };
-
-      const encryptedPayload = encryptBeaconNote(payload, base64ToUint8(contact.wpk));
-      const noteBytes = new TextEncoder().encode(encryptedPayload);
-      if (noteBytes.length > 1024) throw new Error(`Offer too large (${noteBytes.length} bytes).`);
-
-      const txn = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
-        from: activeAddress,
-        to: BEACON_PROTOCOL_ADDRESS,
-        amount: 0,
-        note: noteBytes,
-        suggestedParams: { ...params, fee: 1000, flatFee: true },
-      });
-
-      setConnectionStatus("Broadcasting offer...");
-      const signed = await signTransactions([algosdk.encodeUnsignedTransaction(txn)]);
-      if (!signed?.[0]) throw new Error("Cancelled");
       
-      await algodClient.sendRawTransaction(signed[0]).do();
+      setConnectionStatus("Broadcasting offer...");
+      await sendSdpTxns("offer", compressedSdp, contact.wpk, { exp: Date.now() + OFFER_EXPIRY_MS });
       setConnectionStatus("Offer broadcast. Waiting for peer...");
 
       if (pollRef.current) clearInterval(pollRef.current);
       pollRef.current = setInterval(async () => {
         try {
-          const url = `${MAINNET_ALGONODE_INDEXER}/v2/transactions?address=${BEACON_PROTOCOL_ADDRESS}&address-role=receiver&note-prefix=${BEACON_PREFIX_B64}&limit=20`;
+          const url = `${MAINNET_ALGONODE_INDEXER}/v2/transactions?address=${BEACON_PROTOCOL_ADDRESS}&address-role=receiver&note-prefix=${BEACON_PREFIX_B64}&limit=50`;
           const res = await fetch(url);
           const data = await res.json();
+
+          // Collect all answer parts from this peer
+          const parts = new Map<number, string>();
+          let totalParts = 1;
+
           for (const tx of data.transactions || []) {
+            if (tx.sender !== contact.address) continue;
             const noteStr = new TextDecoder().decode(base64ToUint8(tx.note));
             const decrypted = decryptBeaconNote(noteStr, keypair.secretKey);
-            if (decrypted?.type === "answer" && tx.sender === contact.address && decrypted.sdp) {
-              clearInterval(pollRef.current!);
-              setConnectionStatus("Finalizing connection...");
-              const answerSdp = await decompress(decrypted.sdp);
-              await pc.setRemoteDescription({ type: "answer", sdp: answerSdp });
-              break;
+            if (!decrypted || decrypted.type !== "answer") continue;
+
+            if (decrypted.total && decrypted.part) {
+              totalParts = decrypted.total;
+              parts.set(decrypted.part, decrypted.sdp || "");
+            } else if (decrypted.sdp) {
+              // Single-tx answer
+              parts.set(1, decrypted.sdp);
+              totalParts = 1;
             }
+          }
+
+          if (parts.size === totalParts && parts.size > 0) {
+            clearInterval(pollRef.current!);
+            setConnectionStatus("Finalizing connection...");
+            const fullSdp = Array.from({ length: totalParts }, (_, i) => parts.get(i + 1)).join("");
+            await pc.setRemoteDescription({ type: "answer", sdp: await decompress(fullSdp) });
           }
         } catch { /* poll error */ }
       }, POLL_INTERVAL_ACTIVE);
@@ -636,7 +687,6 @@ export function BeaconChat() {
       setPhase("connecting");
       setConnectionStatus("Responding to handshake...");
 
-      const keypair = await getBeaconKeypair();
       const pc = new RTCPeerConnection({ iceServers: [{ urls: "stun:stun.l.google.com:19302" }] });
       rtcRef.current = pc;
 
@@ -660,32 +710,9 @@ export function BeaconChat() {
       const sdp = pc.localDescription?.sdp;
       if (!sdp) throw new Error("Answer failed");
       const compressedSdp = await compress(filterSdp(sdp));
-      const params = await algodClient.getTransactionParams().do();
-
-      const payload: BeaconNote = {
-        proto: "BEACON/1",
-        type: "answer",
-        wpk: uint8ToBase64(keypair.publicKey),
-        ts: offer.ts,
-        sdp: compressedSdp,
-      };
-
-      const encryptedPayload = encryptBeaconNote(payload, base64ToUint8(offer.wpk));
-      const noteBytes = new TextEncoder().encode(encryptedPayload);
-      if (noteBytes.length > 1024) throw new Error(`Answer too large (${noteBytes.length} bytes).`);
-
-      const txn = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
-        from: activeAddress,
-        to: BEACON_PROTOCOL_ADDRESS,
-        amount: 0,
-        note: noteBytes,
-        suggestedParams: { ...params, fee: 1000, flatFee: true },
-      });
 
       setConnectionStatus("Responding...");
-      const signed = await signTransactions([algosdk.encodeUnsignedTransaction(txn)]);
-      if (!signed?.[0]) throw new Error("Cancelled");
-      await algodClient.sendRawTransaction(signed[0]).do();
+      await sendSdpTxns("answer", compressedSdp, offer.wpk, { ts: offer.ts });
       setConnectionStatus("Answer broadcast. Connecting...");
     } catch (err: any) {
       toast.error(err.message || "Answer failed");
@@ -708,6 +735,8 @@ export function BeaconChat() {
       
       const newRequests: BondRequest[] = [];
       let foundOffer = false;
+      // Group transactions by group ID for multi-part assembly
+      const groupedSdp = new Map<string, { parts: Map<number, string>; total: number; meta: any }>();
 
       for (const tx of data.transactions || []) {
         const noteStr = new TextDecoder().decode(base64ToUint8(tx.note));
@@ -727,8 +756,35 @@ export function BeaconChat() {
           }
         } else if (payload.type === "offer" && tx.sender !== activeAddress && !foundOffer) {
           if (payload.exp && payload.exp < Date.now()) continue;
-          setPendingOffer({ fromAddress: tx.sender, wpk: payload.wpk, ts: payload.ts, sdp: payload.sdp, nfd: payload.nfd });
+          
+          if (payload.total && payload.part) {
+            // Multi-part: group by the Algorand group ID
+            const groupId = tx.group || tx.id; // tx.group is the base64 group ID
+            if (!groupedSdp.has(groupId)) {
+              groupedSdp.set(groupId, { parts: new Map(), total: payload.total, meta: { ...payload, sdp: undefined } });
+            }
+            groupedSdp.get(groupId)!.parts.set(payload.part, payload.sdp || "");
+          } else if (payload.sdp) {
+            // Single-tx offer, handle directly
+            setPendingOffer({ fromAddress: tx.sender, wpk: payload.wpk, ts: payload.ts, sdp: payload.sdp, nfd: payload.nfd });
+            foundOffer = true;
+          }
+        }
+      }
+
+      // Reassemble any complete multi-part offers
+      for (const [, group] of groupedSdp) {
+        if (group.parts.size === group.total) {
+          const fullSdp = Array.from({ length: group.total }, (_, i) => group.parts.get(i + 1)).join("");
+          setPendingOffer({ 
+            fromAddress: group.meta.fromAddress || data.transactions.find((t: any) => t.group === group.meta.groupId || t.id === group.meta.groupId)?.sender, 
+            wpk: group.meta.wpk, 
+            ts: group.meta.ts, 
+            sdp: fullSdp, 
+            nfd: group.meta.nfd 
+          });
           foundOffer = true;
+          break;
         }
       }
       setBondRequests(prev => {
