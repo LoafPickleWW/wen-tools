@@ -214,7 +214,7 @@ function SiteResolver({ asaId }: { asaId: number }) {
           <a href={siteUrl} target="_blank" rel="noreferrer" className="text-[10px] px-2 py-1 bg-neutral-800 text-neutral-400 rounded-md hover:bg-neutral-700">View Source</a>
         </div>
       </div>
-      <iframe src={siteUrl} className="flex-1 w-full border-0" />
+      <iframe src={siteUrl} className="flex-1 w-full border-0" allow="cross-origin-isolated" />
     </div>
   );
 }
@@ -232,6 +232,7 @@ function DeployView() {
   const [deployState, setDeployState] = useState<DeployState>({ step: "idle", message: "", progress: 0, activeStepIndex: -1 });
   const [showConsole, setShowConsole] = useState(false);
   const [result, setResult] = useState<{ cid: string; asaId: number } | null>(null);
+  const [consoleLog, setConsoleLog] = useState<string>("");
 
   // Terminal & Container Refs
   const terminalRef = useRef<HTMLDivElement>(null);
@@ -313,13 +314,14 @@ function DeployView() {
       logBuffer.current.forEach(d => term.write(d));
       logBuffer.current = [];
     }
-  });  // no dep array — runs every render so it catches when ref becomes available
+  });
 
   // ─── DEPLOY PIPELINE ───
   const handleDeploy = async () => {
     if (!config.repo || !githubToken) return;
 
     try {
+      setConsoleLog(""); // Reset log for new run
       // 1. Boot WebContainer
       setDeployState({ step: "booting", message: "Booting browser environment...", progress: 5, activeStepIndex: 0 });
       if (!webcontainerInstance) {
@@ -339,7 +341,7 @@ function DeployView() {
       // 3. Decompress gzip + parse tar entirely in JS — WebContainer has no guaranteed tar binary
       termWriteln("\x1b[33m> Extracting repository...\x1b[0m");
 
-      // Dynamically import fflate (add to your package.json: "fflate": "^0.8.0")
+      // Dynamically import fflate
       const { decompress } = await import("fflate");
       const tarBytes: Uint8Array = await new Promise((res, rej) =>
         decompress(tarGzBuffer, (err, data) => err ? rej(new Error("Gzip decompress failed: " + err.message)) : res(data))
@@ -376,12 +378,10 @@ function DeployView() {
       const topKeys = Object.keys(fileTree);
       if (topKeys.length === 0) throw new Error("Failed to extract repository: archive is empty.");
 
-      // Log what the tar parser found so we can debug structure issues
+      // Log what the tar parser found
       termWriteln(`\x1b[32m> Parsed tar: top-level keys = ${JSON.stringify(topKeys.slice(0, 10))}\x1b[0m`);
 
-      // Detect if package.json landed at root or one level down (GitHub sometimes
-      // emits archives where the first level is already the repo content, sometimes
-      // it's wrapped in an extra owner-repo-hash/ folder that slice(1) fails to strip)
+      // Detect if package.json landed at root or one level down
       let mountTree = fileTree;
       const repoFolder = ".";
       if (!fileTree["package.json"] && topKeys.length === 1 && (fileTree[topKeys[0]] as any)?.directory) {
@@ -399,28 +399,38 @@ function DeployView() {
       setDeployState({ step: "installing", message: "Installing dependencies in browser...", progress: 20, activeStepIndex: 1 });
       termWriteln(`\x1b[33m> Running npm install...\x1b[0m`);
 
-      // Collect install output into a buffer so it shows even if process exits fast
       let installLog = "";
       const install = await wc.spawn("npm", ["install", "--prefer-offline"], { cwd: repoFolder });
       install.output.pipeTo(new WritableStream({
         write(data) {
           installLog += data;
           termWrite(data);
+          setConsoleLog(prev => prev + data);
         }
       }));
       const installExit = await install.exit;
       if (installExit !== 0) {
-        termWriteln(`\x1b[31m> npm install exited with code ${installExit}\x1b[0m`);
-        termWriteln(`\x1b[31m> Last output: ${installLog.slice(-500)}\x1b[0m`);
-        throw new Error(`Installation failed (exit ${installExit}). Check the console above.`);
+        setConsoleLog(prev => prev + "\n\n--- INSTALL FAILED ---\n" + installLog);
+        throw new Error(`Installation failed (exit ${installExit}). See log below.`);
       }
 
       // 5. Build
       setDeployState({ step: "building", message: "Running build command...", progress: 50, activeStepIndex: 2 });
       termWriteln(`\x1b[33m> Running ${config.buildCommand}...\x1b[0m`);
+      let buildLog = "";
       const build = await wc.spawn("npm", ["run", "build"], { cwd: repoFolder });
-      build.output.pipeTo(new WritableStream({ write(data) { termWrite(data); } }));
-      if (await build.exit !== 0) throw new Error("Build failed.");
+      build.output.pipeTo(new WritableStream({
+        write(data) {
+          buildLog += data;
+          termWrite(data);
+          setConsoleLog(prev => prev + data);
+        }
+      }));
+      const buildExit = await build.exit;
+      if (buildExit !== 0) {
+        setConsoleLog(prev => prev + "\n\n--- BUILD FAILED ---\n" + buildLog);
+        throw new Error(`Build failed (exit ${buildExit}):\n${buildLog.slice(-2000)}`);
+      }
 
       // 6. Export files for IPFS
       setDeployState({ step: "exporting", message: "Collecting build artifacts...", progress: 75, activeStepIndex: 2 });
@@ -441,10 +451,8 @@ function DeployView() {
       }
       const files = await collectFiles(outputPath, outputPath);
 
-      // 7. Pin to IPFS (via Crust API proxy or direct if CORS allows)
+      // 7. Pin to IPFS
       setDeployState({ step: "pinning", message: "Pinning to Crust IPFS...", progress: 85, activeStepIndex: 3 });
-      // For this, we'll use a multipart upload to a Crust gateway
-      // In production, you'd use the hardcoded token from crust-auth.ts
       const crustToken = "YWxnby1CQ0FQV0pBTFdBM04zRUlaUkZDTzU1UFEzWUJZQ1NHUFpYTkRIT09BNlI3Q0dIVElTVjJHQ1NZQzZZOkZyYjl6RWhudVVKZ0ZaY0d1cmRTUE45dW1SL1hHMnRlalc0VFpkb3huN3ZXMTVKOFd6TGMva3R2LytnMklWRVFRMVN4Vnk3N0plZ3laZkVKMkRxaEFRPT0=";
       
       const formData = new FormData();
@@ -491,7 +499,6 @@ function DeployView() {
         });
       }
 
-      // Crust payment
       const payment = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
         from: activeAddress!, to: algosdk.getApplicationAddress(CRUST_APP_ID),
         amount: 100000, suggestedParams: params
@@ -526,200 +533,296 @@ function DeployView() {
   // ─── RENDER ─────────────────────────────────────────────────────────────────
 
   return (
-    <div className="min-h-screen bg-neutral-950 text-white font-sans selection:bg-orange-500/30">
+    <div className="min-h-screen bg-neutral-950 text-white font-sans selection:bg-orange-500/30 overflow-x-hidden">
       <div className="max-w-4xl mx-auto px-6 py-16">
         
         {/* Header */}
-        <div className="mb-12">
-          <h1 className="text-4xl font-black tracking-tighter mb-2">
-            <span className="text-orange-500">WEN</span>.DEPLOY <span className="text-[10px] bg-orange-500/10 text-orange-400 px-2 py-0.5 rounded-full font-mono align-middle ml-2 tracking-normal">V2 WEBCONTAINER</span>
-          </h1>
-          <p className="text-neutral-500 text-sm font-mono tracking-tight">Zero-infrastructure build & deploy pipeline.</p>
+        <div className="mb-12 flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
+          <div>
+            <h1 className="text-4xl font-black tracking-tighter mb-2">
+              <span className="text-orange-500">WEN</span>.DEPLOY <span className="text-[10px] bg-orange-500/10 text-orange-400 px-2 py-0.5 rounded-full font-mono align-middle ml-2 tracking-normal">DECENTRALIZED CI/CD</span>
+            </h1>
+            <p className="text-neutral-500 text-sm font-mono tracking-tight max-w-lg">Zero-infrastructure browser-based pipeline. Your code, your container, your blockchain.</p>
+          </div>
+          <div className="hidden md:flex gap-2">
+            <div className="px-3 py-1 bg-neutral-900 border border-neutral-800 rounded-full text-[10px] font-bold text-neutral-500 uppercase tracking-widest">WebContainer V2</div>
+            <div className="px-3 py-1 bg-neutral-900 border border-neutral-800 rounded-full text-[10px] font-bold text-neutral-500 uppercase tracking-widest">ARC-19</div>
+          </div>
+        </div>
+
+        {/* Feature Highlights */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-12">
+          <div className="bg-neutral-900/30 border border-neutral-800 rounded-2xl p-5 hover:border-orange-500/20 transition-all group">
+            <div className="w-8 h-8 bg-orange-500/10 rounded-lg flex items-center justify-center mb-3 text-orange-500 group-hover:scale-110 transition-transform">
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+            </div>
+            <h3 className="text-xs font-black uppercase tracking-widest mb-1 text-neutral-200">Zero Infrastructure</h3>
+            <p className="text-[10px] text-neutral-500 leading-relaxed font-mono">No servers. The entire build happens inside a secure sandbox in your browser. Pure decentralized compute.</p>
+          </div>
+          <div className="bg-neutral-900/30 border border-neutral-800 rounded-2xl p-5 hover:border-orange-500/20 transition-all group">
+            <div className="w-8 h-8 bg-blue-500/10 rounded-lg flex items-center justify-center mb-3 text-blue-500 group-hover:scale-110 transition-transform">
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 11c0 3.517-1.009 6.799-2.753 9.571m-3.44-10.726C5.023 12.724 5 13.517 5 14.5c0 3.403.884 6.591 2.444 9.356M12 11c1.744 2.772 2.753 5.994 2.753 9.571m-3.44-10.726c1.789-2.23 4.192-3.726 6.944-4.226m-9.722 13.582c.162.313.33.62.503.918" /></svg>
+            </div>
+            <h3 className="text-xs font-black uppercase tracking-widest mb-1 text-neutral-200">Immutable Storage</h3>
+            <p className="text-[10px] text-neutral-500 leading-relaxed font-mono">Every deployment is pinned to IPFS and indexed via an Algorand ASA. Your site is permanent and tamper-proof.</p>
+          </div>
+          <div className="bg-neutral-900/30 border border-neutral-800 rounded-2xl p-5 hover:border-orange-500/20 transition-all group">
+            <div className="w-8 h-8 bg-green-500/10 rounded-lg flex items-center justify-center mb-3 text-green-500 group-hover:scale-110 transition-transform">
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
+            </div>
+            <h3 className="text-xs font-black uppercase tracking-widest mb-1 text-neutral-200">Self-Sovereign</h3>
+            <p className="text-[10px] text-neutral-500 leading-relaxed font-mono">You own the deployment keys. You own the metadata. No centralized registrar can take your site down.</p>
+          </div>
         </div>
 
         {!activeAddress || !githubToken ? (
-           <div className="bg-neutral-900/50 border border-neutral-800 rounded-3xl p-10 backdrop-blur-xl">
-             <div className="flex flex-col items-center text-center space-y-6">
-                <div className="w-16 h-16 bg-orange-500/10 rounded-2xl flex items-center justify-center">
+           <div className="bg-neutral-900/50 border border-neutral-800 rounded-3xl p-10 backdrop-blur-xl relative overflow-hidden group">
+             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-orange-500/0 via-orange-500/50 to-orange-500/0 opacity-30" />
+             <div className="flex flex-col items-center text-center space-y-6 relative z-10">
+                <div className="w-16 h-16 bg-orange-500/10 rounded-2xl flex items-center justify-center animate-pulse">
                   <svg className="w-8 h-8 text-orange-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                   </svg>
                 </div>
-                <h2 className="text-xl font-bold">Connect your accounts</h2>
-                <p className="text-neutral-500 text-sm max-w-xs">We need your wallet to sign deployments and a GitHub App installation to fetch your code securely.</p>
+                <div>
+                  <h2 className="text-xl font-bold mb-2">Connect Your Workflow</h2>
+                  <p className="text-neutral-500 text-sm max-w-sm mx-auto">We use your GitHub App installation to pull code and your Algorand wallet to sign the immutable record.</p>
+                </div>
                 <div className="flex flex-col w-full gap-3 max-w-xs">
-                  {!activeAddress && <div className="text-xs text-yellow-500 bg-yellow-500/5 py-2 rounded-lg border border-yellow-500/20">Connect Wallet in Sidebar First</div>}
+                  {!activeAddress && <div className="text-[10px] font-black uppercase tracking-widest text-yellow-500 bg-yellow-500/5 py-3 rounded-xl border border-yellow-500/20">Connect Wallet in Sidebar</div>}
                   {activeAddress && !githubToken && (
-                    <button onClick={connectGitHub} className="w-full py-3 bg-white text-black font-bold rounded-xl hover:bg-neutral-200 transition-colors">
-                      Connect GitHub
+                    <button onClick={connectGitHub} className="group relative w-full py-4 bg-white text-black font-black text-sm rounded-xl hover:bg-neutral-200 transition-all overflow-hidden active:scale-95">
+                      <span className="relative z-10">CONNECT GITHUB</span>
+                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-black/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
                     </button>
                   )}
                 </div>
              </div>
            </div>
         ) : !config.repo ? (
-           <div className="space-y-6">
+           <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
              <div className="relative">
+               <div className="absolute inset-y-0 left-5 flex items-center pointer-events-none">
+                 <svg className="w-4 h-4 text-neutral-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+               </div>
                <input 
                  type="text" 
-                 placeholder="Search your repositories..." 
-                 className="w-full bg-neutral-900 border border-neutral-800 rounded-2xl px-6 py-4 text-sm focus:outline-none focus:ring-1 ring-orange-500/50 transition-all"
+                 placeholder="Search repositories..." 
+                 className="w-full bg-neutral-900 border border-neutral-800 rounded-2xl pl-12 pr-6 py-5 text-sm focus:outline-none focus:ring-1 ring-orange-500/50 transition-all placeholder:text-neutral-700"
                  value={repoSearch}
                  onChange={e => setRepoSearch(e.target.value)}
                />
              </div>
-             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-[440px] overflow-y-auto pr-2 custom-scrollbar">
                {Array.isArray(repos) && repos.filter(r => r.name.toLowerCase().includes(repoSearch.toLowerCase())).map(repo => (
                  <button 
                    key={repo.id}
                    onClick={() => setConfig(c => ({ ...c, repo, branch: repo.default_branch }))}
-                   className="group text-left bg-neutral-900/30 border border-neutral-800 hover:border-orange-500/30 rounded-2xl p-5 transition-all"
+                   className="group text-left bg-neutral-900/30 border border-neutral-800 hover:border-orange-500/40 rounded-2xl p-5 transition-all hover:bg-neutral-900/50"
                  >
-                   <div className="font-bold text-sm mb-1 group-hover:text-orange-400 transition-colors">{repo.name}</div>
-                   <div className="text-[10px] text-neutral-500 font-mono">{repo.language || "Unknown"} • {repo.default_branch}</div>
+                   <div className="flex justify-between items-start mb-2">
+                     <div className="font-bold text-sm group-hover:text-orange-400 transition-colors truncate max-w-[180px]">{repo.name}</div>
+                   </div>
+                   <div className="text-[10px] text-neutral-500 font-mono flex items-center gap-2">
+                     <span className="w-1.5 h-1.5 rounded-full bg-orange-500/40" />
+                     {repo.language || "Web"} • {repo.default_branch}
+                   </div>
                  </button>
                ))}
                {repos.length === 0 && (
-                 <div className="col-span-full py-12 text-center space-y-4">
-                    <p className="text-neutral-500 text-sm">No repositories found.</p>
-                    <button onClick={installGitHubApp} className="text-xs text-orange-500 font-bold hover:underline uppercase tracking-widest">
-                      Install App or Manage Repositories
-                    </button>
+                 <div className="col-span-full py-16 text-center space-y-4 bg-neutral-900/20 rounded-3xl border border-dashed border-neutral-800">
+                    <p className="text-neutral-600 text-xs font-mono">No repositories available.</p>
                  </div>
                )}
              </div>
            </div>
         ) : deployState.step === "idle" || deployState.step === "error" ? (
-          <div className="bg-neutral-900/50 border border-neutral-800 rounded-3xl p-8 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <div className="bg-neutral-900/50 border border-neutral-800 rounded-3xl p-10 space-y-10 animate-in fade-in slide-in-from-bottom-6 duration-700">
+             {deployState.step === "error" && consoleLog && (
+               <div className="bg-neutral-950 border border-red-500/20 rounded-2xl p-6 space-y-3 animate-in slide-in-from-top-2">
+                 <div className="text-[10px] font-black text-red-400 uppercase tracking-[0.2em] flex items-center gap-2">
+                   <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+                   Build Log (last run)
+                 </div>
+                 <pre className="text-[10px] font-mono text-neutral-400 whitespace-pre-wrap break-all max-h-64 overflow-y-auto leading-relaxed p-4 bg-black/40 rounded-xl custom-scrollbar">
+                   {consoleLog.replace(/\x1b\[[0-9;]*m/g, "").slice(-3000)}
+                 </pre>
+               </div>
+             )}
+             
              <div className="flex justify-between items-center">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-orange-500/10 rounded-xl flex items-center justify-center font-bold text-orange-500">{config.repo.name[0].toUpperCase()}</div>
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl flex items-center justify-center font-black text-black shadow-lg shadow-orange-500/10 transform -rotate-3">{config.repo.name[0].toUpperCase()}</div>
                   <div>
-                    <div className="font-bold">{config.repo.name}</div>
-                    <div className="text-[10px] text-neutral-500 font-mono tracking-tighter uppercase">{config.branch}</div>
+                    <div className="font-bold text-lg">{config.repo.name}</div>
+                    <div className="text-[10px] text-orange-500/70 font-black tracking-widest uppercase flex items-center gap-1.5">
+                      {config.branch}
+                    </div>
                   </div>
                 </div>
-                <button onClick={() => setConfig(c => ({ ...c, repo: null }))} className="text-[10px] text-neutral-500 hover:text-neutral-300">CHANGE REPO</button>
+                <button onClick={() => setConfig(c => ({ ...c, repo: null }))} className="text-[10px] font-black tracking-widest text-neutral-600 hover:text-neutral-400 transition-colors uppercase">Change Target</button>
              </div>
 
-             <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <label className="text-[10px] text-neutral-500 font-bold uppercase tracking-widest">Build Command</label>
-                  <input type="text" value={config.buildCommand} onChange={e => setConfig(c => ({ ...c, buildCommand: e.target.value }))} className="w-full bg-neutral-800/50 border border-neutral-700/50 rounded-xl px-4 py-2 text-xs font-mono" />
+             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <label className="text-[10px] text-neutral-500 font-black uppercase tracking-[0.2em] ml-1">Build Command</label>
+                  <input type="text" value={config.buildCommand} onChange={e => setConfig(c => ({ ...c, buildCommand: e.target.value }))} className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-5 py-3 text-xs font-mono text-orange-400 focus:outline-none focus:border-orange-500/50 transition-all" />
                 </div>
-                <div className="space-y-1.5">
-                  <label className="text-[10px] text-neutral-500 font-bold uppercase tracking-widest">Output Directory</label>
-                  <input type="text" value={config.outputDir} onChange={e => setConfig(c => ({ ...c, outputDir: e.target.value }))} className="w-full bg-neutral-800/50 border border-neutral-700/50 rounded-xl px-4 py-2 text-xs font-mono" />
+                <div className="space-y-2">
+                  <label className="text-[10px] text-neutral-500 font-black uppercase tracking-[0.2em] ml-1">Output Dir</label>
+                  <input type="text" value={config.outputDir} onChange={e => setConfig(c => ({ ...c, outputDir: e.target.value }))} className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-5 py-3 text-xs font-mono text-orange-400 focus:outline-none focus:border-orange-500/50 transition-all" />
                 </div>
              </div>
 
              <button 
                onClick={handleDeploy}
-               className="w-full py-4 bg-orange-500 hover:bg-orange-400 text-black font-black text-sm rounded-2xl transition-all shadow-lg shadow-orange-500/10 active:scale-[0.98]"
+               className="group relative w-full py-5 bg-orange-500 hover:bg-orange-400 text-black font-black text-sm rounded-2xl transition-all shadow-xl shadow-orange-500/20 active:scale-[0.98] overflow-hidden"
              >
-               BUILD & DEPLOY
+               <span className="relative z-10">INITIATE DECENTRALIZED DEPLOY</span>
+               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
              </button>
           </div>
         ) : deployState.step === "complete" ? (
-          <div className="bg-green-500/5 border border-green-500/20 rounded-3xl p-10 text-center space-y-6">
-             <div className="w-20 h-20 bg-green-500/10 rounded-full flex items-center justify-center mx-auto">
-               <svg className="w-10 h-10 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <div className="bg-green-500/5 border border-green-500/20 rounded-3xl p-12 text-center space-y-8 animate-in zoom-in-95 duration-500">
+             <div className="w-24 h-24 bg-green-500/10 rounded-full flex items-center justify-center mx-auto shadow-[0_0_40px_rgba(34,197,94,0.15)]">
+               <svg className="w-12 h-12 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
                </svg>
              </div>
-             <h2 className="text-2xl font-black tracking-tight">Deployment Successful</h2>
-             <div className="space-y-2 max-w-xs mx-auto">
-               <div className="text-[10px] text-neutral-500 font-bold uppercase tracking-widest">Site Address</div>
-               <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-3 text-xs font-mono break-all text-green-400">
-                 {window.location.origin}/deploy?resolve={result?.asaId}
+             <h2 className="text-3xl font-black tracking-tighter mb-2 text-green-400 uppercase">Deployed to Eternity</h2>
+             
+             <div className="bg-neutral-900 border border-neutral-800 rounded-2xl p-6 text-left space-y-4 max-w-sm mx-auto">
+               <div>
+                 <div className="text-[10px] text-neutral-600 font-black uppercase tracking-widest mb-1.5">Universal Site Resolver</div>
+                 <div className="bg-neutral-950 border border-neutral-800 rounded-lg p-3 text-[10px] font-mono break-all text-green-500/80 leading-relaxed">
+                   {window.location.origin}/deploy?resolve={result?.asaId}
+                 </div>
                </div>
              </div>
-             <div className="flex gap-3 justify-center">
-                <a href={`/deploy?resolve=${result?.asaId}`} target="_blank" rel="noreferrer" className="px-6 py-3 bg-white text-black font-bold rounded-xl text-sm">View Site</a>
-                <button onClick={() => { setDeployState({ step: "idle", message: "", progress: 0, activeStepIndex: -1 }); setConfig(c => ({ ...c, repo: null })); }} className="px-6 py-3 bg-neutral-900 text-neutral-400 font-bold rounded-xl text-sm border border-neutral-800">Deploy New</button>
+
+             <div className="flex gap-4 justify-center">
+                <a href={`/deploy?resolve=${result?.asaId}`} target="_blank" rel="noreferrer" className="px-8 py-4 bg-white text-black font-black rounded-xl text-xs hover:scale-105 transition-transform active:scale-95">VIEW LIVE SITE</a>
+                <button onClick={() => { setDeployState({ step: "idle", message: "", progress: 0, activeStepIndex: -1 }); setConfig(c => ({ ...c, repo: null })); }} className="px-8 py-4 bg-neutral-900 text-neutral-400 font-black rounded-xl text-xs border border-neutral-800 hover:bg-neutral-800 transition-colors">NEW DEPLOY</button>
              </div>
           </div>
         ) : (
-          <div className="space-y-6 animate-in fade-in duration-700">
-             <div className="bg-neutral-900 border border-neutral-800 rounded-3xl p-8 shadow-2xl">
+          <div className="space-y-8 animate-in fade-in duration-1000">
+             <div className="bg-neutral-900 border border-neutral-800 rounded-[32px] p-10 shadow-2xl relative overflow-hidden">
                 {/* Pipeline Stepper */}
-                <div className="flex justify-between items-start mb-10 px-2">
+                <div className="flex justify-between items-start mb-12 px-2 relative z-10">
                    {PIPELINE_STEPS.map((s, i) => {
                      const status = getStepStatus(i);
                      return (
                        <div key={i} className="flex flex-col items-center flex-1 relative group">
-                         {/* Line */}
                          {i < PIPELINE_STEPS.length - 1 && (
-                           <div className={`absolute top-4 h-[2px] ${deployState.activeStepIndex > i ? 'bg-orange-500' : 'bg-neutral-800'} transition-colors duration-500`} style={{left:'calc(50% + 1.25rem)', right:'calc(-50% + 1.25rem)'}} />
+                           <div className={`absolute top-4 h-[2px] ${deployState.activeStepIndex > i ? 'bg-orange-500' : 'bg-neutral-800'} transition-all duration-700`} style={{left:'calc(50% + 1.25rem)', right:'calc(-50% + 1.25rem)'}} />
                          )}
-                         {/* Circle */}
-                         <div className={`relative z-10 w-8 h-8 rounded-full border-2 flex items-center justify-center transition-all duration-500 ${
-                           status === 'complete' ? 'bg-orange-500 border-orange-500' :
-                           status === 'active' ? 'border-orange-500 shadow-[0_0_15px_rgba(249,115,22,0.4)]' :
-                           'border-neutral-800 bg-neutral-900'
+                         <div className={`relative z-10 w-10 h-10 rounded-full border-2 flex items-center justify-center transition-all duration-500 ${
+                           status === 'complete' ? 'bg-orange-500 border-orange-500 scale-90' :
+                           status === 'active' ? 'border-orange-500 shadow-[0_0_25px_rgba(249,115,22,0.3)] bg-neutral-900' :
+                           'border-neutral-800 bg-neutral-950'
                          }`}>
                            {status === 'complete' ? (
-                             <svg className="w-4 h-4 text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
+                             <svg className="w-5 h-5 text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
                            ) : (
-                             <span className={`text-[10px] font-bold ${status === 'active' ? 'text-orange-500' : 'text-neutral-600'}`}>{i + 1}</span>
+                             <span className={`text-[10px] font-black ${status === 'active' ? 'text-orange-500' : 'text-neutral-700'}`}>{i + 1}</span>
                            )}
                          </div>
-                         <div className="mt-3 text-center">
-                           <div className={`text-[10px] font-black uppercase tracking-widest ${status === 'active' ? 'text-white' : 'text-neutral-500'}`}>{s.label}</div>
-                           <div className="text-[8px] text-neutral-600 font-mono mt-0.5">{s.sub}</div>
+                         <div className="mt-4 text-center">
+                           <div className={`text-[10px] font-black uppercase tracking-widest ${status === 'active' ? 'text-white' : 'text-neutral-600'}`}>{s.label}</div>
+                           <div className="text-[8px] text-neutral-600 font-mono mt-0.5 opacity-50">{s.sub}</div>
                          </div>
                        </div>
                      );
                    })}
                 </div>
 
-                <div className="flex items-center gap-4 mb-4">
-                  <div className="w-2 h-2 bg-orange-500 rounded-full animate-pulse" />
-                  <div className="flex-1">
-                    <div className="text-sm font-medium text-neutral-300">{deployState.message}</div>
+                <div className="relative z-10">
+                  <div className="flex items-center gap-4 mb-5">
+                    <div className="w-3 h-3 bg-orange-500 rounded-full animate-ping" />
+                    <div className="flex-1">
+                      <div className="text-[10px] font-black text-neutral-500 uppercase tracking-widest mb-1">Status Report</div>
+                      <div className="text-sm font-bold text-neutral-200">{deployState.message}</div>
+                    </div>
+                    <div className="text-3xl font-black text-orange-500 drop-shadow-sm">{deployState.progress}%</div>
                   </div>
-                  <div className="text-xl font-black text-orange-500">{deployState.progress}%</div>
-                </div>
-                <div className="w-full h-1.5 bg-neutral-800 rounded-full overflow-hidden">
-                   <div className="h-full bg-orange-500 transition-all duration-500 ease-out" style={{ width: `${deployState.progress}%` }} />
+                  <div className="w-full h-2 bg-neutral-950 border border-neutral-800/50 rounded-full overflow-hidden p-0.5">
+                     <div className="h-full bg-gradient-to-r from-orange-600 to-orange-400 rounded-full transition-all duration-700 ease-out shadow-[0_0_15px_rgba(249,115,22,0.2)]" style={{ width: `${deployState.progress}%` }} />
+                  </div>
                 </div>
              </div>
 
-             {/* Terminal View Toggle */}
              <div className="flex justify-center">
                 <button 
                   onClick={() => setShowConsole(!showConsole)}
-                  className="text-[10px] font-bold text-neutral-600 hover:text-orange-500 transition-colors uppercase tracking-widest flex items-center gap-2"
+                  className="group px-6 py-2.5 bg-neutral-900 border border-neutral-800 rounded-full text-[10px] font-black text-neutral-500 hover:text-orange-500 transition-all uppercase tracking-[0.2em] flex items-center gap-3 active:scale-95"
                 >
-                  {showConsole ? 'Hide' : 'Show'} Build Console
-                  <svg className={`w-3 h-3 transition-transform ${showConsole ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  {showConsole ? 'CLOSE' : 'MONITOR'} BUILD STREAM
+                  <svg className={`w-3 h-3 transition-transform duration-300 ${showConsole ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                   </svg>
                 </button>
              </div>
 
-             <div className={`bg-neutral-900 border border-neutral-800 rounded-3xl overflow-hidden shadow-2xl shadow-black/50 transition-all duration-300 ${showConsole ? 'opacity-100 max-h-[400px]' : 'opacity-0 max-h-0 border-0'}`}>
-               <div className="bg-neutral-800/50 px-4 py-2 flex items-center gap-2 border-b border-neutral-800">
-                  <div className="flex gap-1.5">
-                    <div className="w-2 h-2 rounded-full bg-red-500/50" />
-                    <div className="w-2 h-2 rounded-full bg-yellow-500/50" />
-                    <div className="w-2 h-2 rounded-full bg-green-500/50" />
+             <div className={`bg-neutral-900 border border-neutral-800 rounded-[32px] overflow-hidden shadow-2xl shadow-black/80 transition-all duration-500 ${showConsole ? 'opacity-100 max-h-[500px] translate-y-0' : 'opacity-0 max-h-0 translate-y-4 border-0'}`}>
+               <div className="bg-neutral-800/40 px-6 py-3 flex items-center justify-between border-b border-neutral-800">
+                  <div className="flex items-center gap-3">
+                    <div className="flex gap-1.5">
+                      <div className="w-2.5 h-2.5 rounded-full bg-red-500/30" />
+                      <div className="w-2.5 h-2.5 rounded-full bg-yellow-500/30" />
+                      <div className="w-2.5 h-2.5 rounded-full bg-green-500/30" />
+                    </div>
+                    <div className="text-[10px] font-black font-mono text-neutral-500 uppercase tracking-widest ml-2">WEN.DEPLOY Runtime Logs</div>
                   </div>
-                  <div className="text-[10px] font-mono text-neutral-500 ml-2 uppercase">WEN.DEPLOY CONSOLE</div>
                </div>
-               <div ref={terminalRef} className="p-4" />
+               <div ref={terminalRef} className="p-6 custom-terminal" />
              </div>
           </div>
         )}
 
-        {/* Footer info */}
-        <div className="mt-20 pt-8 border-t border-neutral-900 flex flex-col md:flex-row justify-between items-center gap-4 opacity-30 grayscale hover:opacity-100 hover:grayscale-0 transition-all duration-700">
-          <div className="flex gap-6 items-center">
-            <img src="/af_logo.svg" className="h-6" alt="Algorand" />
-            <img src="/crust.png" className="h-5" alt="Crust" />
-            <span className="text-[10px] font-black tracking-widest text-neutral-400">IPFS • ARC-19 • WEBCONTAINER</span>
+        {/* Use Cases */}
+        {deployState.step === "idle" && (
+          <div className="mt-20 space-y-8 animate-in fade-in duration-1000 delay-300">
+            <h2 className="text-[10px] font-black text-neutral-600 uppercase tracking-[0.4em] text-center">Use Case Scenarios</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="p-8 bg-neutral-900/10 border border-neutral-900 rounded-[32px] space-y-4">
+                <div className="text-orange-500/50">
+                  <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>
+                </div>
+                <h4 className="font-bold">Decentralized Manifestos</h4>
+                <p className="text-xs text-neutral-500 leading-relaxed font-mono">Publish high-stakes content that cannot be altered or removed by any centralized authority.</p>
+              </div>
+              <div className="p-8 bg-neutral-900/10 border border-neutral-900 rounded-[32px] space-y-4">
+                <div className="text-blue-500/50">
+                  <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.75 17L9 21h6l-.75-4M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
+                </div>
+                <h4 className="font-bold">Immutable DApps</h4>
+                <p className="text-xs text-neutral-500 leading-relaxed font-mono">Deploy the frontend for your smart contracts. Ensure that the interface is as immutable as the code on-chain.</p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Footer */}
+        <div className="mt-24 pt-8 border-t border-neutral-900/50 flex flex-col md:flex-row justify-between items-center gap-6 opacity-40 grayscale hover:opacity-100 hover:grayscale-0 transition-all duration-1000">
+          <div className="flex gap-8 items-center">
+            <img src="/af_logo.svg" className="h-5" alt="Algorand" />
+            <img src="/crust.png" className="h-4" alt="Crust" />
+          </div>
+          <div className="flex gap-4 text-[9px] font-black tracking-widest text-neutral-500 uppercase">
+            <span>Browser OS</span>
+            <span className="w-1 h-1 bg-neutral-800 rounded-full mt-1" />
+            <span>IPFS Overlay</span>
+            <span className="w-1 h-1 bg-neutral-800 rounded-full mt-1" />
+            <span>ARC-19 Mainnet</span>
           </div>
         </div>
+      </div>
+      
+      {/* Dynamic Background Elements */}
+      <div className="fixed top-0 left-0 w-full h-full pointer-events-none -z-10 opacity-20">
+        <div className="absolute top-[10%] left-[5%] w-[40%] h-[40%] bg-orange-500/10 blur-[120px] rounded-full animate-pulse" />
+        <div className="absolute bottom-[10%] right-[5%] w-[30%] h-[30%] bg-blue-500/10 blur-[100px] rounded-full animate-pulse delay-700" />
       </div>
     </div>
   );
