@@ -718,7 +718,7 @@ export function BeaconChat() {
       toast.error(err.message || "Answer failed");
       goHome();
     }
-  }, [activeAddress, signTransactions, algodClient, getBeaconKeypair, setupDataChannel, goHome, sendSdpTxns]);
+  }, [activeAddress, signTransactions, algodClient, setupDataChannel, goHome, sendSdpTxns]);
 
   // ═══════════════════════════════════════════════════════════════════
   //  Bonding & Contacts

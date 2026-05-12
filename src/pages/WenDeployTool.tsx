@@ -214,7 +214,7 @@ function SiteResolver({ asaId }: { asaId: number }) {
           <a href={siteUrl} target="_blank" rel="noreferrer" className="text-[10px] px-2 py-1 bg-neutral-800 text-neutral-400 rounded-md hover:bg-neutral-700">View Source</a>
         </div>
       </div>
-      <iframe src={siteUrl} className="flex-1 w-full border-0" allow="cross-origin-isolated" />
+      <iframe src={siteUrl} className="flex-1 w-full border-0" />
     </div>
   );
 }
@@ -281,22 +281,39 @@ function DeployView() {
       });
   }, [githubToken]);
 
-  // ─── WebContainer Init ───
-  useEffect(() => {
-    if (terminalRef.current && !terminalInstance.current) {
-      const term = new Terminal({
-        theme: { background: "#0a0a0a", foreground: "#facc15", cursor: "#facc15" },
-        fontSize: 12,
-        fontFamily: "JetBrains Mono, monospace",
-        cursorBlink: true
-      });
-      const fitAddon = new FitAddon();
-      term.loadAddon(fitAddon);
-      term.open(terminalRef.current);
-      fitAddon.fit();
-      terminalInstance.current = term;
+  // ─── Terminal: buffered log so output is never lost ───
+  const logBuffer = useRef<string[]>([]);
+
+  function termWrite(data: string) {
+    if (terminalInstance.current) {
+      terminalInstance.current.write(data);
+    } else {
+      logBuffer.current.push(data);
     }
-  }, [deployState.step]);
+  }
+  function termWriteln(data: string) { termWrite(data + "\r\n"); }
+
+  // Initialise terminal as soon as the ref div is in the DOM
+  useEffect(() => {
+    if (!terminalRef.current || terminalInstance.current) return;
+    const term = new Terminal({
+      theme: { background: "#0a0a0a", foreground: "#facc15", cursor: "#facc15" },
+      fontSize: 12,
+      fontFamily: "JetBrains Mono, monospace",
+      cursorBlink: true,
+      convertEol: true,
+    });
+    const fitAddon = new FitAddon();
+    term.loadAddon(fitAddon);
+    term.open(terminalRef.current);
+    fitAddon.fit();
+    terminalInstance.current = term;
+    // Flush anything that was written before the terminal was ready
+    if (logBuffer.current.length > 0) {
+      logBuffer.current.forEach(d => term.write(d));
+      logBuffer.current = [];
+    }
+  });  // no dep array — runs every render so it catches when ref becomes available
 
   // ─── DEPLOY PIPELINE ───
   const handleDeploy = async () => {
@@ -309,10 +326,9 @@ function DeployView() {
         webcontainerInstance = await WebContainer.boot();
       }
       const wc = webcontainerInstance;
-      const term = terminalInstance.current;
 
       // 2. Fetch tarball via server-side proxy (avoids codeload.github.com CORS)
-      term?.writeln("\x1b[33m> Fetching repository tarball...\x1b[0m");
+      termWriteln("\x1b[33m> Fetching repository tarball...\x1b[0m");
       const tarRes = await fetch(
         `/api/tarball?repo=${encodeURIComponent(config.repo.full_name)}&ref=${encodeURIComponent(config.branch)}`,
         { headers: { Authorization: `Bearer ${githubToken}` } }
@@ -321,7 +337,7 @@ function DeployView() {
       const tarGzBuffer = new Uint8Array(await tarRes.arrayBuffer());
 
       // 3. Decompress gzip + parse tar entirely in JS — WebContainer has no guaranteed tar binary
-      term?.writeln("\x1b[33m> Extracting repository...\x1b[0m");
+      termWriteln("\x1b[33m> Extracting repository...\x1b[0m");
 
       // Dynamically import fflate (add to your package.json: "fflate": "^0.8.0")
       const { decompress } = await import("fflate");
@@ -361,27 +377,27 @@ function DeployView() {
       if (topKeys.length === 0) throw new Error("Failed to extract repository: archive is empty.");
 
       // Log what the tar parser found so we can debug structure issues
-      term?.writeln(`\x1b[32m> Parsed tar: top-level keys = ${JSON.stringify(topKeys.slice(0, 10))}\x1b[0m`);
+      termWriteln(`\x1b[32m> Parsed tar: top-level keys = ${JSON.stringify(topKeys.slice(0, 10))}\x1b[0m`);
 
       // Detect if package.json landed at root or one level down (GitHub sometimes
       // emits archives where the first level is already the repo content, sometimes
       // it's wrapped in an extra owner-repo-hash/ folder that slice(1) fails to strip)
       let mountTree = fileTree;
-      let repoFolder = ".";
+      const repoFolder = ".";
       if (!fileTree["package.json"] && topKeys.length === 1 && (fileTree[topKeys[0]] as any)?.directory) {
         // Everything is inside one wrapper folder — unwrap it
         mountTree = (fileTree[topKeys[0]] as any).directory;
-        term?.writeln(`\x1b[33m> Unwrapped extra folder: ${topKeys[0]}\x1b[0m`);
+        termWriteln(`\x1b[33m> Unwrapped extra folder: ${topKeys[0]}\x1b[0m`);
       } else if (!fileTree["package.json"]) {
-        term?.writeln(`\x1b[31m> WARNING: package.json not found at root. Keys: ${JSON.stringify(topKeys.slice(0, 20))}\x1b[0m`);
+        termWriteln(`\x1b[31m> WARNING: package.json not found at root. Keys: ${JSON.stringify(topKeys.slice(0, 20))}\x1b[0m`);
       }
 
-      term?.writeln(`\x1b[32m> Mounting ${Object.keys(mountTree).length} entries into WebContainer...\x1b[0m`);
+      termWriteln(`\x1b[32m> Mounting ${Object.keys(mountTree).length} entries into WebContainer...\x1b[0m`);
       await wc.mount(mountTree);
 
       // 4. Install
       setDeployState({ step: "installing", message: "Installing dependencies in browser...", progress: 20, activeStepIndex: 1 });
-      term?.writeln(`\x1b[33m> Running npm install...\x1b[0m`);
+      termWriteln(`\x1b[33m> Running npm install...\x1b[0m`);
 
       // Collect install output into a buffer so it shows even if process exits fast
       let installLog = "";
@@ -389,21 +405,21 @@ function DeployView() {
       install.output.pipeTo(new WritableStream({
         write(data) {
           installLog += data;
-          term?.write(data);
+          termWrite(data);
         }
       }));
       const installExit = await install.exit;
       if (installExit !== 0) {
-        term?.writeln(`\x1b[31m> npm install exited with code ${installExit}\x1b[0m`);
-        term?.writeln(`\x1b[31m> Last output: ${installLog.slice(-500)}\x1b[0m`);
+        termWriteln(`\x1b[31m> npm install exited with code ${installExit}\x1b[0m`);
+        termWriteln(`\x1b[31m> Last output: ${installLog.slice(-500)}\x1b[0m`);
         throw new Error(`Installation failed (exit ${installExit}). Check the console above.`);
       }
 
       // 5. Build
       setDeployState({ step: "building", message: "Running build command...", progress: 50, activeStepIndex: 2 });
-      term?.writeln(`\x1b[33m> Running ${config.buildCommand}...\x1b[0m`);
+      termWriteln(`\x1b[33m> Running ${config.buildCommand}...\x1b[0m`);
       const build = await wc.spawn("npm", ["run", "build"], { cwd: repoFolder });
-      build.output.pipeTo(new WritableStream({ write(data) { term?.write(data); } }));
+      build.output.pipeTo(new WritableStream({ write(data) { termWrite(data); } }));
       if (await build.exit !== 0) throw new Error("Build failed.");
 
       // 6. Export files for IPFS
@@ -634,7 +650,7 @@ function DeployView() {
                        <div key={i} className="flex flex-col items-center flex-1 relative group">
                          {/* Line */}
                          {i < PIPELINE_STEPS.length - 1 && (
-                           <div className={`absolute top-4 left-1/2 w-full h-[2px] ${deployState.activeStepIndex > i ? 'bg-orange-500' : 'bg-neutral-800'} transition-colors duration-500`} />
+                           <div className={`absolute top-4 h-[2px] ${deployState.activeStepIndex > i ? 'bg-orange-500' : 'bg-neutral-800'} transition-colors duration-500`} style={{left:'calc(50% + 1.25rem)', right:'calc(-50% + 1.25rem)'}} />
                          )}
                          {/* Circle */}
                          <div className={`relative z-10 w-8 h-8 rounded-full border-2 flex items-center justify-center transition-all duration-500 ${
@@ -682,19 +698,17 @@ function DeployView() {
                 </button>
              </div>
 
-             {showConsole && (
-               <div className="bg-neutral-900 border border-neutral-800 rounded-3xl overflow-hidden shadow-2xl shadow-black/50 animate-in slide-in-from-top-2 duration-300">
-                 <div className="bg-neutral-800/50 px-4 py-2 flex items-center gap-2 border-b border-neutral-800">
-                    <div className="flex gap-1.5">
-                      <div className="w-2 h-2 rounded-full bg-red-500/50" />
-                      <div className="w-2 h-2 rounded-full bg-yellow-500/50" />
-                      <div className="w-2 h-2 rounded-full bg-green-500/50" />
-                    </div>
-                    <div className="text-[10px] font-mono text-neutral-500 ml-2 uppercase">WEN.DEPLOY CONSOLE</div>
-                 </div>
-                 <div ref={terminalRef} className="p-4" />
+             <div className={`bg-neutral-900 border border-neutral-800 rounded-3xl overflow-hidden shadow-2xl shadow-black/50 transition-all duration-300 ${showConsole ? 'opacity-100 max-h-[400px]' : 'opacity-0 max-h-0 border-0'}`}>
+               <div className="bg-neutral-800/50 px-4 py-2 flex items-center gap-2 border-b border-neutral-800">
+                  <div className="flex gap-1.5">
+                    <div className="w-2 h-2 rounded-full bg-red-500/50" />
+                    <div className="w-2 h-2 rounded-full bg-yellow-500/50" />
+                    <div className="w-2 h-2 rounded-full bg-green-500/50" />
+                  </div>
+                  <div className="text-[10px] font-mono text-neutral-500 ml-2 uppercase">WEN.DEPLOY CONSOLE</div>
                </div>
-             )}
+               <div ref={terminalRef} className="p-4" />
+             </div>
           </div>
         )}
 
