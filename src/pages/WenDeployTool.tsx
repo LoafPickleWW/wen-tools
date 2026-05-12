@@ -310,34 +310,27 @@ function DeployView() {
       const wc = webcontainerInstance;
       const term = terminalInstance.current;
 
-      // 2. Fetch & Mount Repo via Proxy (needed for COEP/CORP)
-      term?.writeln("\x1b[33m> Fetching repository tarball via proxy...\x1b[0m");
-      const tarRes = await fetch(`/api/tarball?repo=${config.repo.full_name}&ref=${config.branch}`, {
-        headers: { Authorization: `Bearer ${githubToken}` }
-      });
-      
-      if (!tarRes.ok) {
-        const errorData = await tarRes.json().catch(() => ({}));
-        throw new Error(`Failed to fetch repository: ${errorData.error || tarRes.statusText}`);
-      }
-
+      // 2. Fetch & Mount Repo (via server-side proxy to avoid CORS on codeload.github.com)
+      term?.writeln("\x1b[33m> Fetching repository tarball...\x1b[0m");
+      const tarRes = await fetch(
+        `/api/tarball?repo=${encodeURIComponent(config.repo.full_name)}&ref=${encodeURIComponent(config.branch)}`,
+        { headers: { Authorization: `Bearer ${githubToken}` } }
+      );
+      if (!tarRes.ok) throw new Error(`Failed to fetch tarball: ${tarRes.status} ${tarRes.statusText}`);
       const tarBuffer = await tarRes.arrayBuffer();
       await wc.fs.writeFile("/repo.tar.gz", new Uint8Array(tarBuffer));
 
-      // 3. Extract (using native tar if available, or a reliable npx tool)
+      // 3. Extract using WebContainer's built-in tar
       term?.writeln("\x1b[33m> Extracting repository...\x1b[0m");
-      // Use 'tar' directly as it's typically available in WebContainer's jsh
       const untar = await wc.spawn("tar", ["-xzf", "/repo.tar.gz", "-C", "/"]);
       untar.output.pipeTo(new WritableStream({ write(data) { term?.write(data); } }));
-      if (await untar.exit !== 0) {
-        term?.writeln("\x1b[31m> Tar failed, trying fallback extraction...\x1b[0m");
-        const fallback = await wc.spawn("npx", ["-y", "extract-zip", "/repo.tar.gz", "/"]); // Note: GitHub gives tar.gz usually
-        if (await fallback.exit !== 0) throw new Error("Failed to extract repository.");
-      }
+      if (await untar.exit !== 0) throw new Error("Failed to extract repository.");
 
-      // Find the extracted folder (it's owner-repo-hash)
+      // Find the extracted folder — GitHub names it owner-repo-<hash>
       const rootEntries = await wc.fs.readdir("/");
-      const repoFolder = rootEntries.find(e => e.includes("-") && e !== "repo.tar.gz");
+      const repoFolder = rootEntries.find(
+        (e: string) => typeof e === "string" && e.includes("-") && !e.endsWith(".tar.gz")
+      );
       if (!repoFolder) throw new Error("Could not find repository folder.");
 
       // 4. Install
