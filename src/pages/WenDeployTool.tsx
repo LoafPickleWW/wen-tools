@@ -374,7 +374,7 @@ function DeployView() {
       type PkgManager = { bin: string; installArgs: string[]; runArgs: (cmd: string) => string[]; label: string };
       const pm: PkgManager =
         mountedKeys.includes("pnpm-lock.yaml")
-          ? { bin: "npx", installArgs: ["pnpm", "install", "--frozen-lockfile"], runArgs: (s) => ["pnpm", "run", s], label: "pnpm" }
+          ? { bin: "npx", installArgs: ["pnpm", "install", "--no-frozen-lockfile", "--force"], runArgs: (s) => ["pnpm", "run", s], label: "pnpm" }
           : mountedKeys.includes("yarn.lock")
           ? { bin: "npx", installArgs: ["yarn", "install", "--frozen-lockfile"], runArgs: (s) => ["yarn", s], label: "yarn" }
           : { bin: "npm", installArgs: ["install", "--legacy-peer-deps", "--prefer-offline"], runArgs: (s) => ["run", s], label: "npm" };
@@ -602,7 +602,20 @@ function DeployView() {
                {Array.isArray(repos) && repos.filter(r => r.name.toLowerCase().includes(repoSearch.toLowerCase())).map(repo => (
                  <button 
                    key={repo.id}
-                   onClick={() => setConfig(c => ({ ...c, repo, branch: repo.default_branch, detectedPkgManager: null }))}
+                   onClick={async () => {
+                     let buildCommand = "npm run build";
+                     try {
+                       const treeRes = await fetch(
+                         `https://api.github.com/repos/${repo.full_name}/git/trees/${repo.default_branch}`,
+                         { headers: { Authorization: `Bearer ${githubToken}` } }
+                       );
+                       const treeData = await treeRes.json();
+                       const filenames: string[] = (treeData.tree || []).map((f: any) => f.path);
+                       if (filenames.includes("pnpm-lock.yaml")) buildCommand = "pnpm run build";
+                       else if (filenames.includes("yarn.lock")) buildCommand = "yarn build";
+                     } catch {}
+                     setConfig(c => ({ ...c, repo, branch: repo.default_branch, buildCommand, detectedPkgManager: null }));
+                   }}
                    className="group text-left bg-neutral-900/30 border border-neutral-800 hover:border-orange-500/40 rounded-2xl p-5 transition-all hover:bg-neutral-900/50"
                  >
                    <div className="flex justify-between items-start mb-2">
