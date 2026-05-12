@@ -96,7 +96,7 @@ export const TOOLS = [
     label: "Download ARC-69 Collection Data",
     description: "Download ARC-69 data for a collection in CSV format.",
     path: "/download-arc69-collection-data",
-    category: "mint",
+    category: "analytics",
     icon:"/icons/arc69d.png"
   },
   {
@@ -123,7 +123,7 @@ export const TOOLS = [
     label: "Download ARC-19 Collection Data",
     description: "Download ARC-19 data for a collection in CSV format.",
     path: "/download-arc19-collection-data",
-    category: "mint",
+    category: "analytics",
     icon:"/icons/arc19d.png"
   },
   {
@@ -141,7 +141,7 @@ export const TOOLS = [
     label: "Asset Add",
     description: "Optin assets in bulk.",
     path: "/batch-optin",
-    category: "asset",
+    category: "management",
     icon:"/icons/optin.png"
   },
   {
@@ -151,7 +151,7 @@ export const TOOLS = [
     description:
       "Easily mass send assets to a single or an asset to multiple wallets.",
     path: "/simple-send",
-    category: "asset",
+    category: "distribution",
     icon:"/icons/send.png"
   },
   {
@@ -161,7 +161,7 @@ export const TOOLS = [
     description:
       "Easily mass send assets to a single or an asset to multiple NFD vaults.",
     path: "/vault-send",
-    category: "asset",
+    category: "distribution",
     icon:"/icons/vault.png"
   },
   {
@@ -170,7 +170,7 @@ export const TOOLS = [
     label: "Asset Remove",
     description: "Optout assets in bulk.",
     path: "/batch-optout",
-    category: "asset",
+    category: "management",
     icon:"/icons/optout.png"
   },
   {
@@ -179,7 +179,7 @@ export const TOOLS = [
     label: "Asset Destroy",
     description: "Destroy (Delete) assets in bulk.",
     path: "/batch-destroy",
-    category: "asset",
+    category: "management",
     icon:"/icons/bin.png"
   },
   {
@@ -189,7 +189,7 @@ export const TOOLS = [
     description:
       "Premium Tool - Easily Airdrop a Token of any amount to holders from a creator wallet.",
     path: "/simple-airdrop",
-    category: "asset",
+    category: "distribution",
     icon:"/icons/drop.png"
   },
   {
@@ -198,7 +198,7 @@ export const TOOLS = [
     label: "Airdrop",
     description: "Airdrop/Send assets/ALGO to a list of addresses.",
     path: "/airdrop",
-    category: "asset",
+    category: "distribution",
     icon:"/icons/drops.png"
   },
   {
@@ -207,7 +207,7 @@ export const TOOLS = [
     label: "Asset Clawback",
     description: "Clawback assets in bulk.",
     path: "/batch-clawback",
-    category: "asset",
+    category: "management",
     icon:"/icons/clawback.png"
   },
   {
@@ -216,7 +216,7 @@ export const TOOLS = [
     label: "Asset Freeze",
     description: "Freeze/Unfreeze assets in bulk.",
     path: "/batch-freeze",
-    category: "asset",
+    category: "management",
     icon:"/icons/freeze.png"
   },
   {
@@ -225,7 +225,7 @@ export const TOOLS = [
     label: "Wallet Holdings",
     description: "View the assets data of a wallet in CSV format.",
     path: "/wallet-holdings",
-    category: "asset",
+    category: "analytics",
     icon:"/icons/wallet.png"
   },
   {
@@ -234,7 +234,7 @@ export const TOOLS = [
     label: "Find Collection Holders",
     description: "Download all the holders for a collection in CSV format.",
     path: "/find-collection-holders",
-    category: "asset",
+    category: "analytics",
     icon:"/icons/group.png"
   },
   {
@@ -243,7 +243,7 @@ export const TOOLS = [
     label: "Multimint Asset Holders",
     description: "View the holders of a multimint asset list in CSV format.",
     path: "/multimint-asset-holders",
-    category: "asset",
+    category: "analytics",
     icon:"/icons/multihold.png"
   },
   {
@@ -270,7 +270,7 @@ export const TOOLS = [
     description:
       "Claim multiple assets from your asset Inbox & NFD vault in one go",
     path: "/bulk-claim",
-    category: "asset",
+    category: "management",
     icon:"/icons/bulk.png"
   },
   {
@@ -279,7 +279,7 @@ export const TOOLS = [
     description:
       "Set and manage your token's circulation supply using the ARC62 Standard",
     path: "/token-manager",
-    category: "asset",
+    category: "management",
     icon:"/icons/manager.png"
   },
   {
@@ -295,7 +295,7 @@ export const TOOLS = [
     label: "xGov Dashboard",
     description: "Premium dashboard for tracking active xGov proposals, history, and bulk voting.",
     path: "/xgov",
-    category: "asset",
+    category: "apps",
     icon: "/icons/xgov.png"
   },
   {
@@ -303,7 +303,7 @@ export const TOOLS = [
     label: "Jukebox",
     description: "Scan your wallet for music NFTs and play them directly.",
     path: "/jukebox",
-    category: "asset",
+    category: "apps",
     icon: "/icons/jukebox.png"
   },
   {
@@ -311,7 +311,7 @@ export const TOOLS = [
     label: "P2P Chat",
     description: "End-to-end encrypted peer-to-peer chat & file transfer via LiquidAuth.",
     path: "/p2p-chat",
-    category: "asset",
+    category: "apps",
     icon: "/icons/p2pchat.svg"
   },
   {
@@ -319,7 +319,7 @@ export const TOOLS = [
     label: "BEACON Chat",
     description: "Zero-infrastructure, on-chain encrypted chat with serverless P2P signaling via Algorand — No brokers, no middlemen, true sovereign P2P.",
     path: "/beacon-chat",
-    category: "asset",
+    category: "apps",
     icon: "/icons/p2pchat.svg"
   },
   {
@@ -327,7 +327,7 @@ export const TOOLS = [
     label: "Post-Quantum Wallet",
     description: "Create & manage Falcon-1024 post-quantum secured Algorand accounts.",
     path: "/post-quantum",
-    category: "asset",
+    category: "experimental",
     icon: "/icons/pqwallet.png"
   },
   {
@@ -335,7 +335,7 @@ export const TOOLS = [
     label: "BEACON Drop",
     description: "Serverless, on-chain dead drop powered by the BEACON Protocol.",
     path: "/beacon-drop",
-    category: "asset",
+    category: "apps",
     icon: "/icons/drop.png"
   },
 ];

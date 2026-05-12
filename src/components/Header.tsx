@@ -12,6 +12,7 @@ import { useState } from "react";
 import DropdownMenu from "./DropdownMenu";
 import DonationDialog from "./DonationDialog";
 import IconButton from "@mui/material/IconButton";
+import { trackEvent } from "../utils";
 
 export function Header() {
   const [isSidesheetOpen, setIsSidesheetOpen] = useState(false);
@@ -64,6 +65,7 @@ export function Header() {
           component="a"
           href="https://discord.com/oauth2/authorize?client_id=1325220652332089435"
           target="_blank"
+          onClick={() => trackEvent("header_click", "nav", "Wen Bot")}
         >
           <p>wen bot</p>
         </ListItemButton>
@@ -71,6 +73,7 @@ export function Header() {
           component="a"
           href="https://wallet.wen.tools"
           target="_blank"
+          onClick={() => trackEvent("header_click", "nav", "Wen Wallet")}
         >
           <p>wen wallet</p>
         </ListItemButton>
@@ -79,6 +82,7 @@ export function Header() {
           href="https://swap.wen.tools"
           target="_blank"
           className="text-xl flex flex-row items-center gap-1"
+          onClick={() => trackEvent("header_click", "nav", "Wen Swap")}
         >
           <p>wen swap</p>
         </ListItemButton>

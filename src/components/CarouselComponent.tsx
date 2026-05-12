@@ -1,6 +1,7 @@
 // src/Carousel.js
 import React, { useState } from "react";
 import { Image } from "../types";
+import { trackEvent } from "../utils";
 
 const CarouselComponent = ({ images }: { images: Image[] }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -19,7 +20,13 @@ const CarouselComponent = ({ images }: { images: Image[] }) => {
     <div className="mx-auto my-2 md:my-4">
       <div>
         {images.map((image, index) => (
-          <a href={image.url} target="_blank" rel="noreferrer" key={index}>
+          <a 
+            href={image.url} 
+            target="_blank" 
+            rel="noreferrer" 
+            key={index}
+            onClick={() => trackEvent("carousel_click", "home", image.path)}
+          >
             <img
               src={image.path}
               alt={image.path}

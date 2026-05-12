@@ -38,6 +38,16 @@ import * as digest from "multiformats/hashes/digest";
 import { NetworkId } from "@txnlab/use-wallet-react";
 import * as algokit from "@algorandfoundation/algokit-utils";
 
+export function trackEvent(action: string, category: string, label?: string, value?: number) {
+  if (typeof window !== "undefined" && (window as any).gtag) {
+    (window as any).gtag("event", action, {
+      event_category: category,
+      event_label: label,
+      value: value,
+    });
+  }
+}
+
 export const peraWallet = new PeraWalletConnect({
   shouldShowSignTxnToast: true,
 });

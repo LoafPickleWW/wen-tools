@@ -1,4 +1,5 @@
 import { SelectToolComponent } from "../components/SelectToolComponent";
+import { trackEvent } from "../utils";
 
 export default function Home() {
   return (
@@ -15,6 +16,7 @@ export default function Home() {
             href="https://www.algorand.foundation?ref=eviltools"
             className="flex justify-center opacity-80 hover:opacity-100 transition"
             target="_blank noreferrer"
+            onClick={() => trackEvent("partner_click", "home", "Algorand Foundation")}
           >
             <img
               src="./af_logo.svg"
@@ -26,6 +28,7 @@ export default function Home() {
             href="https://algoverify.me?ref=eviltools"
             className="flex justify-center text-center items-center opacity-80 text-3xl hover:opacity-100 transition font-sans font-semibold"
             target="_blank noreferrer"
+            onClick={() => trackEvent("partner_click", "home", "AlgoVerify")}
           >
             AlgoVerify
           </a>
@@ -33,6 +36,7 @@ export default function Home() {
             href="https://nf.domains?ref=eviltools"
             className="flex justify-center items-center opacity-80 hover:opacity-100 transition"
             target="_blank noreferrer"
+            onClick={() => trackEvent("partner_click", "home", "NF Domains")}
           >
             <svg viewBox="0 0 1260 400" fill="white" className="h-10 w-auto">
               <polygon points="430,0 430,66.7 430,133.3 430,200 430,266.7 430,400 630,400 630,266.7 730,266.7 730,200 730,133.3 830,133.3 830,66.7 830,0 630,0"></polygon>
@@ -44,6 +48,7 @@ export default function Home() {
             href="https://www.randgallery.com/algo-collection?ref=eviltools"
             className="flex justify-center opacity-80 hover:opacity-100 transition "
             target="_blank noreferrer"
+            onClick={() => trackEvent("partner_click", "home", "Rand Gallery")}
           >
             <svg
               width="90"
@@ -65,6 +70,7 @@ export default function Home() {
             href="https://apps.crust.network/?rpc=wss%3A%2F%2Frpc.crust.network#/explorer"
             className="flex justify-center opacity-80 hover:opacity-100 transition"
             target="_blank noreferrer"
+            onClick={() => trackEvent("partner_click", "home", "Crust Network")}
           >
             <img
               src="./crust.png"
@@ -76,6 +82,7 @@ export default function Home() {
             href="https://mentalmarvin.art/"
             className="flex justify-center opacity-80 hover:opacity-100 transition"
             target="_blank noreferrer"
+            onClick={() => trackEvent("partner_click", "home", "Mental Marvin")}
           >
             <img
               src="./sm-small.png"

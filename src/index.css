@@ -13,14 +13,17 @@ input::-webkit-inner-spin-button {
 /* Firefox */
 input[type="number"] {
   -moz-appearance: textfield;
+  appearance: textfield;
 }
 
 .tooltip {
-  @apply invisible absolute;
+  visibility: hidden;
+  position: absolute;
 }
 
 .has-tooltip:hover .tooltip {
-  @apply visible z-10;
+  visibility: visible;
+  z-index: 10;
 }
 
 /* scrollbar */
@@ -99,4 +102,12 @@ body {
     padding-right: 0%;
     margin: 0 auto 0;
   }
+}
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-out forwards;
 }

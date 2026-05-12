@@ -1,4 +1,5 @@
 import { Tooltip } from "@mui/material";
+import { trackEvent } from "../utils";
 
 export function Footer() {
   return (
@@ -11,6 +12,7 @@ export function Footer() {
             target="_blank"
             rel="noopener noreferrer"
             className="font-normal text-white transition hover:text-primary-gray pl-1 text-md"
+            onClick={() => trackEvent("footer_click", "nav", "Wen Tools Home")}
           >
             Wen.Tools
           </a>
@@ -36,6 +38,7 @@ export function Footer() {
             target="_blank"
             rel="noreferrer noopener"
             className="font-normal text-md text-center font-sans hover:text-primary-gray transition text-white mb-3 md:mb-0"
+            onClick={() => trackEvent("footer_click", "nav", "Algonode")}
           >
             powered by Algonode.io
           </a>
@@ -46,6 +49,7 @@ export function Footer() {
             target="_blank"
             className="opacity-100 transition-opacity hover:opacity-80"
             rel="noreferrer"
+            onClick={() => trackEvent("footer_click", "social", "Twitter")}
           >
             <img src="/x-icon.png" alt="" className=" w-7 h-7" />
           </a>
@@ -54,6 +58,7 @@ export function Footer() {
             target="_blank"
             className="opacity-100 transition-opacity hover:opacity-80"
             rel="noreferrer"
+            onClick={() => trackEvent("footer_click", "social", "Discord")}
           >
             <img src="/discord-icon.webp" alt="" className=" w-8 h-8" />
           </a>
@@ -62,6 +67,7 @@ export function Footer() {
             href="https://github.com/LoafPickleWW/wen-tools"
             target="_blank"
             rel="noreferrer"
+            onClick={() => trackEvent("footer_click", "social", "GitHub")}
           >
             <img src="/github-icon.png" alt="" className=" w-9 h-9" />
           </a>
