@@ -335,8 +335,7 @@ function SiteResolver({ asaId }: { asaId: number }) {
   }, [asaId]);
 
   const currentGateway = [IPFS_GATEWAY, ...IPFS_GATEWAY_FALLBACKS][gatewayIndex % 4];
-  const cidV1 = toCIDv1(siteInfo.cid);
-  const siteUrl = siteInfo ? currentGateway.replace("{cid}", cidV1) : "";
+  const siteUrl = siteInfo?.cid ? currentGateway.replace("{cid}", toCIDv1(siteInfo.cid)) : "";
 
   if (loading) return <div className="min-h-screen bg-neutral-950 flex items-center justify-center text-neutral-500 font-mono">RESOLVING...</div>;
   if (error) return <div className="min-h-screen bg-neutral-950 flex items-center justify-center text-red-400 p-8">{error}</div>;
