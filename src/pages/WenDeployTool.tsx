@@ -718,15 +718,20 @@ function DeployView() {
         formData.append("file", new Blob([content as any]), f.path);
       });
 
-      const pinRes = await fetch("https://gw-seattle.crustcloud.io/api/v0/add?pin=true", {
+      const pinRes = await fetch("https://gw-seattle.crustcloud.io/api/v0/add?pin=true&wrap-with-directory=true&recursive=true", {
         method: "POST",
         headers: { Authorization: `Basic ${crustToken}` },
         body: formData
       });
       if (!pinRes.ok) throw new Error(`IPFS pin failed: ${pinRes.status}`);
+      
       const text = await pinRes.text();
       const lines = text.trim().split("\n").filter(Boolean).map(l => JSON.parse(l));
-      const root = lines.find(l => l.Name === "") ?? lines[lines.length - 1];
+
+      // The root directory entry always has Name === "" when using wrap-with-directory
+      const root = lines.find(l => l.Name === "");
+      if (!root) throw new Error("No root directory entry in IPFS response");
+      
       const cid = toCIDv1(root.Hash);
       termWriteln(`\x1b[32m> Pinned to IPFS: ${cid}\x1b[0m`);
 
