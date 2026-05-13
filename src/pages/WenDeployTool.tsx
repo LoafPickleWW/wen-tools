@@ -753,11 +753,12 @@ function DeployView() {
       const root = lines.find(l => l.Name === "");
       if (!root) throw new Error("No root directory entry in IPFS response");
       
-      const cid = toCIDv1(root.Hash);
-      termWriteln(`\x1b[32m> Pinned to IPFS: ${cid}\x1b[0m`);
+      const rawCid = root.Hash; 
+      const cidV1 = toCIDv1(rawCid); 
+      const reserve = cidToReserveAddress(rawCid);
+      termWriteln(`\x1b[32m> Pinned: ${rawCid}\x1b[0m`);
 
       const params = await algodClient.getTransactionParams().do();
-      const reserve = cidToReserveAddress(cid);
 
       let txn;
       if (config.existingAsaId) {
@@ -825,7 +826,7 @@ function DeployView() {
         methodArgs: [
           { txn: paymentTxn, signer: transactionSigner },
           node,
-          cid,
+          rawCid,
           Math.max(totalSize, 10000),
           true // mainnet
         ],
@@ -849,7 +850,7 @@ function DeployView() {
         asaId = ptx["asset-index"];
       }
 
-      setResult({ cid, asaId: asaId! });
+      setResult({ cid: cidV1, asaId: asaId! });
       setDeployState({ step: "complete", message: "Deployment Complete!", progress: 100, activeStepIndex: 5 });
       termWriteln("\x1b[32m> Deployment successful!\x1b[0m");
 
