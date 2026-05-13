@@ -22,7 +22,6 @@ const IPFS_GATEWAY = "https://{cid}.ipfs.dweb.link";
 const IPFS_GATEWAY_FALLBACKS = [
   "https://{cid}.ipfs.w3s.link",
   "https://{cid}.ipfs.cf-ipfs.com",
-  "https://{cid}.ipfs.gw.crustfiles.net",
 ];
 
 // ARC-19 URL template for CIDv0 (dag-pb, sha2-256)
