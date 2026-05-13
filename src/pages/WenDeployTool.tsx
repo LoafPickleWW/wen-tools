@@ -742,7 +742,7 @@ function DeployView() {
             {deployState.step === "error" && (
               <div className="space-y-3">
                 <div className="bg-red-500/5 border border-red-500/20 rounded-2xl p-4"><div className="text-[10px] font-bold text-red-400 uppercase tracking-widest mb-2 flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-red-500 inline-block" />Deploy Failed</div><p className="text-xs text-red-300 font-mono">{deployState.message}</p></div>
-                {consoleLog && ( <div className="bg-neutral-950 border border-neutral-800 rounded-2xl p-4"><div className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest mb-2">Build Log</div><pre className="text-[10px] font-mono text-neutral-400 whitespace-pre-wrap break-all max-h-40 overflow-y-auto leading-relaxed">{consoleLog.replace(new RegExp("\\\\u001b\\\\[\\\\d+(?:;\\\\d+)*m", "g"), "").slice(-3000)}</pre></div> )}
+                {consoleLog && ( <div className="bg-neutral-950 border border-neutral-800 rounded-2xl p-4"><div className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest mb-2">Build Log</div><pre className="text-[10px] font-mono text-neutral-400 whitespace-pre-wrap break-all max-h-40 overflow-y-auto leading-relaxed">{consoleLog.replace(/\x1b[0-9;]*m/g, "").slice(-3000)}</pre></div> )}
               </div>
             )}
             <div className="bg-neutral-900/50 border border-neutral-800 rounded-3xl p-6 flex justify-between items-center">
