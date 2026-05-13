@@ -714,7 +714,10 @@ function DeployView() {
         body: formData
       });
       if (!pinRes.ok) throw new Error(`IPFS pin failed: ${pinRes.status}`);
-      const { Hash: cid } = await pinRes.json();
+      const text = await pinRes.text();
+      const lines = text.trim().split("\n").filter(Boolean).map(l => JSON.parse(l));
+      const root = lines.find(l => l.Name === "") ?? lines[lines.length - 1];
+      const cid = root.Hash;
       termWriteln(`\x1b[32m> Pinned to IPFS: ${cid}\x1b[0m`);
 
       const algod = new algosdk.Algodv2("", ALGOD_SERVER, "");
