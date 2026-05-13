@@ -479,7 +479,11 @@ function DeployView() {
         termWriteln("\x1b[33m> Booting WebContainer...\x1b[0m");
         setDeployState({ step: "booting", message: "Booting browser environment...", progress: 8, activeStepIndex: 0 });
 
-        if (!webcontainerInstance) webcontainerInstance = await WebContainer.boot();
+        if (webcontainerInstance) {
+          try { webcontainerInstance.teardown(); } catch (_e) {}
+          webcontainerInstance = null;
+        }
+        webcontainerInstance = await WebContainer.boot();
         const wc = webcontainerInstance;
 
         termWriteln("\x1b[33m> Fetching repository tarball...\x1b[0m");
@@ -694,6 +698,8 @@ function DeployView() {
     return "pending";
   };
 
+  const ANSI_REG = new RegExp("\\x1b[0-9;]*m", "g");
+
   return (
     <div className="min-h-screen bg-neutral-950 text-white font-sans selection:bg-orange-500/30">
       <div className="max-w-4xl mx-auto px-6 py-16">
@@ -721,14 +727,24 @@ function DeployView() {
              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
                {Array.isArray(repos) && repos.filter(r => r.name.toLowerCase().includes(repoSearch.toLowerCase())).map(repo => (
                  <button key={repo.id} onClick={async () => {
-                   let buildCommand = "npm run build", hasBlockchainDeps = false;
+                   let buildCommand = "npm run build";
+                   let hasBlockchainDepsDetected = false;
                    try {
                      const treeRes = await fetch(`https://api.github.com/repos/${repo.full_name}/git/trees/${repo.default_branch}`, { headers: { Authorization: `Bearer ${githubToken}` } });
                      const treeData = await treeRes.json(), filenames = (treeData.tree || []).map((f: any) => f.path);
                      if (filenames.includes("pnpm-lock.yaml")) buildCommand = "pnpm run build";
                      else if (filenames.includes("yarn.lock")) buildCommand = "yarn build";
+                     const pkgFile = treeData.tree?.find((f: any) => f.path === "package.json");
+                     if (pkgFile?.url) {
+                       const pkgRes = await fetch(pkgFile.url, { headers: { Authorization: `Bearer ${githubToken}` } });
+                       const pkgBlob = await pkgRes.json();
+                       const pkgJson = JSON.parse(atob(pkgBlob.content));
+                       const allDeps = Object.keys({ ...pkgJson.dependencies, ...pkgJson.devDependencies });
+                       const PROBLEM = ['algosdk', 'ethers', 'web3', '@solana/web3.js', 'bitcoinjs-lib', '@perawallet/connect', 'vite-plugin-node-polyfills', 'crypto-browserify', 'bn.js', 'elliptic', 'secp256k1'];
+                       hasBlockchainDepsDetected = PROBLEM.some(d => allDeps.includes(d));
+                     }
                    } catch { /* silently fall back */ }
-                   setConfig(c => ({ ...c, repo, branch: repo.default_branch, buildCommand, hasBlockchainDeps }));
+                   setConfig(c => ({ ...c, repo, branch: repo.default_branch, buildCommand, hasBlockchainDeps: hasBlockchainDepsDetected }));
                  }} className="group text-left bg-neutral-900/30 border border-neutral-800 hover:border-orange-500/30 rounded-2xl p-5 transition-all">
                    <div className="font-bold text-sm mb-1 group-hover:text-orange-400 transition-colors">{repo.name}</div>
                    <div className="text-[10px] text-neutral-500 font-mono">{repo.language || "Unknown"} • {repo.default_branch}</div>
@@ -742,7 +758,7 @@ function DeployView() {
             {deployState.step === "error" && (
               <div className="space-y-3">
                 <div className="bg-red-500/5 border border-red-500/20 rounded-2xl p-4"><div className="text-[10px] font-bold text-red-400 uppercase tracking-widest mb-2 flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-red-500 inline-block" />Deploy Failed</div><p className="text-xs text-red-300 font-mono">{deployState.message}</p></div>
-                {consoleLog && ( <div className="bg-neutral-950 border border-neutral-800 rounded-2xl p-4"><div className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest mb-2">Build Log</div><pre className="text-[10px] font-mono text-neutral-400 whitespace-pre-wrap break-all max-h-40 overflow-y-auto leading-relaxed">{consoleLog.replace(/\x1b[0-9;]*m/g, "").slice(-3000)}</pre></div> )}
+                {consoleLog && ( <div className="bg-neutral-950 border border-neutral-800 rounded-2xl p-4"><div className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest mb-2">Build Log</div><pre className="text-[10px] font-mono text-neutral-400 whitespace-pre-wrap break-all max-h-40 overflow-y-auto leading-relaxed">{consoleLog.replace(ANSI_REG, "").slice(-3000)}</pre></div> )}
               </div>
             )}
             <div className="bg-neutral-900/50 border border-neutral-800 rounded-3xl p-6 flex justify-between items-center">
