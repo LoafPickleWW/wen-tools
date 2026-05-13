@@ -480,7 +480,11 @@ function DeployView() {
         setDeployState({ step: "booting", message: "Booting browser environment...", progress: 8, activeStepIndex: 0 });
 
         if (webcontainerInstance) {
-          try { webcontainerInstance.teardown(); } catch (_e) {}
+          try {
+            webcontainerInstance.teardown();
+          } catch {
+            // Silently ignore teardown errors on stale instances
+          }
           webcontainerInstance = null;
         }
         webcontainerInstance = await WebContainer.boot();
@@ -501,16 +505,16 @@ function DeployView() {
           let off = 0;
 
           const SKIP_NAMES = new Set(["pax_global_header", "./pax_global_header"]);
-          const ZERO_REG = new RegExp("\\x00", "g");
+          const NULL = String.fromCharCode(0);
 
           while (off + 512 <= buf.length) {
             const header = buf.slice(off, off + 512);
             if (header.every((b: number) => b === 0)) break;
 
-            const name    = dec.decode(header.slice(0, 100)).replace(ZERO_REG, "").trim();
-            const prefix  = dec.decode(header.slice(345, 500)).replace(ZERO_REG, "").trim();
+            const name    = dec.decode(header.slice(0, 100)).split(NULL).join("").trim();
+            const prefix  = dec.decode(header.slice(345, 500)).split(NULL).join("").trim();
             const fullName = prefix ? prefix + "/" + name : name;
-            const sizeStr = dec.decode(header.slice(124, 136)).replace(ZERO_REG, "").trim();
+            const sizeStr = dec.decode(header.slice(124, 136)).split(NULL).join("").trim();
             const size    = sizeStr ? parseInt(sizeStr, 8) : 0;
             const type    = String.fromCharCode(header[156]);
 
@@ -546,21 +550,38 @@ function DeployView() {
         termWriteln(`\x1b[36m> Parsed tar top-level keys: ${JSON.stringify(topKeys.slice(0, 15))}\x1b[0m`);
 
         let mountTree = fileTree;
-        const realKeys = topKeys.filter(k => k !== "pax_global_header" && !k.startsWith("pax_"));
-        if (!fileTree["package.json"] && realKeys.length === 1 && (fileTree[realKeys[0]] as any)?.directory) {
-          mountTree = (fileTree[realKeys[0]] as any).directory;
-          termWriteln(`\x1b[33m> Unwrapped wrapper folder: ${realKeys[0]}\x1b[0m`);
-          termWriteln(`\x1b[36m> Unwrapped keys: ${JSON.stringify(Object.keys(mountTree).slice(0, 15))}\x1b[0m`);
-        }
+        const realKeys = topKeys.filter(k => k !== "pax_global_header" && !k.startsWith("pax_") && !k.startsWith("."));
 
-        const hasPackageJson = !!mountTree["package.json"];
-        termWriteln(`\x1b[${hasPackageJson ? "32" : "31"}m> package.json at root: ${hasPackageJson}\x1b[0m`);
+        // Unwrap if package.json isn't at root AND there's exactly one real subfolder
+        if (!mountTree["package.json"] && realKeys.length === 1) {
+          const candidate = (fileTree[realKeys[0]] as any)?.directory;
+          if (candidate && candidate["package.json"]) {
+            mountTree = candidate;
+            termWriteln(`\x1b[33m> Unwrapped wrapper folder: ${realKeys[0]}\x1b[0m`);
+          } else {
+            // Try one more level deep (e.g. repo/folder/package.json)
+            for (const key of Object.keys(candidate ?? {})) {
+              const sub = candidate?.[key]?.directory;
+              if (sub?.["package.json"]) {
+                mountTree = sub;
+                termWriteln(`\x1b[33m> Unwrapped nested folder: ${realKeys[0]}/${key}\x1b[0m`);
+                break;
+              }
+            }
+          }
+        }
 
         termWriteln(`\x1b[32m> Mounting ${Object.keys(mountTree).length} entries into WebContainer...\x1b[0m`);
         await wc.mount(mountTree);
 
         const rootAfterMount = await wc.fs.readdir("/");
         termWriteln(`\x1b[36m> Container root after mount: ${JSON.stringify(rootAfterMount.slice(0, 15))}\x1b[0m`);
+
+        // Hard guard: verify package.json exists in container root
+        if (!rootAfterMount.includes("package.json")) {
+          termWriteln(`\x1b[31m> ERROR: package.json not found at root. Contents: ${JSON.stringify(rootAfterMount)}\x1b[0m`);
+          throw new Error(`package.json missing from container root. Found: ${rootAfterMount.slice(0, 10).join(", ")}`);
+        }
 
         const mountedKeys = Object.keys(mountTree);
         type PkgManager = { bin: string; installArgs: string[]; runArgs: (s: string) => string[]; label: string };
@@ -589,7 +610,12 @@ function DeployView() {
           const isNetErr = installLog.includes("ECONNRESET") || installLog.includes("socket hang up") || installLog.includes("META_FETCH_FAIL") || installLog.includes("FETCH_FAIL");
           if (installExit === 0 || !isNetErr) break;
         }
-        if (installExit !== 0) throw new Error(`Installation failed (exit ${installExit}).`);
+        if (installExit !== 0) {
+          const ESC = String.fromCharCode(27);
+          const ANSI_REG_LINT = new RegExp(ESC + "\\[[0-9;]*m", "g");
+          const snippet = installLog.replace(ANSI_REG_LINT, "").slice(-500);
+          throw new Error(`Installation failed (exit ${installExit}).\n${snippet}`);
+        }
 
         setDeployState({ step: "building", message: "Building...", progress: 50, activeStepIndex: 2 });
         const buildCmd = config.buildCommand.trim().split(/\s+/);
@@ -698,7 +724,8 @@ function DeployView() {
     return "pending";
   };
 
-  const ANSI_REG = new RegExp("\\x1b[0-9;]*m", "g");
+  const ESC = String.fromCharCode(27);
+  const ANSI_REG = new RegExp(ESC + "\\[[0-9;]*m", "g");
 
   return (
     <div className="min-h-screen bg-neutral-950 text-white font-sans selection:bg-orange-500/30">
@@ -757,7 +784,7 @@ function DeployView() {
           <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
             {deployState.step === "error" && (
               <div className="space-y-3">
-                <div className="bg-red-500/5 border border-red-500/20 rounded-2xl p-4"><div className="text-[10px] font-bold text-red-400 uppercase tracking-widest mb-2 flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-red-500 inline-block" />Deploy Failed</div><p className="text-xs text-red-300 font-mono">{deployState.message}</p></div>
+                <div className="bg-red-500/5 border border-red-500/20 rounded-2xl p-4"><div className="text-[10px] font-bold text-red-400 uppercase tracking-widest mb-2 flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-red-500 inline-block" />Deploy Failed</div><p className="text-xs text-red-300 font-mono whitespace-pre-wrap">{deployState.message}</p></div>
                 {consoleLog && ( <div className="bg-neutral-950 border border-neutral-800 rounded-2xl p-4"><div className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest mb-2">Build Log</div><pre className="text-[10px] font-mono text-neutral-400 whitespace-pre-wrap break-all max-h-40 overflow-y-auto leading-relaxed">{consoleLog.replace(ANSI_REG, "").slice(-3000)}</pre></div> )}
               </div>
             )}
@@ -791,11 +818,6 @@ function DeployView() {
                       <a href={`data:text/yaml;charset=utf-8,${encodeURIComponent(WEN_DEPLOY_WORKFLOW)}`} download="wen-deploy.yml" className="inline-flex items-center gap-1.5 px-3 py-2 bg-orange-500 hover:bg-orange-400 text-black font-bold text-[10px] rounded-xl transition-colors">↓ Download workflow</a>
                       <button onClick={() => navigator.clipboard.writeText(WEN_DEPLOY_WORKFLOW)} className="px-3 py-2 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 font-bold text-[10px] rounded-xl transition-colors">Copy workflow</button>
                       <button onClick={() => navigator.clipboard.writeText(WEN_DEPLOY_AI_PROMPT)} className="px-3 py-2 bg-neutral-800 hover:bg-neutral-700 text-cyan-400 font-bold text-[10px] rounded-xl transition-colors flex items-center gap-1.5"><span>✦</span> Copy AI prompt</button>
-                    </div>
-
-                    <div className="bg-neutral-950 rounded-xl p-3 border border-neutral-800">
-                      <div className="text-[9px] font-bold text-neutral-600 uppercase tracking-widest mb-1.5 flex items-center gap-1.5"><span className="text-cyan-500">✦</span> AI Agent Prompt</div>
-                      <p className="text-[10px] text-neutral-500 font-mono leading-relaxed line-clamp-2">Set up WEN.DEPLOY GitHub Actions workflow for this repo. Create .github/workflows/wen-deploy.yml...</p>
                     </div>
 
                     <button onClick={handleDeploy} className="w-full py-3 bg-orange-500 hover:bg-orange-400 text-black font-black text-xs rounded-xl transition-all shadow-lg shadow-orange-500/10 active:scale-[0.98]">DEPLOY VIA GITHUB ACTIONS</button>
