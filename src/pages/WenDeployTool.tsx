@@ -298,19 +298,36 @@ export default function WenDeployTool() {
 
   // Handle OAuth callback in popup
   useEffect(() => {
-    if (oauthCode && window.opener) {
-      window.opener.postMessage({ type: "gh_oauth_code", code: oauthCode }, window.location.origin);
-      // Give it a tiny moment to send before closing
-      setTimeout(() => window.close(), 100);
+    // If we have a code and we're either a popup or have an opener, handle the callback
+    const isPopup = window.name === "github-auth" || window.opener;
+    if (oauthCode && isPopup) {
+      if (window.opener) {
+        window.opener.postMessage({ type: "gh_oauth_code", code: oauthCode }, window.location.origin);
+      }
+      // Close after a short delay to ensure message is sent
+      const timer = setTimeout(() => {
+        window.close();
+        // Fallback for browsers that block self-closing
+        const forceClose = () => { if (!window.closed) window.close(); };
+        setTimeout(forceClose, 500);
+      }, 200);
+      return () => clearTimeout(timer);
     }
   }, [oauthCode]);
 
-  // Show a blank closing screen if in a popup handling OAuth
-  if (oauthCode && window.opener) {
+  // Show a blank closing screen if handling OAuth callback
+  const isAuthCallback = oauthCode && (window.name === "github-auth" || window.opener);
+  if (isAuthCallback) {
     return (
-      <div className="min-h-screen bg-neutral-950 flex items-center justify-center">
-        <div className="w-4 h-4 border-2 border-orange-500/20 border-t-orange-500 rounded-full animate-spin mr-3" />
-        <div className="text-neutral-500 font-mono text-xs uppercase tracking-widest animate-pulse">Authenticating...</div>
+      <div className="min-h-screen bg-neutral-950 flex flex-col items-center justify-center gap-4">
+        <div className="w-6 h-6 border-2 border-orange-500/20 border-t-orange-500 rounded-full animate-spin" />
+        <div className="text-neutral-500 font-mono text-[10px] uppercase tracking-widest animate-pulse">Completing Authentication...</div>
+        <button 
+          onClick={() => window.close()}
+          className="mt-4 px-4 py-2 bg-neutral-900 border border-neutral-800 rounded-lg text-neutral-400 text-[10px] font-bold uppercase tracking-widest hover:bg-neutral-800 transition-colors"
+        >
+          Close Window
+        </button>
       </div>
     );
   }
@@ -539,35 +556,39 @@ function DeployView() {
       .catch(() => setRepos([]));
   }, [githubToken]);
 
-  // Fetch ARC-19 SITE assets owned by the connected wallet
+  // Fetch ARC-19 SITE assets managed by the connected wallet
   useEffect(() => {
     if (!activeAddress) return;
     setDeploymentsLoading(true);
     const INDEXER = "https://mainnet-idx.4160.nodely.dev";
-    fetch(`${INDEXER}/v2/accounts/${activeAddress}/assets?include-all=false`)
+    
+    // Fetch assets created by this account - this is more efficient as it returns params
+    fetch(`${INDEXER}/v2/accounts/${activeAddress}/created-assets`)
       .then(r => r.json())
-      .then(async data => {
-        const assets: any[] = data.assets || [];
-        const siteAssetIds = assets.filter(a => a.amount > 0).map(a => a["asset-id"]);
-        if (siteAssetIds.length === 0) { setDeploymentsLoading(false); return; }
+      .then(data => {
+        const createdAssets: any[] = data.assets || [];
         const results: { asaId: number; name: string; cidV1: string; siteUrl: string }[] = [];
-        await Promise.all(
-          siteAssetIds.slice(0, 50).map(async (id: number) => {
+        
+        createdAssets.forEach(asset => {
+          const p = asset.params;
+          // Loosen check: any ARC-19 asset that looks like a site
+          if (p?.url?.startsWith("template-ipfs://") && (p?.["unit-name"] === "SITE" || p?.["unit-name"] === "WEN" || !p?.["unit-name"])) {
             try {
-              const res = await fetch(`${INDEXER}/v2/assets/${id}`);
-              const d = await res.json();
-              const p = d.asset?.params;
-              if (p?.url?.startsWith("template-ipfs://") && p?.["unit-name"] === "SITE") {
-                const cidV0 = reserveAddressToCID(p.reserve);
-                const cidV1 = toCIDv1(cidV0);
-                results.push({ asaId: id, name: p.name || `Site #${id}`, cidV1, siteUrl: `https://${cidV1}.ipfs.dweb.link` });
-              }
-            } catch { /* skip */ }
-          })
-        );
+              const cidV0 = reserveAddressToCID(p.reserve);
+              const cidV1 = toCIDv1(cidV0);
+              results.push({ 
+                asaId: asset.index, 
+                name: p.name || `Site #${asset.index}`, 
+                cidV1, 
+                siteUrl: `https://${cidV1}.ipfs.dweb.link` 
+              });
+            } catch { /* skip invalid reserve addresses */ }
+          }
+        });
+        
         setMyDeployments(results.sort((a, b) => b.asaId - a.asaId));
       })
-      .catch(() => {})
+      .catch(err => console.error("Failed to fetch deployments:", err))
       .finally(() => setDeploymentsLoading(false));
   }, [activeAddress]);
 
