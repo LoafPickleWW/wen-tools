@@ -138,29 +138,32 @@ function openGitHubAuth(): Promise<string> {
       return new Promise(() => {});
     }
 
-    const interval = setInterval(() => {
-      try {
-        if (popup.closed) {
-          clearInterval(interval);
-          reject(new Error("Authentication cancelled."));
-          return;
-        }
-        const url = popup.location.href;
-        if (url.includes("code=")) {
-          const code = new URL(url).searchParams.get("code");
-          popup.close();
-          clearInterval(interval);
-          if (code) resolve(code);
-          else reject(new Error("No auth code received."));
-        }
-      } catch { /* cross-origin */ }
-    }, 300);
+    const onMessage = (event: MessageEvent) => {
+      if (event.origin !== window.location.origin) return;
+      if (event.data?.type === "gh_oauth_code") {
+        window.removeEventListener("message", onMessage);
+        clearTimeout(timeout);
+        clearInterval(checkClosed);
+        resolve(event.data.code);
+      }
+    };
+    window.addEventListener("message", onMessage);
 
-    setTimeout(() => {
-      clearInterval(interval);
+    const timeout = setTimeout(() => {
+      window.removeEventListener("message", onMessage);
+      clearInterval(checkClosed);
       if (!popup.closed) popup.close();
       reject(new Error("Authentication timed out."));
     }, 5 * 60 * 1000);
+
+    const checkClosed = setInterval(() => {
+      if (popup.closed) {
+        clearInterval(checkClosed);
+        window.removeEventListener("message", onMessage);
+        // Give it a tiny moment in case message just arrived
+        setTimeout(() => reject(new Error("Authentication cancelled.")), 100);
+      }
+    }, 1000);
   });
 }
 
@@ -291,6 +294,26 @@ Do not modify anything else in the repository.`;
 export default function WenDeployTool() {
   const [searchParams] = useSearchParams();
   const resolveAsaId = searchParams.get("resolve");
+  const oauthCode = searchParams.get("code");
+
+  // Handle OAuth callback in popup
+  useEffect(() => {
+    if (oauthCode && window.opener) {
+      window.opener.postMessage({ type: "gh_oauth_code", code: oauthCode }, window.location.origin);
+      // Give it a tiny moment to send before closing
+      setTimeout(() => window.close(), 100);
+    }
+  }, [oauthCode]);
+
+  // Show a blank closing screen if in a popup handling OAuth
+  if (oauthCode && window.opener) {
+    return (
+      <div className="min-h-screen bg-neutral-950 flex items-center justify-center">
+        <div className="w-4 h-4 border-2 border-orange-500/20 border-t-orange-500 rounded-full animate-spin mr-3" />
+        <div className="text-neutral-500 font-mono text-xs uppercase tracking-widest animate-pulse">Authenticating...</div>
+      </div>
+    );
+  }
 
   if (resolveAsaId) {
     const asaId = parseInt(resolveAsaId, 10);
@@ -309,13 +332,6 @@ function SiteResolver({ asaId }: { asaId: number }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [gatewayIndex, setGatewayIndex] = useState(0);
-  const iframeRef = useRef<HTMLIFrameElement>(null);
-
-  useEffect(() => {
-    if (iframeRef.current) {
-      iframeRef.current.setAttribute("credentialless", "");
-    }
-  }, [siteInfo]);
 
   useEffect(() => {
     async function resolve() {
@@ -330,7 +346,13 @@ function SiteResolver({ asaId }: { asaId: number }) {
         }
 
         const cid = reserveAddressToCID(params.reserve);
-        setSiteInfo({ asaId, cid, name: params.name });
+        setSiteInfo({ 
+          asaId, 
+          cid, 
+          name: params.name, 
+          creator: params.creator,
+          unit: params["unit-name"]
+        });
       } catch (e: any) {
         setError(e.message);
       } finally {
@@ -340,35 +362,98 @@ function SiteResolver({ asaId }: { asaId: number }) {
     resolve();
   }, [asaId]);
 
-  const currentGateway = [IPFS_GATEWAY, ...IPFS_GATEWAY_FALLBACKS][gatewayIndex % 4];
-  const siteUrl = siteInfo?.cid ? currentGateway.replace("{cid}", toCIDv1(siteInfo.cid)) : "";
+  const currentGateway = [IPFS_GATEWAY, ...IPFS_GATEWAY_FALLBACKS][gatewayIndex % 3];
+  const cidV1 = siteInfo?.cid ? toCIDv1(siteInfo.cid) : "";
+  const siteUrl = siteInfo?.cid ? currentGateway.replace("{cid}", cidV1) : "";
 
-  if (loading) return <div className="min-h-screen bg-neutral-950 flex items-center justify-center text-neutral-500 font-mono">RESOLVING...</div>;
-  if (error) return <div className="min-h-screen bg-neutral-950 flex-col items-center justify-center text-red-400 p-8 flex gap-4">
-    <p>{error}</p>
-    <a href="/deploy" className="text-orange-500 underline text-sm">Return to Deploy Tool</a>
-  </div>;
+  useEffect(() => {
+    if (siteUrl) {
+      const timer = setTimeout(() => {
+        window.location.href = siteUrl;
+      }, 1500);
+      return () => clearTimeout(timer);
+    }
+  }, [siteUrl]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-neutral-950 flex flex-col items-center justify-center gap-6">
+        <div className="w-12 h-12 border-2 border-orange-500/20 border-t-orange-500 rounded-full animate-spin" />
+        <div className="text-neutral-500 font-mono text-xs tracking-widest animate-pulse uppercase">Resolving ARC-19 Site...</div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-neutral-950 flex flex-col items-center justify-center gap-6 p-8">
+        <div className="text-red-400 font-mono text-sm max-w-md text-center">{error}</div>
+        <a href="/deploy" className="text-orange-500 hover:text-orange-400 text-xs font-bold uppercase tracking-widest transition-colors">← Back to Deploy Tool</a>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen flex flex-col bg-neutral-950">
-      <div className="border-b border-neutral-800 p-3 flex justify-between items-center bg-neutral-900/50">
-        <div className="flex items-center gap-3">
-          <a href="/deploy" className="text-orange-500 font-bold text-xs tracking-widest">WEN.DEPLOY</a>
-          <span className="text-neutral-700 text-xs">|</span>
-          <span className="text-neutral-400 text-xs font-mono">{siteInfo.name}</span>
+    <div className="min-h-screen bg-neutral-950 flex flex-col items-center justify-center p-6 font-sans">
+      <div className="w-full max-w-xl space-y-8">
+        <div className="space-y-2 text-center">
+          <h1 className="text-3xl font-black tracking-tighter text-white">{siteInfo.name}</h1>
+          <div className="flex items-center justify-center gap-2 text-neutral-500 font-mono text-[10px] uppercase tracking-wider">
+            <span>ASA {siteInfo.asaId}</span>
+            <span className="w-1 h-1 bg-neutral-800 rounded-full" />
+            <span>{siteInfo.unit}</span>
+          </div>
         </div>
-        <div className="flex gap-2">
-          <button onClick={() => setGatewayIndex(i => i + 1)} className="text-[10px] px-2 py-1 bg-neutral-800 text-neutral-400 rounded-md hover:bg-neutral-700">Switch Gateway</button>
-          <a href={siteUrl} target="_blank" rel="noreferrer" className="text-[10px] px-2 py-1 bg-neutral-800 text-neutral-400 rounded-md hover:bg-neutral-700">Open Site ↗</a>
+
+        <div className="bg-neutral-900/50 border border-neutral-800 rounded-2xl p-8 space-y-6 backdrop-blur-sm">
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex flex-col gap-1">
+              <span className="text-[10px] text-neutral-500 uppercase font-bold tracking-widest">Target CID</span>
+              <code className="text-orange-400 text-xs break-all">{cidV1}</code>
+            </div>
+            <button 
+              onClick={() => {
+                navigator.clipboard.writeText(cidV1);
+              }}
+              className="p-2 hover:bg-neutral-800 rounded-lg text-neutral-500 transition-colors"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+            </button>
+          </div>
+
+          <div className="flex flex-col gap-1">
+            <span className="text-[10px] text-neutral-500 uppercase font-bold tracking-widest">Creator</span>
+            <code className="text-neutral-300 text-[11px] break-all">{siteInfo.creator}</code>
+          </div>
+
+          <div className="pt-4 flex flex-col gap-3">
+            <div className="flex items-center gap-3 py-3 px-4 bg-orange-500/10 border border-orange-500/20 rounded-xl">
+              <div className="w-2 h-2 bg-orange-500 rounded-full animate-ping" />
+              <span className="text-orange-400 text-xs font-medium">Redirecting to IPFS gateway...</span>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-3">
+              <a 
+                href={siteUrl} 
+                className="flex items-center justify-center gap-2 py-3 bg-white text-black font-bold text-xs rounded-xl hover:bg-neutral-200 transition-colors"
+              >
+                Open Site ↗
+              </a>
+              <button 
+                onClick={() => setGatewayIndex(i => i + 1)}
+                className="flex items-center justify-center py-3 bg-neutral-800 text-neutral-400 font-bold text-xs rounded-xl hover:bg-neutral-700 transition-colors"
+              >
+                Switch Gateway
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap justify-center gap-x-6 gap-y-3">
+          <a href={`https://explorer.perawallet.app/asset/${siteInfo.asaId}`} target="_blank" rel="noreferrer" className="text-neutral-600 hover:text-neutral-400 text-[10px] uppercase font-bold tracking-widest transition-colors">View on Pera</a>
+          <a href="/deploy" className="text-neutral-600 hover:text-neutral-400 text-[10px] uppercase font-bold tracking-widest transition-colors">Deploy Another</a>
         </div>
       </div>
-      <iframe 
-        ref={iframeRef}
-        src={siteUrl} 
-        className="flex-1 w-full border-0 bg-white" 
-        sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
-        title={siteInfo.name}
-      />
     </div>
   );
 }
@@ -386,6 +471,8 @@ function DeployView() {
   const [result, setResult] = useState<{ cid: string; asaId: number } | null>(null);
   const [consoleLog, setConsoleLog] = useState<string>("");
   const [deployMode, setDeployMode] = useState<"actions" | "webcontainer" | null>(null);
+  const [myDeployments, setMyDeployments] = useState<{ asaId: number; name: string; cidV1: string; siteUrl: string }[]>([]);
+  const [deploymentsLoading, setDeploymentsLoading] = useState(false);
 
   const terminalRef = useRef<HTMLDivElement>(null);
   const terminalInstance = useRef<Terminal | null>(null);
@@ -451,6 +538,38 @@ function DeployView() {
       })
       .catch(() => setRepos([]));
   }, [githubToken]);
+
+  // Fetch ARC-19 SITE assets owned by the connected wallet
+  useEffect(() => {
+    if (!activeAddress) return;
+    setDeploymentsLoading(true);
+    const INDEXER = "https://mainnet-idx.4160.nodely.dev";
+    fetch(`${INDEXER}/v2/accounts/${activeAddress}/assets?include-all=false`)
+      .then(r => r.json())
+      .then(async data => {
+        const assets: any[] = data.assets || [];
+        const siteAssetIds = assets.filter(a => a.amount > 0).map(a => a["asset-id"]);
+        if (siteAssetIds.length === 0) { setDeploymentsLoading(false); return; }
+        const results: { asaId: number; name: string; cidV1: string; siteUrl: string }[] = [];
+        await Promise.all(
+          siteAssetIds.slice(0, 50).map(async (id: number) => {
+            try {
+              const res = await fetch(`${INDEXER}/v2/assets/${id}`);
+              const d = await res.json();
+              const p = d.asset?.params;
+              if (p?.url?.startsWith("template-ipfs://") && p?.["unit-name"] === "SITE") {
+                const cidV0 = reserveAddressToCID(p.reserve);
+                const cidV1 = toCIDv1(cidV0);
+                results.push({ asaId: id, name: p.name || `Site #${id}`, cidV1, siteUrl: `https://${cidV1}.ipfs.dweb.link` });
+              }
+            } catch { /* skip */ }
+          })
+        );
+        setMyDeployments(results.sort((a, b) => b.asaId - a.asaId));
+      })
+      .catch(() => {})
+      .finally(() => setDeploymentsLoading(false));
+  }, [activeAddress]);
 
   const logBuffer = useRef<string[]>([]);
 
@@ -904,8 +1023,84 @@ function DeployView() {
                 </div>
              </div>
            </div>
-        ) : !config.repo ? (
+                ) : !config.repo ? (
            <div className="space-y-6">
+
+             {/* ── My Deployments ── */}
+             {(deploymentsLoading || myDeployments.length > 0) && (
+               <div className="space-y-3">
+                 <div className="flex items-center justify-between">
+                   <h2 className="text-xs font-black uppercase tracking-widest text-neutral-400">My Deployments</h2>
+                   {deploymentsLoading && <div className="w-4 h-4 border-2 border-orange-500 border-t-transparent rounded-full animate-spin" />}
+                 </div>
+                 {deploymentsLoading && myDeployments.length === 0 && (
+                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                     {[0,1].map(i => (
+                       <div key={i} className="bg-neutral-900/30 border border-neutral-800 rounded-2xl p-5 animate-pulse space-y-3">
+                         <div className="h-3 bg-neutral-800 rounded w-1/2" />
+                         <div className="h-2 bg-neutral-800 rounded w-3/4" />
+                         <div className="h-2 bg-neutral-800 rounded w-1/3" />
+                       </div>
+                     ))}
+                   </div>
+                 )}
+                 {myDeployments.length > 0 && (
+                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                     {myDeployments.map(d => (
+                       <div key={d.asaId} className="group bg-neutral-900/30 border border-neutral-800 hover:border-orange-500/30 rounded-2xl p-5 transition-all space-y-3">
+                         <div className="flex items-start justify-between gap-2">
+                           <div className="flex items-center gap-3 min-w-0">
+                             <div className="w-8 h-8 bg-orange-500/10 rounded-lg flex items-center justify-center text-orange-500 font-black text-sm shrink-0">
+                               {d.name[0]?.toUpperCase()}
+                             </div>
+                             <div className="min-w-0">
+                               <div className="font-bold text-sm text-white truncate">{d.name}</div>
+                               <div className="text-[10px] text-neutral-500 font-mono">ASA #{d.asaId}</div>
+                             </div>
+                           </div>
+                           <div className="w-2 h-2 bg-green-500 rounded-full shrink-0 mt-1.5" title="Live" />
+                         </div>
+                         <div className="text-[9px] font-mono text-neutral-600 truncate">{d.cidV1}</div>
+                         <div className="flex gap-2 pt-1">
+                           <a
+                             href={`/deploy?resolve=${d.asaId}`}
+                             target="_blank"
+                             rel="noreferrer"
+                             className="flex-1 py-2 bg-white/5 hover:bg-white/10 border border-neutral-700 text-neutral-300 font-bold text-[10px] rounded-lg transition-colors text-center"
+                           >
+                             View Site ↗
+                           </a>
+                           <button
+                             onClick={() => {
+                               setConfig(c => ({ ...c, existingAsaId: d.asaId, repo: null }));
+                             }}
+                             className="flex-1 py-2 bg-orange-500/10 hover:bg-orange-500/20 border border-orange-500/20 text-orange-400 font-bold text-[10px] rounded-lg transition-colors"
+                           >
+                             Update ↻
+                           </button>
+                         </div>
+                       </div>
+                     ))}
+                   </div>
+                 )}
+                 <div className="border-t border-neutral-800/50 pt-4">
+                   <div className="text-xs font-black uppercase tracking-widest text-neutral-400 mb-3">Deploy New Site</div>
+                 </div>
+               </div>
+             )}
+
+             {config.existingAsaId && (
+               <div className="flex items-center justify-between bg-orange-500/10 border border-orange-500/30 rounded-2xl px-5 py-3">
+                 <div className="flex items-center gap-3">
+                   <div className="w-2 h-2 bg-orange-500 rounded-full animate-pulse" />
+                   <div>
+                     <div className="text-xs font-bold text-orange-400">Update Mode — ASA #{config.existingAsaId}</div>
+                     <div className="text-[10px] text-orange-400/60">Pick the repo to redeploy from</div>
+                   </div>
+                 </div>
+                 <button onClick={() => setConfig(c => ({ ...c, existingAsaId: null }))} className="text-[10px] text-neutral-500 hover:text-neutral-300 font-bold uppercase tracking-widest">Cancel</button>
+               </div>
+             )}
              <div className="relative"><input type="text" placeholder="Search your repositories..." className="w-full bg-neutral-900 border border-neutral-800 rounded-2xl px-6 py-4 text-sm focus:outline-none focus:ring-1 ring-orange-500/50 transition-all" value={repoSearch} onChange={e => setRepoSearch(e.target.value)} /></div>
              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
                {Array.isArray(repos) && repos.filter(r => r.name.toLowerCase().includes(repoSearch.toLowerCase())).map(repo => (
