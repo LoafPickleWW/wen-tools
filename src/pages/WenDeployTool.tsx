@@ -659,7 +659,7 @@ function DeployView() {
         formData.append("file", new Blob([content as any]), f.path);
       });
 
-      const pinRes = await fetch("https://crust-algorand.io/api/v0/add?pin=true", {
+      const pinRes = await fetch("https://gw-seattle.crustcloud.io/api/v0/add?pin=true", {
         method: "POST",
         headers: { Authorization: `Basic ${crustToken}` },
         body: formData
