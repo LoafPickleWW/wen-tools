@@ -225,13 +225,13 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
 
       - name: Setup pnpm
         if: steps.pm.outputs.manager == 'pnpm'
-        uses: pnpm/action-setup@v3
+        uses: pnpm/action-setup@v4
         with:
-          version: latest
+          version: 9
 
       - name: Install dependencies
         run: |
@@ -645,7 +645,7 @@ function DeployView() {
           const mountedKeys = Object.keys(mountTree);
           type PkgManager = { bin: string; installArgs: string[]; runArgs: (s: string) => string[]; label: string };
           const pkgManager: PkgManager = mountedKeys.includes("pnpm-lock.yaml")
-            ? { bin: "npx", installArgs: ["--yes", "pnpm@latest", "install", "--no-frozen-lockfile"], runArgs: s => ["--yes", "pnpm@latest", "run", s], label: "pnpm" }
+            ? { bin: "npx", installArgs: ["--yes", "pnpm@9", "install", "--no-frozen-lockfile"], runArgs: s => ["--yes", "pnpm@9", "run", s], label: "pnpm" }
             : mountedKeys.includes("yarn.lock")
             ? { bin: "npx", installArgs: ["yarn", "install"], runArgs: s => ["yarn", s], label: "yarn" }
             : { bin: "npm", installArgs: ["install", "--legacy-peer-deps"], runArgs: s => ["run", s], label: "npm" };
