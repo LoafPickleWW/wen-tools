@@ -9,15 +9,13 @@ import { WebContainer } from "@webcontainer/api";
 import { Terminal } from "xterm";
 import { FitAddon } from "xterm-addon-fit";
 import "xterm/css/xterm.css";
+import { makeCrustPinTx } from "../crust";
 
 // ─── CONSTANTS ────────────────────────────────────────────────────────────────
 
 const GITHUB_CLIENT_ID = import.meta.env.VITE_GITHUB_CLIENT_ID || "";
 const GITHUB_APP_SLUG = import.meta.env.VITE_GITHUB_APP_SLUG || "";
 const GITHUB_REDIRECT_URI = `${window.location.origin}/deploy`;
-
-// Crust Algorand storage contract (mainnet)
-const CRUST_APP_ID = 1275319623;
 
 // IPFS gateway for resolving sites
 const IPFS_GATEWAY = "https://ipfs.algonode.dev/ipfs";
@@ -360,7 +358,7 @@ function SiteResolver({ asaId }: { asaId: number }) {
 }
 
 function DeployView() {
-  const { activeAddress, signTransactions } = useWallet();
+  const { activeAddress, transactionSigner, algodClient } = useWallet();
   const [githubToken, setGithubToken] = useState<string | null>(() => sessionStorage.getItem("gh_token"));
   const [repos, setRepos] = useState<GitHubRepo[]>([]);
   const [repoSearch, setRepoSearch] = useState("");
@@ -671,8 +669,18 @@ function DeployView() {
               await new Promise(r => setTimeout(r, attempt * 10000));
             }
             installLog = "";
-            const install = await wc.spawn(pkgManager.bin, pkgManager.installArgs, { cwd: "." });
-            install.output.pipeTo(new WritableStream({ write(data) { installLog += data; termWrite(data); setConsoleLog(p => p + data); } }));
+            const install = await wc.spawn(pkgManager.bin, pkgManager.installArgs, { 
+              cwd: ".",
+              terminal: { cols: 100, rows: 30 }
+            });
+            install.output.pipeTo(new WritableStream({ 
+              write(data) { 
+                installLog += data; 
+                termWrite(data); 
+                // Debounce/buffer the state update slightly if needed, but for now just keep it for the Log view
+                setConsoleLog(p => (p + data).slice(-50000)); 
+              } 
+            }));
             installExit = await Promise.race([ install.exit, new Promise<number>(r => setTimeout(() => r(124), 180000)) ]);
             const isNetErr = installLog.includes("ECONNRESET") || installLog.includes("socket hang up") || installLog.includes("META_FETCH_FAIL") || installLog.includes("FETCH_FAIL");
             if (installExit === 0 || !isNetErr) break;
@@ -688,8 +696,16 @@ function DeployView() {
           const buildCmd = config.buildCommand.trim().split(/\s+/);
           const knownBins = ["npm", "pnpm", "yarn", "npx"];
           const [buildBin, ...buildArgs] = knownBins.includes(buildCmd[0]) ? buildCmd : [pkgManager.bin, ...pkgManager.runArgs(buildCmd.join(" "))];
-          const build = await wc.spawn(buildBin, buildArgs, { cwd: "." });
-          build.output.pipeTo(new WritableStream({ write(data) { termWrite(data); setConsoleLog(p => p + data); } }));
+          const build = await wc.spawn(buildBin, buildArgs, { 
+            cwd: ".",
+            terminal: { cols: 100, rows: 30 }
+          });
+          build.output.pipeTo(new WritableStream({ 
+            write(data) { 
+              termWrite(data); 
+              setConsoleLog(p => (p + data).slice(-50000)); 
+            } 
+          }));
           if (await build.exit !== 0) throw new Error("Build failed.");
 
           setDeployState({ step: "exporting", message: "Collecting build output...", progress: 75, activeStepIndex: 2 });
@@ -723,9 +739,13 @@ function DeployView() {
         headers: { Authorization: `Basic ${crustToken}` },
         body: formData
       });
-      if (!pinRes.ok) throw new Error(`IPFS pin failed: ${pinRes.status}`);
       
+      console.log("Crust response status:", pinRes.status, pinRes.statusText);
       const text = await pinRes.text();
+      console.log("Crust raw response:", text);
+
+      if (!pinRes.ok) throw new Error(`IPFS pin failed: ${pinRes.status} ${text}`);
+      
       const lines = text.trim().split("\n").filter(Boolean).map(l => JSON.parse(l));
 
       // The root directory entry always has Name === "" when using wrap-with-directory
@@ -735,14 +755,13 @@ function DeployView() {
       const cid = toCIDv1(root.Hash);
       termWriteln(`\x1b[32m> Pinned to IPFS: ${cid}\x1b[0m`);
 
-      const algod = new algosdk.Algodv2("", ALGOD_SERVER, "");
-      const params = await algod.getTransactionParams().do();
+      const params = await algodClient.getTransactionParams().do();
       const reserve = cidToReserveAddress(cid);
 
       let txn;
       if (config.existingAsaId) {
         setDeployState({ step: "updating", message: "Verifying asset ownership...", progress: 88, activeStepIndex: 4 });
-        const assetInfo = await algod.getAssetByID(config.existingAsaId).do();
+        const assetInfo = await algodClient.getAssetByID(config.existingAsaId).do();
         
         if (assetInfo.params.manager !== activeAddress) {
           throw new Error(`You are not the manager of ASA ${config.existingAsaId}. Manager is ${assetInfo.params.manager}`);
@@ -775,23 +794,20 @@ function DeployView() {
         });
       }
 
-      const payment = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
-        from: activeAddress!,
-        to: algosdk.getApplicationAddress(CRUST_APP_ID),
-        amount: 100000,
-        suggestedParams: params
-      });
-      algosdk.assignGroupID([txn, payment]);
-
-      const signed = await signTransactions([algosdk.encodeUnsignedTransaction(txn), algosdk.encodeUnsignedTransaction(payment)]);
-      if (!signed || signed.length < 2 || !signed[0] || !signed[1]) throw new Error("Transaction signing failed.");
+      const atc = new algosdk.AtomicTransactionComposer();
+      atc.addTransaction({ txn, signer: transactionSigner });
       
-      const { txId } = await algod.sendRawTransaction(signed as Uint8Array[]).do();
-      await algosdk.waitForConfirmation(algod, txId, 4);
+      const pinMethod = await makeCrustPinTx(cid, transactionSigner, activeAddress!, algodClient);
+      atc.addMethodCall(pinMethod);
+
+      termWriteln("\x1b[33m> Requesting signature for deployment & IPFS pinning...\x1b[0m");
+      const atcResult = await atc.execute(algodClient, 4);
+      const txId = atcResult.txIDs[0];
+      termWriteln(`\x1b[32m> Transaction confirmed: ${txId}\x1b[0m`);
 
       let asaId = config.existingAsaId;
       if (!asaId) {
-        const ptx = await algod.pendingTransactionInformation(txId).do();
+        const ptx = await algodClient.pendingTransactionInformation(txId).do();
         asaId = ptx["asset-index"];
       }
 
