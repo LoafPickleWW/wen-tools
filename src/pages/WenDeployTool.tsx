@@ -92,7 +92,7 @@ function reserveAddressToCID(reserveAddress: string): string {
     const decoded = algosdk.decodeAddress(reserveAddress);
     const sha256Code = 0x12;
     const hashDigest = digest.create(sha256Code, decoded.publicKey);
-    const cid = CID.createV0(hashDigest);
+    const cid = CID.createV0(hashDigest).toV1();
     return cid.toString();
   } catch (e) {
     console.error("Failed to decode reserve address to CID:", e);
@@ -108,6 +108,16 @@ function cidToReserveAddress(cidStr: string): string {
   } catch (e) {
     console.error("Failed to encode CID to reserve address:", e);
     return "";
+  }
+}
+
+function toCIDv1(cidStr: string): string {
+  try {
+    const cid = CID.parse(cidStr);
+    return cid.toV1().toString();
+  } catch (e) {
+    console.error("Failed to convert CID to v1:", e);
+    return cidStr;
   }
 }
 
@@ -717,7 +727,7 @@ function DeployView() {
       const text = await pinRes.text();
       const lines = text.trim().split("\n").filter(Boolean).map(l => JSON.parse(l));
       const root = lines.find(l => l.Name === "") ?? lines[lines.length - 1];
-      const cid = root.Hash;
+      const cid = toCIDv1(root.Hash);
       termWriteln(`\x1b[32m> Pinned to IPFS: ${cid}\x1b[0m`);
 
       const algod = new algosdk.Algodv2("", ALGOD_SERVER, "");
