@@ -9,7 +9,9 @@ import { WebContainer } from "@webcontainer/api";
 import { Terminal } from "xterm";
 import { FitAddon } from "xterm-addon-fit";
 import "xterm/css/xterm.css";
+import { toast } from "react-toastify";
 import { getPrice, appId, getRandomNode } from "../crust";
+import { UPDATE_FEE_PER_ASA, MINT_FEE_WALLET } from "../constants";
 
 // ─── CONSTANTS ────────────────────────────────────────────────────────────────
 
@@ -917,6 +919,7 @@ function DeployView() {
 
       let txn;
       if (config.existingAsaId) {
+        termWriteln(`\x1b[33m> Update Mode: Targeted ASA #${config.existingAsaId}\x1b[0m`);
         setDeployState({ step: "updating", message: "Verifying asset ownership...", progress: 88, activeStepIndex: 4 });
         const assetInfo = await algodClient.getAssetByID(config.existingAsaId).do();
         
@@ -924,6 +927,7 @@ function DeployView() {
           throw new Error(`You are not the manager of ASA ${config.existingAsaId}. Manager is ${assetInfo.params.manager}`);
         }
 
+        termWriteln(`\x1b[33m> New Reserve Address (CID Hash): ${reserve}\x1b[0m`);
         txn = algosdk.makeAssetConfigTxnWithSuggestedParamsFromObject({
           from: activeAddress!,
           assetIndex: config.existingAsaId,
@@ -936,6 +940,7 @@ function DeployView() {
         });
         setDeployState({ step: "updating", message: "Updating on-chain...", progress: 93, activeStepIndex: 4 });
       } else {
+        termWriteln(`\x1b[33m> Mint Mode: Creating new ARC-19 NFT\x1b[0m`);
         setDeployState({ step: "minting", message: "Minting ARC-19 NFT...", progress: 92, activeStepIndex: 4 });
         txn = algosdk.makeAssetCreateTxnWithSuggestedParamsFromObject({
           from: activeAddress!,
@@ -1008,10 +1013,60 @@ function DeployView() {
       setResult({ cid: cidV1, asaId: asaId! });
       setDeployState({ step: "complete", message: "Deployment Complete!", progress: 100, activeStepIndex: 5 });
       termWriteln("\x1b[32m> Deployment successful!\x1b[0m");
+      termWriteln(`\x1b[32m> Site Live: ${window.location.origin}/deploy?resolve=${asaId}\x1b[0m`);
 
     } catch (e: any) {
+      console.error("Deployment error:", e);
+      termWriteln(`\x1b[31m> ERROR: ${e.message || "Unknown error occurred"}\x1b[0m`);
+      if (e.data) termWriteln(`\x1b[31m> Data: ${JSON.stringify(e.data)}\x1b[0m`);
+      setDeployState({ step: "error", message: e.message || "Unknown error", progress: 0, activeStepIndex: -1 });
+    }
+  };
+
+  const handleDestroy = async (asaId: number) => {
+    if (!activeAddress || !transactionSigner) return;
+    if (!confirm(`CAUTION: Are you sure you want to DESTROY Site #${asaId}? This will permanently delete the on-chain asset and your site will no longer resolve. This action cannot be undone.`)) return;
+
+    try {
+      setDeployState({ step: "updating", message: "Destroying asset...", progress: 50, activeStepIndex: 4 });
+      const params = await algodClient.getTransactionParams().do();
+      
+      const destroyTxn = algosdk.makeAssetDestroyTxnWithSuggestedParamsFromObject({
+        from: activeAddress,
+        suggestedParams: params,
+        assetIndex: asaId,
+        note: new TextEncoder().encode("Destroyed via WEN.DEPLOY")
+      });
+
+      const feeTxn = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
+        from: activeAddress,
+        to: MINT_FEE_WALLET,
+        amount: algosdk.algosToMicroalgos(UPDATE_FEE_PER_ASA),
+        suggestedParams: params,
+        note: new TextEncoder().encode("WEN.DEPLOY maintenance fee")
+      });
+
+      algosdk.assignGroupID([destroyTxn, feeTxn]);
+
+      termWriteln(`\x1b[33m> Requesting signature to DESTROY ASA #${asaId}...\x1b[0m`);
+      const signed = await transactionSigner([destroyTxn, feeTxn], [0, 1]);
+      const { txId } = await algodClient.sendRawTransaction(signed).do();
+      
+      termWriteln(`\x1b[32m> Asset #${asaId} destroyed successfully. TX: ${txId}\x1b[0m`);
+      setMyDeployments(prev => prev.filter(d => d.asaId !== asaId));
+      setDeployState({ step: "idle", message: "", progress: 0, activeStepIndex: -1 });
+      toast.success("Site destroyed permanently.");
+    } catch (e: any) {
+      console.error("Destroy error:", e);
+      termWriteln(`\x1b[31m> DESTROY ERROR: ${e.message}\x1b[0m`);
       setDeployState({ step: "error", message: e.message, progress: 0, activeStepIndex: -1 });
     }
+  };
+
+  const handleGitHubLogout = () => {
+    sessionStorage.removeItem("gh_token");
+    setGithubToken(null);
+    setRepos([]);
   };
 
   const getStepStatus = (index: number) => {
@@ -1079,7 +1134,18 @@ function DeployView() {
                                <div className="text-[10px] text-neutral-500 font-mono">ASA #{d.asaId}</div>
                              </div>
                            </div>
-                           <div className="w-2 h-2 bg-green-500 rounded-full shrink-0 mt-1.5" title="Live" />
+                           <div className="flex items-center gap-2">
+                             <div className="w-2 h-2 bg-green-500 rounded-full shrink-0" title="Live" />
+                             <button 
+                               onClick={(e) => { e.stopPropagation(); handleDestroy(d.asaId); }}
+                               className="p-1.5 text-neutral-600 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-all"
+                               title="Destroy Asset"
+                             >
+                               <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                               </svg>
+                             </button>
+                           </div>
                          </div>
                          <div className="text-[9px] font-mono text-neutral-600 truncate">{d.cidV1}</div>
                          <div className="flex gap-2 pt-1">
@@ -1122,7 +1188,10 @@ function DeployView() {
                  <button onClick={() => setConfig(c => ({ ...c, existingAsaId: null }))} className="text-[10px] text-neutral-500 hover:text-neutral-300 font-bold uppercase tracking-widest">Cancel</button>
                </div>
              )}
-             <div className="relative"><input type="text" placeholder="Search your repositories..." className="w-full bg-neutral-900 border border-neutral-800 rounded-2xl px-6 py-4 text-sm focus:outline-none focus:ring-1 ring-orange-500/50 transition-all" value={repoSearch} onChange={e => setRepoSearch(e.target.value)} /></div>
+             <div className="flex items-center justify-between gap-4">
+               <div className="relative flex-1"><input type="text" placeholder="Search your repositories..." className="w-full bg-neutral-900 border border-neutral-800 rounded-2xl px-6 py-4 text-sm focus:outline-none focus:ring-1 ring-orange-500/50 transition-all" value={repoSearch} onChange={e => setRepoSearch(e.target.value)} /></div>
+               <button onClick={handleGitHubLogout} className="px-4 py-4 bg-neutral-900 border border-neutral-800 rounded-2xl text-[10px] font-bold text-neutral-500 hover:text-red-400 hover:border-red-400/20 transition-all uppercase tracking-widest whitespace-nowrap">Sign Out</button>
+             </div>
              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
                {Array.isArray(repos) && repos.filter(r => r.name.toLowerCase().includes(repoSearch.toLowerCase())).map(repo => (
                  <button key={repo.id} onClick={async () => {
