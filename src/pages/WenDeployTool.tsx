@@ -1088,6 +1088,77 @@ function DeployView() {
           <p className="text-neutral-500 text-sm font-mono tracking-tight">Zero-infrastructure build & deploy pipeline.</p>
         </div>
 
+        {/* ── My Deployments (Always show if wallet connected) ── */}
+        {activeAddress && (deploymentsLoading || myDeployments.length > 0) && (
+          <div className="mb-12 space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-xs font-black uppercase tracking-widest text-neutral-400">My Deployments</h2>
+              {deploymentsLoading && <div className="w-4 h-4 border-2 border-orange-500 border-t-transparent rounded-full animate-spin" />}
+            </div>
+            {deploymentsLoading && myDeployments.length === 0 && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {[0,1].map(i => (
+                  <div key={i} className="bg-neutral-900/30 border border-neutral-800 rounded-2xl p-5 animate-pulse space-y-3">
+                    <div className="h-3 bg-neutral-800 rounded w-1/2" />
+                    <div className="h-2 bg-neutral-800 rounded w-3/4" />
+                    <div className="h-2 bg-neutral-800 rounded w-1/3" />
+                  </div>
+                ))}
+              </div>
+            )}
+            {myDeployments.length > 0 && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {myDeployments.map(d => (
+                  <div key={d.asaId} className="group bg-neutral-900/30 border border-neutral-800 hover:border-orange-500/30 rounded-2xl p-5 transition-all space-y-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-8 h-8 bg-orange-500/10 rounded-lg flex items-center justify-center text-orange-500 font-black text-sm shrink-0">
+                          {d.name[0]?.toUpperCase()}
+                        </div>
+                        <div className="min-w-0">
+                          <div className="font-bold text-sm text-white truncate">{d.name}</div>
+                          <div className="text-[10px] text-neutral-500 font-mono">ASA #{d.asaId}</div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 bg-green-500 rounded-full shrink-0" title="Live" />
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); handleDestroy(d.asaId); }}
+                          className="p-1.5 text-neutral-600 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-all"
+                          title="Destroy Asset"
+                        >
+                          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
+                    <div className="text-[9px] font-mono text-neutral-600 truncate">{d.cidV1}</div>
+                    <div className="flex gap-2 pt-1">
+                      <a
+                        href={`/deploy?resolve=${d.asaId}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="flex-1 py-2 bg-white/5 hover:bg-white/10 border border-neutral-700 text-neutral-300 font-bold text-[10px] rounded-lg transition-colors text-center"
+                      >
+                        View Site ↗
+                      </a>
+                      <button
+                        onClick={() => {
+                          setConfig(c => ({ ...c, existingAsaId: d.asaId, repo: null }));
+                        }}
+                        className="flex-1 py-2 bg-orange-500/10 hover:bg-orange-500/20 border border-orange-500/20 text-orange-400 font-bold text-[10px] rounded-lg transition-colors"
+                      >
+                        Update ↻
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
         {!activeAddress || !githubToken ? (
            <div className="bg-neutral-900/50 border border-neutral-800 rounded-3xl p-10 backdrop-blur-xl">
              <div className="flex flex-col items-center text-center space-y-6">
@@ -1099,82 +1170,8 @@ function DeployView() {
                 </div>
              </div>
            </div>
-                ) : !config.repo ? (
+        ) : !config.repo ? (
            <div className="space-y-6">
-
-             {/* ── My Deployments ── */}
-             {(deploymentsLoading || myDeployments.length > 0) && (
-               <div className="space-y-3">
-                 <div className="flex items-center justify-between">
-                   <h2 className="text-xs font-black uppercase tracking-widest text-neutral-400">My Deployments</h2>
-                   {deploymentsLoading && <div className="w-4 h-4 border-2 border-orange-500 border-t-transparent rounded-full animate-spin" />}
-                 </div>
-                 {deploymentsLoading && myDeployments.length === 0 && (
-                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                     {[0,1].map(i => (
-                       <div key={i} className="bg-neutral-900/30 border border-neutral-800 rounded-2xl p-5 animate-pulse space-y-3">
-                         <div className="h-3 bg-neutral-800 rounded w-1/2" />
-                         <div className="h-2 bg-neutral-800 rounded w-3/4" />
-                         <div className="h-2 bg-neutral-800 rounded w-1/3" />
-                       </div>
-                     ))}
-                   </div>
-                 )}
-                 {myDeployments.length > 0 && (
-                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                     {myDeployments.map(d => (
-                       <div key={d.asaId} className="group bg-neutral-900/30 border border-neutral-800 hover:border-orange-500/30 rounded-2xl p-5 transition-all space-y-3">
-                         <div className="flex items-start justify-between gap-2">
-                           <div className="flex items-center gap-3 min-w-0">
-                             <div className="w-8 h-8 bg-orange-500/10 rounded-lg flex items-center justify-center text-orange-500 font-black text-sm shrink-0">
-                               {d.name[0]?.toUpperCase()}
-                             </div>
-                             <div className="min-w-0">
-                               <div className="font-bold text-sm text-white truncate">{d.name}</div>
-                               <div className="text-[10px] text-neutral-500 font-mono">ASA #{d.asaId}</div>
-                             </div>
-                           </div>
-                           <div className="flex items-center gap-2">
-                             <div className="w-2 h-2 bg-green-500 rounded-full shrink-0" title="Live" />
-                             <button 
-                               onClick={(e) => { e.stopPropagation(); handleDestroy(d.asaId); }}
-                               className="p-1.5 text-neutral-600 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-all"
-                               title="Destroy Asset"
-                             >
-                               <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                               </svg>
-                             </button>
-                           </div>
-                         </div>
-                         <div className="text-[9px] font-mono text-neutral-600 truncate">{d.cidV1}</div>
-                         <div className="flex gap-2 pt-1">
-                           <a
-                             href={`/deploy?resolve=${d.asaId}`}
-                             target="_blank"
-                             rel="noreferrer"
-                             className="flex-1 py-2 bg-white/5 hover:bg-white/10 border border-neutral-700 text-neutral-300 font-bold text-[10px] rounded-lg transition-colors text-center"
-                           >
-                             View Site ↗
-                           </a>
-                           <button
-                             onClick={() => {
-                               setConfig(c => ({ ...c, existingAsaId: d.asaId, repo: null }));
-                             }}
-                             className="flex-1 py-2 bg-orange-500/10 hover:bg-orange-500/20 border border-orange-500/20 text-orange-400 font-bold text-[10px] rounded-lg transition-colors"
-                           >
-                             Update ↻
-                           </button>
-                         </div>
-                       </div>
-                     ))}
-                   </div>
-                 )}
-                 <div className="border-t border-neutral-800/50 pt-4">
-                   <div className="text-xs font-black uppercase tracking-widest text-neutral-400 mb-3">Deploy New Site</div>
-                 </div>
-               </div>
-             )}
 
              {config.existingAsaId && (
                <div className="flex items-center justify-between bg-orange-500/10 border border-orange-500/30 rounded-2xl px-5 py-3">
