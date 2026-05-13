@@ -90,7 +90,7 @@ function reserveAddressToCID(reserveAddress: string): string {
     const decoded = algosdk.decodeAddress(reserveAddress);
     const sha256Code = 0x12;
     const hashDigest = digest.create(sha256Code, decoded.publicKey);
-    const cid = CID.createV0(hashDigest).toV1();
+    const cid = CID.createV0(hashDigest);
     return cid.toString();
   } catch (e) {
     console.error("Failed to decode reserve address to CID:", e);
@@ -100,8 +100,9 @@ function reserveAddressToCID(reserveAddress: string): string {
 
 function cidToReserveAddress(cidStr: string): string {
   try {
-    const cid = CID.parse(cidStr);
+    const cid = CID.parse(cidStr).toV0();
     const hashBytes = cid.multihash.digest;
+    if (hashBytes.length !== 32) throw new Error(`Expected 32 bytes, got ${hashBytes.length}`);
     return algosdk.encodeAddress(hashBytes);
   } catch (e) {
     console.error("Failed to encode CID to reserve address:", e);
@@ -334,7 +335,7 @@ function SiteResolver({ asaId }: { asaId: number }) {
   }, [asaId]);
 
   const currentGateway = [IPFS_GATEWAY, ...IPFS_GATEWAY_FALLBACKS][gatewayIndex % 4];
-  const siteUrl = siteInfo ? `${currentGateway}/${siteInfo.cid}` : "";
+  const siteUrl = siteInfo ? `${currentGateway}/${toCIDv1(siteInfo.cid)}` : "";
 
   if (loading) return <div className="min-h-screen bg-neutral-950 flex items-center justify-center text-neutral-500 font-mono">RESOLVING...</div>;
   if (error) return <div className="min-h-screen bg-neutral-950 flex items-center justify-center text-red-400 p-8">{error}</div>;
