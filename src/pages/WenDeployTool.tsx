@@ -751,10 +751,10 @@ function DeployView() {
         txn = algosdk.makeAssetConfigTxnWithSuggestedParamsFromObject({
           from: activeAddress!,
           assetIndex: config.existingAsaId,
-          reserve,
-          manager: activeAddress!,
-          freeze: assetInfo.params.freeze || undefined,
-          clawback: assetInfo.params.clawback || undefined,
+          manager: assetInfo.params.manager,
+          reserve: reserve,
+          freeze: assetInfo.params.freeze,
+          clawback: assetInfo.params.clawback,
           strictEmptyAddressChecking: false,
           suggestedParams: params
         });
