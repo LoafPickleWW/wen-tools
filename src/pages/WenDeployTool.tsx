@@ -309,6 +309,13 @@ function SiteResolver({ asaId }: { asaId: number }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [gatewayIndex, setGatewayIndex] = useState(0);
+  const iframeRef = useRef<HTMLIFrameElement>(null);
+
+  useEffect(() => {
+    if (iframeRef.current) {
+      iframeRef.current.setAttribute("credentialless", "");
+    }
+  }, [siteInfo]);
 
   useEffect(() => {
     async function resolve() {
@@ -337,7 +344,10 @@ function SiteResolver({ asaId }: { asaId: number }) {
   const siteUrl = siteInfo?.cid ? currentGateway.replace("{cid}", toCIDv1(siteInfo.cid)) : "";
 
   if (loading) return <div className="min-h-screen bg-neutral-950 flex items-center justify-center text-neutral-500 font-mono">RESOLVING...</div>;
-  if (error) return <div className="min-h-screen bg-neutral-950 flex items-center justify-center text-red-400 p-8">{error}</div>;
+  if (error) return <div className="min-h-screen bg-neutral-950 flex-col items-center justify-center text-red-400 p-8 flex gap-4">
+    <p>{error}</p>
+    <a href="/deploy" className="text-orange-500 underline text-sm">Return to Deploy Tool</a>
+  </div>;
 
   return (
     <div className="min-h-screen flex flex-col bg-neutral-950">
@@ -349,10 +359,16 @@ function SiteResolver({ asaId }: { asaId: number }) {
         </div>
         <div className="flex gap-2">
           <button onClick={() => setGatewayIndex(i => i + 1)} className="text-[10px] px-2 py-1 bg-neutral-800 text-neutral-400 rounded-md hover:bg-neutral-700">Switch Gateway</button>
-          <a href={siteUrl} target="_blank" rel="noreferrer" className="text-[10px] px-2 py-1 bg-neutral-800 text-neutral-400 rounded-md hover:bg-neutral-700">View Source</a>
+          <a href={siteUrl} target="_blank" rel="noreferrer" className="text-[10px] px-2 py-1 bg-neutral-800 text-neutral-400 rounded-md hover:bg-neutral-700">Open Site ↗</a>
         </div>
       </div>
-      <iframe src={siteUrl} className="flex-1 w-full border-0" />
+      <iframe 
+        ref={iframeRef}
+        src={siteUrl} 
+        className="flex-1 w-full border-0 bg-white" 
+        sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
+        title={siteInfo.name}
+      />
     </div>
   );
 }
