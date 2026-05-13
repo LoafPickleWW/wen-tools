@@ -33,6 +33,9 @@ const ARC19_URL_TEMPLATE = "template-ipfs://{ipfscid:0:dag-pb:reserve:sha2-256}"
 // Algorand node config
 const ALGOD_SERVER = "https://mainnet-api.4160.nodely.dev";
 
+// Keywords to trigger "Crypto Dep" warning
+const BLOCKCHAIN_KEYWORDS = ["algo", "eth", "web3", "wallet", "contract", "noble", "cipher", "crypto", "beacon", "sign", "ledger", "perawallet", "defly", "daffi"];
+
 // ─── TYPES ────────────────────────────────────────────────────────────────────
 
 interface GitHubRepo {
@@ -68,9 +71,9 @@ interface DeployState {
 }
 
 const PIPELINE_STEPS = [
-  { label: "Environment", sub: "Booting container", steps: ["booting"] },
-  { label: "Install", sub: "Fetching deps", steps: ["installing"] },
-  { label: "Build", sub: "Generating dist", steps: ["building", "exporting"] },
+  { label: "Prepare", sub: "Fetching build", steps: ["booting"] },
+  { label: "Artifact", sub: "Getting files", steps: ["installing"] },
+  { label: "Unpack", sub: "Reading dist", steps: ["building", "exporting"] },
   { label: "IPFS", sub: "Pinning to Crust", steps: ["pinning"] },
   { label: "Blockchain", sub: "Minting ARC-19", steps: ["minting", "updating"] },
 ];
@@ -82,6 +85,7 @@ interface DeployConfig {
   outputDir: string;
   existingAsaId: number | null;
   detectedPkgManager: string | null;
+  hasBlockchainDeps: boolean;
 }
 
 // ─── UTILITY FUNCTIONS ───────────────────────────────────────────────────────
@@ -143,6 +147,95 @@ function openGitHubAuth(): Promise<string> {
 }
 
 let webcontainerInstance: WebContainer | null = null;
+
+// ─── EMBEDDED WORKFLOW ───────────────────────────────────────────────────────
+const WEN_DEPLOY_WORKFLOW = `name: Build & Upload Artifact
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Detect package manager
+        id: pm
+        run: |
+          if [ -f "pnpm-lock.yaml" ]; then
+            echo "manager=pnpm" >> $GITHUB_OUTPUT
+          elif [ -f "yarn.lock" ]; then
+            echo "manager=yarn" >> $GITHUB_OUTPUT
+          else
+            echo "manager=npm" >> $GITHUB_OUTPUT
+          fi
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Setup pnpm
+        if: steps.pm.outputs.manager == 'pnpm'
+        uses: pnpm/action-setup@v3
+        with:
+          version: latest
+
+      - name: Install dependencies
+        run: |
+          if [ "\${{ steps.pm.outputs.manager }}" = "pnpm" ]; then
+            pnpm install --no-frozen-lockfile
+          elif [ "\${{ steps.pm.outputs.manager }}" = "yarn" ]; then
+            yarn install
+          else
+            npm install --legacy-peer-deps
+          fi
+
+      - name: Build
+        run: |
+          if [ "\${{ steps.pm.outputs.manager }}" = "pnpm" ]; then
+            pnpm run build
+          elif [ "\${{ steps.pm.outputs.manager }}" = "yarn" ]; then
+            yarn build
+          else
+            npm run build
+          fi
+
+      # ── Upload build output as artifact ──────────────────────────────────────
+      # WEN.DEPLOY will automatically detect and use this artifact,
+      # skipping the in-browser build step for much faster deploys.
+      #
+      # Change "dist" below if your build outputs to a different directory
+      # (common alternatives: build, out, public, .next/static)
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+          retention-days: 7
+`;
+
+// ─── AI AGENT PROMPT ─────────────────────────────────────────────────────────
+const WEN_DEPLOY_AI_PROMPT = `You are helping set up WEN.DEPLOY for this repository.
+
+WEN.DEPLOY is a decentralized deployment tool that pins static sites to IPFS and mints them as Algorand ARC-19 NFTs. To enable fast, reliable deploys it needs a GitHub Actions workflow that builds the project and uploads the output as an artifact.
+
+Please do the following:
+1. Create the file \`.github/workflows/wen-deploy.yml\` with this exact content:
+
+\`\`\`yaml
+${WEN_DEPLOY_WORKFLOW}
+\`\`\`
+
+2. Check the project's build output directory. The workflow above assumes \`dist/\` — if this project outputs to a different directory (e.g. \`build/\`, \`out/\`, \`.next/\`, \`public/\`) update the \`path:\` line in the "Upload build artifact" step accordingly.
+
+3. Make sure the workflow's install and build commands match what this project uses. The workflow auto-detects npm/pnpm/yarn but double-check the build script name in \`package.json\`.
+
+4. Commit and push the workflow file. Once the first Actions run completes successfully, WEN.DEPLOY will automatically use the pre-built artifact for near-instant deploys — no in-browser build needed.
+
+Do not modify anything else in the repository.`;
 
 // ─── MAIN COMPONENT ───────────────────────────────────────────────────────────
 
@@ -221,12 +314,13 @@ function DeployView() {
   const [repos, setRepos] = useState<GitHubRepo[]>([]);
   const [repoSearch, setRepoSearch] = useState("");
   const [config, setConfig] = useState<DeployConfig>({
-    repo: null, branch: "", buildCommand: "npm run build", outputDir: "dist", existingAsaId: null, detectedPkgManager: null
+    repo: null, branch: "", buildCommand: "npm run build", outputDir: "dist", existingAsaId: null, detectedPkgManager: null, hasBlockchainDeps: false
   });
   const [deployState, setDeployState] = useState<DeployState>({ step: "idle", message: "", progress: 0, activeStepIndex: -1 });
   const [showConsole, setShowConsole] = useState(false);
   const [result, setResult] = useState<{ cid: string; asaId: number } | null>(null);
   const [consoleLog, setConsoleLog] = useState<string>("");
+  const [deployMode, setDeployMode] = useState<"actions" | "webcontainer" | null>(null);
 
   const terminalRef = useRef<HTMLDivElement>(null);
   const terminalInstance = useRef<Terminal | null>(null);
@@ -310,213 +404,192 @@ function DeployView() {
 
     try {
       setConsoleLog("");
-      setDeployState({ step: "booting", message: "Booting browser environment...", progress: 5, activeStepIndex: 0 });
-      if (!webcontainerInstance) {
-        webcontainerInstance = await WebContainer.boot();
-      }
-      const wc = webcontainerInstance;
+      let files: { path: string; content: Uint8Array }[] | null = null;
 
-      termWriteln("\x1b[33m> Fetching repository tarball...\x1b[0m");
-      const tarRes = await fetch(
-        `/api/tarball?repo=${encodeURIComponent(config.repo.full_name)}&ref=${encodeURIComponent(config.branch)}`,
-        { headers: { Authorization: `Bearer ${githubToken}` } }
-      );
-      if (!tarRes.ok) throw new Error(`Failed to fetch tarball: ${tarRes.status} ${tarRes.statusText}`);
-      const tarGzBuffer = new Uint8Array(await tarRes.arrayBuffer());
+      // ── FAST PATH: GitHub Actions artifact ──────────────────────────────────
+      if (deployMode !== "webcontainer") {
+        setDeployState({ step: "booting", message: "Checking for pre-built artifact...", progress: 5, activeStepIndex: 0 });
+        termWriteln("\x1b[36m> Checking GitHub Actions for a pre-built artifact...\x1b[0m");
 
-      termWriteln("\x1b[33m> Extracting repository...\x1b[0m");
-
-      const { decompress } = await import("fflate");
-      const tarBytes: Uint8Array = await new Promise((res, rej) =>
-        decompress(tarGzBuffer, (err, data) => err ? rej(new Error("Gzip decompress failed: " + err.message)) : res(data))
-      );
-
-      function parseTar(buf: Uint8Array): Record<string, any> {
-        const tree: Record<string, any> = {};
-        let off = 0;
-        const dec = new TextDecoder();
-        while (off + 512 <= buf.length) {
-          const name = dec.decode(buf.slice(off, off + 100)).replace(/\0/g, "").trim();
-          if (!name) break;
-          const size = parseInt(dec.decode(buf.slice(off + 124, off + 136)).replace(/\0/g, "").trim() || "0", 8);
-          const type = String.fromCharCode(buf[off + 156]);
-          off += 512;
-          const parts = name.split("/").slice(1).filter(Boolean);
-          if (parts.length && type !== "5") {
-            let node = tree;
-            for (const dir of parts.slice(0, -1)) {
-              if (!node[dir]) node[dir] = { directory: {} };
-              node = node[dir].directory;
+        try {
+          const runsRes = await fetch(
+            `https://api.github.com/repos/${config.repo.full_name}/actions/runs?status=success&per_page=10&branch=${encodeURIComponent(config.branch)}`,
+            { headers: { Authorization: `Bearer ${githubToken}`, Accept: "application/vnd.github+json" } }
+          );
+          if (runsRes.ok) {
+            const runs: any[] = (await runsRes.json()).workflow_runs || [];
+            for (const run of runs) {
+              const artRes = await fetch(
+                `https://api.github.com/repos/${config.repo.full_name}/actions/runs/${run.id}/artifacts`,
+                { headers: { Authorization: `Bearer ${githubToken}`, Accept: "application/vnd.github+json" } }
+              );
+              const artifacts: any[] = (await artRes.json()).artifacts || [];
+              const preferred = ["dist", "build", "out", "public", config.outputDir];
+              const match = artifacts.find(a => preferred.some(p => a.name.toLowerCase().includes(p))) ?? artifacts[0];
+              if (match) {
+                termWriteln(`\x1b[32m> Found artifact: "${match.name}" (run #${run.run_number})\x1b[0m`);
+                const zipRes = await fetch("/api/artifact", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ url: match.archive_download_url, token: githubToken })
+                });
+                if (zipRes.ok) {
+                  const { unzip } = await import("fflate");
+                  const zipBytes = new Uint8Array(await zipRes.arrayBuffer());
+                  const unzipped: Record<string, Uint8Array> = await new Promise((res, rej) =>
+                    unzip(zipBytes, (err, data) => err ? rej(err) : res(data))
+                  );
+                  const zipKeys = Object.keys(unzipped).filter(k => !k.endsWith("/"));
+                  const topDirs = new Set(zipKeys.map(k => k.split("/")[0]));
+                  const stripPrefix = topDirs.size === 1 ? [...topDirs][0] + "/" : "";
+                  files = zipKeys.map(k => ({
+                    path: stripPrefix ? k.slice(stripPrefix.length) : k,
+                    content: unzipped[k]
+                  })).filter(f => f.path);
+                  termWriteln(`\x1b[32m> Unpacked ${files.length} files from artifact — skipping build step\x1b[0m`);
+                }
+                break;
+              }
             }
-            const fname = parts[parts.length - 1];
-            if (fname) node[fname] = { file: { contents: buf.slice(off, off + size) } };
           }
-          off += Math.ceil(size / 512) * 512;
+        } catch (artifactErr) {
+          termWriteln(`\x1b[33m> No artifact available, falling back to WebContainer build\x1b[0m`);
         }
-        return tree;
       }
 
-      const fileTree = parseTar(tarBytes);
-      const topKeys = Object.keys(fileTree);
-      if (topKeys.length === 0) throw new Error("Failed to extract repository: archive is empty.");
-
-      let mountTree = fileTree;
-      const repoFolder = ".";
-      if (!fileTree["package.json"] && topKeys.length === 1 && (fileTree[topKeys[0]] as any)?.directory) {
-        mountTree = (fileTree[topKeys[0]] as any).directory;
-        termWriteln(`\x1b[33m> Unwrapped extra folder: ${topKeys[0]}\x1b[0m`);
-      }
-
-      termWriteln(`\x1b[32m> Mounting repository into WebContainer...\x1b[0m`);
-      await wc.mount(mountTree);
-
-      const mountedKeys = Object.keys(mountTree);
-      type PkgManager = { bin: string; installArgs: string[]; runArgs: (cmd: string) => string[]; label: string };
-      const pm: PkgManager =
-        mountedKeys.includes("pnpm-lock.yaml")
-          ? { bin: "npx", installArgs: ["pnpm", "install", "--no-frozen-lockfile", "--force", "--network-concurrency=4"], runArgs: (s) => ["pnpm", "run", s], label: "pnpm" }
-          : mountedKeys.includes("yarn.lock")
-          ? { bin: "npx", installArgs: ["yarn", "install", "--frozen-lockfile", "--network-concurrency=4"], runArgs: (s) => ["yarn", s], label: "yarn" }
-          : { bin: "npm", installArgs: ["install", "--legacy-peer-deps", "--prefer-offline"], runArgs: (s) => ["run", s], label: "npm" };
-
-      termWriteln(`\x1b[36m> Detected package manager: ${pm.label}\x1b[0m`);
-      setConfig(prev => ({ ...prev, detectedPkgManager: pm.label }));
-
-      // Write .npmrc for network resilience
-      const npmrc = [
-        "fetch-retries=8",
-        "fetch-retry-mintimeout=20000",
-        "fetch-retry-maxtimeout=120000",
-        "network-concurrency=4",
-        "registry=https://registry.npmjs.org/",
-      ].join("\n");
-      await wc.fs.writeFile("/.npmrc", npmrc);
-
-      setDeployState({ step: "installing", message: `Installing dependencies with ${pm.label}...`, progress: 20, activeStepIndex: 1 });
-      
-      let installLog = "";
-      let installExit = 1;
-      const maxRetries = 3;
-
-      for (let attempt = 1; attempt <= maxRetries; attempt++) {
-        if (attempt > 1) {
-          termWriteln(`\x1b[33m> Network hiccup detected. Retry attempt ${attempt}/${maxRetries} in ${5 * attempt}s...\x1b[0m`);
-          await new Promise(r => setTimeout(r, 5000 * attempt));
-          installLog = ""; // reset log for next scan
+      // ── SLOW PATH: WebContainer build ────────────────────────────────────────
+      if (!files) {
+        if (deployMode === "actions") {
+          throw new Error("No GitHub Action artifact found. Please push your workflow and wait for a successful run, or choose the In-Browser Build option.");
         }
-        
-        termWriteln(`\x1b[33m> Running ${pm.bin} ${pm.installArgs.join(" ")}...\x1b[0m`);
-        const install = await wc.spawn(pm.bin, pm.installArgs, { cwd: repoFolder });
-        install.output.pipeTo(new WritableStream({
-          write(data) {
-            installLog += data;
-            termWrite(data);
-            setConsoleLog(prev => prev + data);
+
+        setDeployState({ step: "booting", message: "Booting browser environment...", progress: 8, activeStepIndex: 0 });
+        if (!webcontainerInstance) {
+          webcontainerInstance = await WebContainer.boot();
+        }
+        const wc = webcontainerInstance;
+
+        termWriteln("\x1b[33m> Fetching repository tarball...\x1b[0m");
+        const tarRes = await fetch(
+          `/api/tarball?repo=${encodeURIComponent(config.repo.full_name)}&ref=${encodeURIComponent(config.branch)}`,
+          { headers: { Authorization: `Bearer ${githubToken}` } }
+        );
+        if (!tarRes.ok) throw new Error(`Failed to fetch tarball: ${tarRes.status}`);
+        const tarGzBuffer = new Uint8Array(await tarRes.arrayBuffer());
+
+        termWriteln("\x1b[33m> Extracting repository...\x1b[0m");
+        const { decompress } = await import("fflate");
+        const tarBytes: Uint8Array = await new Promise((res, rej) =>
+          decompress(tarGzBuffer, (err, data) => err ? rej(new Error("Gzip decompress failed: " + err.message)) : res(data))
+        );
+
+        function parseTar(buf: Uint8Array): Record<string, any> {
+          const tree: Record<string, any> = {};
+          let off = 0;
+          const dec = new TextDecoder();
+          while (off + 512 <= buf.length) {
+            const name = dec.decode(buf.slice(off, off + 100)).replace(/\0/g, "").trim();
+            if (!name) break;
+            const size = parseInt(dec.decode(buf.slice(off + 124, off + 136)).replace(/\0/g, "").trim() || "0", 8);
+            const type = String.fromCharCode(buf[off + 156]);
+            off += 512;
+            const parts = name.split("/").slice(1).filter(Boolean);
+            if (parts.length && type !== "5") {
+              let node = tree;
+              for (const dir of parts.slice(0, -1)) {
+                if (!node[dir]) node[dir] = { directory: {} };
+                node = node[dir].directory;
+              }
+              const fname = parts[parts.length - 1];
+              if (fname) node[fname] = { file: { contents: buf.slice(off, off + size) } };
+            }
+            off += Math.ceil(size / 512) * 512;
           }
-        }));
-        installExit = await install.exit;
-        
-        if (installExit === 0) break;
-        
-        const isNetworkError = installLog.includes("ECONNRESET") || installLog.includes("socket hang up") || installLog.includes("META_FETCH_FAIL");
-        if (!isNetworkError) break; // fail fast for non-network errors
-      }
-
-      if (installExit !== 0) {
-        setConsoleLog(prev => prev + "\n\n--- INSTALL FAILED ---\n" + installLog);
-        throw new Error(`Installation failed. See log below.`);
-      }
-
-      setDeployState({ step: "building", message: "Running build command...", progress: 50, activeStepIndex: 2 });
-      
-      const buildCmdParts = config.buildCommand.trim().split(/\s+/);
-      const knownBins = ["npm", "pnpm", "yarn", "npx"];
-      const [buildBin, ...buildArgs] = knownBins.includes(buildCmdParts[0])
-        ? buildCmdParts
-        : [pm.bin, ...pm.runArgs(buildCmdParts.join(" "))];
-
-      termWriteln(`\x1b[33m> Running: ${buildBin} ${buildArgs.join(" ")}...\x1b[0m`);
-      let buildLog = "";
-      const build = await wc.spawn(buildBin, buildArgs, { cwd: repoFolder });
-      build.output.pipeTo(new WritableStream({
-        write(data) {
-          buildLog += data;
-          termWrite(data);
-          setConsoleLog(prev => prev + data);
+          return tree;
         }
-      }));
-      if (await build.exit !== 0) {
-        setConsoleLog(prev => prev + "\n\n--- BUILD FAILED ---\n" + buildLog);
-        throw new Error(`Build failed:\n${buildLog.slice(-2000)}`);
-      }
 
-      setDeployState({ step: "exporting", message: "Collecting build artifacts...", progress: 75, activeStepIndex: 2 });
-      const outputPath = `/${config.outputDir}`;
-      if (!(await wc.fs.readdir("/")).includes(config.outputDir)) {
-         throw new Error(`Output directory "${config.outputDir}" not found.`);
-      }
+        const fileTree = parseTar(tarBytes);
+        await wc.mount(fileTree);
 
-      async function collectFiles(dir: string, base: string, list: any[] = []) {
-        const entries = await wc.fs.readdir(dir, { withFileTypes: true });
-        for (const entry of entries) {
-          const path = `${dir}/${entry.name}`;
-          const relPath = path.replace(base + "/", "");
-          if (entry.isDirectory()) await collectFiles(path, base, list);
-          else list.push({ path: relPath, content: await wc.fs.readFile(path) });
+        const mountedKeys = Object.keys(fileTree);
+        type PkgManager = { bin: string; installArgs: string[]; runArgs: (cmd: string) => string[]; label: string };
+        const pm: PkgManager =
+          mountedKeys.includes("pnpm-lock.yaml")
+            ? { bin: "npx", installArgs: ["pnpm", "install", "--no-frozen-lockfile", "--force", "--network-concurrency=4"], runArgs: (s) => ["pnpm", "run", s], label: "pnpm" }
+            : mountedKeys.includes("yarn.lock")
+            ? { bin: "npx", installArgs: ["yarn", "install", "--frozen-lockfile", "--network-concurrency=4"], runArgs: (s) => ["yarn", s], label: "yarn" }
+            : { bin: "npm", installArgs: ["install", "--legacy-peer-deps", "--prefer-offline"], runArgs: (s) => ["run", s], label: "npm" };
+
+        const npmrc = ["fetch-retries=8", "fetch-retry-mintimeout=20000", "fetch-retry-maxtimeout=120000", "network-concurrency=4", "registry=https://registry.npmjs.org/"].join("\n");
+        await wc.fs.writeFile("/.npmrc", npmrc);
+
+        setDeployState({ step: "installing", message: `Installing dependencies...`, progress: 20, activeStepIndex: 1 });
+        let installExit = 1;
+        for (let i = 1; i <= 3; i++) {
+          const install = await wc.spawn(pm.bin, pm.installArgs);
+          install.output.pipeTo(new WritableStream({ write(d) { termWrite(d); setConsoleLog(p => p + d); } }));
+          installExit = await install.exit;
+          if (installExit === 0) break;
+          await new Promise(r => setTimeout(r, 5000 * i));
         }
-        return list;
-      }
-      const files = await collectFiles(outputPath, outputPath);
+        if (installExit !== 0) throw new Error("Installation failed.");
 
-      setDeployState({ step: "pinning", message: "Pinning to Crust IPFS...", progress: 85, activeStepIndex: 3 });
+        setDeployState({ step: "building", message: "Running build...", progress: 50, activeStepIndex: 2 });
+        const buildParts = config.buildCommand.trim().split(/\s+/);
+        const [bBin, ...bArgs] = ["npm", "pnpm", "yarn", "npx"].includes(buildParts[0]) ? buildParts : [pm.bin, ...pm.runArgs(buildParts.join(" "))];
+        const build = await wc.spawn(bBin, bArgs);
+        build.output.pipeTo(new WritableStream({ write(d) { termWrite(d); setConsoleLog(p => p + d); } }));
+        if (await build.exit !== 0) throw new Error("Build failed.");
+
+        const outputPath = `/${config.outputDir}`;
+        async function collectFiles(dir: string, base: string, list: any[] = []) {
+          const entries = await wc.fs.readdir(dir, { withFileTypes: true });
+          for (const entry of entries) {
+            const path = `${dir}/${entry.name}`;
+            const relPath = path.replace(base + "/", "");
+            if (entry.isDirectory()) await collectFiles(path, base, list);
+            else list.push({ path: relPath, content: await wc.fs.readFile(path) });
+          }
+          return list;
+        }
+        files = await collectFiles(outputPath, outputPath);
+      }
+
+      // ── SHARED: Pinning & Minting ──────────────────────────────────────────
+      setDeployState({ step: "pinning", message: "Pinning to IPFS...", progress: 85, activeStepIndex: 3 });
       const crustToken = "YWxnby1CQ0FQV0pBTFdBM04zRUlaUkZDTzU1UFEzWUJZQ1NHUFpYTkRIT09BNlI3Q0dIVElTVjJHQ1NZQzZZOkZyYjl6RWhudVVKZ0ZaY0d1cmRTUE45dW1SL1hHMnRlalc0VFpkb3huN3ZXMTVKOFd6TGMva3R2LytnMklWRVFRMVN4Vnk3N0plZ3laZkVKMkRxaEFRPT0=";
-      
       const formData = new FormData();
+      
+      // FIX: Handle SharedArrayBuffer by copying it into a standard Uint8Array
       files.forEach(f => {
-        formData.append("file", new Blob([f.content]), f.path);
+        const standardContent = f.content.buffer instanceof SharedArrayBuffer ? new Uint8Array(f.content) : f.content;
+        formData.append("file", new Blob([standardContent as any]), f.path);
       });
 
       const pinRes = await fetch("https://gw.crustfiles.app/api/v0/add?wrap-with-directory=true&cid-version=1", {
-        method: "POST",
-        headers: { Authorization: `Basic ${crustToken}` },
-        body: formData
+        method: "POST", headers: { Authorization: `Basic ${crustToken}` }, body: formData
       });
-      const pinText = await pinRes.text();
-      const pinLines = pinText.trim().split("\n");
+      const pinLines = (await pinRes.text()).trim().split("\n");
       const rootCid = JSON.parse(pinLines[pinLines.length - 1]).Hash;
 
-      setDeployState({ step: "minting", message: "Updating Algorand record...", progress: 95, activeStepIndex: 4 });
+      setDeployState({ step: "minting", message: "Finalizing on Algorand...", progress: 95, activeStepIndex: 4 });
       const algod = new algosdk.Algodv2("", ALGOD_SERVER, "");
       const params = await algod.getTransactionParams().do();
       const reserveAddress = cidToReserveAddress(rootCid);
       
       let txn;
       if (config.existingAsaId) {
-        await algod.getAssetByID(config.existingAsaId).do();
         txn = algosdk.makeAssetConfigTxnWithSuggestedParamsFromObject({
-          from: activeAddress!,
-          assetIndex: config.existingAsaId,
-          manager: activeAddress!,
-          reserve: reserveAddress,
-          suggestedParams: params,
-          strictEmptyAddressChecking: false
+          from: activeAddress!, assetIndex: config.existingAsaId, manager: activeAddress!, reserve: reserveAddress, suggestedParams: params, strictEmptyAddressChecking: false
         });
       } else {
         txn = algosdk.makeAssetCreateTxnWithSuggestedParamsFromObject({
-          from: activeAddress!,
-          total: 1, decimals: 0, defaultFrozen: false,
-          manager: activeAddress!,
-          reserve: reserveAddress,
-          unitName: "SITE",
-          assetName: config.repo.name.slice(0, 32),
-          assetURL: ARC19_URL_TEMPLATE,
-          suggestedParams: params
+          from: activeAddress!, total: 1, decimals: 0, defaultFrozen: false, manager: activeAddress!, reserve: reserveAddress, unitName: "SITE", assetName: config.repo.name.slice(0, 32), assetURL: ARC19_URL_TEMPLATE, suggestedParams: params
         });
       }
 
       const payment = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
-        from: activeAddress!, to: algosdk.getApplicationAddress(CRUST_APP_ID),
-        amount: 100000, suggestedParams: params
+        from: activeAddress!, to: algosdk.getApplicationAddress(CRUST_APP_ID), amount: 100000, suggestedParams: params
       });
 
       algosdk.assignGroupID([txn, payment]);
@@ -557,193 +630,208 @@ function DeployView() {
             </h1>
             <p className="text-neutral-500 text-sm font-mono tracking-tight max-w-lg">Zero-infrastructure browser-based pipeline. Your code, your container, your blockchain.</p>
           </div>
-          <div className="hidden md:flex gap-2">
-            <div className="px-3 py-1 bg-neutral-900 border border-neutral-800 rounded-full text-[10px] font-bold text-neutral-500 uppercase tracking-widest">WebContainer V2</div>
-            <div className="px-3 py-1 bg-neutral-900 border border-neutral-800 rounded-full text-[10px] font-bold text-neutral-500 uppercase tracking-widest">ARC-19</div>
-          </div>
-        </div>
-
-        {/* Feature Highlights */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-12">
-          <div className="bg-neutral-900/30 border border-neutral-800 rounded-2xl p-5 hover:border-orange-500/20 transition-all group">
-            <div className="w-8 h-8 bg-orange-500/10 rounded-lg flex items-center justify-center mb-3 text-orange-500 group-hover:scale-110 transition-transform">
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
-            </div>
-            <h3 className="text-xs font-black uppercase tracking-widest mb-1 text-neutral-200">Zero Infrastructure</h3>
-            <p className="text-[10px] text-neutral-500 leading-relaxed font-mono">No servers. The entire build happens inside a secure sandbox in your browser. Pure decentralized compute.</p>
-          </div>
-          <div className="bg-neutral-900/30 border border-neutral-800 rounded-2xl p-5 hover:border-orange-500/20 transition-all group">
-            <div className="w-8 h-8 bg-blue-500/10 rounded-lg flex items-center justify-center mb-3 text-blue-500 group-hover:scale-110 transition-transform">
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 11c0 3.517-1.009 6.799-2.753 9.571m-3.44-10.726C5.023 12.724 5 13.517 5 14.5c0 3.403.884 6.591 2.444 9.356M12 11c1.744 2.772 2.753 5.994 2.753 9.571m-3.44-10.726c1.789-2.23 4.192-3.726 6.944-4.226m-9.722 13.582c.162.313.33.62.503.918" /></svg>
-            </div>
-            <h3 className="text-xs font-black uppercase tracking-widest mb-1 text-neutral-200">Immutable Storage</h3>
-            <p className="text-[10px] text-neutral-500 leading-relaxed font-mono">Every deployment is pinned to IPFS and indexed via an Algorand ASA. Your site is permanent and tamper-proof.</p>
-          </div>
-          <div className="bg-neutral-900/30 border border-neutral-800 rounded-2xl p-5 hover:border-orange-500/20 transition-all group">
-            <div className="w-8 h-8 bg-green-500/10 rounded-lg flex items-center justify-center mb-3 text-green-500 group-hover:scale-110 transition-transform">
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
-            </div>
-            <h3 className="text-xs font-black uppercase tracking-widest mb-1 text-neutral-200">Self-Sovereign</h3>
-            <p className="text-[10px] text-neutral-500 leading-relaxed font-mono">You own the deployment keys. You own the metadata. No centralized registrar can take your site down.</p>
-          </div>
         </div>
 
         {!activeAddress || !githubToken ? (
-           <div className="bg-neutral-900/50 border border-neutral-800 rounded-3xl p-10 backdrop-blur-xl relative overflow-hidden group">
-             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-orange-500/0 via-orange-500/50 to-orange-500/0 opacity-30" />
-             <div className="flex flex-col items-center text-center space-y-6 relative z-10">
-                <div className="w-16 h-16 bg-orange-500/10 rounded-2xl flex items-center justify-center animate-pulse">
-                  <svg className="w-8 h-8 text-orange-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                  </svg>
-                </div>
-                <div>
-                  <h2 className="text-xl font-bold mb-2">Connect Your Workflow</h2>
-                  <p className="text-neutral-500 text-sm max-w-sm mx-auto">We use your GitHub App installation to pull code and your Algorand wallet to sign the immutable record.</p>
-                </div>
-                <div className="flex flex-col w-full gap-3 max-w-xs">
-                  {!activeAddress && <div className="text-[10px] font-black uppercase tracking-widest text-yellow-500 bg-yellow-500/5 py-3 rounded-xl border border-yellow-500/20">Connect Wallet in Sidebar</div>}
-                  {activeAddress && !githubToken && (
-                    <button onClick={connectGitHub} className="group relative w-full py-4 bg-white text-black font-black text-sm rounded-xl hover:bg-neutral-200 transition-all overflow-hidden active:scale-95">
-                      <span className="relative z-10">CONNECT GITHUB</span>
-                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-black/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
-                    </button>
-                  )}
-                </div>
-             </div>
+           <div className="bg-neutral-900/50 border border-neutral-800 rounded-3xl p-10 backdrop-blur-xl flex flex-col items-center text-center space-y-6">
+              <div className="w-16 h-16 bg-orange-500/10 rounded-2xl flex items-center justify-center animate-pulse">
+                <svg className="w-8 h-8 text-orange-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                </svg>
+              </div>
+              <h2 className="text-xl font-bold">Connect your accounts</h2>
+              <div className="flex flex-col w-full gap-3 max-w-xs">
+                {!activeAddress && <div className="text-[10px] font-black uppercase tracking-widest text-yellow-500 bg-yellow-500/5 py-3 rounded-xl border border-yellow-500/20">Connect Wallet in Sidebar</div>}
+                {activeAddress && !githubToken && (
+                  <button onClick={connectGitHub} className="w-full py-4 bg-white text-black font-black text-sm rounded-xl hover:bg-neutral-200 transition-all active:scale-95">CONNECT GITHUB</button>
+                )}
+              </div>
            </div>
         ) : !config.repo ? (
            <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
              <div className="relative">
-               <div className="absolute inset-y-0 left-5 flex items-center pointer-events-none">
-                 <svg className="w-4 h-4 text-neutral-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
-               </div>
                <input 
                  type="text" 
                  placeholder="Search repositories..." 
-                 className="w-full bg-neutral-900 border border-neutral-800 rounded-2xl pl-12 pr-6 py-5 text-sm focus:outline-none focus:ring-1 ring-orange-500/50 transition-all placeholder:text-neutral-700"
+                 className="w-full bg-neutral-900 border border-neutral-800 rounded-2xl px-6 py-5 text-sm focus:outline-none focus:ring-1 ring-orange-500/50 transition-all"
                  value={repoSearch}
                  onChange={e => setRepoSearch(e.target.value)}
                />
              </div>
              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-[440px] overflow-y-auto pr-2 custom-scrollbar">
-               {Array.isArray(repos) && repos.filter(r => r.name.toLowerCase().includes(repoSearch.toLowerCase())).map(repo => (
+               {repos.filter(r => r.name.toLowerCase().includes(repoSearch.toLowerCase())).map(repo => (
                  <button 
                    key={repo.id}
                    onClick={async () => {
                      let buildCommand = "npm run build";
+                     let hasBlockchainDeps = false;
                      try {
-                       const treeRes = await fetch(
-                         `https://api.github.com/repos/${repo.full_name}/git/trees/${repo.default_branch}`,
-                         { headers: { Authorization: `Bearer ${githubToken}` } }
-                       );
+                       const treeRes = await fetch(`https://api.github.com/repos/${repo.full_name}/git/trees/${repo.default_branch}`, { headers: { Authorization: `Bearer ${githubToken}` } });
                        const treeData = await treeRes.json();
-                       const filenames: string[] = (treeData.tree || []).map((f: any) => f.path);
+                       const filenames: string[] = (treeData.tree || []).map((f: any) => f.path.toLowerCase());
                        if (filenames.includes("pnpm-lock.yaml")) buildCommand = "pnpm run build";
                        else if (filenames.includes("yarn.lock")) buildCommand = "yarn build";
-                     } catch {
-                       // ignore scan error
-                     }
-                     setConfig(c => ({ ...c, repo, branch: repo.default_branch, buildCommand, detectedPkgManager: null }));
+                       hasBlockchainDeps = filenames.some(f => BLOCKCHAIN_KEYWORDS.some(k => f.includes(k)));
+                     } catch { /* ignore scan error */ }
+                     setConfig(c => ({ ...c, repo, branch: repo.default_branch, buildCommand, hasBlockchainDeps }));
+                     if (hasBlockchainDeps) setDeployMode("actions");
                    }}
                    className="group text-left bg-neutral-900/30 border border-neutral-800 hover:border-orange-500/40 rounded-2xl p-5 transition-all hover:bg-neutral-900/50"
                  >
-                   <div className="flex justify-between items-start mb-2">
-                     <div className="font-bold text-sm group-hover:text-orange-400 transition-colors truncate max-w-[180px]">{repo.name}</div>
-                   </div>
-                   <div className="text-[10px] text-neutral-500 font-mono flex items-center gap-2">
-                     <span className="w-1.5 h-1.5 rounded-full bg-orange-500/40" />
-                     {repo.language || "Web"} • {repo.default_branch}
-                   </div>
+                   <div className="font-bold text-sm mb-1 group-hover:text-orange-400 transition-colors">{repo.name}</div>
+                   <div className="text-[10px] text-neutral-500 font-mono">{repo.language || "Web"} • {repo.default_branch}</div>
                  </button>
                ))}
                {repos.length === 0 && (
-                 <div className="col-span-full py-16 text-center space-y-4 bg-neutral-900/20 rounded-3xl border border-dashed border-neutral-800">
-                    <p className="text-neutral-600 text-xs font-mono">No repositories available.</p>
-                    <button onClick={installGitHubApp} className="text-[10px] text-orange-500 font-black hover:text-orange-400 uppercase tracking-[0.2em] border-b border-orange-500/30 pb-0.5">
-                      Install GitHub App
-                    </button>
+                 <div className="col-span-full py-16 text-center space-y-4">
+                    <p className="text-neutral-500 text-sm">No repositories found.</p>
+                    <button onClick={installGitHubApp} className="text-xs text-orange-500 font-bold hover:underline uppercase tracking-widest">Manage GitHub App installations</button>
                  </div>
                )}
              </div>
            </div>
         ) : deployState.step === "idle" || deployState.step === "error" ? (
-          <div className="bg-neutral-900/50 border border-neutral-800 rounded-3xl p-10 space-y-10 animate-in fade-in slide-in-from-bottom-6 duration-700">
+          <div className="space-y-6 animate-in fade-in slide-in-from-bottom-6 duration-700">
              {deployState.step === "error" && consoleLog && (
-               <div className="bg-neutral-950 border border-red-500/20 rounded-2xl p-6 space-y-3 animate-in slide-in-from-top-2">
-                 <div className="text-[10px] font-black text-red-400 uppercase tracking-[0.2em] flex items-center gap-2">
-                   <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-                   Build Log (last run)
+               <div className="bg-neutral-950 border border-red-500/20 rounded-2xl p-6 space-y-3">
+                 <div className="text-[10px] font-black text-red-400 uppercase tracking-widest flex items-center gap-2">
+                   <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" /> Build Log (last run)
                  </div>
                  <pre className="text-[10px] font-mono text-neutral-400 whitespace-pre-wrap break-all max-h-64 overflow-y-auto leading-relaxed p-4 bg-black/40 rounded-xl custom-scrollbar">
-                   {consoleLog.replace(/\x1b\[[0-9;]*m/g, "").slice(-3000)}
+                   {consoleLog.replace(new RegExp("\\u001b\\[[0-9;]*m", "g"), "").slice(-3000)}
                  </pre>
                </div>
              )}
              
-             <div className="flex justify-between items-center">
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl flex items-center justify-center font-black text-black shadow-lg shadow-orange-500/10 transform -rotate-3">{config.repo.name[0].toUpperCase()}</div>
+             {/* Repo Header */}
+             <div className="bg-neutral-900/50 border border-neutral-800 rounded-3xl p-6 flex justify-between items-center">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-orange-500/10 rounded-xl flex items-center justify-center font-bold text-orange-500">{config.repo.name[0].toUpperCase()}</div>
                   <div>
-                    <div className="font-bold text-lg">{config.repo.name}</div>
-                    <div className="text-[10px] text-orange-500/70 font-black tracking-widest uppercase flex items-center gap-2">
+                    <div className="font-bold">{config.repo.name}</div>
+                    <div className="text-[10px] text-neutral-500 font-mono uppercase flex items-center gap-2">
                       {config.branch}
-                      {config.detectedPkgManager && (
-                        <span className="px-1.5 py-0.5 bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 rounded text-[8px] font-black tracking-normal uppercase">USING {config.detectedPkgManager}</span>
-                      )}
+                      {config.detectedPkgManager && <span className="text-cyan-500/70 border border-cyan-500/20 rounded px-1">{config.detectedPkgManager}</span>}
+                      {config.hasBlockchainDeps && <span className="text-orange-500/70 border border-orange-500/20 rounded px-1">crypto deps</span>}
                     </div>
                   </div>
                 </div>
-                <button onClick={() => setConfig(c => ({ ...c, repo: null }))} className="text-[10px] font-black tracking-widest text-neutral-600 hover:text-neutral-400 transition-colors uppercase">Change Target</button>
+                <button onClick={() => { setConfig(c => ({ ...c, repo: null })); setDeployMode(null); }} className="text-[10px] text-neutral-500 hover:text-neutral-300">CHANGE REPO</button>
              </div>
 
-             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <label className="text-[10px] text-neutral-500 font-black uppercase tracking-[0.2em] ml-1">Build Command</label>
-                  <input type="text" value={config.buildCommand} onChange={e => setConfig(c => ({ ...c, buildCommand: e.target.value }))} className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-5 py-3 text-xs font-mono text-orange-400 focus:outline-none focus:border-orange-500/50 transition-all" />
+             <div className="space-y-3">
+                <div className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest px-1">Choose deploy method</div>
+                
+                {/* ⚡ GitHub Actions */}
+                <div className={`rounded-2xl border transition-all duration-200 overflow-hidden ${deployMode === "actions" ? "border-orange-500/50 bg-orange-500/5" : "border-neutral-800 bg-neutral-900/50"}`}>
+                  <button onClick={() => setDeployMode("actions")} className="w-full p-5 flex items-start gap-4 text-left">
+                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-base mt-0.5 ${deployMode === "actions" ? "bg-orange-500/20" : "bg-neutral-800"}`}>⚡</div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="font-bold text-sm">GitHub Actions</span>
+                        <span className="text-[9px] font-bold uppercase tracking-wider bg-orange-500 text-black px-2 py-0.5 rounded-full">Recommended</span>
+                        {config.hasBlockchainDeps && <span className="text-[9px] font-bold uppercase tracking-wider bg-green-500/20 text-green-400 border border-green-500/20 px-2 py-0.5 rounded-full">Required for crypto repos</span>}
+                      </div>
+                      <p className="text-[11px] text-neutral-400 leading-relaxed">Builds on GitHub's servers. Near-instant deploys once set up. Reliable for all projects.</p>
+                      <div className="flex gap-4 mt-2">
+                        <span className="text-[10px] text-neutral-500 flex items-center gap-1"><span className="text-green-400">✓</span> Works with crypto deps</span>
+                        <span className="text-[10px] text-neutral-500 flex items-center gap-1"><span className="text-green-400">✓</span> Fast (~5s after setup)</span>
+                      </div>
+                    </div>
+                    <div className={`w-4 h-4 rounded-full border-2 flex-shrink-0 mt-1 ${deployMode === "actions" ? "border-orange-500 bg-orange-500" : "border-neutral-600"}`} />
+                  </button>
+
+                  {deployMode === "actions" && (
+                    <div className="border-t border-orange-500/20 p-5 space-y-4">
+                      <div>
+                        <div className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest mb-2">Setup instructions</div>
+                        <ol className="text-xs text-neutral-400 space-y-1.5 list-decimal list-inside leading-relaxed">
+                          <li>Add <code className="text-orange-400 bg-neutral-800 px-1 py-0.5 rounded text-[10px]">wen-deploy.yml</code> to <code className="text-orange-400 bg-neutral-800 px-1 py-0.5 rounded text-[10px]">.github/workflows/</code></li>
+                          <li>Push — GitHub will build automatically</li>
+                          <li>Click Deploy — WEN.DEPLOY picks up the artifact</li>
+                        </ol>
+                      </div>
+
+                      <div className="flex gap-2 flex-wrap">
+                        <a href={`data:text/yaml;charset=utf-8,${encodeURIComponent(WEN_DEPLOY_WORKFLOW)}`} download="wen-deploy.yml" className="inline-flex items-center gap-1.5 px-3 py-2 bg-orange-500 hover:bg-orange-400 text-black font-bold text-[10px] rounded-xl transition-colors">↓ Download workflow</a>
+                        <button onClick={() => navigator.clipboard.writeText(WEN_DEPLOY_WORKFLOW)} className="px-3 py-2 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 font-bold text-[10px] rounded-xl">Copy workflow</button>
+                        <button onClick={() => navigator.clipboard.writeText(WEN_DEPLOY_AI_PROMPT)} className="px-3 py-2 bg-neutral-800 hover:bg-neutral-700 text-cyan-400 font-bold text-[10px] rounded-xl flex items-center gap-1.5"><span>✦</span> Copy AI prompt</button>
+                      </div>
+
+                      <div className="bg-neutral-950 rounded-xl p-3 border border-neutral-800">
+                        <div className="text-[9px] font-bold text-neutral-600 uppercase tracking-widest mb-1.5 flex items-center gap-1.5">
+                          <span className="text-cyan-500">✦</span> AI Agent Prompt
+                          <span className="text-neutral-700">— paste into Cursor, Windsurf, Copilot</span>
+                        </div>
+                        <p className="text-[10px] text-neutral-500 font-mono leading-relaxed line-clamp-3">Set up WEN.DEPLOY GitHub Actions workflow for this repo. Create .github/workflows/wen-deploy.yml, verify the build output path matches the project, commit and push...</p>
+                      </div>
+
+                      <p className="text-[10px] text-neutral-600">Already have the workflow? Just click Deploy.</p>
+                      <button onClick={handleDeploy} className="w-full py-4 bg-orange-500 hover:bg-orange-400 text-black font-black text-sm rounded-2xl shadow-lg shadow-orange-500/10 active:scale-[0.98]">DEPLOY VIA GITHUB ACTIONS</button>
+                    </div>
+                  )}
                 </div>
-                <div className="space-y-2">
-                  <label className="text-[10px] text-neutral-500 font-black uppercase tracking-[0.2em] ml-1">Output Dir</label>
-                  <input type="text" value={config.outputDir} onChange={e => setConfig(c => ({ ...c, outputDir: e.target.value }))} className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-5 py-3 text-xs font-mono text-orange-400 focus:outline-none focus:border-orange-500/50 transition-all" />
+
+                {/* 🌐 In-Browser Build */}
+                <div className={`rounded-2xl border transition-all duration-200 overflow-hidden ${deployMode === "webcontainer" ? "border-neutral-600 bg-neutral-900/80" : "border-neutral-800 bg-neutral-900/30"}`}>
+                  <button onClick={() => setDeployMode("webcontainer")} className="w-full p-5 flex items-start gap-4 text-left">
+                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-base mt-0.5 ${deployMode === "webcontainer" ? "bg-neutral-700" : "bg-neutral-800/50"}`}>🌐</div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="font-bold text-sm text-neutral-300">In-Browser Build</span>
+                        <span className="text-[9px] font-bold uppercase tracking-wider bg-neutral-800 text-neutral-400 px-2 py-0.5 rounded-full">No setup required</span>
+                      </div>
+                      <p className="text-[11px] text-neutral-500 leading-relaxed">Builds directly in the browser using WebContainer. Slower and may struggle with crypto deps.</p>
+                      <div className="flex gap-4 mt-2">
+                        <span className="text-[10px] text-neutral-600 flex items-center gap-1"><span className="text-green-400">✓</span> Zero setup</span>
+                        {config.hasBlockchainDeps && <span className="text-[10px] text-orange-500/70 flex items-center gap-1"><span>⚠</span> May fail for this repo</span>}
+                      </div>
+                    </div>
+                    <div className={`w-4 h-4 rounded-full border-2 flex-shrink-0 mt-1 ${deployMode === "webcontainer" ? "border-neutral-400 bg-neutral-400" : "border-neutral-600"}`} />
+                  </button>
+
+                  {deployMode === "webcontainer" && (
+                    <div className="border-t border-neutral-700 p-5 space-y-4">
+                      {config.hasBlockchainDeps && (
+                        <div className="bg-orange-500/10 border border-orange-500/20 rounded-xl px-4 py-3 text-[11px] text-orange-300">
+                          ⚠ This repo has crypto dependencies that frequently time out in the browser build environment. GitHub Actions is recommended.
+                        </div>
+                      )}
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-1.5">
+                          <label className="text-[10px] text-neutral-500 font-bold uppercase tracking-widest">Build Command</label>
+                          <input type="text" value={config.buildCommand} onChange={e => setConfig(c => ({ ...c, buildCommand: e.target.value }))} className="w-full bg-neutral-800/50 border border-neutral-700/50 rounded-xl px-3 py-2 text-xs font-mono" />
+                        </div>
+                        <div className="space-y-1.5">
+                          <label className="text-[10px] text-neutral-500 font-bold uppercase tracking-widest">Output Directory</label>
+                          <input type="text" value={config.outputDir} onChange={e => setConfig(c => ({ ...c, outputDir: e.target.value }))} className="w-full bg-neutral-800/50 border border-neutral-700/50 rounded-xl px-3 py-2 text-xs font-mono" />
+                        </div>
+                      </div>
+                      <button onClick={handleDeploy} className="w-full py-4 bg-neutral-700 hover:bg-neutral-600 text-white font-black text-sm rounded-2xl active:scale-[0.98]">BUILD IN BROWSER</button>
+                    </div>
+                  )}
                 </div>
              </div>
-
-             <button 
-               onClick={handleDeploy}
-               className="group relative w-full py-5 bg-orange-500 hover:bg-orange-400 text-black font-black text-sm rounded-2xl transition-all shadow-xl shadow-orange-500/20 active:scale-[0.98] overflow-hidden"
-             >
-               <span className="relative z-10">INITIATE DECENTRALIZED DEPLOY</span>
-               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
-             </button>
           </div>
         ) : deployState.step === "complete" ? (
-          <div className="bg-green-500/5 border border-green-500/20 rounded-3xl p-12 text-center space-y-8 animate-in zoom-in-95 duration-500">
-             <div className="w-24 h-24 bg-green-500/10 rounded-full flex items-center justify-center mx-auto shadow-[0_0_40px_rgba(34,197,94,0.15)]">
-               <svg className="w-12 h-12 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-               </svg>
+          <div className="bg-green-500/5 border border-green-500/20 rounded-3xl p-10 text-center space-y-6">
+             <div className="w-20 h-20 bg-green-500/10 rounded-full flex items-center justify-center mx-auto shadow-[0_0_40px_rgba(34,197,94,0.15)]">
+               <svg className="w-10 h-10 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
              </div>
-             <h2 className="text-3xl font-black tracking-tighter mb-2 text-green-400 uppercase">Deployed to Eternity</h2>
-             
-             <div className="bg-neutral-900 border border-neutral-800 rounded-2xl p-6 text-left space-y-4 max-w-sm mx-auto">
-               <div>
-                 <div className="text-[10px] text-neutral-600 font-black uppercase tracking-widest mb-1.5">Universal Site Resolver</div>
-                 <div className="bg-neutral-950 border border-neutral-800 rounded-lg p-3 text-[10px] font-mono break-all text-green-500/80 leading-relaxed">
-                   {window.location.origin}/deploy?resolve={result?.asaId}
-                 </div>
-               </div>
+             <h2 className="text-2xl font-black tracking-tight">Deployment Successful</h2>
+             <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-4 text-xs font-mono break-all text-green-400 max-w-sm mx-auto">
+               {window.location.origin}/deploy?resolve={result?.asaId}
              </div>
-
-             <div className="flex gap-4 justify-center">
-                <a href={`/deploy?resolve=${result?.asaId}`} target="_blank" rel="noreferrer" className="px-8 py-4 bg-white text-black font-black rounded-xl text-xs hover:scale-105 transition-transform active:scale-95">VIEW LIVE SITE</a>
-                <button onClick={() => { setDeployState({ step: "idle", message: "", progress: 0, activeStepIndex: -1 }); setConfig(c => ({ ...c, repo: null })); }} className="px-8 py-4 bg-neutral-900 text-neutral-400 font-black rounded-xl text-xs border border-neutral-800 hover:bg-neutral-800 transition-colors">NEW DEPLOY</button>
+             <div className="flex gap-3 justify-center">
+                <a href={`/deploy?resolve=${result?.asaId}`} target="_blank" rel="noreferrer" className="px-6 py-3 bg-white text-black font-bold rounded-xl text-sm transition-transform active:scale-95">View Site</a>
+                <button onClick={() => { setDeployState({ step: "idle", message: "", progress: 0, activeStepIndex: -1 }); setConfig(c => ({ ...c, repo: null })); }} className="px-6 py-3 bg-neutral-900 text-neutral-400 font-bold rounded-xl text-sm border border-neutral-800">Deploy New</button>
              </div>
           </div>
         ) : (
-          <div className="space-y-8 animate-in fade-in duration-1000">
-             <div className="bg-neutral-900 border border-neutral-800 rounded-[32px] p-10 shadow-2xl relative overflow-hidden">
+          <div className="space-y-6 animate-in fade-in duration-700">
+             <div className="bg-neutral-900 border border-neutral-800 rounded-[32px] p-10 shadow-2xl">
                 {/* Pipeline Stepper */}
-                <div className="flex justify-between items-start mb-12 px-2 relative z-10">
+                <div className="flex justify-between items-start mb-12 px-2 relative">
                    {PIPELINE_STEPS.map((s, i) => {
                      const status = getStepStatus(i);
                      return (
@@ -751,112 +839,56 @@ function DeployView() {
                          {i < PIPELINE_STEPS.length - 1 && (
                            <div className={`absolute top-4 h-[2px] ${deployState.activeStepIndex > i ? 'bg-orange-500' : 'bg-neutral-800'} transition-all duration-700`} style={{left:'calc(50% + 1.25rem)', right:'calc(-50% + 1.25rem)'}} />
                          )}
-                         <div className={`relative z-10 w-10 h-10 rounded-full border-2 flex items-center justify-center transition-all duration-500 ${
-                           status === 'complete' ? 'bg-orange-500 border-orange-500 scale-90' :
-                           status === 'active' ? 'border-orange-500 shadow-[0_0_25px_rgba(249,115,22,0.3)] bg-neutral-900' :
-                           'border-neutral-800 bg-neutral-950'
+                         <div className={`relative z-10 w-8 h-8 rounded-full border-2 flex items-center justify-center transition-all duration-500 ${
+                           status === 'complete' ? 'bg-orange-500 border-orange-500' :
+                           status === 'active' ? 'border-orange-500 shadow-[0_0_15px_rgba(249,115,22,0.4)]' :
+                           'border-neutral-800 bg-neutral-900'
                          }`}>
-                           {status === 'complete' ? (
-                             <svg className="w-5 h-5 text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
-                           ) : (
-                             <span className={`text-[10px] font-black ${status === 'active' ? 'text-orange-500' : 'text-neutral-700'}`}>{i + 1}</span>
-                           )}
+                           {status === 'complete' ? <svg className="w-4 h-4 text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg> : <span className={`text-[10px] font-bold ${status === 'active' ? 'text-orange-500' : 'text-neutral-700'}`}>{i + 1}</span>}
                          </div>
                          <div className="mt-4 text-center">
                            <div className={`text-[10px] font-black uppercase tracking-widest ${status === 'active' ? 'text-white' : 'text-neutral-600'}`}>{s.label}</div>
-                           <div className="text-[8px] text-neutral-600 font-mono mt-0.5 opacity-50">{s.sub}</div>
+                           <div className="text-[8px] text-neutral-600 font-mono mt-0.5">{s.sub}</div>
                          </div>
                        </div>
                      );
                    })}
                 </div>
 
-                <div className="relative z-10">
-                  <div className="flex items-center gap-4 mb-5">
-                    <div className="w-3 h-3 bg-orange-500 rounded-full animate-ping" />
-                    <div className="flex-1">
-                      <div className="text-[10px] font-black text-neutral-500 uppercase tracking-widest mb-1">Status Report</div>
-                      <div className="text-sm font-bold text-neutral-200">{deployState.message}</div>
-                    </div>
-                    <div className="text-3xl font-black text-orange-500 drop-shadow-sm">{deployState.progress}%</div>
-                  </div>
-                  <div className="w-full h-2 bg-neutral-950 border border-neutral-800/50 rounded-full overflow-hidden p-0.5">
-                     <div className="h-full bg-gradient-to-r from-orange-600 to-orange-400 rounded-full transition-all duration-700 ease-out shadow-[0_0_15px_rgba(249,115,22,0.2)]" style={{ width: `${deployState.progress}%` }} />
-                  </div>
+                <div className="flex items-center gap-4 mb-4">
+                  <div className="w-2 h-2 bg-orange-500 rounded-full animate-pulse" />
+                  <div className="flex-1"><div className="text-sm font-bold text-neutral-200">{deployState.message}</div></div>
+                  <div className="text-xl font-black text-orange-500">{deployState.progress}%</div>
+                </div>
+                <div className="w-full h-1.5 bg-neutral-950 border border-neutral-800 rounded-full overflow-hidden">
+                   <div className="h-full bg-orange-500 transition-all duration-700 ease-out shadow-[0_0_15px_rgba(249,115,22,0.2)]" style={{ width: `${deployState.progress}%` }} />
                 </div>
              </div>
 
              <div className="flex justify-center">
-                <button 
-                  onClick={() => setShowConsole(!showConsole)}
-                  className="group px-6 py-2.5 bg-neutral-900 border border-neutral-800 rounded-full text-[10px] font-black text-neutral-500 hover:text-orange-500 transition-all uppercase tracking-[0.2em] flex items-center gap-3 active:scale-95"
-                >
-                  {showConsole ? 'CLOSE' : 'MONITOR'} BUILD STREAM
-                  <svg className={`w-3 h-3 transition-transform duration-300 ${showConsole ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
+                <button onClick={() => setShowConsole(!showConsole)} className="text-[10px] font-bold text-neutral-600 hover:text-orange-500 transition-all uppercase tracking-widest flex items-center gap-2">
+                  {showConsole ? 'Hide' : 'Show'} Build Console
+                  <svg className={`w-3 h-3 transition-transform ${showConsole ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
                 </button>
              </div>
 
-             <div className={`bg-neutral-900 border border-neutral-800 rounded-[32px] overflow-hidden shadow-2xl shadow-black/80 transition-all duration-500 ${showConsole ? 'opacity-100 max-h-[500px] translate-y-0' : 'opacity-0 max-h-0 translate-y-4 border-0'}`}>
-               <div className="bg-neutral-800/40 px-6 py-3 flex items-center justify-between border-b border-neutral-800">
-                  <div className="flex items-center gap-3">
-                    <div className="flex gap-1.5">
-                      <div className="w-2.5 h-2.5 rounded-full bg-red-500/30" />
-                      <div className="w-2.5 h-2.5 rounded-full bg-yellow-500/30" />
-                      <div className="w-2.5 h-2.5 rounded-full bg-green-500/30" />
-                    </div>
-                    <div className="text-[10px] font-black font-mono text-neutral-500 uppercase tracking-widest ml-2">WEN.DEPLOY Runtime Logs</div>
-                  </div>
+             <div className={`bg-neutral-900 border border-neutral-800 rounded-3xl overflow-hidden shadow-2xl transition-all duration-500 ${showConsole ? 'opacity-100 max-h-[400px]' : 'opacity-0 max-h-0 border-0'}`}>
+               <div className="bg-neutral-800/50 px-4 py-2 flex items-center border-b border-neutral-800">
+                  <div className="flex gap-1.5"><div className="w-2 h-2 rounded-full bg-red-500/50" /><div className="w-2 h-2 rounded-full bg-yellow-500/50" /><div className="w-2 h-2 rounded-full bg-green-500/50" /></div>
+                  <div className="text-[10px] font-mono text-neutral-500 ml-2 uppercase">WEN.DEPLOY CONSOLE</div>
                </div>
-               <div ref={terminalRef} className="p-6 custom-terminal" />
+               <div ref={terminalRef} className="p-4" />
              </div>
           </div>
         )}
 
-        {/* Use Cases */}
-        {deployState.step === "idle" && (
-          <div className="mt-20 space-y-8 animate-in fade-in duration-1000 delay-300">
-            <h2 className="text-[10px] font-black text-neutral-600 uppercase tracking-[0.4em] text-center">Use Case Scenarios</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="p-8 bg-neutral-900/10 border border-neutral-900 rounded-[32px] space-y-4">
-                <div className="text-orange-500/50">
-                  <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>
-                </div>
-                <h4 className="font-bold">Decentralized Manifestos</h4>
-                <p className="text-xs text-neutral-500 leading-relaxed font-mono">Publish high-stakes content that cannot be altered or removed by any centralized authority.</p>
-              </div>
-              <div className="p-8 bg-neutral-900/10 border border-neutral-900 rounded-[32px] space-y-4">
-                <div className="text-blue-500/50">
-                  <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.75 17L9 21h6l-.75-4M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 00-2 2z" /></svg>
-                </div>
-                <h4 className="font-bold">Immutable DApps</h4>
-                <p className="text-xs text-neutral-500 leading-relaxed font-mono">Deploy the frontend for your smart contracts. Ensure that the interface is as immutable as the code on-chain.</p>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Footer */}
-        <div className="mt-24 pt-8 border-t border-neutral-900/50 flex flex-col md:flex-row justify-between items-center gap-6 opacity-40 grayscale hover:opacity-100 hover:grayscale-0 transition-all duration-1000">
-          <div className="flex gap-8 items-center">
-            <img src="/af_logo.svg" className="h-5" alt="Algorand" />
-            <img src="/crust.png" className="h-4" alt="Crust" />
-          </div>
-          <div className="flex gap-4 text-[9px] font-black tracking-widest text-neutral-500 uppercase">
-            <span>Browser OS</span>
-            <span className="w-1 h-1 bg-neutral-800 rounded-full mt-1" />
-            <span>IPFS Overlay</span>
-            <span className="w-1 h-1 bg-neutral-800 rounded-full mt-1" />
-            <span>ARC-19 Mainnet</span>
+        <div className="mt-20 pt-8 border-t border-neutral-900 flex flex-col md:flex-row justify-between items-center gap-4 opacity-30 grayscale hover:opacity-100 hover:grayscale-0 transition-all duration-1000">
+          <div className="flex gap-6 items-center">
+            <img src="/af_logo.svg" className="h-6" alt="Algorand" />
+            <img src="/crust.png" className="h-5" alt="Crust" />
+            <span className="text-[10px] font-black tracking-widest text-neutral-400">IPFS • ARC-19 • CI/CD</span>
           </div>
         </div>
-      </div>
-      
-      {/* Dynamic Background Elements */}
-      <div className="fixed top-0 left-0 w-full h-full pointer-events-none -z-10 opacity-20">
-        <div className="absolute top-[10%] left-[5%] w-[40%] h-[40%] bg-orange-500/10 blur-[120px] rounded-full animate-pulse" />
-        <div className="absolute bottom-[10%] right-[5%] w-[30%] h-[30%] bg-blue-500/10 blur-[100px] rounded-full animate-pulse delay-700" />
       </div>
     </div>
   );
