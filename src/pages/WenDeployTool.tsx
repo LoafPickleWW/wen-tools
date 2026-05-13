@@ -90,6 +90,10 @@ interface DeployConfig {
 
 // ─── UTILITY FUNCTIONS ───────────────────────────────────────────────────────
 
+function isMobile() {
+  return /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+}
+
 function reserveAddressToCID(reserveAddress: string): string {
   try {
     const decoded = algosdk.decodeAddress(reserveAddress);
@@ -114,16 +118,18 @@ function cidToReserveAddress(cidStr: string): string {
   }
 }
 
-function openGitHubAuth(): Promise<string> {
+function openGitHubAuth(): Promise<string | null> {
   return new Promise((resolve, reject) => {
     const authUrl = `https://github.com/login/oauth/authorize?client_id=${GITHUB_CLIENT_ID}&redirect_uri=${encodeURIComponent(GITHUB_REDIRECT_URI)}`;
 
     const popup = window.open(authUrl, "github-auth", "width=600,height=700");
     if (!popup) {
-      reject(new Error("Popup blocked. Please allow popups for this site."));
+      // Return null to signal popup was blocked
+      resolve(null);
       return;
     }
 
+    const start = Date.now();
     const interval = setInterval(() => {
       try {
         if (popup.closed) {
@@ -131,6 +137,15 @@ function openGitHubAuth(): Promise<string> {
           reject(new Error("Authentication cancelled."));
           return;
         }
+        
+        // Timeout after 5 minutes
+        if (Date.now() - start > 300000) {
+          popup.close();
+          clearInterval(interval);
+          reject(new Error("Authentication timed out."));
+          return;
+        }
+
         const url = popup.location.href;
         if (url.includes("code=")) {
           const code = new URL(url).searchParams.get("code");
@@ -140,9 +155,9 @@ function openGitHubAuth(): Promise<string> {
           else reject(new Error("No auth code received."));
         }
       } catch {
-        // Cross-origin
+        // Cross-origin access error is normal while popup is on GitHub
       }
-    }, 500);
+    }, 300);
   });
 }
 
@@ -310,6 +325,7 @@ function SiteResolver({ asaId }: { asaId: number }) {
 
 function DeployView() {
   const { activeAddress, signTransactions } = useWallet();
+  const [searchParams] = useSearchParams();
   const [githubToken, setGithubToken] = useState<string | null>(() => sessionStorage.getItem("gh_token"));
   const [repos, setRepos] = useState<GitHubRepo[]>([]);
   const [repoSearch, setRepoSearch] = useState("");
@@ -325,14 +341,53 @@ function DeployView() {
   const terminalRef = useRef<HTMLDivElement>(null);
   const terminalInstance = useRef<Terminal | null>(null);
 
+  // ─── GITHUB AUTH FLOW ───
+  const exchangeCodeForToken = async (code: string) => {
+    try {
+      const res = await fetch("/api/github/token", { 
+        method: "POST", 
+        headers: { "Content-Type": "application/json" }, 
+        body: JSON.stringify({ code }) 
+      });
+      const { access_token } = await res.json();
+      if (!access_token) throw new Error("Authentication failed: No token received.");
+      setGithubToken(access_token);
+      sessionStorage.setItem("gh_token", access_token);
+      sessionStorage.removeItem("gh_oauth_pending");
+    } catch (e: any) {
+      setDeployState({ step: "error", message: e.message, progress: 0, activeStepIndex: -1 });
+    }
+  };
+
+  useEffect(() => {
+    const code = searchParams.get("code");
+    if (code) {
+      // Clean URL immediately
+      const newUrl = window.location.origin + window.location.pathname;
+      window.history.replaceState({}, document.title, newUrl);
+      exchangeCodeForToken(code);
+    }
+  }, [searchParams]);
+
   const connectGitHub = async () => {
+    const authUrl = `https://github.com/login/oauth/authorize?client_id=${GITHUB_CLIENT_ID}&redirect_uri=${encodeURIComponent(GITHUB_REDIRECT_URI)}`;
+    
+    if (isMobile()) {
+      sessionStorage.setItem("gh_oauth_pending", "true");
+      window.location.href = authUrl;
+      return;
+    }
+
     try {
       setDeployState({ step: "connecting-github", message: "Connecting to GitHub...", progress: 0, activeStepIndex: -1 });
       const code = await openGitHubAuth();
-      const res = await fetch("/api/github/token", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ code }) });
-      const { access_token } = await res.json();
-      setGithubToken(access_token);
-      sessionStorage.setItem("gh_token", access_token);
+      if (code === null) {
+        // Popup was blocked, fallback to redirect
+        sessionStorage.setItem("gh_oauth_pending", "true");
+        window.location.href = authUrl;
+      } else {
+        await exchangeCodeForToken(code);
+      }
     } catch (e: any) {
       setDeployState({ step: "error", message: e.message, progress: 0, activeStepIndex: -1 });
     }
@@ -452,7 +507,7 @@ function DeployView() {
               }
             }
           }
-        } catch (artifactErr) {
+        } catch {
           termWriteln(`\x1b[33m> No artifact available, falling back to WebContainer build\x1b[0m`);
         }
       }
@@ -488,22 +543,35 @@ function DeployView() {
           let off = 0;
           const dec = new TextDecoder();
           while (off + 512 <= buf.length) {
+            // Standard TAR EOA is two 512-byte blocks of zeros. 
+            // We check the first few bytes of the current block for non-zero.
+            let isZero = true;
+            for (let i = 0; i < 64; i++) { if (buf[off + i] !== 0) { isZero = false; break; } }
+            if (isZero) break;
+
             const name = dec.decode(buf.slice(off, off + 100)).replace(/\0/g, "").trim();
-            if (!name) break;
+            const prefix = dec.decode(buf.slice(off + 345, off + 500)).replace(/\0/g, "").trim();
+            const fullName = prefix ? `${prefix}/${name}` : name;
+            
             const size = parseInt(dec.decode(buf.slice(off + 124, off + 136)).replace(/\0/g, "").trim() || "0", 8);
             const type = String.fromCharCode(buf[off + 156]);
-            off += 512;
-            const parts = name.split("/").slice(1).filter(Boolean);
-            if (parts.length && type !== "5") {
-              let node = tree;
-              for (const dir of parts.slice(0, -1)) {
-                if (!node[dir]) node[dir] = { directory: {} };
-                node = node[dir].directory;
+            
+            off += 512; // Move past header
+
+            if (fullName && type !== "5" && type !== "L") { // Skip directories and long-link headers
+              const parts = fullName.split("/").slice(1).filter(Boolean);
+              if (parts.length) {
+                let node = tree;
+                for (const dir of parts.slice(0, -1)) {
+                  if (!node[dir]) node[dir] = { directory: {} };
+                  node = node[dir].directory;
+                }
+                const fname = parts[parts.length - 1];
+                if (fname) node[fname] = { file: { contents: buf.slice(off, off + size) } };
               }
-              const fname = parts[parts.length - 1];
-              if (fname) node[fname] = { file: { contents: buf.slice(off, off + size) } };
             }
-            off += Math.ceil(size / 512) * 512;
+            
+            off += Math.ceil(size / 512) * 512; // Move past data blocks
           }
           return tree;
         }
@@ -560,7 +628,6 @@ function DeployView() {
       const crustToken = "YWxnby1CQ0FQV0pBTFdBM04zRUlaUkZDTzU1UFEzWUJZQ1NHUFpYTkRIT09BNlI3Q0dIVElTVjJHQ1NZQzZZOkZyYjl6RWhudVVKZ0ZaY0d1cmRTUE45dW1SL1hHMnRlalc0VFpkb3huN3ZXMTVKOFd6TGMva3R2LytnMklWRVFRMVN4Vnk3N0plZ3laZkVKMkRxaEFRPT0=";
       const formData = new FormData();
       
-      // FIX: Handle SharedArrayBuffer by copying it into a standard Uint8Array
       files.forEach(f => {
         const standardContent = f.content.buffer instanceof SharedArrayBuffer ? new Uint8Array(f.content) : f.content;
         formData.append("file", new Blob([standardContent as any]), f.path);
