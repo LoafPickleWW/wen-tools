@@ -476,21 +476,8 @@ function DeployView() {
       }
 
       if (!files) {
-        termWriteln("\x1b[33m> Booting WebContainer...\x1b[0m");
-        setDeployState({ step: "booting", message: "Booting browser environment...", progress: 8, activeStepIndex: 0 });
-
-        if (webcontainerInstance) {
-          try {
-            webcontainerInstance.teardown();
-          } catch {
-            // Silently ignore teardown errors on stale instances
-          }
-          webcontainerInstance = null;
-        }
-        webcontainerInstance = await WebContainer.boot();
-        const wc = webcontainerInstance;
-
         termWriteln("\x1b[33m> Fetching repository tarball...\x1b[0m");
+        setDeployState({ step: "booting", message: "Fetching code...", progress: 8, activeStepIndex: 0 });
         const tarRes = await fetch(`/api/tarball?repo=${encodeURIComponent(config.repo.full_name)}&ref=${encodeURIComponent(config.branch)}`, { headers: { Authorization: `Bearer ${githubToken}` } });
         if (!tarRes.ok) throw new Error(`Failed to fetch tarball: ${tarRes.status}`);
         const tarGzBuffer = new Uint8Array(await tarRes.arrayBuffer());
@@ -552,14 +539,12 @@ function DeployView() {
         let mountTree = fileTree;
         const realKeys = topKeys.filter(k => k !== "pax_global_header" && !k.startsWith("pax_") && !k.startsWith("."));
 
-        // Unwrap if package.json isn't at root AND there's exactly one real subfolder
         if (!mountTree["package.json"] && realKeys.length === 1) {
           const candidate = (fileTree[realKeys[0]] as any)?.directory;
           if (candidate && candidate["package.json"]) {
             mountTree = candidate;
             termWriteln(`\x1b[33m> Unwrapped wrapper folder: ${realKeys[0]}\x1b[0m`);
           } else {
-            // Try one more level deep (e.g. repo/folder/package.json)
             for (const key of Object.keys(candidate ?? {})) {
               const sub = candidate?.[key]?.directory;
               if (sub?.["package.json"]) {
@@ -571,76 +556,99 @@ function DeployView() {
           }
         }
 
-        termWriteln(`\x1b[32m> Mounting ${Object.keys(mountTree).length} entries into WebContainer...\x1b[0m`);
-        await wc.mount(mountTree);
+        const hasPackageJson = !!mountTree["package.json"];
+        termWriteln(`\x1b[${hasPackageJson ? "32" : "33"}m> package.json at root: ${hasPackageJson}\x1b[0m`);
 
-        const rootAfterMount = await wc.fs.readdir("/");
-        termWriteln(`\x1b[36m> Container root after mount: ${JSON.stringify(rootAfterMount.slice(0, 15))}\x1b[0m`);
+        if (!hasPackageJson) {
+          termWriteln("\x1b[33m> No package.json found — treating repo as static site, skipping build\x1b[0m");
 
-        // Hard guard: verify package.json exists in container root
-        if (!rootAfterMount.includes("package.json")) {
-          termWriteln(`\x1b[31m> ERROR: package.json not found at root. Contents: ${JSON.stringify(rootAfterMount)}\x1b[0m`);
-          throw new Error(`package.json missing from container root. Found: ${rootAfterMount.slice(0, 10).join(", ")}`);
-        }
+          const collectFromTree = (node: Record<string, any>, prefix = "", list: { path: string; content: Uint8Array }[] = []) => {
+            for (const [key, val] of Object.entries(node)) {
+              const fullPath = prefix ? `${prefix}/${key}` : key;
+              if (val?.file?.contents) list.push({ path: fullPath, content: val.file.contents });
+              else if (val?.directory) collectFromTree(val.directory, fullPath, list);
+            }
+            return list;
+          };
 
-        const mountedKeys = Object.keys(mountTree);
-        type PkgManager = { bin: string; installArgs: string[]; runArgs: (s: string) => string[]; label: string };
-        const pkgManager: PkgManager = mountedKeys.includes("pnpm-lock.yaml")
-          ? { bin: "npx", installArgs: ["pnpm@latest", "install", "--no-frozen-lockfile"], runArgs: s => ["pnpm@latest", "run", s], label: "pnpm" }
-          : mountedKeys.includes("yarn.lock")
-          ? { bin: "npx", installArgs: ["yarn", "install"], runArgs: s => ["yarn", s], label: "yarn" }
-          : { bin: "npm", installArgs: ["install", "--legacy-peer-deps"], runArgs: s => ["run", s], label: "npm" };
-
-        const npmrc = ["registry=https://registry.npmjs.org/", "fetch-retries=2", "fetch-retry-mintimeout=5000", "fetch-retry-maxtimeout=10000", "maxsockets=4", "network-concurrency=4"].join("\n");
-        await wc.fs.writeFile("/.npmrc", npmrc);
-
-        setDeployState({ step: "installing", message: `Installing with ${pkgManager.label}...`, progress: 20, activeStepIndex: 1 });
-        termWriteln(`\x1b[33m> Running ${pkgManager.label} install...\x1b[0m`);
-
-        let installLog = "", installExit = 1;
-        for (let attempt = 1; attempt <= 3; attempt++) {
-          if (attempt > 1) {
-            termWriteln(`\x1b[33m> Network error — retry ${attempt}/3 (waiting ${attempt * 10}s)...\x1b[0m`);
-            await new Promise(r => setTimeout(r, attempt * 10000));
+          files = collectFromTree(mountTree);
+          termWriteln(`\x1b[32m> Collected ${files.length} static files\x1b[0m`);
+        } else {
+          termWriteln("\x1b[33m> Booting WebContainer...\x1b[0m");
+          if (webcontainerInstance) {
+            try { webcontainerInstance.teardown(); } catch { /* ignore */ }
+            webcontainerInstance = null;
           }
-          installLog = "";
-          const install = await wc.spawn(pkgManager.bin, pkgManager.installArgs, { cwd: "." });
-          install.output.pipeTo(new WritableStream({ write(data) { installLog += data; termWrite(data); setConsoleLog(p => p + data); } }));
-          installExit = await Promise.race([ install.exit, new Promise<number>(r => setTimeout(() => r(124), 180000)) ]);
-          const isNetErr = installLog.includes("ECONNRESET") || installLog.includes("socket hang up") || installLog.includes("META_FETCH_FAIL") || installLog.includes("FETCH_FAIL");
-          if (installExit === 0 || !isNetErr) break;
-        }
-        if (installExit !== 0) {
-          const ESC = String.fromCharCode(27);
-          const ANSI_REG_LINT = new RegExp(ESC + "\\[[0-9;]*m", "g");
-          const snippet = installLog.replace(ANSI_REG_LINT, "").slice(-500);
-          throw new Error(`Installation failed (exit ${installExit}).\n${snippet}`);
-        }
+          webcontainerInstance = await WebContainer.boot();
+          const wc = webcontainerInstance;
 
-        setDeployState({ step: "building", message: "Building...", progress: 50, activeStepIndex: 2 });
-        const buildCmd = config.buildCommand.trim().split(/\s+/);
-        const knownBins = ["npm", "pnpm", "yarn", "npx"];
-        const [buildBin, ...buildArgs] = knownBins.includes(buildCmd[0]) ? buildCmd : [pkgManager.bin, ...pkgManager.runArgs(buildCmd.join(" "))];
-        const build = await wc.spawn(buildBin, buildArgs, { cwd: "." });
-        build.output.pipeTo(new WritableStream({ write(data) { termWrite(data); setConsoleLog(p => p + data); } }));
-        if (await build.exit !== 0) throw new Error("Build failed.");
+          termWriteln(`\x1b[32m> Mounting ${Object.keys(mountTree).length} entries into WebContainer...\x1b[0m`);
+          await wc.mount(mountTree);
 
-        setDeployState({ step: "exporting", message: "Collecting build output...", progress: 75, activeStepIndex: 2 });
-        const outputPath = `/${config.outputDir}`;
-        async function collectFiles(dir: string, base: string, list: { path: string; content: Uint8Array }[] = []) {
-          const entries = await wc.fs.readdir(dir, { withFileTypes: true });
-          for (const entry of entries) {
-            const full = `${dir}/${entry.name}`, rel = full.slice(base.length + 1);
-            if (entry.isDirectory()) await collectFiles(full, base, list);
-            else list.push({ path: rel, content: await wc.fs.readFile(full) });
+          const rootAfterMount = await wc.fs.readdir("/");
+          if (!rootAfterMount.includes("package.json")) {
+            termWriteln(`\x1b[31m> ERROR: package.json not found at root. Contents: ${JSON.stringify(rootAfterMount)}\x1b[0m`);
+            throw new Error(`package.json missing from container root.`);
           }
-          return list;
+
+          const mountedKeys = Object.keys(mountTree);
+          type PkgManager = { bin: string; installArgs: string[]; runArgs: (s: string) => string[]; label: string };
+          const pkgManager: PkgManager = mountedKeys.includes("pnpm-lock.yaml")
+            ? { bin: "npx", installArgs: ["--yes", "pnpm@latest", "install", "--no-frozen-lockfile"], runArgs: s => ["--yes", "pnpm@latest", "run", s], label: "pnpm" }
+            : mountedKeys.includes("yarn.lock")
+            ? { bin: "npx", installArgs: ["yarn", "install"], runArgs: s => ["yarn", s], label: "yarn" }
+            : { bin: "npm", installArgs: ["install", "--legacy-peer-deps"], runArgs: s => ["run", s], label: "npm" };
+
+          const npmrc = ["registry=https://registry.npmjs.org/", "fetch-retries=2", "fetch-retry-mintimeout=5000", "fetch-retry-maxtimeout=10000", "maxsockets=4", "network-concurrency=4"].join("\n");
+          await wc.fs.writeFile("/.npmrc", npmrc);
+
+          setDeployState({ step: "installing", message: `Installing with ${pkgManager.label}...`, progress: 20, activeStepIndex: 1 });
+          termWriteln(`\x1b[33m> Running ${pkgManager.label} install...\x1b[0m`);
+
+          let installLog = "", installExit = 1;
+          for (let attempt = 1; attempt <= 3; attempt++) {
+            if (attempt > 1) {
+              termWriteln(`\x1b[33m> Network error — retry ${attempt}/3...\x1b[0m`);
+              await new Promise(r => setTimeout(r, attempt * 10000));
+            }
+            installLog = "";
+            const install = await wc.spawn(pkgManager.bin, pkgManager.installArgs, { cwd: "." });
+            install.output.pipeTo(new WritableStream({ write(data) { installLog += data; termWrite(data); setConsoleLog(p => p + data); } }));
+            installExit = await Promise.race([ install.exit, new Promise<number>(r => setTimeout(() => r(124), 180000)) ]);
+            const isNetErr = installLog.includes("ECONNRESET") || installLog.includes("socket hang up") || installLog.includes("META_FETCH_FAIL") || installLog.includes("FETCH_FAIL");
+            if (installExit === 0 || !isNetErr) break;
+          }
+          if (installExit !== 0) {
+            const ESC_ERR = String.fromCharCode(27);
+            const ANSI_REG_ERR = new RegExp(ESC_ERR + "\\[[0-9;]*m", "g");
+            const snippet = installLog.replace(ANSI_REG_ERR, "").slice(-500);
+            throw new Error(`Installation failed (exit ${installExit}).\n${snippet}`);
+          }
+
+          setDeployState({ step: "building", message: "Building...", progress: 50, activeStepIndex: 2 });
+          const buildCmd = config.buildCommand.trim().split(/\s+/);
+          const knownBins = ["npm", "pnpm", "yarn", "npx"];
+          const [buildBin, ...buildArgs] = knownBins.includes(buildCmd[0]) ? buildCmd : [pkgManager.bin, ...pkgManager.runArgs(buildCmd.join(" "))];
+          const build = await wc.spawn(buildBin, buildArgs, { cwd: "." });
+          build.output.pipeTo(new WritableStream({ write(data) { termWrite(data); setConsoleLog(p => p + data); } }));
+          if (await build.exit !== 0) throw new Error("Build failed.");
+
+          setDeployState({ step: "exporting", message: "Collecting build output...", progress: 75, activeStepIndex: 2 });
+          const outputPath = `/${config.outputDir}`;
+          const collectFiles = async (dir: string, base: string, list: { path: string; content: Uint8Array }[] = []) => {
+            const entries = await wc.fs.readdir(dir, { withFileTypes: true });
+            for (const entry of entries) {
+              const full = `${dir}/${entry.name}`, rel = full.slice(base.length + 1);
+              if (entry.isDirectory()) await collectFiles(full, base, list);
+              else list.push({ path: rel, content: await wc.fs.readFile(full) });
+            }
+            return list;
+          };
+          files = await collectFiles(outputPath, outputPath);
         }
-        files = await collectFiles(outputPath, outputPath);
-        termWriteln(`\x1b[32m> Collected ${files.length} build files\x1b[0m`);
       }
 
-      if (!files || files.length === 0) throw new Error("No build files found to deploy.");
+      if (!files || files.length === 0) throw new Error("No files found to deploy.");
 
       // ── SHARED: Pinning & Minting ──────────────────────────────────────────
       setDeployState({ step: "pinning", message: "Pinning to IPFS...", progress: 85, activeStepIndex: 3 });
@@ -660,7 +668,6 @@ function DeployView() {
       const { Hash: cid } = await pinRes.json();
       termWriteln(`\x1b[32m> Pinned to IPFS: ${cid}\x1b[0m`);
 
-      // Mint on Algorand
       setDeployState({ step: "minting", message: "Minting ARC-19 NFT...", progress: 92, activeStepIndex: 4 });
       const algod = new algosdk.Algodv2("", ALGOD_SERVER, "");
       const params = await algod.getTransactionParams().do();
@@ -724,8 +731,8 @@ function DeployView() {
     return "pending";
   };
 
-  const ESC = String.fromCharCode(27);
-  const ANSI_REG = new RegExp(ESC + "\\[[0-9;]*m", "g");
+  const ESC_RENDER = String.fromCharCode(27);
+  const ANSI_REG_RENDER = new RegExp(ESC_RENDER + "\\[[0-9;]*m", "g");
 
   return (
     <div className="min-h-screen bg-neutral-950 text-white font-sans selection:bg-orange-500/30">
@@ -785,7 +792,7 @@ function DeployView() {
             {deployState.step === "error" && (
               <div className="space-y-3">
                 <div className="bg-red-500/5 border border-red-500/20 rounded-2xl p-4"><div className="text-[10px] font-bold text-red-400 uppercase tracking-widest mb-2 flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-red-500 inline-block" />Deploy Failed</div><p className="text-xs text-red-300 font-mono whitespace-pre-wrap">{deployState.message}</p></div>
-                {consoleLog && ( <div className="bg-neutral-950 border border-neutral-800 rounded-2xl p-4"><div className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest mb-2">Build Log</div><pre className="text-[10px] font-mono text-neutral-400 whitespace-pre-wrap break-all max-h-40 overflow-y-auto leading-relaxed">{consoleLog.replace(ANSI_REG, "").slice(-3000)}</pre></div> )}
+                {consoleLog && ( <div className="bg-neutral-950 border border-neutral-800 rounded-2xl p-4"><div className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest mb-2">Build Log</div><pre className="text-[10px] font-mono text-neutral-400 whitespace-pre-wrap break-all max-h-40 overflow-y-auto leading-relaxed">{consoleLog.replace(ANSI_REG_RENDER, "").slice(-3000)}</pre></div> )}
               </div>
             )}
             <div className="bg-neutral-900/50 border border-neutral-800 rounded-3xl p-6 flex justify-between items-center">
@@ -813,13 +820,11 @@ function DeployView() {
                         <li>Come back and click Deploy — WEN.DEPLOY picks up the artifact</li>
                       </ol>
                     </div>
-
                     <div className="flex gap-2 flex-wrap">
                       <a href={`data:text/yaml;charset=utf-8,${encodeURIComponent(WEN_DEPLOY_WORKFLOW)}`} download="wen-deploy.yml" className="inline-flex items-center gap-1.5 px-3 py-2 bg-orange-500 hover:bg-orange-400 text-black font-bold text-[10px] rounded-xl transition-colors">↓ Download workflow</a>
                       <button onClick={() => navigator.clipboard.writeText(WEN_DEPLOY_WORKFLOW)} className="px-3 py-2 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 font-bold text-[10px] rounded-xl transition-colors">Copy workflow</button>
                       <button onClick={() => navigator.clipboard.writeText(WEN_DEPLOY_AI_PROMPT)} className="px-3 py-2 bg-neutral-800 hover:bg-neutral-700 text-cyan-400 font-bold text-[10px] rounded-xl transition-colors flex items-center gap-1.5"><span>✦</span> Copy AI prompt</button>
                     </div>
-
                     <button onClick={handleDeploy} className="w-full py-3 bg-orange-500 hover:bg-orange-400 text-black font-black text-xs rounded-xl transition-all shadow-lg shadow-orange-500/10 active:scale-[0.98]">DEPLOY VIA GITHUB ACTIONS</button>
                   </div>
                 )}
