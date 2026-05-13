@@ -230,8 +230,6 @@ jobs:
       - name: Setup pnpm
         if: steps.pm.outputs.manager == 'pnpm'
         uses: pnpm/action-setup@v4
-        with:
-          version: 9
 
       - name: Install dependencies
         run: |
@@ -719,29 +717,41 @@ function DeployView() {
       const { Hash: cid } = await pinRes.json();
       termWriteln(`\x1b[32m> Pinned to IPFS: ${cid}\x1b[0m`);
 
-      setDeployState({ step: "minting", message: "Minting ARC-19 NFT...", progress: 92, activeStepIndex: 4 });
       const algod = new algosdk.Algodv2("", ALGOD_SERVER, "");
       const params = await algod.getTransactionParams().do();
       const reserve = cidToReserveAddress(cid);
 
       let txn;
       if (config.existingAsaId) {
+        setDeployState({ step: "updating", message: "Verifying asset ownership...", progress: 88, activeStepIndex: 4 });
+        const assetInfo = await algod.getAssetByID(config.existingAsaId).do();
+        
+        if (assetInfo.params.manager !== activeAddress) {
+          throw new Error(`You are not the manager of ASA ${config.existingAsaId}. Manager is ${assetInfo.params.manager}`);
+        }
+
         txn = algosdk.makeAssetConfigTxnWithSuggestedParamsFromObject({
           from: activeAddress!,
           assetIndex: config.existingAsaId,
           reserve,
+          manager: activeAddress!,
+          freeze: assetInfo.params.freeze || undefined,
+          clawback: assetInfo.params.clawback || undefined,
           strictEmptyAddressChecking: false,
           suggestedParams: params
         });
+        setDeployState({ step: "updating", message: "Updating on-chain...", progress: 93, activeStepIndex: 4 });
       } else {
+        setDeployState({ step: "minting", message: "Minting ARC-19 NFT...", progress: 92, activeStepIndex: 4 });
         txn = algosdk.makeAssetCreateTxnWithSuggestedParamsFromObject({
           from: activeAddress!,
           assetName: config.repo.name.slice(0, 32),
-          unitName: "WEN",
+          unitName: "SITE",
           total: 1,
           decimals: 0,
           reserve,
           assetURL: ARC19_URL_TEMPLATE,
+          manager: activeAddress!,
           defaultFrozen: false,
           suggestedParams: params
         });
@@ -876,6 +886,30 @@ function DeployView() {
                       <button onClick={() => navigator.clipboard.writeText(WEN_DEPLOY_WORKFLOW)} className="px-3 py-2 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 font-bold text-[10px] rounded-xl transition-colors">Copy workflow</button>
                       <button onClick={() => navigator.clipboard.writeText(WEN_DEPLOY_AI_PROMPT)} className="px-3 py-2 bg-neutral-800 hover:bg-neutral-700 text-cyan-400 font-bold text-[10px] rounded-xl transition-colors flex items-center gap-1.5"><span>✦</span> Copy AI prompt</button>
                     </div>
+                    
+                    <div className="pt-4 border-t border-neutral-800 space-y-3">
+                      <div className="flex items-center gap-3">
+                        <input
+                          type="checkbox"
+                          id="update-mode-actions"
+                          checked={!!config.existingAsaId}
+                          onChange={e => setConfig(c => ({ ...c, existingAsaId: e.target.checked ? 0 : null }))}
+                          className="w-4 h-4 bg-neutral-900 border-neutral-700 rounded text-orange-500 focus:ring-orange-500/50"
+                        />
+                        <label htmlFor="update-mode-actions" className="text-xs font-bold text-neutral-400 uppercase tracking-widest">Update existing deployment</label>
+                      </div>
+
+                      {config.existingAsaId !== null && (
+                        <input
+                          type="number"
+                          placeholder="Enter ASA ID to update"
+                          value={config.existingAsaId || ""}
+                          onChange={e => setConfig(c => ({ ...c, existingAsaId: parseInt(e.target.value) || null }))}
+                          className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-3 text-xs font-mono text-orange-400 focus:outline-none focus:ring-1 ring-orange-500/50"
+                        />
+                      )}
+                    </div>
+                    
                     <button onClick={handleDeploy} className="w-full py-3 bg-orange-500 hover:bg-orange-400 text-black font-black text-xs rounded-xl transition-all shadow-lg shadow-orange-500/10 active:scale-[0.98]">DEPLOY VIA GITHUB ACTIONS</button>
                   </div>
                 )}
@@ -892,6 +926,30 @@ function DeployView() {
                       <input type="text" value={config.buildCommand} onChange={e => setConfig(c => ({ ...c, buildCommand: e.target.value }))} className="w-full bg-neutral-800/50 border border-neutral-700/50 rounded-xl px-3 py-2 text-xs font-mono" />
                       <input type="text" value={config.outputDir} onChange={e => setConfig(c => ({ ...c, outputDir: e.target.value }))} className="w-full bg-neutral-800/50 border border-neutral-700/50 rounded-xl px-3 py-2 text-xs font-mono" />
                     </div>
+                    
+                    <div className="pt-2 space-y-3">
+                      <div className="flex items-center gap-3">
+                        <input
+                          type="checkbox"
+                          id="update-mode-wc"
+                          checked={!!config.existingAsaId}
+                          onChange={e => setConfig(c => ({ ...c, existingAsaId: e.target.checked ? 0 : null }))}
+                          className="w-4 h-4 bg-neutral-900 border-neutral-700 rounded text-orange-500 focus:ring-orange-500/50"
+                        />
+                        <label htmlFor="update-mode-wc" className="text-xs font-bold text-neutral-400 uppercase tracking-widest">Update existing deployment</label>
+                      </div>
+
+                      {config.existingAsaId !== null && (
+                        <input
+                          type="number"
+                          placeholder="Enter ASA ID to update"
+                          value={config.existingAsaId || ""}
+                          onChange={e => setConfig(c => ({ ...c, existingAsaId: parseInt(e.target.value) || null }))}
+                          className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-3 text-xs font-mono text-orange-400 focus:outline-none focus:ring-1 ring-orange-500/50"
+                        />
+                      )}
+                    </div>
+                    
                     <button onClick={handleDeploy} className="w-full py-3 bg-neutral-700 hover:bg-neutral-600 text-white font-black text-xs rounded-xl transition-all active:scale-[0.98]">BUILD IN BROWSER</button>
                   </div>
                 )}
