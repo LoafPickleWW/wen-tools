@@ -9,7 +9,7 @@ import { WebContainer } from "@webcontainer/api";
 import { Terminal } from "xterm";
 import { FitAddon } from "xterm-addon-fit";
 import "xterm/css/xterm.css";
-import { makeCrustPinTx } from "../crust";
+import { getPrice, appId, getRandomNode } from "../crust";
 
 // ─── CONSTANTS ────────────────────────────────────────────────────────────────
 
@@ -794,11 +794,48 @@ function DeployView() {
         });
       }
 
+      const totalSize = files.reduce((acc, f) => acc + f.content.length, 0);
+      termWriteln(`\x1b[36m> Total site size: ${(totalSize / 1024).toFixed(2)} KB\x1b[0m`);
+
+      const price = await getPrice(algodClient, Math.max(totalSize, 10000));
+      termWriteln(`\x1b[36m> IPFS Pinning Fee: ${(price / 1000000).toFixed(6)} ALGO\x1b[0m`);
+
       const atc = new algosdk.AtomicTransactionComposer();
+      
+      // 1. Asset Transaction (Create or Config)
       atc.addTransaction({ txn, signer: transactionSigner });
       
-      const pinMethod = await makeCrustPinTx(cid, transactionSigner, activeAddress!, algodClient);
-      atc.addMethodCall(pinMethod);
+      // 2. Crust Pinning Transaction Group (Payment + Application Call)
+      const node = await getRandomNode(algodClient);
+      if (!node) throw new Error("No Crust storage nodes available at the moment.");
+      
+      const paymentTxn = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
+        from: activeAddress!,
+        to: algosdk.getApplicationAddress(appId),
+        amount: price,
+        suggestedParams: { ...params, flatFee: true, fee: 2000 }
+      });
+
+      const method = algosdk.ABIMethod.fromSignature("place_order(pay,account,string,uint64,bool)void");
+      
+      atc.addMethodCall({
+        appID: appId,
+        method,
+        methodArgs: [
+          { txn: paymentTxn, signer: transactionSigner },
+          node,
+          cid,
+          Math.max(totalSize, 10000),
+          true // mainnet
+        ],
+        sender: activeAddress!,
+        signer: transactionSigner,
+        suggestedParams: { ...params, flatFee: true, fee: 6000 }, // Total pinning fee: 8000
+        boxes: [
+          { appIndex: appId, name: algosdk.decodeAddress(node).publicKey },
+          { appIndex: appId, name: new TextEncoder().encode("nodes") },
+        ]
+      });
 
       termWriteln("\x1b[33m> Requesting signature for deployment & IPFS pinning...\x1b[0m");
       const atcResult = await atc.execute(algodClient, 4);
