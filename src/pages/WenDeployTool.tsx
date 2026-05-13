@@ -20,9 +20,9 @@ const GITHUB_REDIRECT_URI = `${window.location.origin}/deploy`;
 const CRUST_APP_ID = 1275319623;
 
 // IPFS gateway for resolving sites
-const IPFS_GATEWAY = "https://ipfs.io/ipfs";
+const IPFS_GATEWAY = "https://ipfs.algonode.dev/ipfs";
 const IPFS_GATEWAY_FALLBACKS = [
-  "https://gateway.pinata.cloud/ipfs",
+  "https://gw.crustfiles.net/ipfs",
   "https://cloudflare-ipfs.com/ipfs",
   "https://w3s.link/ipfs",
 ];
@@ -154,6 +154,46 @@ function openGitHubAuth(): Promise<string> {
       reject(new Error("Authentication timed out."));
     }, 5 * 60 * 1000);
   });
+}
+
+function generateReadmeHTML(markdown: string, repoName: string): string {
+  // Basic md → html conversion for headings, code blocks, links
+  const body = markdown
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+    .replace(/^#### (.+)$/gm, "<h4>$1</h4>")
+    .replace(/^### (.+)$/gm, "<h3>$1</h3>")
+    .replace(/^## (.+)$/gm, "<h2>$1</h2>")
+    .replace(/^# (.+)$/gm, "<h1>$1</h1>")
+    .replace(/```[\w]*\n([\s\S]*?)```/gm, "<pre><code>$1</code></pre>")
+    .replace(/`([^`]+)`/g, "<code>$1</code>")
+    .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>')
+    .replace(/^---$/gm, "<hr>")
+    .replace(/\n\n/g, "</p><p>")
+    .replace(/^\s*[-*] (.+)$/gm, "<li>$1</li>");
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${repoName}</title>
+  <style>
+    body { max-width: 860px; margin: 0 auto; padding: 2rem; font-family: -apple-system, sans-serif; 
+           background: #0d1117; color: #e6edf3; line-height: 1.6; }
+    h1,h2,h3,h4 { border-bottom: 1px solid #30363d; padding-bottom: .3em; }
+    pre { background: #161b22; border: 1px solid #30363d; border-radius: 6px; 
+          padding: 1rem; overflow-x: auto; }
+    code { background: #161b22; padding: .2em .4em; border-radius: 3px; font-size: 90%; }
+    pre code { background: none; padding: 0; }
+    a { color: #58a6ff; } hr { border-color: #30363d; }
+    li { margin: .25rem 0; }
+    table { border-collapse: collapse; width: 100%; }
+    td,th { border: 1px solid #30363d; padding: .5rem .75rem; }
+  </style>
+</head>
+<body><p>${body}</p></body>
+</html>`;
 }
 
 let webcontainerInstance: WebContainer | null = null;
@@ -572,6 +612,17 @@ function DeployView() {
           };
 
           files = collectFromTree(mountTree);
+          
+          const hasIndex = files.some(f => f.path === "index.html" || f.path === "index.htm");
+          if (!hasIndex) {
+            const readme = files.find(f => f.path.toLowerCase() === "readme.md");
+            if (readme) {
+              const md = new TextDecoder().decode(readme.content);
+              const html = generateReadmeHTML(md, config.repo!.name);
+              files.push({ path: "index.html", content: new TextEncoder().encode(html) });
+              termWriteln(`\x1b[33m> No index.html found — generated one from README.md\x1b[0m`);
+            }
+          }
           termWriteln(`\x1b[32m> Collected ${files.length} static files\x1b[0m`);
         } else {
           termWriteln("\x1b[33m> Booting WebContainer...\x1b[0m");
