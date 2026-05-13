@@ -17,12 +17,12 @@ const GITHUB_CLIENT_ID = import.meta.env.VITE_GITHUB_CLIENT_ID || "";
 const GITHUB_APP_SLUG = import.meta.env.VITE_GITHUB_APP_SLUG || "";
 const GITHUB_REDIRECT_URI = `${window.location.origin}/deploy`;
 
-// IPFS gateway for resolving sites
-const IPFS_GATEWAY = "https://ipfs.algonode.dev/ipfs";
+// IPFS gateway for resolving sites (subdomain style for origin isolation)
+const IPFS_GATEWAY = "https://{cid}.ipfs.dweb.link";
 const IPFS_GATEWAY_FALLBACKS = [
-  "https://gw.crustfiles.net/ipfs",
-  "https://cloudflare-ipfs.com/ipfs",
-  "https://w3s.link/ipfs",
+  "https://{cid}.ipfs.w3s.link",
+  "https://{cid}.ipfs.cf-ipfs.com",
+  "https://{cid}.ipfs.gw.crustfiles.net",
 ];
 
 // ARC-19 URL template for CIDv0 (dag-pb, sha2-256)
@@ -335,7 +335,8 @@ function SiteResolver({ asaId }: { asaId: number }) {
   }, [asaId]);
 
   const currentGateway = [IPFS_GATEWAY, ...IPFS_GATEWAY_FALLBACKS][gatewayIndex % 4];
-  const siteUrl = siteInfo ? `${currentGateway}/${toCIDv1(siteInfo.cid)}` : "";
+  const cidV1 = toCIDv1(siteInfo.cid);
+  const siteUrl = siteInfo ? currentGateway.replace("{cid}", cidV1) : "";
 
   if (loading) return <div className="min-h-screen bg-neutral-950 flex items-center justify-center text-neutral-500 font-mono">RESOLVING...</div>;
   if (error) return <div className="min-h-screen bg-neutral-950 flex items-center justify-center text-red-400 p-8">{error}</div>;
