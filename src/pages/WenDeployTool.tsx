@@ -91,7 +91,7 @@ interface DeployConfig {
 // ─── UTILITY FUNCTIONS ───────────────────────────────────────────────────────
 
 function isMobile() {
-  return /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+  return /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || window.innerWidth < 768;
 }
 
 function reserveAddressToCID(reserveAddress: string): string {
@@ -122,9 +122,17 @@ function openGitHubAuth(): Promise<string | null> {
   return new Promise((resolve, reject) => {
     const authUrl = `https://github.com/login/oauth/authorize?client_id=${GITHUB_CLIENT_ID}&redirect_uri=${encodeURIComponent(GITHUB_REDIRECT_URI)}`;
 
-    const popup = window.open(authUrl, "github-auth", "width=600,height=700");
+    if (isMobile()) {
+      sessionStorage.setItem("gh_oauth_pending", "true");
+      window.location.href = authUrl;
+      resolve(null);
+      return;
+    }
+
+    const popup = window.open(authUrl, "github-auth", "width=600,height=700,left=200,top=100");
     if (!popup) {
-      // Return null to signal popup was blocked
+      sessionStorage.setItem("gh_oauth_pending", "true");
+      window.location.href = authUrl;
       resolve(null);
       return;
     }
@@ -138,7 +146,6 @@ function openGitHubAuth(): Promise<string | null> {
           return;
         }
         
-        // Timeout after 5 minutes
         if (Date.now() - start > 300000) {
           popup.close();
           clearInterval(interval);
@@ -154,9 +161,7 @@ function openGitHubAuth(): Promise<string | null> {
           if (code) resolve(code);
           else reject(new Error("No auth code received."));
         }
-      } catch {
-        // Cross-origin access error is normal while popup is on GitHub
-      }
+      } catch { /* cross-origin */ }
     }, 300);
   });
 }
@@ -221,9 +226,6 @@ jobs:
       # ── Upload build output as artifact ──────────────────────────────────────
       # WEN.DEPLOY will automatically detect and use this artifact,
       # skipping the in-browser build step for much faster deploys.
-      #
-      # Change "dist" below if your build outputs to a different directory
-      # (common alternatives: build, out, public, .next/static)
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
@@ -232,7 +234,6 @@ jobs:
           retention-days: 7
 `;
 
-// ─── AI AGENT PROMPT ─────────────────────────────────────────────────────────
 const WEN_DEPLOY_AI_PROMPT = `You are helping set up WEN.DEPLOY for this repository.
 
 WEN.DEPLOY is a decentralized deployment tool that pins static sites to IPFS and mints them as Algorand ARC-19 NFTs. To enable fast, reliable deploys it needs a GitHub Actions workflow that builds the project and uploads the output as an artifact.
@@ -246,11 +247,9 @@ ${WEN_DEPLOY_WORKFLOW}
 
 2. Check the project's build output directory. The workflow above assumes \`dist/\` — if this project outputs to a different directory (e.g. \`build/\`, \`out/\`, \`.next/\`, \`public/\`) update the \`path:\` line in the "Upload build artifact" step accordingly.
 
-3. Make sure the workflow's install and build commands match what this project uses. The workflow auto-detects npm/pnpm/yarn but double-check the build script name in \`package.json\`.
+3. Make sure the workflow's install and build commands match what this project uses.
 
-4. Commit and push the workflow file. Once the first Actions run completes successfully, WEN.DEPLOY will automatically use the pre-built artifact for near-instant deploys — no in-browser build needed.
-
-Do not modify anything else in the repository.`;
+4. Commit and push the workflow file. Once the first Actions run completes successfully, WEN.DEPLOY will automatically use the pre-built artifact for near-instant deploys.`;
 
 // ─── MAIN COMPONENT ───────────────────────────────────────────────────────────
 
@@ -361,8 +360,8 @@ function DeployView() {
 
   useEffect(() => {
     const code = searchParams.get("code");
-    if (code) {
-      // Clean URL immediately
+    const pending = sessionStorage.getItem("gh_oauth_pending");
+    if (code && pending) {
       const newUrl = window.location.origin + window.location.pathname;
       window.history.replaceState({}, document.title, newUrl);
       exchangeCodeForToken(code);
@@ -370,24 +369,10 @@ function DeployView() {
   }, [searchParams]);
 
   const connectGitHub = async () => {
-    const authUrl = `https://github.com/login/oauth/authorize?client_id=${GITHUB_CLIENT_ID}&redirect_uri=${encodeURIComponent(GITHUB_REDIRECT_URI)}`;
-    
-    if (isMobile()) {
-      sessionStorage.setItem("gh_oauth_pending", "true");
-      window.location.href = authUrl;
-      return;
-    }
-
     try {
       setDeployState({ step: "connecting-github", message: "Connecting to GitHub...", progress: 0, activeStepIndex: -1 });
       const code = await openGitHubAuth();
-      if (code === null) {
-        // Popup was blocked, fallback to redirect
-        sessionStorage.setItem("gh_oauth_pending", "true");
-        window.location.href = authUrl;
-      } else {
-        await exchangeCodeForToken(code);
-      }
+      if (code) await exchangeCodeForToken(code);
     } catch (e: any) {
       setDeployState({ step: "error", message: e.message, progress: 0, activeStepIndex: -1 });
     }
@@ -410,27 +395,16 @@ function DeployView() {
           throw new Error("GitHub session expired. Please reconnect.");
         }
         const data = await r.json();
-        if (Array.isArray(data)) {
-          setRepos(data);
-        } else {
-          console.error("Unexpected response from GitHub:", data);
-          setRepos([]);
-        }
+        if (Array.isArray(data)) setRepos(data);
+        else setRepos([]);
       })
-      .catch(err => {
-        console.error(err);
-        setRepos([]);
-      });
+      .catch(() => setRepos([]));
   }, [githubToken]);
 
   const logBuffer = useRef<string[]>([]);
-
   function termWrite(data: string) {
-    if (terminalInstance.current) {
-      terminalInstance.current.write(data);
-    } else {
-      logBuffer.current.push(data);
-    }
+    if (terminalInstance.current) terminalInstance.current.write(data);
+    else logBuffer.current.push(data);
   }
   function termWriteln(data: string) { termWrite(data + "\r\n"); }
 
@@ -480,7 +454,7 @@ function DeployView() {
               );
               const artifacts: any[] = (await artRes.json()).artifacts || [];
               const preferred = ["dist", "build", "out", "public", config.outputDir];
-              const match = artifacts.find(a => preferred.some(p => a.name.toLowerCase().includes(p))) ?? artifacts[0];
+              const match = artifacts.find((a: any) => preferred.some((p: string) => a.name.toLowerCase().includes(p))) ?? artifacts[0];
               if (match) {
                 termWriteln(`\x1b[32m> Found artifact: "${match.name}" (run #${run.run_number})\x1b[0m`);
                 const zipRes = await fetch("/api/artifact", {
@@ -494,129 +468,120 @@ function DeployView() {
                   const unzipped: Record<string, Uint8Array> = await new Promise((res, rej) =>
                     unzip(zipBytes, (err, data) => err ? rej(err) : res(data))
                   );
-                  const zipKeys = Object.keys(unzipped).filter(k => !k.endsWith("/"));
-                  const topDirs = new Set(zipKeys.map(k => k.split("/")[0]));
+                  const zipKeys = Object.keys(unzipped).filter((k: string) => !k.endsWith("/"));
+                  const topDirs = new Set(zipKeys.map((k: string) => k.split("/")[0]));
                   const stripPrefix = topDirs.size === 1 ? [...topDirs][0] + "/" : "";
-                  files = zipKeys.map(k => ({
+                  files = zipKeys.map((k: string) => ({
                     path: stripPrefix ? k.slice(stripPrefix.length) : k,
                     content: unzipped[k]
-                  })).filter(f => f.path);
+                  })).filter((f: any) => f.path);
                   termWriteln(`\x1b[32m> Unpacked ${files.length} files from artifact — skipping build step\x1b[0m`);
                 }
                 break;
               }
             }
           }
-        } catch {
+        } catch (_artifactErr) {
           termWriteln(`\x1b[33m> No artifact available, falling back to WebContainer build\x1b[0m`);
         }
       }
 
       // ── SLOW PATH: WebContainer build ────────────────────────────────────────
       if (!files) {
-        if (deployMode === "actions") {
-          throw new Error("No GitHub Action artifact found. Please push your workflow and wait for a successful run, or choose the In-Browser Build option.");
-        }
+        if (deployMode === "actions") throw new Error("No GitHub Action artifact found. Please push your workflow or use In-Browser Build.");
 
         setDeployState({ step: "booting", message: "Booting browser environment...", progress: 8, activeStepIndex: 0 });
-        if (!webcontainerInstance) {
-          webcontainerInstance = await WebContainer.boot();
-        }
+        if (!webcontainerInstance) webcontainerInstance = await WebContainer.boot();
         const wc = webcontainerInstance;
 
         termWriteln("\x1b[33m> Fetching repository tarball...\x1b[0m");
-        const tarRes = await fetch(
-          `/api/tarball?repo=${encodeURIComponent(config.repo.full_name)}&ref=${encodeURIComponent(config.branch)}`,
-          { headers: { Authorization: `Bearer ${githubToken}` } }
-        );
+        const tarRes = await fetch(`/api/tarball?repo=${encodeURIComponent(config.repo.full_name)}&ref=${encodeURIComponent(config.branch)}`, { headers: { Authorization: `Bearer ${githubToken}` } });
         if (!tarRes.ok) throw new Error(`Failed to fetch tarball: ${tarRes.status}`);
         const tarGzBuffer = new Uint8Array(await tarRes.arrayBuffer());
 
         termWriteln("\x1b[33m> Extracting repository...\x1b[0m");
         const { decompress } = await import("fflate");
-        const tarBytes: Uint8Array = await new Promise((res, rej) =>
-          decompress(tarGzBuffer, (err, data) => err ? rej(new Error("Gzip decompress failed: " + err.message)) : res(data))
-        );
+        const tarBytes: Uint8Array = await new Promise((res, rej) => decompress(tarGzBuffer, (err, data) => err ? rej(err) : res(data)));
 
         function parseTar(buf: Uint8Array): Record<string, any> {
           const tree: Record<string, any> = {};
           let off = 0;
           const dec = new TextDecoder();
           while (off + 512 <= buf.length) {
-            // Standard TAR EOA is two 512-byte blocks of zeros. 
-            // We check the first few bytes of the current block for non-zero.
             let isZero = true;
             for (let i = 0; i < 64; i++) { if (buf[off + i] !== 0) { isZero = false; break; } }
             if (isZero) break;
 
-            const name = dec.decode(buf.slice(off, off + 100)).replace(/\0/g, "").trim();
-            const prefix = dec.decode(buf.slice(off + 345, off + 500)).replace(/\0/g, "").trim();
+            const name = dec.decode(buf.slice(off, off + 100)).replace(/\x00/g, "").trim();
+            const prefix = dec.decode(buf.slice(off + 345, off + 500)).replace(/\x00/g, "").trim();
             const fullName = prefix ? `${prefix}/${name}` : name;
-            
-            const size = parseInt(dec.decode(buf.slice(off + 124, off + 136)).replace(/\0/g, "").trim() || "0", 8);
+            const size = parseInt(dec.decode(buf.slice(off + 124, off + 136)).replace(/\x00/g, "").trim() || "0", 8);
             const type = String.fromCharCode(buf[off + 156]);
             
-            off += 512; // Move past header
-
-            if (fullName && type !== "5" && type !== "L") { // Skip directories and long-link headers
-              const parts = fullName.split("/").slice(1).filter(Boolean);
-              if (parts.length) {
+            off += 512;
+            if (fullName && type !== "5" && type !== "L") {
+              const parts = fullName.split("/").filter(Boolean);
+              const stripped = parts.length > 1 ? parts.slice(1) : parts; // Strip owner-repo-sha wrapper
+              if (stripped.length > 0) {
                 let node = tree;
-                for (const dir of parts.slice(0, -1)) {
-                  if (!node[dir]) node[dir] = { directory: {} };
+                for (const dir of stripped.slice(0, -1)) {
+                  if (!node[dir] || !node[dir].directory) node[dir] = { directory: {} };
                   node = node[dir].directory;
                 }
-                const fname = parts[parts.length - 1];
+                const fname = stripped[stripped.length - 1];
                 if (fname) node[fname] = { file: { contents: buf.slice(off, off + size) } };
               }
             }
-            
-            off += Math.ceil(size / 512) * 512; // Move past data blocks
+            off += Math.ceil(size / 512) * 512;
           }
           return tree;
         }
 
-        const fileTree = parseTar(tarBytes);
-        await wc.mount(fileTree);
+        const mountTree = parseTar(tarBytes);
+        const topKeys = Object.keys(mountTree);
+        termWriteln(`\x1b[36m> Parsed tar top-level keys: ${JSON.stringify(topKeys.slice(0, 15))}\x1b[0m`);
+        
+        const hasPackageJson = !!mountTree["package.json"];
+        termWriteln(`\x1b[${hasPackageJson ? "32" : "31"}m> package.json at root: ${hasPackageJson}\x1b[0m`);
+        
+        termWriteln(`\x1b[32m> Mounting ${topKeys.length} entries into WebContainer...\x1b[0m`);
+        await wc.mount(mountTree);
 
-        const mountedKeys = Object.keys(fileTree);
-        type PkgManager = { bin: string; installArgs: string[]; runArgs: (cmd: string) => string[]; label: string };
-        const pm: PkgManager =
-          mountedKeys.includes("pnpm-lock.yaml")
-            ? { bin: "npx", installArgs: ["pnpm", "install", "--no-frozen-lockfile", "--force", "--network-concurrency=4"], runArgs: (s) => ["pnpm", "run", s], label: "pnpm" }
-            : mountedKeys.includes("yarn.lock")
-            ? { bin: "npx", installArgs: ["yarn", "install", "--frozen-lockfile", "--network-concurrency=4"], runArgs: (s) => ["yarn", s], label: "yarn" }
-            : { bin: "npm", installArgs: ["install", "--legacy-peer-deps", "--prefer-offline"], runArgs: (s) => ["run", s], label: "npm" };
+        const rootAfterMount = await wc.fs.readdir("/");
+        termWriteln(`\x1b[36m> Container root after mount: ${JSON.stringify(rootAfterMount.slice(0, 15))}\x1b[0m`);
 
-        const npmrc = ["fetch-retries=8", "fetch-retry-mintimeout=20000", "fetch-retry-maxtimeout=120000", "network-concurrency=4", "registry=https://registry.npmjs.org/"].join("\n");
+        const pm = topKeys.includes("pnpm-lock.yaml") ? { bin: "npx", args: ["pnpm", "install", "--no-frozen-lockfile", "--force", "--network-concurrency=4"], label: "pnpm" }
+                  : topKeys.includes("yarn.lock") ? { bin: "npx", args: ["yarn", "install", "--frozen-lockfile", "--network-concurrency=4"], label: "yarn" }
+                  : { bin: "npm", args: ["install", "--legacy-peer-deps"], label: "npm" };
+
+        const npmrc = ["fetch-retries=8", "fetch-retry-mintimeout=20000", "fetch-retry-maxtimeout=120000", "network-concurrency=4"].join("\n");
         await wc.fs.writeFile("/.npmrc", npmrc);
 
-        setDeployState({ step: "installing", message: `Installing dependencies...`, progress: 20, activeStepIndex: 1 });
-        let installExit = 1;
+        setDeployState({ step: "installing", message: `Installing with ${pm.label}...`, progress: 20, activeStepIndex: 1 });
+        let exit = 1;
         for (let i = 1; i <= 3; i++) {
-          const install = await wc.spawn(pm.bin, pm.installArgs);
+          const install = await wc.spawn(pm.bin, pm.args);
           install.output.pipeTo(new WritableStream({ write(d) { termWrite(d); setConsoleLog(p => p + d); } }));
-          installExit = await install.exit;
-          if (installExit === 0) break;
+          exit = await install.exit;
+          if (exit === 0) break;
           await new Promise(r => setTimeout(r, 5000 * i));
         }
-        if (installExit !== 0) throw new Error("Installation failed.");
+        if (exit !== 0) throw new Error("Installation failed.");
 
         setDeployState({ step: "building", message: "Running build...", progress: 50, activeStepIndex: 2 });
-        const buildParts = config.buildCommand.trim().split(/\s+/);
-        const [bBin, ...bArgs] = ["npm", "pnpm", "yarn", "npx"].includes(buildParts[0]) ? buildParts : [pm.bin, ...pm.runArgs(buildParts.join(" "))];
+        const bParts = config.buildCommand.trim().split(/\s+/);
+        const [bBin, ...bArgs] = ["npm", "pnpm", "yarn", "npx"].includes(bParts[0]) ? bParts : [pm.bin, "run", bParts[0]];
         const build = await wc.spawn(bBin, bArgs);
         build.output.pipeTo(new WritableStream({ write(d) { termWrite(d); setConsoleLog(p => p + d); } }));
         if (await build.exit !== 0) throw new Error("Build failed.");
 
         const outputPath = `/${config.outputDir}`;
-        async function collectFiles(dir: string, base: string, list: any[] = []) {
+        async function collectFiles(dir: string, base: string, list: { path: string; content: Uint8Array }[] = []) {
           const entries = await wc.fs.readdir(dir, { withFileTypes: true });
           for (const entry of entries) {
-            const path = `${dir}/${entry.name}`;
-            const relPath = path.replace(base + "/", "");
+            const path = `${dir}/${entry.name}`, rel = path.slice(base.length + 1);
             if (entry.isDirectory()) await collectFiles(path, base, list);
-            else list.push({ path: relPath, content: await wc.fs.readFile(path) });
+            else list.push({ path: rel, content: await wc.fs.readFile(path) });
           }
           return list;
         }
@@ -627,10 +592,9 @@ function DeployView() {
       setDeployState({ step: "pinning", message: "Pinning to IPFS...", progress: 85, activeStepIndex: 3 });
       const crustToken = "YWxnby1CQ0FQV0pBTFdBM04zRUlaUkZDTzU1UFEzWUJZQ1NHUFpYTkRIT09BNlI3Q0dIVElTVjJHQ1NZQzZZOkZyYjl6RWhudVVKZ0ZaY0d1cmRTUE45dW1SL1hHMnRlalc0VFpkb3huN3ZXMTVKOFd6TGMva3R2LytnMklWRVFRMVN4Vnk3N0plZ3laZkVKMkRxaEFRPT0=";
       const formData = new FormData();
-      
-      files.forEach(f => {
-        const standardContent = f.content.buffer instanceof SharedArrayBuffer ? new Uint8Array(f.content) : f.content;
-        formData.append("file", new Blob([standardContent as any]), f.path);
+      (files as { path: string; content: Uint8Array }[]).forEach(f => {
+        const content = f.content.buffer instanceof SharedArrayBuffer ? new Uint8Array(f.content) : f.content;
+        formData.append("file", new Blob([content as any]), f.path);
       });
 
       const pinRes = await fetch("https://gw.crustfiles.app/api/v0/add?wrap-with-directory=true&cid-version=1", {
@@ -640,41 +604,30 @@ function DeployView() {
       const rootCid = JSON.parse(pinLines[pinLines.length - 1]).Hash;
 
       setDeployState({ step: "minting", message: "Finalizing on Algorand...", progress: 95, activeStepIndex: 4 });
-      const algod = new algosdk.Algodv2("", ALGOD_SERVER, "");
-      const params = await algod.getTransactionParams().do();
-      const reserveAddress = cidToReserveAddress(rootCid);
+      const algod = new algosdk.Algodv2("", ALGOD_SERVER, ""), params = await algod.getTransactionParams().do();
+      const reserve = cidToReserveAddress(rootCid);
       
-      let txn;
-      if (config.existingAsaId) {
-        txn = algosdk.makeAssetConfigTxnWithSuggestedParamsFromObject({
-          from: activeAddress!, assetIndex: config.existingAsaId, manager: activeAddress!, reserve: reserveAddress, suggestedParams: params, strictEmptyAddressChecking: false
-        });
-      } else {
-        txn = algosdk.makeAssetCreateTxnWithSuggestedParamsFromObject({
-          from: activeAddress!, total: 1, decimals: 0, defaultFrozen: false, manager: activeAddress!, reserve: reserveAddress, unitName: "SITE", assetName: config.repo.name.slice(0, 32), assetURL: ARC19_URL_TEMPLATE, suggestedParams: params
-        });
-      }
+      const txn = config.existingAsaId 
+        ? algosdk.makeAssetConfigTxnWithSuggestedParamsFromObject({ from: activeAddress!, assetIndex: config.existingAsaId, manager: activeAddress!, reserve, suggestedParams: params, strictEmptyAddressChecking: false })
+        : algosdk.makeAssetCreateTxnWithSuggestedParamsFromObject({ from: activeAddress!, total: 1, decimals: 0, defaultFrozen: false, manager: activeAddress!, reserve, unitName: "SITE", assetName: config.repo.name.slice(0, 32), assetURL: ARC19_URL_TEMPLATE, suggestedParams: params });
 
-      const payment = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
-        from: activeAddress!, to: algosdk.getApplicationAddress(CRUST_APP_ID), amount: 100000, suggestedParams: params
-      });
-
+      const payment = algosdk.makePaymentTxnWithSuggestedParamsFromObject({ from: activeAddress!, to: algosdk.getApplicationAddress(CRUST_APP_ID), amount: 100000, suggestedParams: params });
       algosdk.assignGroupID([txn, payment]);
-      const signed = await signTransactions([algosdk.encodeUnsignedTransaction(txn), algosdk.encodeUnsignedTransaction(payment)] as Uint8Array[]);
+      const signed = await signTransactions([algosdk.encodeUnsignedTransaction(txn), algosdk.encodeUnsignedTransaction(payment)]);
+      if (!signed || signed.length < 2 || !signed[0] || !signed[1]) throw new Error("Transaction signing failed.");
+      
       const { txId } = await algod.sendRawTransaction(signed as Uint8Array[]).do();
       await algosdk.waitForConfirmation(algod, txId, 4);
 
-      let finalAsaId = config.existingAsaId;
-      if (!finalAsaId) {
+      let asaId = config.existingAsaId;
+      if (!asaId) {
         const info = await algod.pendingTransactionInformation(txId).do();
-        finalAsaId = info["asset-index"];
+        asaId = info["asset-index"];
       }
 
-      setResult({ cid: rootCid, asaId: finalAsaId! });
+      setResult({ cid: rootCid, asaId: asaId! });
       setDeployState({ step: "complete", message: "Deployment Successful!", progress: 100, activeStepIndex: 5 });
-
     } catch (e: any) {
-      console.error(e);
       setDeployState({ step: "error", message: e.message, progress: 0, activeStepIndex: -1 });
     }
   };
@@ -730,15 +683,13 @@ function DeployView() {
                  <button 
                    key={repo.id}
                    onClick={async () => {
-                     let buildCommand = "npm run build";
-                     let hasBlockchainDeps = false;
+                     let buildCommand = "npm run build", hasBlockchainDeps = false;
                      try {
                        const treeRes = await fetch(`https://api.github.com/repos/${repo.full_name}/git/trees/${repo.default_branch}`, { headers: { Authorization: `Bearer ${githubToken}` } });
-                       const treeData = await treeRes.json();
-                       const filenames: string[] = (treeData.tree || []).map((f: any) => f.path.toLowerCase());
+                       const treeData = await treeRes.json(), filenames = (treeData.tree || []).map((f: any) => f.path.toLowerCase());
                        if (filenames.includes("pnpm-lock.yaml")) buildCommand = "pnpm run build";
                        else if (filenames.includes("yarn.lock")) buildCommand = "yarn build";
-                       hasBlockchainDeps = filenames.some(f => BLOCKCHAIN_KEYWORDS.some(k => f.includes(k)));
+                       hasBlockchainDeps = filenames.some((f: string) => BLOCKCHAIN_KEYWORDS.some((k: string) => f.includes(k)));
                      } catch { /* ignore scan error */ }
                      setConfig(c => ({ ...c, repo, branch: repo.default_branch, buildCommand, hasBlockchainDeps }));
                      if (hasBlockchainDeps) setDeployMode("actions");
@@ -770,7 +721,6 @@ function DeployView() {
                </div>
              )}
              
-             {/* Repo Header */}
              <div className="bg-neutral-900/50 border border-neutral-800 rounded-3xl p-6 flex justify-between items-center">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 bg-orange-500/10 rounded-xl flex items-center justify-center font-bold text-orange-500">{config.repo.name[0].toUpperCase()}</div>
@@ -789,7 +739,6 @@ function DeployView() {
              <div className="space-y-3">
                 <div className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest px-1">Choose deploy method</div>
                 
-                {/* ⚡ GitHub Actions */}
                 <div className={`rounded-2xl border transition-all duration-200 overflow-hidden ${deployMode === "actions" ? "border-orange-500/50 bg-orange-500/5" : "border-neutral-800 bg-neutral-900/50"}`}>
                   <button onClick={() => setDeployMode("actions")} className="w-full p-5 flex items-start gap-4 text-left">
                     <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-base mt-0.5 ${deployMode === "actions" ? "bg-orange-500/20" : "bg-neutral-800"}`}>⚡</div>
@@ -810,36 +759,16 @@ function DeployView() {
 
                   {deployMode === "actions" && (
                     <div className="border-t border-orange-500/20 p-5 space-y-4">
-                      <div>
-                        <div className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest mb-2">Setup instructions</div>
-                        <ol className="text-xs text-neutral-400 space-y-1.5 list-decimal list-inside leading-relaxed">
-                          <li>Add <code className="text-orange-400 bg-neutral-800 px-1 py-0.5 rounded text-[10px]">wen-deploy.yml</code> to <code className="text-orange-400 bg-neutral-800 px-1 py-0.5 rounded text-[10px]">.github/workflows/</code></li>
-                          <li>Push — GitHub will build automatically</li>
-                          <li>Click Deploy — WEN.DEPLOY picks up the artifact</li>
-                        </ol>
-                      </div>
-
                       <div className="flex gap-2 flex-wrap">
-                        <a href={`data:text/yaml;charset=utf-8,${encodeURIComponent(WEN_DEPLOY_WORKFLOW)}`} download="wen-deploy.yml" className="inline-flex items-center gap-1.5 px-3 py-2 bg-orange-500 hover:bg-orange-400 text-black font-bold text-[10px] rounded-xl transition-colors">↓ Download workflow</a>
+                        <a href={`data:text/yaml;charset=utf-8,${encodeURIComponent(WEN_DEPLOY_WORKFLOW)}`} download="wen-deploy.yml" className="inline-flex items-center gap-1.5 px-3 py-2 bg-orange-500 hover:bg-orange-400 text-black font-bold text-[10px] rounded-xl">↓ Download workflow</a>
                         <button onClick={() => navigator.clipboard.writeText(WEN_DEPLOY_WORKFLOW)} className="px-3 py-2 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 font-bold text-[10px] rounded-xl">Copy workflow</button>
-                        <button onClick={() => navigator.clipboard.writeText(WEN_DEPLOY_AI_PROMPT)} className="px-3 py-2 bg-neutral-800 hover:bg-neutral-700 text-cyan-400 font-bold text-[10px] rounded-xl flex items-center gap-1.5"><span>✦</span> Copy AI prompt</button>
+                        <button onClick={() => navigator.clipboard.writeText(WEN_DEPLOY_AI_PROMPT)} className="px-3 py-2 bg-neutral-800 hover:bg-neutral-700 text-cyan-400 font-bold text-[10px] rounded-xl">✦ Copy AI prompt</button>
                       </div>
-
-                      <div className="bg-neutral-950 rounded-xl p-3 border border-neutral-800">
-                        <div className="text-[9px] font-bold text-neutral-600 uppercase tracking-widest mb-1.5 flex items-center gap-1.5">
-                          <span className="text-cyan-500">✦</span> AI Agent Prompt
-                          <span className="text-neutral-700">— paste into Cursor, Windsurf, Copilot</span>
-                        </div>
-                        <p className="text-[10px] text-neutral-500 font-mono leading-relaxed line-clamp-3">Set up WEN.DEPLOY GitHub Actions workflow for this repo. Create .github/workflows/wen-deploy.yml, verify the build output path matches the project, commit and push...</p>
-                      </div>
-
-                      <p className="text-[10px] text-neutral-600">Already have the workflow? Just click Deploy.</p>
-                      <button onClick={handleDeploy} className="w-full py-4 bg-orange-500 hover:bg-orange-400 text-black font-black text-sm rounded-2xl shadow-lg shadow-orange-500/10 active:scale-[0.98]">DEPLOY VIA GITHUB ACTIONS</button>
+                      <button onClick={handleDeploy} className="w-full py-4 bg-orange-500 hover:bg-orange-400 text-black font-black text-sm rounded-2xl active:scale-[0.98]">DEPLOY VIA GITHUB ACTIONS</button>
                     </div>
                   )}
                 </div>
 
-                {/* 🌐 In-Browser Build */}
                 <div className={`rounded-2xl border transition-all duration-200 overflow-hidden ${deployMode === "webcontainer" ? "border-neutral-600 bg-neutral-900/80" : "border-neutral-800 bg-neutral-900/30"}`}>
                   <button onClick={() => setDeployMode("webcontainer")} className="w-full p-5 flex items-start gap-4 text-left">
                     <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-base mt-0.5 ${deployMode === "webcontainer" ? "bg-neutral-700" : "bg-neutral-800/50"}`}>🌐</div>
@@ -849,30 +778,15 @@ function DeployView() {
                         <span className="text-[9px] font-bold uppercase tracking-wider bg-neutral-800 text-neutral-400 px-2 py-0.5 rounded-full">No setup required</span>
                       </div>
                       <p className="text-[11px] text-neutral-500 leading-relaxed">Builds directly in the browser using WebContainer. Slower and may struggle with crypto deps.</p>
-                      <div className="flex gap-4 mt-2">
-                        <span className="text-[10px] text-neutral-600 flex items-center gap-1"><span className="text-green-400">✓</span> Zero setup</span>
-                        {config.hasBlockchainDeps && <span className="text-[10px] text-orange-500/70 flex items-center gap-1"><span>⚠</span> May fail for this repo</span>}
-                      </div>
                     </div>
                     <div className={`w-4 h-4 rounded-full border-2 flex-shrink-0 mt-1 ${deployMode === "webcontainer" ? "border-neutral-400 bg-neutral-400" : "border-neutral-600"}`} />
                   </button>
 
                   {deployMode === "webcontainer" && (
                     <div className="border-t border-neutral-700 p-5 space-y-4">
-                      {config.hasBlockchainDeps && (
-                        <div className="bg-orange-500/10 border border-orange-500/20 rounded-xl px-4 py-3 text-[11px] text-orange-300">
-                          ⚠ This repo has crypto dependencies that frequently time out in the browser build environment. GitHub Actions is recommended.
-                        </div>
-                      )}
                       <div className="grid grid-cols-2 gap-3">
-                        <div className="space-y-1.5">
-                          <label className="text-[10px] text-neutral-500 font-bold uppercase tracking-widest">Build Command</label>
-                          <input type="text" value={config.buildCommand} onChange={e => setConfig(c => ({ ...c, buildCommand: e.target.value }))} className="w-full bg-neutral-800/50 border border-neutral-700/50 rounded-xl px-3 py-2 text-xs font-mono" />
-                        </div>
-                        <div className="space-y-1.5">
-                          <label className="text-[10px] text-neutral-500 font-bold uppercase tracking-widest">Output Directory</label>
-                          <input type="text" value={config.outputDir} onChange={e => setConfig(c => ({ ...c, outputDir: e.target.value }))} className="w-full bg-neutral-800/50 border border-neutral-700/50 rounded-xl px-3 py-2 text-xs font-mono" />
-                        </div>
+                        <input type="text" value={config.buildCommand} onChange={e => setConfig(c => ({ ...c, buildCommand: e.target.value }))} className="bg-neutral-800/50 border border-neutral-700/50 rounded-xl px-3 py-2 text-xs font-mono" placeholder="Build command" />
+                        <input type="text" value={config.outputDir} onChange={e => setConfig(c => ({ ...c, outputDir: e.target.value }))} className="bg-neutral-800/50 border border-neutral-700/50 rounded-xl px-3 py-2 text-xs font-mono" placeholder="Output dir" />
                       </div>
                       <button onClick={handleDeploy} className="w-full py-4 bg-neutral-700 hover:bg-neutral-600 text-white font-black text-sm rounded-2xl active:scale-[0.98]">BUILD IN BROWSER</button>
                     </div>
@@ -882,80 +796,35 @@ function DeployView() {
           </div>
         ) : deployState.step === "complete" ? (
           <div className="bg-green-500/5 border border-green-500/20 rounded-3xl p-10 text-center space-y-6">
-             <div className="w-20 h-20 bg-green-500/10 rounded-full flex items-center justify-center mx-auto shadow-[0_0_40px_rgba(34,197,94,0.15)]">
-               <svg className="w-10 h-10 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
-             </div>
+             <div className="w-20 h-20 bg-green-500/10 rounded-full flex items-center justify-center mx-auto shadow-[0_0_40px_rgba(34,197,94,0.15)]"><svg className="w-10 h-10 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg></div>
              <h2 className="text-2xl font-black tracking-tight">Deployment Successful</h2>
-             <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-4 text-xs font-mono break-all text-green-400 max-w-sm mx-auto">
-               {window.location.origin}/deploy?resolve={result?.asaId}
-             </div>
-             <div className="flex gap-3 justify-center">
-                <a href={`/deploy?resolve=${result?.asaId}`} target="_blank" rel="noreferrer" className="px-6 py-3 bg-white text-black font-bold rounded-xl text-sm transition-transform active:scale-95">View Site</a>
-                <button onClick={() => { setDeployState({ step: "idle", message: "", progress: 0, activeStepIndex: -1 }); setConfig(c => ({ ...c, repo: null })); }} className="px-6 py-3 bg-neutral-900 text-neutral-400 font-bold rounded-xl text-sm border border-neutral-800">Deploy New</button>
-             </div>
+             <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-4 text-xs font-mono break-all text-green-400 max-w-sm mx-auto">{window.location.origin}/deploy?resolve={result?.asaId}</div>
+             <div className="flex gap-3 justify-center"><a href={`/deploy?resolve=${result?.asaId}`} target="_blank" rel="noreferrer" className="px-6 py-3 bg-white text-black font-bold rounded-xl text-sm transition-transform active:scale-95">View Site</a><button onClick={() => { setDeployState({ step: "idle", message: "", progress: 0, activeStepIndex: -1 }); setConfig(c => ({ ...c, repo: null })); }} className="px-6 py-3 bg-neutral-900 text-neutral-400 font-bold rounded-xl text-sm border border-neutral-800">Deploy New</button></div>
           </div>
         ) : (
           <div className="space-y-6 animate-in fade-in duration-700">
              <div className="bg-neutral-900 border border-neutral-800 rounded-[32px] p-10 shadow-2xl">
-                {/* Pipeline Stepper */}
                 <div className="flex justify-between items-start mb-12 px-2 relative">
                    {PIPELINE_STEPS.map((s, i) => {
                      const status = getStepStatus(i);
                      return (
                        <div key={i} className="flex flex-col items-center flex-1 relative group">
-                         {i < PIPELINE_STEPS.length - 1 && (
-                           <div className={`absolute top-4 h-[2px] ${deployState.activeStepIndex > i ? 'bg-orange-500' : 'bg-neutral-800'} transition-all duration-700`} style={{left:'calc(50% + 1.25rem)', right:'calc(-50% + 1.25rem)'}} />
-                         )}
-                         <div className={`relative z-10 w-8 h-8 rounded-full border-2 flex items-center justify-center transition-all duration-500 ${
-                           status === 'complete' ? 'bg-orange-500 border-orange-500' :
-                           status === 'active' ? 'border-orange-500 shadow-[0_0_15px_rgba(249,115,22,0.4)]' :
-                           'border-neutral-800 bg-neutral-900'
-                         }`}>
-                           {status === 'complete' ? <svg className="w-4 h-4 text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg> : <span className={`text-[10px] font-bold ${status === 'active' ? 'text-orange-500' : 'text-neutral-700'}`}>{i + 1}</span>}
-                         </div>
-                         <div className="mt-4 text-center">
-                           <div className={`text-[10px] font-black uppercase tracking-widest ${status === 'active' ? 'text-white' : 'text-neutral-600'}`}>{s.label}</div>
-                           <div className="text-[8px] text-neutral-600 font-mono mt-0.5">{s.sub}</div>
-                         </div>
+                         {i < PIPELINE_STEPS.length - 1 && <div className={`absolute top-4 h-[2px] ${deployState.activeStepIndex > i ? 'bg-orange-500' : 'bg-neutral-800'} transition-all duration-700`} style={{left:'calc(50% + 1.25rem)', right:'calc(-50% + 1.25rem)'}} />}
+                         <div className={`relative z-10 w-8 h-8 rounded-full border-2 flex items-center justify-center transition-all duration-500 ${status === 'complete' ? 'bg-orange-500 border-orange-500' : status === 'active' ? 'border-orange-500 shadow-[0_0_15px_rgba(249,115,22,0.4)]' : 'border-neutral-800 bg-neutral-900'}`}>{status === 'complete' ? <svg className="w-4 h-4 text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg> : <span className={`text-[10px] font-bold ${status === 'active' ? 'text-orange-500' : 'text-neutral-700'}`}>{i + 1}</span>}</div>
+                         <div className="mt-4 text-center"><div className={`text-[10px] font-black uppercase tracking-widest ${status === 'active' ? 'text-white' : 'text-neutral-600'}`}>{s.label}</div><div className="text-[8px] text-neutral-600 font-mono mt-0.5">{s.sub}</div></div>
                        </div>
                      );
                    })}
                 </div>
-
-                <div className="flex items-center gap-4 mb-4">
-                  <div className="w-2 h-2 bg-orange-500 rounded-full animate-pulse" />
-                  <div className="flex-1"><div className="text-sm font-bold text-neutral-200">{deployState.message}</div></div>
-                  <div className="text-xl font-black text-orange-500">{deployState.progress}%</div>
-                </div>
-                <div className="w-full h-1.5 bg-neutral-950 border border-neutral-800 rounded-full overflow-hidden">
-                   <div className="h-full bg-orange-500 transition-all duration-700 ease-out shadow-[0_0_15px_rgba(249,115,22,0.2)]" style={{ width: `${deployState.progress}%` }} />
-                </div>
+                <div className="flex items-center gap-4 mb-4"><div className="w-2 h-2 bg-orange-500 rounded-full animate-pulse" /><div className="flex-1"><div className="text-sm font-bold text-neutral-200">{deployState.message}</div></div><div className="text-xl font-black text-orange-500">{deployState.progress}%</div></div>
+                <div className="w-full h-1.5 bg-neutral-950 border border-neutral-800 rounded-full overflow-hidden"><div className="h-full bg-orange-500 transition-all duration-700 ease-out shadow-[0_0_15px_rgba(249,115,22,0.2)]" style={{ width: `${deployState.progress}%` }} /></div>
              </div>
-
-             <div className="flex justify-center">
-                <button onClick={() => setShowConsole(!showConsole)} className="text-[10px] font-bold text-neutral-600 hover:text-orange-500 transition-all uppercase tracking-widest flex items-center gap-2">
-                  {showConsole ? 'Hide' : 'Show'} Build Console
-                  <svg className={`w-3 h-3 transition-transform ${showConsole ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
-                </button>
-             </div>
-
-             <div className={`bg-neutral-900 border border-neutral-800 rounded-3xl overflow-hidden shadow-2xl transition-all duration-500 ${showConsole ? 'opacity-100 max-h-[400px]' : 'opacity-0 max-h-0 border-0'}`}>
-               <div className="bg-neutral-800/50 px-4 py-2 flex items-center border-b border-neutral-800">
-                  <div className="flex gap-1.5"><div className="w-2 h-2 rounded-full bg-red-500/50" /><div className="w-2 h-2 rounded-full bg-yellow-500/50" /><div className="w-2 h-2 rounded-full bg-green-500/50" /></div>
-                  <div className="text-[10px] font-mono text-neutral-500 ml-2 uppercase">WEN.DEPLOY CONSOLE</div>
-               </div>
-               <div ref={terminalRef} className="p-4" />
-             </div>
+             <div className="flex justify-center"><button onClick={() => setShowConsole(!showConsole)} className="text-[10px] font-bold text-neutral-600 hover:text-orange-500 transition-all uppercase tracking-widest flex items-center gap-2">{showConsole ? 'Hide' : 'Show'} Build Console <svg className={`w-3 h-3 transition-transform ${showConsole ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg></button></div>
+             <div className={`bg-neutral-900 border border-neutral-800 rounded-3xl overflow-hidden shadow-2xl transition-all duration-500 ${showConsole ? 'opacity-100 max-h-[400px]' : 'opacity-0 max-h-0 border-0'}`}><div className="bg-neutral-800/50 px-4 py-2 flex items-center border-b border-neutral-800"><div className="flex gap-1.5"><div className="w-2 h-2 rounded-full bg-red-500/50" /><div className="w-2 h-2 rounded-full bg-yellow-500/50" /><div className="w-2 h-2 rounded-full bg-green-500/50" /></div><div className="text-[10px] font-mono text-neutral-500 ml-2 uppercase">WEN.DEPLOY CONSOLE</div></div><div ref={terminalRef} className="p-4" /></div>
           </div>
         )}
 
-        <div className="mt-20 pt-8 border-t border-neutral-900 flex flex-col md:flex-row justify-between items-center gap-4 opacity-30 grayscale hover:opacity-100 hover:grayscale-0 transition-all duration-1000">
-          <div className="flex gap-6 items-center">
-            <img src="/af_logo.svg" className="h-6" alt="Algorand" />
-            <img src="/crust.png" className="h-5" alt="Crust" />
-            <span className="text-[10px] font-black tracking-widest text-neutral-400">IPFS • ARC-19 • CI/CD</span>
-          </div>
-        </div>
+        <div className="mt-20 pt-8 border-t border-neutral-900 flex flex-col md:flex-row justify-between items-center gap-4 opacity-30 grayscale hover:opacity-100 hover:grayscale-0 transition-all duration-1000"><div className="flex gap-6 items-center"><img src="/af_logo.svg" className="h-6" alt="Algorand" /><img src="/crust.png" className="h-5" alt="Crust" /><span className="text-[10px] font-black tracking-widest text-neutral-400">IPFS • ARC-19 • CI/CD</span></div></div>
       </div>
     </div>
   );
