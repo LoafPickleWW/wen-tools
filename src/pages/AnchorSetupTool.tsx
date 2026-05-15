@@ -41,7 +41,7 @@ Please analyze our current build/release pipeline and propose the exact YAML cha
 }`;
 
   const githubActionSnippet = `      - name: ANCHOR Artifact
-        uses: loafpickleww/anchor-action@v1
+        uses: LoafPickleWW/ANCHOR-Protocol@main
         with:
           mnemonic: \${{ secrets.ANCHOR_MNEMONIC }}
           network: '${network}'
