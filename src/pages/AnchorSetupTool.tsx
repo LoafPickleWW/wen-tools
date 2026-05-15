@@ -41,11 +41,12 @@ Please analyze our current build/release pipeline and propose the exact YAML cha
 }`;
 
   const githubActionSnippet = `      - name: ANCHOR Artifact
-        uses: LoafPickleWW/ANCHOR-Protocol@main
-        with:
-          mnemonic: \${{ secrets.ANCHOR_MNEMONIC }}
-          network: '${network}'
-          # Optional: fail_on_error: true`;
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          npx @loafpickleww/anchor publish -r $VERSION --fail-on-error
+        env:
+          ANCHOR_MNEMONIC: \${{ secrets.ANCHOR_MNEMONIC }}
+          ANCHOR_NETWORK: '${network}'`;
 
   const readmeSnippet = `## 🔒 Security & Integrity
 

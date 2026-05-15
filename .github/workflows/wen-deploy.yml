@@ -51,10 +51,12 @@ jobs:
           fi
 
       - name: ANCHOR Artifact
-        uses: LoafPickleWW/ANCHOR-Protocol@main
-        with:
-          mnemonic: ${{ secrets.ANCHOR_MNEMONIC }}
-          network: 'mainnet'
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          npx @loafpickleww/anchor publish -r $VERSION --fail-on-error
+        env:
+          ANCHOR_MNEMONIC: ${{ secrets.ANCHOR_MNEMONIC }}
+          ANCHOR_NETWORK: 'mainnet'
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
