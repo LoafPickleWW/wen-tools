@@ -44,7 +44,8 @@ Please analyze our current build/release pipeline and propose the exact YAML cha
         uses: loafpickleww/anchor-action@v1
         with:
           mnemonic: \${{ secrets.ANCHOR_MNEMONIC }}
-          network: '${network}'`;
+          network: '${network}'
+          # Optional: fail_on_error: true`;
 
   const readmeSnippet = `## 🔒 Security & Integrity
 
@@ -58,7 +59,11 @@ You can verify the provenance of this package using the ANCHOR CLI:
 npx @loafpickleww/anchor verify <package-name> <version>
 \`\`\`
 
-Verification relies on cross-referencing metadata (wallet \`${wallet || "YOUR_WALLET_ADDRESS"}\`) with the official transparency log on Algorand.`;
+Verification relies on cross-referencing metadata (wallet \`${wallet || "YOUR_WALLET_ADDRESS"}\`) with the official transparency log on Algorand.
+
+---
+
+*Generated via [wen.tools](https://wen.tools/anchor-setup)*`;
 
   return (
     <div className="mx-auto text-white mb-10 flex flex-col items-center max-w-5xl w-full px-4 min-h-screen">
@@ -144,6 +149,10 @@ Verification relies on cross-referencing metadata (wallet \`${wallet || "YOUR_WA
 
             <div className="mt-8 pt-6 border-t border-secondary-gray/50 text-xs text-slate-500 leading-relaxed italic">
               Don't have a signing wallet? Use the <a href="/vanity" className="text-amber-400 hover:underline font-bold">Vanity Address</a> tool to generate a custom identity, or use any Algorand wallet you control.
+            </div>
+            
+            <div className="mt-4 pt-4 border-t border-secondary-gray/50 text-[10px] text-slate-600 leading-tight">
+              Looking for CLI usage? Run <code className="text-slate-400">npx @loafpickleww/anchor --help</code> to see all available commands.
             </div>
           </div>
         </div>
