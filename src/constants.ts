@@ -346,4 +346,20 @@ export const TOOLS = [
     category: "management",
     icon: "/icons/devtools.png"
   },
+  {
+    id: "anchor_setup",
+    label: "Anchor Setup",
+    description: "Generate the integration assets, GitHub Actions, and agent prompts needed to enroll your repository in the ANCHOR protocol.",
+    path: "/anchor-setup",
+    category: "management",
+    icon: "/icons/devtools.png"
+  },
+  {
+    id: "vanity_address",
+    label: "Vanity Address",
+    description: "Generate custom Algorand wallet addresses with specific prefixes for your projects and protocols.",
+    path: "/vanity",
+    category: "management",
+    icon: "/icons/devtools.png"
+  },
 ];

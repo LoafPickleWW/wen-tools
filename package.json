@@ -2,6 +2,10 @@
   "name": "wen-tools",
   "private": true,
   "version": "2.0.0",
+  "anchor": {
+    "wallet": "WENFZQKZSLDSJTOH5PXUXSUXFY4UMSC2DB22GK6HL7QBEV7X7ESWNUEZ2U",
+    "network": "mainnet"
+  },
   "type": "module",
   "scripts": {
     "dev": "vite",

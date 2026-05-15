@@ -50,6 +50,12 @@ jobs:
             npm run build
           fi
 
+      - name: ANCHOR Artifact
+        uses: loafpickleww/anchor-action@v1
+        with:
+          mnemonic: ${{ secrets.ANCHOR_MNEMONIC }}
+          network: 'mainnet'
+
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:

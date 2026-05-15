@@ -47,6 +47,10 @@ import { BeaconChat } from './pages/BeaconChat';
 import PostQuantum from './pages/PostQuantum';
 import { BeaconDropTool } from './pages/BeaconDropTool';
 import WenDeployTool from './pages/WenDeployTool';
+import AnchorSetupTool from './pages/AnchorSetupTool';
+import VanityAddressTool from './pages/VanityAddressTool';
+
+
 
 const walletManager = new WalletManager({
   wallets: [
@@ -143,6 +147,8 @@ function App() {
             <Route path='/post-quantum' element={<PostQuantum />} />
             <Route path='/beacon-drop' element={<BeaconDropTool />} />
             <Route path='/deploy' element={<WenDeployTool />} />
+            <Route path='/anchor-setup' element={<AnchorSetupTool />} />
+            <Route path='/vanity' element={<VanityAddressTool />} />
             <Route path="*" element={<Home />} />
           </Routes>
           <Footer />

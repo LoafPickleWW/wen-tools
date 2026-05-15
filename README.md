@@ -55,6 +55,22 @@ Bounties will be paid out upon successful merge and approval of the Pull Request
 
 Total Bounties Paid: 4,450A
 
+## 🔒 Security & Integrity
+
+This repository uses the **ANCHOR Protocol** to create a tamper-evident software supply chain record on the Algorand blockchain. Every build artifact is "anchored" with a cryptographic hash to ensure the code you run matches the code published by the authors.
+
+### Verification
+
+You can verify the provenance of this package at any time using the ANCHOR CLI:
+
+```bash
+npx @loafpickleww/anchor verify wen-tools <version>
+```
+
+Verification relies on cross-referencing this repository's metadata (wallet `WENFZQKZSLDSJTOH5PXUXSUXFY4UMSC2DB22GK6HL7QBEV7X7ESWNUEZ2U`) with the official transparency log on the Algorand blockchain.
+
+---
+
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) file for details

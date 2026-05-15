@@ -4,6 +4,8 @@ import { TOOLS } from "../constants";
 import CarouselComponent from "./CarouselComponent";
 import { ToolSearch } from "./ToolSearch";
 import { trackEvent } from "../utils";
+import { IoChevronBack, IoChevronForward } from "react-icons/io5";
+
 
 const CATEGORIES = [
   { id: "featured", label: "Featured" },
@@ -47,6 +49,20 @@ export function SelectToolComponent() {
     }
   }, [activeTab, searchQuery]);
 
+  const handlePrevCategory = () => {
+    const currentIndex = CATEGORIES.findIndex(c => c.id === activeTab);
+    const prevIndex = (currentIndex - 1 + CATEGORIES.length) % CATEGORIES.length;
+    setActiveTab(CATEGORIES[prevIndex].id);
+    setSearchQuery("");
+  };
+
+  const handleNextCategory = () => {
+    const currentIndex = CATEGORIES.findIndex(c => c.id === activeTab);
+    const nextIndex = (currentIndex + 1) % CATEGORIES.length;
+    setActiveTab(CATEGORIES[nextIndex].id);
+    setSearchQuery("");
+  };
+
   return (
     <div className="text-center w-full max-w-7xl mx-auto px-4">
       {/* Carousels Section */}
@@ -74,7 +90,8 @@ export function SelectToolComponent() {
       <div className="sticky top-20 z-20 bg-primary-black/80 backdrop-blur-md py-4 mb-6 border-b border-t border-dashed border-secondary-gray">
         <ToolSearch query={searchQuery} setQuery={setSearchQuery} />
         
-        <div className="flex overflow-x-auto no-scrollbar pb-2 gap-2 px-2 justify-start lg:justify-center">
+        {/* Desktop Categories */}
+        <div className="hidden lg:flex overflow-x-auto no-scrollbar pb-2 gap-2 px-2 justify-center">
           {CATEGORIES.map((cat) => (
             <button
               key={cat.id}
@@ -92,6 +109,34 @@ export function SelectToolComponent() {
             </button>
           ))}
         </div>
+
+        {/* Mobile Category Slideshow */}
+        {!searchQuery && (
+          <div className="lg:hidden flex items-center justify-between px-2 py-1 max-w-sm mx-auto">
+            <button 
+              onClick={handlePrevCategory} 
+              className="p-3 text-amber-400 hover:scale-110 active:scale-95 transition-transform"
+            >
+              <IoChevronBack size={28} />
+            </button>
+            
+            <div className="flex-1 overflow-hidden relative h-12 flex items-center justify-center">
+              <div 
+                key={activeTab}
+                className="text-xl font-black text-amber-400 tracking-tight animate-fade-in whitespace-nowrap uppercase italic"
+              >
+                {CATEGORIES.find(c => c.id === activeTab)?.label}
+              </div>
+            </div>
+
+            <button 
+              onClick={handleNextCategory} 
+              className="p-3 text-amber-400 hover:scale-110 active:scale-95 transition-transform"
+            >
+              <IoChevronForward size={28} />
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Tools Grid */}
