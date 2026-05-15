@@ -66,11 +66,11 @@ importers:
         specifier: ^0.3.0
         version: 0.3.0
       falcon-algo-sdk:
-        specifier: ^1.0.5
-        version: 1.0.5
+        specifier: ^1.1.2
+        version: 1.1.2
       falcon-signatures:
-        specifier: ^1.4.0
-        version: 1.4.0
+        specifier: ^1.4.2
+        version: 1.4.2
       fflate:
         specifier: ^0.8.2
         version: 0.8.2
@@ -1951,12 +1951,15 @@ packages:
   evp_bytestokey@1.0.3:
     resolution: {integrity: sha512-/f2Go4TognH/KvCISP7OUsHn85hT9nUkxxA9BEWxFn+Oj9o8ZNLm/40hdlgSLyuOimsrTKLUMEorQexp/aPQeA==}
 
-  falcon-algo-sdk@1.0.5:
-    resolution: {integrity: sha512-rpfOc7IdNC8Euk9S8m6Y+TmvRw40alONUUq9kea2P7uXeP9Hkeu2oFRzZ/qkLmfYbUzZcJx7YUi10Mk0zeY7/A==}
+  falcon-algo-sdk@1.1.2:
+    resolution: {integrity: sha512-otCLttpWyZHTxKpFhcvicbsS8233XQ2hJQy1vwOhMtpSJp1gHtqvb7dWkp2ssIQAhpQcQuyLRWwCi5OJzeBGng==}
     hasBin: true
 
   falcon-signatures@1.4.0:
     resolution: {integrity: sha512-ZH/JFP8MfkI9KJegv1GDImEwNyjIzKE5MTAcGiQmI5jNy1FSpxD+R84o2Nbh8xx7plN2SnRXWQrHCKdLJyv1xw==}
+
+  falcon-signatures@1.4.2:
+    resolution: {integrity: sha512-Nt7pStWxp7JQt70XtBG4HszwejcPX5kddgYYIhgSWm8cT9RIB73NlwBLrI0JrnIR1CnLr1ZsH7LB/SjI+3Lafg==}
 
   fast-deep-equal@3.1.3:
     resolution: {integrity: sha512-f3qQ9oQy9j2AhBe/H9VC91wLmKBCCU/gDOnKNAYG5hswO7BLKj09Hc5HYNz9cGI++xlpDCIgDaitVs03ATR84Q==}
@@ -5118,7 +5121,7 @@ snapshots:
       md5.js: 1.3.5
       safe-buffer: 5.2.1
 
-  falcon-algo-sdk@1.0.5:
+  falcon-algo-sdk@1.1.2:
     dependencies:
       '@noble/ed25519': 3.1.0
       algosdk: 3.5.2
@@ -5126,6 +5129,8 @@ snapshots:
       rfc4648: 1.5.4
 
   falcon-signatures@1.4.0: {}
+
+  falcon-signatures@1.4.2: {}
 
   fast-deep-equal@3.1.3: {}
 
