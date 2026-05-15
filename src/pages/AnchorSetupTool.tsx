@@ -60,13 +60,23 @@ async function fetchNpmPackageInfo(pkgName: string): Promise<{ version: string; 
   } catch { return null; }
 }
 
-async function fetchGitHubPackageName(owner: string, repo: string): Promise<string | null> {
+async function fetchGitHubRepoInfo(owner: string, repo: string): Promise<{ 
+  name: string; 
+  anchorWallet?: string; 
+  anchorNetwork?: string;
+  version?: string;
+} | null> {
   try {
     const res = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/package.json`);
     if (!res.ok) return null;
     const data = await res.json();
     const pkg = JSON.parse(atob(data.content));
-    return pkg.name || null;
+    return {
+      name: pkg.name,
+      anchorWallet: pkg.anchor?.wallet,
+      anchorNetwork: pkg.anchor?.network,
+      version: pkg.version,
+    };
   } catch { return null; }
 }
 
@@ -206,68 +216,99 @@ Verification cross-references npm metadata (wallet \`${wallet || "YOUR_WALLET_AD
     try {
       let pkgName: string | null = null;
       let version: string | null = null;
+      let anchorWallet: string | null = null;
+      let anchorNetwork: string | null = null;
 
-      // ── Step 1: Resolve package name from input ──────────────────────────────
+      // ── Step 1: Resolve package name and metadata ───────────────────────────
       if (verifyMode === "github") {
         const parsed = parseGitHubUrl(verifyInput.trim());
         if (!parsed) throw new Error("Invalid GitHub URL. Expected format: github.com/owner/repo");
-        pkgName = await fetchGitHubPackageName(parsed.owner, parsed.repo);
-        if (!pkgName) throw new Error(`Could not find package.json in ${parsed.owner}/${parsed.repo}`);
+        
+        const repoInfo = await fetchGitHubRepoInfo(parsed.owner, parsed.repo);
+        if (!repoInfo) throw new Error(`Could not find package.json in ${parsed.owner}/${parsed.repo}`);
+        
+        pkgName = repoInfo.name;
+        version = repoInfo.version || "latest";
+        anchorWallet = repoInfo.anchorWallet || null;
+        anchorNetwork = repoInfo.anchorNetwork || null;
+
+        if (!anchorWallet) {
+          setVerifyResult({ 
+            status: "unenrolled", 
+            packageName: pkgName,
+            version,
+            warnings: ["No anchor.wallet field found in this repo's package.json"] 
+          });
+          return;
+        }
       } else if (verifyMode === "npm") {
         // Accept either "my-package" or "my-package@1.2.3"
         const parts = verifyInput.trim().split("@");
         pkgName = parts[0] || verifyInput.trim();
         version = parts[1] || null;
+
+        const npmInfo = await fetchNpmPackageInfo(pkgName);
+        if (!npmInfo) {
+          setVerifyResult({ status: "unenrolled", packageName: pkgName, warnings: ["Package not found on npm registry"] });
+          return;
+        }
+
+        version = version || npmInfo.version;
+        anchorWallet = npmInfo.anchorWallet || null;
+        anchorNetwork = npmInfo.anchorNetwork || null;
+
+        if (!anchorWallet) {
+          setVerifyResult({ status: "unenrolled", packageName: pkgName, version, warnings: ["No anchor.wallet field found in package.json on npm"] });
+          return;
+        }
       } else if (verifyMode === "asa") {
         const asaInfo = await fetchAsaInfo(verifyInput.trim());
         if (!asaInfo) throw new Error(`ASA ${verifyInput.trim()} not found`);
         pkgName = asaInfo.name;
+        
+        // ASA mode still needs metadata — try npm first
+        const npmInfo = await fetchNpmPackageInfo(pkgName);
+        if (npmInfo) {
+          version = npmInfo.version;
+          anchorWallet = npmInfo.anchorWallet || null;
+          anchorNetwork = npmInfo.anchorNetwork || null;
+        }
       }
 
       if (!pkgName) throw new Error("Could not resolve package name");
-
-      // ── Step 2: Fetch npm metadata ────────────────────────────────────────────
-      const npmInfo = await fetchNpmPackageInfo(pkgName);
-      if (!npmInfo) {
-        setVerifyResult({ status: "unenrolled", packageName: pkgName, warnings: ["Package not found on npm registry"] });
+      if (!anchorWallet) {
+        setVerifyResult({ status: "unenrolled", packageName: pkgName, warnings: ["Could not find anchor metadata for this package"] });
         return;
       }
 
-      version = version || npmInfo.version;
-      const npmWallet = npmInfo.anchorWallet;
-      const network   = npmInfo.anchorNetwork || verifyNetwork;
+      const network = anchorNetwork || verifyNetwork;
 
-      if (!npmWallet) {
-        setVerifyResult({ status: "unenrolled", packageName: pkgName, version, warnings: ["No anchor.wallet field found in package.json"] });
-        return;
-      }
-
-      // ── Step 3: Cross-validate on-chain registration ──────────────────────────
-      const regTxId = await findRegistration(npmWallet, pkgName, network);
-      const chainWallet = regTxId ? npmWallet : null;
-      const crossValidated = !!chainWallet && chainWallet === npmWallet;
+      // ── Step 2: Cross-validate on-chain registration ──────────────────────────
+      const regTxId = await findRegistration(anchorWallet, pkgName, network);
+      const chainWallet = regTxId ? anchorWallet : null;
+      const crossValidated = !!chainWallet && chainWallet === anchorWallet;
 
       if (!regTxId) {
         setVerifyResult({
           status: "unenrolled",
           packageName: pkgName,
-          version,
-          npmWallet,
-          warnings: ["Wallet declared in package.json but no on-chain registration found. Package may be newly enrolled."],
+          version: version!,
+          npmWallet: anchorWallet,
+          warnings: ["Wallet declared in metadata but no on-chain registration found. Package may be newly enrolled."],
         });
         return;
       }
 
-      // ── Step 4: Find anchor transactions ─────────────────────────────────────
-      const anchors = await findAnchors(npmWallet, pkgName, version!, network);
+      // ── Step 3: Find anchor transactions ─────────────────────────────────────
+      const anchors = await findAnchors(anchorWallet, pkgName, version!, network);
 
       if (!anchors.pre && !anchors.post) {
         setVerifyResult({
           status: "unenrolled",
           packageName: pkgName,
           version: version!,
-          npmWallet,
-          chainWallet: npmWallet,
+          npmWallet: anchorWallet,
+          chainWallet: anchorWallet,
           crossValidated,
           warnings: [`Enrolled but no anchor transactions found for ${pkgName}@${version}`],
         });
@@ -285,8 +326,8 @@ Verification cross-references npm metadata (wallet \`${wallet || "YOUR_WALLET_AD
         status,
         packageName: pkgName,
         version: version!,
-        npmWallet,
-        chainWallet: npmWallet,
+        npmWallet: anchorWallet,
+        chainWallet: anchorWallet,
         crossValidated,
         prePublish: pre ? {
           found: true,
@@ -622,10 +663,10 @@ function VerifyResultCard({ result }: { result: VerifyResult }) {
           {result.npmWallet && (
             <div className="space-y-3">
               <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Identity</div>
-              <DetailRow label="Signing Wallet" value={result.npmWallet} mono truncate />
+              <DetailRow label="Declared Wallet" value={result.npmWallet} mono truncate />
               <DetailRow
                 label="Cross-validated"
-                value={result.crossValidated ? "✓ npm + chain agree" : "✗ Sources disagree"}
+                value={result.crossValidated ? "✓ Metadata + chain agree" : "✗ Sources disagree"}
                 valueClass={result.crossValidated ? "text-green-400" : "text-red-400"}
               />
             </div>
