@@ -43,9 +43,8 @@ Please analyze our current build/release pipeline and propose the exact YAML cha
   const githubActionSnippet = `      - name: ANCHOR Artifact
         run: |
           VERSION=$(node -p "require('./package.json').version")
-          npx @loafpickleww/anchor publish -r $VERSION --fail-on-error
+          npx @loafpickleww/anchor publish -r $VERSION --mnemonic \${{ secrets.ANCHOR_MNEMONIC }} --fail-on-error
         env:
-          ANCHOR_MNEMONIC: \${{ secrets.ANCHOR_MNEMONIC }}
           ANCHOR_NETWORK: '${network}'`;
 
   const readmeSnippet = `## 🔒 Security & Integrity
