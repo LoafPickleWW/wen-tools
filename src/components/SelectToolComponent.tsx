@@ -116,7 +116,7 @@ export function SelectToolComponent() {
       </div>
 
       {/* Navigation & Search */}
-      <div className="sticky top-20 z-20 bg-primary-black/80 backdrop-blur-md py-4 mb-6 border-b border-t border-dashed border-secondary-gray">
+      <div className="sticky top-[64px] md:top-[72px] z-20 bg-primary-black/80 backdrop-blur-md py-4 mb-6 border-b border-secondary-gray/30 shadow-xl shadow-black/20">
         <ToolSearch query={searchQuery} setQuery={setSearchQuery} />
         
         {/* Desktop Categories */}
