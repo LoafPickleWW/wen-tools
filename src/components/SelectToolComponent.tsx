@@ -63,6 +63,35 @@ export function SelectToolComponent() {
     setSearchQuery("");
   };
 
+  const [touchStart, setTouchStart] = useState<number | null>(null);
+  const [touchEnd, setTouchEnd] = useState<number | null>(null);
+
+  const minSwipeDistance = 50;
+
+  const onTouchStart = (e: React.TouchEvent) => {
+    setTouchEnd(null);
+    setTouchStart(e.targetTouches[0].clientX);
+  };
+
+  const onTouchMove = (e: React.TouchEvent) => {
+    setTouchEnd(e.targetTouches[0].clientX);
+  };
+
+  const onTouchEnd = () => {
+    if (!touchStart || !touchEnd) return;
+    const distance = touchStart - touchEnd;
+    const isLeftSwipe = distance > minSwipeDistance;
+    const isRightSwipe = distance < -minSwipeDistance;
+    
+    if (isLeftSwipe) {
+      handleNextCategory();
+      trackEvent("category_swipe", "home", "left");
+    } else if (isRightSwipe) {
+      handlePrevCategory();
+      trackEvent("category_swipe", "home", "right");
+    }
+  };
+
   return (
     <div className="text-center w-full max-w-7xl mx-auto px-4">
       {/* Carousels Section */}
@@ -112,7 +141,12 @@ export function SelectToolComponent() {
 
         {/* Mobile Category Slideshow */}
         {!searchQuery && (
-          <div className="lg:hidden flex items-center justify-between px-2 py-1 max-w-sm mx-auto">
+          <div 
+            className="lg:hidden flex items-center justify-between px-2 py-1 max-w-sm mx-auto"
+            onTouchStart={onTouchStart}
+            onTouchMove={onTouchMove}
+            onTouchEnd={onTouchEnd}
+          >
             <button 
               onClick={handlePrevCategory} 
               className="p-3 text-amber-400 hover:scale-110 active:scale-95 transition-transform"
@@ -140,7 +174,12 @@ export function SelectToolComponent() {
       </div>
 
       {/* Tools Grid */}
-      <div className="min-h-[400px]">
+      <div 
+        className="min-h-[400px]"
+        onTouchStart={onTouchStart}
+        onTouchMove={onTouchMove}
+        onTouchEnd={onTouchEnd}
+      >
         {searchQuery && (
           <h3 className="text-xl text-slate-400 mb-6 animate-fade-in">
             Found {filteredTools.length} tools matching "{searchQuery}"
