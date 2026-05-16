@@ -36,7 +36,7 @@ export async function resolveNfd(domain: string): Promise<string> {
   try {
     const r = await fetch(`https://api.nf.domains/nfd/${domain}?view=tiny`);
     if (r.ok) { const d = await r.json(); return d.depositAccount || ""; }
-  } catch {}
+  } catch { /* ignore */ }
   return "";
 }
 
@@ -55,7 +55,7 @@ export async function getAccountAssets(addr: string): Promise<Set<number>> {
     const r = await fetch(`${INDEXER}/v2/accounts/${addr}/assets?include-all=false`);
     const d = await r.json();
     for (const a of d.assets || []) s.add(a["asset-id"]);
-  } catch {}
+  } catch { /* ignore */ }
   return s;
 }
 
@@ -117,7 +117,7 @@ export async function getAccountAssetsWithInfo(
       results.push(...resolved);
       onBatch?.([...results]);
     }
-  } catch {}
+  } catch { /* ignore */ }
   return results;
 }
 
@@ -247,7 +247,7 @@ export async function fetchSwapFromTxIds(txIds: string[]): Promise<DecodedSwapTx
     notes.push(Uint8Array.from(atob(note64), c => c.charCodeAt(0)));
   }
 
-  let merged = new Uint8Array(notes.reduce((s, n) => s + n.length, 0));
+  const merged = new Uint8Array(notes.reduce((s, n) => s + n.length, 0));
   let off = 0;
   for (const n of notes) { merged.set(n, off); off += n.length; }
 
@@ -282,7 +282,7 @@ export async function fetchSwapFromTxIds(txIds: string[]): Promise<DecodedSwapTx
         });
       } else {
         let dec = 0;
-        try { const info = await getAssetInfo(txn.assetIndex); dec = info.params.decimals; } catch {}
+        try { const info = await getAssetInfo(txn.assetIndex); dec = info.params.decimals; } catch { /* ignore */ }
         results.push({
           swap: { id: i, sender: from, receiver: to, assetId: txn.assetIndex,
             amount: (txn.amount as number) / Math.pow(10, dec), txType: "axfer" },
