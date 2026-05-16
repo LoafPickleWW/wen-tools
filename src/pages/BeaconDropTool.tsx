@@ -15,6 +15,7 @@ import {
   base64ToUint8
 } from "../utils/deadDropCrypto";
 import { BEACON_PROTOCOL_ADDRESS, MAINNET_ALGONODE_INDEXER } from "../constants";
+import { Meta } from "../components/Meta";
 
 // The standard BEACON prefix used to filter transactions
 const BEACON_PREFIX = "BEACON/1:";
@@ -361,6 +362,10 @@ export function BeaconDropTool() {
 
   return (
     <div className="flex flex-col items-center justify-center w-full px-4 py-8 min-h-[80vh]">
+      <Meta 
+        title="BEACON Drop Tool" 
+        description="Securely send and receive encrypted messages and files on-chain using the BEACON protocol. Fully decentralized, serverless peer-to-peer communication on Algorand."
+      />
       <div className="w-full max-w-2xl bg-[#1a1a1a] rounded-2xl p-8 border border-[#333] shadow-2xl">
         <div className="flex flex-col items-center justify-center mb-8">
           <h1 className="text-3xl font-bold text-white flex items-center gap-2">
@@ -514,6 +519,23 @@ export function BeaconDropTool() {
           </div>
         </div>
       )}
+      {/* Practitioner Section: Serverless Peer-to-Peer Signaling */}
+      <section className="mt-20 pt-12 border-t border-slate-800 w-full max-w-4xl text-left px-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+          <div className="space-y-4">
+            <h2 className="text-xl font-bold text-white tracking-tight italic">Serverless Peer-to-Peer Signaling</h2>
+            <p className="text-sm text-slate-400 leading-relaxed">
+              The BEACON protocol eliminates the need for centralized signaling servers by utilizing the Algorand ledger as a global, tamper-proof message board. By broadcasting encrypted payloads to a shared protocol address, users can coordinate handshakes and share data directly, ensuring that the communication channel remains as resilient and decentralized as the underlying blockchain.
+            </p>
+          </div>
+          <div className="space-y-4">
+            <h2 className="text-xl font-bold text-white tracking-tight italic">On-Chain Confidentiality</h2>
+            <p className="text-sm text-slate-400 leading-relaxed">
+              Confidentiality in a public ledger is achieved through robust asymmetric encryption. Every BEACON drop is encrypted with the recipient's public key, ensuring that only the intended party can decrypt and view the contents. This architecture provides a professional-grade solution for sharing sensitive metadata, project credentials, or private communication without compromising on-chain transparency.
+            </p>
+          </div>
+        </div>
+      </section>
     </div>
   );
 }

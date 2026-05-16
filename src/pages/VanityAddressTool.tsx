@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import algosdk from "algosdk";
 import { IoSparkles, IoSearch, IoStop, IoCopy, IoCheckmark, IoWallet } from "react-icons/io5";
 import { trackEvent } from "../utils";
+import { Meta } from "../components/Meta";
 
 export default function VanityAddressTool() {
   const [prefix, setPrefix] = useState("");
@@ -66,14 +67,18 @@ export default function VanityAddressTool() {
   }, [isSearching, prefix]);
 
   return (
-    <div className="mx-auto text-white mb-10 flex flex-col items-center max-w-4xl w-full px-4 min-h-screen">
+    <article className="mx-auto text-white mb-10 flex flex-col items-center max-w-4xl w-full px-4 min-h-screen" aria-labelledby="vanity-title">
+      <Meta 
+        title="Vanity Address Generator" 
+        description="High-performance Algorand vanity address generator. Create custom wallet addresses with specific prefixes for project identities and protocol signing."
+      />
       {/* Header */}
       <div className="w-full flex flex-col items-center mt-12 mb-8 text-center">
         <div className="flex items-center gap-4">
           <div className="p-3 bg-amber-400 rounded-2xl shadow-lg shadow-amber-400/20">
             <IoSparkles className="text-4xl text-black" />
           </div>
-          <h1 className="text-3xl md:text-5xl font-black tracking-tight bg-gradient-to-r from-amber-200 via-amber-400 to-orange-500 bg-clip-text text-transparent uppercase">
+          <h1 id="vanity-title" className="text-3xl md:text-5xl font-black tracking-tight bg-gradient-to-r from-amber-200 via-amber-400 to-orange-500 bg-clip-text text-transparent uppercase">
             Vanity Address
           </h1>
         </div>
@@ -190,11 +195,51 @@ export default function VanityAddressTool() {
         </div>
       </div>
       
+      {/* Vanity & Identity Section - Practitioner's Perspective */}
+      <section className="mt-16 pt-12 border-t border-secondary-gray/50 w-full max-w-4xl mx-auto">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+          <div className="space-y-4">
+            <h2 className="text-xl font-black text-white tracking-tight italic">Identity as Infrastructure</h2>
+            <p className="text-sm text-slate-400 leading-relaxed">
+              In a decentralized world, your wallet address is your first point of contact. For protocols, a recognizable prefix (like <code className="text-amber-200">WEN...</code>) isn't just vanity—it's a form of human-readable signaling that aids in transaction auditing and developer trust.
+            </p>
+          </div>
+          <div className="space-y-4">
+            <h2 className="text-xl font-black text-white tracking-tight italic">Computational Reality</h2>
+            <p className="text-sm text-slate-400 leading-relaxed">
+              Searching for a 4-character prefix takes roughly 24 million attempts on average. While modern browsers are fast, this tool runs entirely on your local CPU thread. For longer prefixes (5+ chars), consider using the ANCHOR CLI or a dedicated server to avoid browser timeout.
+            </p>
+          </div>
+        </div>
+        
+        <div className="mt-12 p-6 bg-banner-grey border border-amber-400/10 rounded-[32px]">
+          <h3 className="text-xs font-bold text-amber-400 uppercase tracking-widest mb-4">Identity Best Practices</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="flex items-center gap-3 text-[11px] text-slate-400">
+              <div className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0" />
+              <span>Use prefixes that match your NFD or project brand</span>
+            </div>
+            <div className="flex items-center gap-3 text-[11px] text-slate-400">
+              <div className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0" />
+              <span>Generate offline for high-security signing wallets</span>
+            </div>
+            <div className="flex items-center gap-3 text-[11px] text-slate-400">
+              <div className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0" />
+              <span>Never store mnemonics in plain text after generation</span>
+            </div>
+            <div className="flex items-center gap-3 text-[11px] text-slate-400">
+              <div className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0" />
+              <span>Verify the checksum manually before first deposit</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Footer info */}
-      <div className="mt-8 text-center text-xs text-slate-600 space-y-2">
+      <div className="mt-8 text-center text-xs text-slate-600 space-y-2 pb-20">
         <p>Alphabet: A-Z and 2-7. Characters like 0, 1, 8, 9 are not valid.</p>
         <p>Complexity increases exponentially: 3 chars ~ 200k attempts, 4 chars ~ 11m attempts.</p>
       </div>
-    </div>
+    </article>
   );
 }

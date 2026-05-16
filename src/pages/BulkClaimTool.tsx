@@ -14,6 +14,7 @@ import { EnhancedTable } from "../components/DataGrid";
 import InfinityModeComponent from "../components/InfinityModeComponent";
 import { HeadCell } from "../types";
 import ConnectButton from "../components/ConnectButton";
+import { Meta } from "../components/Meta";
 
 interface Asset {
   assetId: number;
@@ -247,6 +248,10 @@ export const BlukClaimTool = () => {
 
   return (
     <div className="mx-auto text-white mb-4 text-center flex flex-col items-center max-w-[40rem] gap-y-2 min-h-screen">
+      <Meta 
+        title="Bulk Claim Tool" 
+        description="Consolidate and claim your Algorand assets from ARC-59 Asset Inboxes and NFD Vaults in a single session. Professional asset recovery for active collectors."
+      />
       <h1 className="text-2xl font-bold mt-6">
         {TOOLS.find((tool) => tool.path === window.location.pathname)?.label}
       </h1>
@@ -296,11 +301,23 @@ export const BlukClaimTool = () => {
         </div>
       )}
 
-      <p className="text-center text-xs text-slate-400 py-2">
-        ⚠️If you reload or close this page, you will lose your progress⚠️
-        <br />
-        You can reload the page if you want to stop/restart the process!
-      </p>
+      {/* Practitioner Section: Asset Recovery (ARC-59) */}
+      <section className="mt-16 pt-12 border-t border-slate-800 w-full text-left px-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div className="space-y-4">
+            <h2 className="text-xl font-bold text-white tracking-tight italic">Asset Recovery (ARC-59)</h2>
+            <p className="text-sm text-slate-400 leading-relaxed">
+              ARC-59 introduces the concept of an "Asset Inbox", a decentralized mechanism for receiving assets without prior opt-ins. This tool scans your inbox and allows you to claim multiple assets in a single, coordinated operation. It is the gold standard for frictionless airdrops and community rewards, ensuring that your participation is rewarded without administrative overhead.
+            </p>
+          </div>
+          <div className="space-y-4">
+            <h2 className="text-xl font-bold text-white tracking-tight italic">The NFD Vault Ecosystem</h2>
+            <p className="text-sm text-slate-400 leading-relaxed">
+              Non-Fungible Domains (NFDs) provide sophisticated vault infrastructure for asset management. Assets sent to an NFD vault are secure and easily accessible via this interface. By consolidating your claims, you maintain a unified view of your on-chain inventory, leveraging the synergy between the NFD protocol and modern Algorand logistics tools.
+            </p>
+          </div>
+        </div>
+      </section>
     </div>
   );
 };

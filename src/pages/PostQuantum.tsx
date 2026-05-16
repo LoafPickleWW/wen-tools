@@ -9,6 +9,7 @@ import FundAccountPanel from "../components/falcon/FundAccountPanel";
 import TransactionHistoryPanel from "../components/falcon/TransactionHistoryPanel";
 import type { FalconAccount } from "../utils/falcon";
 import { getAllAccounts } from "../db/falconDb";
+import { Meta } from "../components/Meta";
 
 export default function PostQuantum() {
   const [accounts, setAccounts] = useState<FalconAccount[]>([]);
@@ -36,6 +37,10 @@ export default function PostQuantum() {
 
   return (
     <div className="mx-auto text-white mb-4 flex flex-col items-center max-w-4xl w-full px-4 min-h-screen">
+      <Meta 
+        title="Post-Quantum Wallet" 
+        description="Secure your Algorand assets with Falcon-1024 post-quantum signatures. Experimental, client-side cryptographic resilience for the future of decentralized finance."
+      />
       {/* Header */}
       <div className="w-full flex flex-col items-center mt-8 mb-2">
         <div className="flex items-center gap-3">
@@ -188,6 +193,24 @@ export default function PostQuantum() {
           by GoPlausible. All crypto runs client-side in WASM. Zero custody.
         </p>
       </div>
+
+      {/* Practitioner Section: Post-Quantum Resilience */}
+      <section className="mt-16 pt-12 border-t border-slate-800 w-full max-w-4xl text-left px-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+          <div className="space-y-4">
+            <h2 className="text-xl font-bold text-white tracking-tight italic">Falcon Cryptography</h2>
+            <p className="text-sm text-slate-400 leading-relaxed">
+              Falcon (Fast-Fourier Lattice-based Compact Signatures over NSRU) is a post-quantum signature scheme selected by NIST for its efficiency and small signature size. On Algorand, Falcon-1024 provides a robust defense against potential quantum computing threats, ensuring that your cryptographic identity remains secure even in a post-classical world.
+            </p>
+          </div>
+          <div className="space-y-4">
+            <h2 className="text-xl font-bold text-white tracking-tight italic">State Proof Resilience</h2>
+            <p className="text-sm text-slate-400 leading-relaxed">
+              Algorand's State Proofs already utilize Falcon signatures to provide trustless bridges and cross-chain communication. By adopting Falcon-protected wallets, practitioners are aligning their security posture with the cutting-edge of the Algorand protocol, leveraging the same cryptographic primitives that protect the network's long-term consensus.
+            </p>
+          </div>
+        </div>
+      </section>
 
       {/* Dialogs */}
       <CreateAccountDialog

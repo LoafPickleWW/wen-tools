@@ -5,6 +5,7 @@ import { Arc69, getIndexerURL } from "../utils";
 import { TOOLS } from "../constants";
 import { useWallet } from "@txnlab/use-wallet-react";
 import ConnectButton from "../components/ConnectButton";
+import { Meta } from "../components/Meta";
 
 export function DownloadCollectionData() {
   const [creatorWallet, setCreatorWallet] = useState("");
@@ -136,6 +137,10 @@ export function DownloadCollectionData() {
 
   return (
     <div className="mx-auto text-white mb-4 text-center flex flex-col items-center min-h-screen">
+      <Meta 
+        title="Collection Data Export Tool" 
+        description="Extract and export comprehensive data for any Algorand NFT collection. Download metadata, asset IDs, and creator details for professional auditing."
+      />
       <h1 className="text-2xl font-bold mt-6">
         {TOOLS.find((tool) => tool.path === window.location.pathname)?.label}
       </h1>
@@ -199,6 +204,23 @@ export function DownloadCollectionData() {
         <br />
         You can reload the page if you want to stop/restart the process!
       </p>
+      {/* Practitioner Section: Collection Data Integrity */}
+      <section className="mt-20 pt-12 border-t border-slate-800 w-full max-w-4xl text-left px-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+          <div className="space-y-4">
+            <h2 className="text-xl font-bold text-white tracking-tight italic">Collection Data Integrity</h2>
+            <p className="text-sm text-slate-400 leading-relaxed">
+              Exporting collection data is a critical step in project auditing and secondary market preparation. By extracting full metadata profiles, practitioners can verify the consistency of traits and properties across their entire supply. This transparency is vital for maintaining the long-term value and provenance of decentralized assets.
+            </p>
+          </div>
+          <div className="space-y-4">
+            <h2 className="text-xl font-bold text-white tracking-tight italic">Metadata Preservation</h2>
+            <p className="text-sm text-slate-400 leading-relaxed">
+              As a creator, maintaining a local archive of your collection's on-chain state is a best practice for risk management. This tool allows you to bridge the gap between the ledger and your internal records, ensuring that your project documentation remains accurate and actionable as your ecosystem evolves.
+            </p>
+          </div>
+        </div>
+      </section>
     </div>
   );
 }

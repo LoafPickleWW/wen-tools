@@ -12,6 +12,7 @@ import { TOOLS } from "../constants";
 import InfinityModeComponent from "../components/InfinityModeComponent";
 import { useWallet } from "@txnlab/use-wallet-react";
 import ConnectButton from "../components/ConnectButton";
+import { Meta } from "../components/Meta";
 
 export function BatchCollectionMetadataUpdate() {
   const [csvData, setCsvData] = useState(null as null | any);
@@ -125,6 +126,10 @@ export function BatchCollectionMetadataUpdate() {
 
   return (
     <div className="mb-4 text-center flex flex-col items-center max-w-[40rem] gap-y-2 mx-auto text-white min-h-screen">
+      <Meta 
+        title="Batch Metadata Update" 
+        description="Efficiently refresh metadata across entire Algorand asset collections. Streamlined bulk configuration for professional project management."
+      />
       <h1 className="text-2xl font-bold mt-6">
         {TOOLS.find((tool) => tool.path === window.location.pathname)?.label}
       </h1>
@@ -216,11 +221,27 @@ export function BatchCollectionMetadataUpdate() {
         </div>
       )}
       <p className="text-sm italic text-slate-200">Fee: Free</p>
-      <p className="text-center text-xs text-slate-400 py-2">
-        ⚠️If you reload or close this page, you will lose your progress⚠️
-        <br />
-        You can reload the page if you want to stop/restart the process!
+      <p className="text-center text-xs text-slate-600 py-4 italic">
+        ⚠️ If you reload or close this page, you will lose your progress. You can reload to restart the process.
       </p>
+
+      {/* Practitioner Section: Metadata Refresh */}
+      <section className="mt-16 pt-12 border-t border-slate-800 w-full text-left px-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div className="space-y-4">
+            <h2 className="text-xl font-bold text-white tracking-tight italic">Metadata Refresh</h2>
+            <p className="text-sm text-slate-400 leading-relaxed">
+              Batch Metadata Update is designed for high-efficiency asset management. Whether you're correcting errors, updating traits, or refreshing external links across a collection, this tool allows you to broadcast configuration changes in bulk. It leverages Algorand's transaction grouping to ensure that updates are processed reliably and cost-effectively.
+            </p>
+          </div>
+          <div className="space-y-4">
+            <h2 className="text-xl font-bold text-white tracking-tight italic">Bulk Configuration</h2>
+            <p className="text-sm text-slate-400 leading-relaxed">
+              When managing hundreds or thousands of assets, manual updates are no longer feasible. By using a CSV-driven workflow, you can maintain precise control over your collection's state. This practitioner-led approach ensures that every asset in your supply chain remains synchronized with your project's evolving requirements.
+            </p>
+          </div>
+        </div>
+      </section>
     </div>
   );
 }

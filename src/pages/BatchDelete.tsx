@@ -12,6 +12,7 @@ import { TOOLS } from "../constants";
 import InfinityModeComponent from "../components/InfinityModeComponent";
 import { useWallet } from "@txnlab/use-wallet-react";
 import ConnectButton from "../components/ConnectButton";
+import { Meta } from "../components/Meta";
 
 export function BatchDelete() {
   const [csvData, setCsvData] = useState(null as null | any);
@@ -91,6 +92,10 @@ export function BatchDelete() {
 
   return (
     <div className="mb-4 text-center flex flex-col items-center max-w-[40rem] gap-y-2 mx-auto text-white min-h-screen">
+      <Meta 
+        title="Batch Delete Tool" 
+        description="Permanently delete multiple Algorand assets from your wallet. Clean up your asset inventory and manage your creator legacy efficiently."
+      />
       <h1 className="text-2xl font-bold mt-6">
         {TOOLS.find((tool) => tool.path === window.location.pathname)?.label}
       </h1>
@@ -201,11 +206,27 @@ export function BatchDelete() {
         </div>
       )}
       <p className="text-sm italic text-slate-200">Fee: Free</p>
-      <p className="text-center text-xs text-slate-400 py-2">
-        ⚠️If you reload or close this page, you will lose your progress⚠️
-        <br />
-        You can reload the page if you want to stop/restart the process!
+      <p className="text-center text-xs text-slate-600 py-4 italic">
+        ⚠️ If you reload or close this page, you will lose your progress. You can reload to restart the process.
       </p>
+
+      {/* Practitioner Section: Asset Lifecycle Management */}
+      <section className="mt-16 pt-12 border-t border-slate-800 w-full text-left px-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div className="space-y-4">
+            <h2 className="text-xl font-bold text-white tracking-tight italic">Asset Lifecycle Management</h2>
+            <p className="text-sm text-slate-400 leading-relaxed">
+              Decommissioning assets is just as critical as minting them. Batch Delete allows you to formally retire assets from the Algorand ledger, freeing up minimum balance requirements (MBR) and maintaining a clean professional profile. This tool is designed for high-volume inventory management, ensuring that your wallet only reflects active, relevant projects.
+            </p>
+          </div>
+          <div className="space-y-4">
+            <h2 className="text-xl font-bold text-white tracking-tight italic">Wallet Hygiene</h2>
+            <p className="text-sm text-slate-400 leading-relaxed">
+              In the decentralized space, your wallet is your identity. Excessive "junk" assets or failed experiments can clutter your public profile and complicate logistical operations. By performing regular maintenance with batch tools, you ensure that your on-chain presence remains focused and authoritative, adhering to the highest standards of digital hygiene.
+            </p>
+          </div>
+        </div>
+      </section>
     </div>
   );
 }

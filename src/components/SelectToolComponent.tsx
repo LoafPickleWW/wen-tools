@@ -93,7 +93,7 @@ export function SelectToolComponent() {
   };
 
   return (
-    <div className="text-center w-full max-w-7xl mx-auto px-4">
+    <main className="text-center w-full max-w-7xl mx-auto px-4" aria-label="Algorand Tool Discovery">
       {/* Carousels Section */}
       <div className="mx-auto my-4 md:my-8">
         <div className="flex flex-col lg:flex-row items-center justify-center lg:gap-8 gap-6">
@@ -181,16 +181,16 @@ export function SelectToolComponent() {
         onTouchEnd={onTouchEnd}
       >
         {searchQuery && (
-          <h3 className="text-xl text-slate-400 mb-6 animate-fade-in">
+          <h2 className="text-xl text-slate-400 mb-6 animate-fade-in">
             Found {filteredTools.length} tools matching "{searchQuery}"
-          </h3>
+          </h2>
         )}
         
         {!searchQuery && (
-          <h3 className="text-2xl lg:text-4xl font-semibold tracking-tight text-white font-sans mb-8 animate-fade-in capitalize">
+          <h1 className="text-2xl lg:text-4xl font-semibold tracking-tight text-white font-sans mb-8 animate-fade-in capitalize">
             {activeTab === "featured" ? "Our " : "All "} 
             <span className="text-amber-400">{activeTab === "featured" ? "Top" : activeTab}</span> tools
-          </h3>
+          </h1>
         )}
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 items-stretch mb-12">
@@ -201,6 +201,7 @@ export function SelectToolComponent() {
               className="animate-fade-in"
               style={{ animationDelay: `${index * 50}ms` }}
               onClick={() => trackEvent("tool_click", "home", tool.label)}
+              aria-label={`Open ${tool.label}: ${tool.description}`}
             >
               <div className="button-link group relative flex flex-col h-full rounded-[36px] bg-banner-grey p-2.5 text-center transition-all duration-300 ease-in-out hover:scale-[1.02] hover:bg-secondary-gray border border-transparent hover:border-amber-400/30">
                 <div className="relative flex items-center mb-[50px] w-full h-[70px] rounded-t-[28px] bg-gradient-to-r from-[#E4E808] to-[#FD941D]">
@@ -239,6 +240,6 @@ export function SelectToolComponent() {
           </div>
         )}
       </div>
-    </div>
+    </main>
   );
 }

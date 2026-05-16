@@ -5,6 +5,7 @@ import {
   IoApps, IoPricetag, IoWarning, IoClose
 } from "react-icons/io5";
 import { trackEvent } from "../utils";
+import { Meta } from "../components/Meta";
 
 // ─── CONSTANTS ────────────────────────────────────────────────────────────────
 
@@ -354,24 +355,28 @@ Verification cross-references npm metadata (wallet \`${wallet || "YOUR_WALLET_AD
   // ── Render ──────────────────────────────────────────────────────────────────
 
   return (
-    <div className="mx-auto text-white mb-10 flex flex-col items-center max-w-5xl w-full px-4 min-h-screen">
+    <article className="mx-auto text-white mb-10 flex flex-col items-center max-w-5xl w-full px-4 min-h-screen" aria-labelledby="anchor-title">
+      <Meta 
+        title="ANCHOR Protocol" 
+        description="Secure your software supply chain on Algorand. The ANCHOR protocol provides tamper-evident provenance for npm packages and GitHub repositories."
+      />
 
       {/* Header */}
-      <div className="w-full flex flex-col items-center mt-12 mb-8">
+      <header className="w-full flex flex-col items-center mt-12 mb-8">
         <div className="flex items-center gap-4">
           <div className="p-2 md:p-3 bg-amber-400 rounded-2xl shadow-lg shadow-amber-400/20">
-            <IoShieldCheckmark className="text-3xl md:text-4xl text-black" />
+            <IoShieldCheckmark className="text-3xl md:text-4xl text-black" aria-hidden="true" />
           </div>
-          <h1 className="text-3xl md:text-5xl font-black tracking-tight bg-gradient-to-r from-amber-200 via-amber-400 to-orange-500 bg-clip-text text-transparent">
-            ANCHOR
+          <h1 id="anchor-title" className="text-3xl md:text-5xl font-black tracking-tight bg-gradient-to-r from-amber-200 via-amber-400 to-orange-500 bg-clip-text text-transparent">
+            ANCHOR Protocol
           </h1>
         </div>
         <p className="text-slate-400 mt-4 text-lg font-medium text-center max-w-2xl">
-          Tamper-evident software supply chain integrity on Algorand.
+          Tamper-evident software supply chain integrity for the Algorand ecosystem.
         </p>
 
         {/* Tabs */}
-        <div className="flex gap-2 mt-8 bg-primary-black border border-secondary-gray rounded-2xl p-1">
+        <nav className="flex gap-2 mt-8 bg-primary-black border border-secondary-gray rounded-2xl p-1" aria-label="Tool sections">
           {(["setup", "verify"] as Tab[]).map(t => (
             <button
               key={t}
@@ -385,8 +390,8 @@ Verification cross-references npm metadata (wallet \`${wallet || "YOUR_WALLET_AD
               {t === "setup" ? "⚙ Setup" : "🔍 Verify"}
             </button>
           ))}
-        </div>
-      </div>
+        </nav>
+      </header>
 
       {/* ── SETUP TAB ─────────────────────────────────────────────────────────── */}
       {tab === "setup" && (
@@ -491,6 +496,52 @@ Verification cross-references npm metadata (wallet \`${wallet || "YOUR_WALLET_AD
               onCopy={() => handleCopy("readme", readmeSnippet)}
               isCopied={copiedId === "readme"}
             />
+
+            {/* Supply Chain Hygiene Section - Practitioner's Perspective */}
+            <section className="bg-amber-400/5 border border-amber-400/20 rounded-3xl p-8 mt-12 w-full">
+              <h2 className="text-xl font-bold text-amber-400 mb-6 flex items-center gap-2">
+                <IoShieldCheckmark aria-hidden="true" /> Supply Chain Hygiene
+              </h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                <div className="space-y-3">
+                  <h3 className="font-bold text-white text-sm uppercase tracking-wider">Independent Provenance</h3>
+                  <p className="text-sm text-slate-400 leading-relaxed">
+                    ANCHOR provides an author-side record independent of npm's infrastructure. By recording your build hash on Algorand, you ensure the registry isn't the sole arbiter of what you actually published.
+                  </p>
+                </div>
+                <div className="space-y-3">
+                  <h3 className="font-bold text-white text-sm uppercase tracking-wider">The Baseline</h3>
+                  <p className="text-sm text-slate-400 leading-relaxed">
+                    Before anchoring, ensure your foundations are solid: Always commit your lockfiles, use <code className="text-amber-200">npm ci</code> in pipelines, and use <code className="text-amber-200">npm audit</code> to scan for vulnerabilities.
+                  </p>
+                </div>
+                <div className="space-y-3">
+                  <h3 className="font-bold text-white text-sm uppercase tracking-wider">What it doesn't do</h3>
+                  <p className="text-sm text-slate-400 leading-relaxed">
+                    ANCHOR doesn't catch bugs or prevent malicious code. It only guarantees that the artifact a user downloads is exactly what the author committed to the chain.
+                  </p>
+                </div>
+              </div>
+              
+              <div className="mt-8 pt-6 border-t border-amber-400/10 grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-3">
+                <div className="flex items-center gap-3 text-xs text-slate-400">
+                  <div className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0" />
+                  <span>Pin GitHub Action versions to specific commit hashes</span>
+                </div>
+                <div className="flex items-center gap-3 text-xs text-slate-400">
+                  <div className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0" />
+                  <span>Use dedicated, low-balance signing wallets for CI</span>
+                </div>
+                <div className="flex items-center gap-3 text-xs text-slate-400">
+                  <div className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0" />
+                  <span>Run <code className="text-amber-200 text-[10px]">npm pack --dry-run</code> before every publish</span>
+                </div>
+                <div className="flex items-center gap-3 text-xs text-slate-400">
+                  <div className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0" />
+                  <span>Treat mnemonics like high-value API secret keys</span>
+                </div>
+              </div>
+            </section>
           </div>
         </div>
       )}
@@ -604,7 +655,24 @@ Verification cross-references npm metadata (wallet \`${wallet || "YOUR_WALLET_AD
           )}
         </div>
       )}
-    </div>
+      {/* Practitioner Section: Supply Chain Provenance */}
+      <section className="mt-20 pt-12 border-t border-slate-800 w-full max-w-4xl text-left px-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+          <div className="space-y-4">
+            <h2 className="text-xl font-bold text-white tracking-tight italic">Supply Chain Provenance</h2>
+            <p className="text-sm text-slate-400 leading-relaxed">
+              In modern software development, the integrity of your supply chain is paramount. The ANCHOR protocol provides a tamper-proof audit trail for software artifacts by anchoring package metadata and cryptographic hashes directly to the Algorand ledger. This establishes a clear line of provenance from the developer's workstation to the end-user's machine, effectively mitigating "man-in-the-middle" and repository injection attacks.
+            </p>
+          </div>
+          <div className="space-y-4">
+            <h2 className="text-xl font-bold text-white tracking-tight italic">Cryptographic Anchoring</h2>
+            <p className="text-sm text-slate-400 leading-relaxed">
+              By utilizing Algorand's immutable transaction notes, ANCHOR creates a permanent, publicly verifiable record of every software release. This decentralized verification layer operates independently of traditional package managers, providing a "second factor" of authentication that ensures what your users download is exactly what you published. For practitioners, this means a higher standard of security and transparency for their professional software projects.
+            </p>
+          </div>
+        </div>
+      </section>
+    </article>
   );
 }
 

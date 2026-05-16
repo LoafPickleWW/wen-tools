@@ -19,6 +19,7 @@ import { useWallet } from "@txnlab/use-wallet-react";
 import "react-json-view-lite/dist/index.css";
 import { PreviewAssetComponent } from "../components/PreviewAssetComponent";
 import ConnectButton from "../components/ConnectButton";
+import { Meta } from "../components/Meta";
 
 const simpleMintAtom = atomWithStorage("simpleMint", {
   name: "",
@@ -604,6 +605,10 @@ wen.contentWindow.postMessage({
 
   return (
     <div className="mx-auto text-white mb-4 text-center flex flex-col items-center max-w-full gap-y-2 min-h-screen">
+      <Meta 
+        title="Simple Mint" 
+        description="The easiest way to mint single or multiple assets on Algorand. A streamlined, practitioner-led minting utility for NFTs and tokens."
+      />
       <h1 className="text-2xl font-bold mt-6">
         {TOOLS.find((tool) => tool.path === window.location.pathname)?.label}
       </h1>
@@ -1048,6 +1053,23 @@ wen.contentWindow.postMessage({
           },
         ]}
       />
+      {/* Practitioner Section: Minting Ethics & Best Practices */}
+      <section className="mt-20 pt-12 border-t border-slate-800 w-full max-w-4xl text-left px-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+          <div className="space-y-4">
+            <h2 className="text-xl font-bold text-white tracking-tight italic">Asset Scarcity & Utility</h2>
+            <p className="text-sm text-slate-400 leading-relaxed">
+              When minting on Algorand, consider the long-term utility of your asset. NFTs (Total Supply: 1, Decimals: 0) are perfect for art, while fungible tokens are better suited for community rewards or governance. Choosing the right ARC standard (ARC-3 vs ARC-19) is a critical design decision for your project's roadmap.
+            </p>
+          </div>
+          <div className="space-y-4">
+            <h2 className="text-xl font-bold text-white tracking-tight italic">IPFS Resilience</h2>
+            <p className="text-sm text-slate-400 leading-relaxed">
+              Decentralized storage is only as strong as its pinning strategy. Simple Mint automates pinning to the Crust Network, but for high-value collections, we recommend redundant pinning across multiple providers to ensure your media remains available through all network conditions.
+            </p>
+          </div>
+        </div>
+      </section>
     </div>
   );
 }

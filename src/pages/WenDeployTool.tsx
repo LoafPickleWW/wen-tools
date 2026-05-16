@@ -12,6 +12,7 @@ import "xterm/css/xterm.css";
 import { toast } from "react-toastify";
 import { getPrice, appId, getRandomNode } from "../crust";
 import { UPDATE_FEE_PER_ASA, MINT_FEE_WALLET } from "../constants";
+import { Meta } from "../components/Meta";
 
 // ─── CONSTANTS ────────────────────────────────────────────────────────────────
 
@@ -334,16 +335,26 @@ export default function WenDeployTool() {
     );
   }
 
-  if (resolveAsaId) {
-    const asaId = parseInt(resolveAsaId, 10);
-    return isNaN(asaId) ? (
-      <div className="min-h-screen bg-neutral-950 flex items-center justify-center text-red-400">Invalid ASA ID</div>
-    ) : (
-      <SiteResolver asaId={asaId} />
-    );
-  }
-
-  return <DeployView />;
+  return (
+    <>
+      <Meta 
+        title={resolveAsaId ? "Resolve Site" : "WEN.DEPLOY"} 
+        description="Deploy static sites to IPFS and mint them as Algorand ARC-19 NFTs. WEN.DEPLOY provides near-instant, decentralized hosting for the Algorand ecosystem."
+      />
+      {resolveAsaId ? (
+        (() => {
+          const asaId = parseInt(resolveAsaId, 10);
+          return isNaN(asaId) ? (
+            <div className="min-h-screen bg-neutral-950 flex items-center justify-center text-red-400">Invalid ASA ID</div>
+          ) : (
+            <SiteResolver asaId={asaId} />
+          );
+        })()
+      ) : (
+        <DeployView />
+      )}
+    </>
+  );
 }
 
 function SiteResolver({ asaId }: { asaId: number }) {
@@ -1364,6 +1375,46 @@ function DeployView() {
           </div>
         )}
       </div>
+      
+      {/* Decentralized Ethics / Practitioner Section */}
+      <section className="mt-16 pt-12 border-t border-neutral-800/50 w-full max-w-4xl mx-auto px-4 pb-20">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+          <div className="space-y-4">
+            <h2 className="text-xl font-black text-white tracking-tight">The Case for Decentralized Hosting</h2>
+            <p className="text-sm text-neutral-400 leading-relaxed">
+              Most "Web3" sites still live on centralized clouds. If their domain expires or the hosting bill isn't paid, the site vanishes. WEN.DEPLOY uses ARC-19 to bind your site's content (IPFS CID) directly to an Algorand Asset. As long as the ledger exists, the link to your site remains immutable and discoverable.
+            </p>
+          </div>
+          <div className="space-y-4">
+            <h2 className="text-xl font-black text-white tracking-tight">Practitioner's Note</h2>
+            <p className="text-sm text-neutral-400 leading-relaxed">
+              Hosting on IPFS is only the first step. For true persistence, ensure your site's CID is pinned across multiple providers (Crust, Pinata, or your own node). WEN.DEPLOY automates the initial pinning to Crust, but high-value sites should consider redundant pinning strategies to ensure maximum availability.
+            </p>
+          </div>
+        </div>
+        
+        <div className="mt-12 p-6 bg-orange-500/5 border border-orange-500/10 rounded-2xl">
+          <h3 className="text-xs font-bold text-orange-400 uppercase tracking-widest mb-4">WEN.DEPLOY Checklist</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="flex items-center gap-3 text-[11px] text-neutral-400">
+              <div className="w-1.5 h-1.5 rounded-full bg-orange-500 shrink-0" />
+              <span>Use ARC-19 sites for decentralized documentation</span>
+            </div>
+            <div className="flex items-center gap-3 text-[11px] text-neutral-400">
+              <div className="w-1.5 h-1.5 rounded-full bg-orange-500 shrink-0" />
+              <span>Always verify your CID after a fresh deploy</span>
+            </div>
+            <div className="flex items-center gap-3 text-[11px] text-neutral-400">
+              <div className="w-1.5 h-1.5 rounded-full bg-orange-500 shrink-0" />
+              <span>Combine with ANCHOR for full supply chain provenance</span>
+            </div>
+            <div className="flex items-center gap-3 text-[11px] text-neutral-400">
+              <div className="w-1.5 h-1.5 rounded-full bg-orange-500 shrink-0" />
+              <span>Treat your SITE asset as a critical identity root</span>
+            </div>
+          </div>
+        </div>
+      </section>
     </div>
   );
 }

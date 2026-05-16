@@ -13,6 +13,7 @@ import { TOOLS } from "../constants";
 import InfinityModeComponent from "../components/InfinityModeComponent";
 import { useWallet } from "@txnlab/use-wallet-react";
 import ConnectButton from "../components/ConnectButton";
+import { Meta } from "../components/Meta";
 
 export function BatchClawback() {
   const [csvData, setCsvData] = useState(null as null | any);
@@ -116,6 +117,10 @@ export function BatchClawback() {
 
   return (
     <div className="mx-auto text-white mb-4 text-center flex flex-col items-center max-w-[40rem] gap-y-2 min-h-screen">
+      <Meta 
+        title="Batch Clawback Tool" 
+        description="Execute mass asset clawbacks on Algorand for administrative recovery or compliance. Manage asset movements securely and at scale."
+      />
       <h1 className="text-2xl font-bold mt-6">
         {TOOLS.find((tool) => tool.path === window.location.pathname)?.label}
       </h1>
@@ -217,11 +222,27 @@ export function BatchClawback() {
           )}
         </div>
       )}
-      <p className="text-center text-xs text-slate-400 py-2">
-        ⚠️If you reload or close this page, you will lose your progress⚠️
-        <br />
-        You can reload the page if you want to stop/restart the process!
+      <p className="text-center text-xs text-slate-600 py-4 italic">
+        ⚠️ If you reload or close this page, you will lose your progress. You can reload to restart the process.
       </p>
+
+      {/* Practitioner Section: Administrative Recovery */}
+      <section className="mt-16 pt-12 border-t border-slate-800 w-full text-left px-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div className="space-y-4">
+            <h2 className="text-xl font-bold text-white tracking-tight italic">Administrative Recovery</h2>
+            <p className="text-sm text-slate-400 leading-relaxed">
+              The clawback mechanism is a critical administrative feature for regulated assets or institutional projects on Algorand. It allows a designated clawback address to move assets between accounts, often used for recovering tokens from lost wallets or correcting erroneous distributions. Batch Clawback automates these movements, providing a professional-grade interface for complex asset recovery operations.
+            </p>
+          </div>
+          <div className="space-y-4">
+            <h2 className="text-xl font-bold text-white tracking-tight italic">Protocol Safety</h2>
+            <p className="text-sm text-slate-400 leading-relaxed">
+              Safety and compliance are non-negotiable for institutional-grade blockchain applications. By leveraging clawback capabilities at scale, project managers can ensure that their asset supply remains under proper administrative control. This tool provides the necessary infrastructure to execute high-volume recovery transactions with precision, maintaining the integrity and reputation of your on-chain project.
+            </p>
+          </div>
+        </div>
+      </section>
     </div>
   );
 }

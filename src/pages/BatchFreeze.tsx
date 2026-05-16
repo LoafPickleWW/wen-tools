@@ -12,6 +12,7 @@ import { TOOLS } from "../constants";
 import InfinityModeComponent from "../components/InfinityModeComponent";
 import { useWallet } from "@txnlab/use-wallet-react";
 import ConnectButton from "../components/ConnectButton";
+import { Meta } from "../components/Meta";
 
 export function BatchFreeze() {
   const [csvData, setCsvData] = useState(null as null | any);
@@ -98,6 +99,10 @@ export function BatchFreeze() {
 
   return (
     <div className="mx-auto text-white mb-4 text-center flex flex-col items-center max-w-[40rem] gap-y-2 min-h-screen">
+      <Meta 
+        title="Batch Freeze Tool" 
+        description="Mass freeze or unfreeze Algorand assets in bulk. Implement essential project governance and security measures across your collection."
+      />
       <h1 className="text-2xl font-bold mt-6">
         {TOOLS.find((tool) => tool.path === window.location.pathname)?.label}
       </h1>
@@ -204,11 +209,27 @@ export function BatchFreeze() {
           )}
         </div>
       )}
-      <p className="text-center text-xs text-slate-400 py-2">
-        ⚠️If you reload or close this page, you will lose your progress⚠️
-        <br />
-        You can reload the page if you want to stop/restart the process!
+      <p className="text-center text-xs text-slate-600 py-4 italic">
+        ⚠️ If you reload or close this page, you will lose your progress. You can reload to restart the process.
       </p>
+
+      {/* Practitioner Section: Asset Governance */}
+      <section className="mt-16 pt-12 border-t border-slate-800 w-full text-left px-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div className="space-y-4">
+            <h2 className="text-xl font-bold text-white tracking-tight italic">Asset Governance</h2>
+            <p className="text-sm text-slate-400 leading-relaxed">
+              The freeze function is a powerful governance tool on Algorand, allowing asset managers to temporarily restrict transfers for specific accounts. This is often used during regulatory compliance reviews, security incidents, or project-specific lockup periods. Batch Freeze enables managers to apply these restrictions across hundreds of accounts in a single, coordinated operation.
+            </p>
+          </div>
+          <div className="space-y-4">
+            <h2 className="text-xl font-bold text-white tracking-tight italic">Risk Mitigation</h2>
+            <p className="text-sm text-slate-400 leading-relaxed">
+              In high-stakes project management, the ability to act quickly is paramount. Whether mitigating a potential exploit or managing a complex distribution schedule, mass freezing provides a safety net for asset integrity. Practitioners use this tool to ensure that their project's supply chain remains secure and that asset movements align with established governance protocols.
+            </p>
+          </div>
+        </div>
+      </section>
     </div>
   );
 }

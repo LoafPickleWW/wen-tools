@@ -20,6 +20,7 @@ import { isCrustAuth } from "../crust-auth";
 import { useWallet } from "@txnlab/use-wallet-react";
 import { PreviewAssetComponent } from "../components/PreviewAssetComponent";
 import ConnectButton from "../components/ConnectButton";
+import { Meta } from "../components/Meta";
 
 export function SimpleBatchMint() {
   const START_PROCESS = 0;
@@ -423,6 +424,10 @@ export function SimpleBatchMint() {
 
   return (
     <div className="mx-auto text-white mb-4 text-center flex flex-col items-center max-w-full gap-y-2 min-h-screen">
+      <Meta 
+        title="Simple Batch Mint" 
+        description="High-speed batch minting for standard Algorand assets. Ideal for large-scale token distributions and project launches."
+      />
       <h1 className="text-2xl font-bold mt-6">
         {TOOLS.find((tool) => tool.path === window.location.pathname)?.label}
       </h1>
@@ -792,6 +797,23 @@ export function SimpleBatchMint() {
           },
         ]}
       />
+      {/* Practitioner Section: Distribution Efficiency */}
+      <section className="mt-20 pt-12 border-t border-slate-800 w-full max-w-4xl text-left px-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+          <div className="space-y-4">
+            <h2 className="text-xl font-bold text-white tracking-tight italic">Distribution Efficiency</h2>
+            <p className="text-sm text-slate-400 leading-relaxed">
+              When launching a large-scale collection or token, efficiency is paramount. Simple Batch Mint optimizes transaction grouping to minimize network congestion and costs. By utilizing standardized metadata patterns across your entire supply, you ensure maximum compatibility with the broader Algorand ecosystem.
+            </p>
+          </div>
+          <div className="space-y-4">
+            <h2 className="text-xl font-bold text-white tracking-tight italic">Tokenomics Design</h2>
+            <p className="text-sm text-slate-400 leading-relaxed">
+              The technical execution of your mint is the first step in your project's lifecycle. Ensure your total supply, decimals, and metadata are perfectly aligned with your long-term goals. A clean, well-documented mint is the foundation of community trust.
+            </p>
+          </div>
+        </div>
+      </section>
     </div>
   );
 }

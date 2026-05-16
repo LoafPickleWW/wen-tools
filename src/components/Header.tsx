@@ -36,9 +36,8 @@ export function Header() {
             <MdMenu />
           </IconButton>
         </div>
-        <Link to="/"
-        >
-          <img src="/w-t-logo.png" alt="logo" className=" mr-2 p-1 w-20 lg:w-36" />
+        <Link to="/" aria-label="wen.tools Home">
+          <img src="/w-t-logo.png" alt="wen.tools - Algorand Developer Utility Suite" className=" mr-2 p-1 w-20 lg:w-36" />
         </Link>
         <Typography
           component="div"
@@ -58,35 +57,37 @@ export function Header() {
             visibility: { xs: "hidden", sm: "visible" },
           }}
         ></Typography>
-        <List
-          className="hidden lg:flex flex-row items-center px-4 py-2 gap-2 text-xl "
-        >
-        <ListItemButton
-          component="a"
-          href="https://discord.com/oauth2/authorize?client_id=1325220652332089435"
-          target="_blank"
-          onClick={() => trackEvent("header_click", "nav", "Wen Bot")}
-        >
-          <p>wen bot</p>
-        </ListItemButton>
-        <ListItemButton
-          component="a"
-          href="https://wallet.wen.tools"
-          target="_blank"
-          onClick={() => trackEvent("header_click", "nav", "Wen Wallet")}
-        >
-          <p>wen wallet</p>
-        </ListItemButton>
-        <ListItemButton
-          component="a"
-          href="https://swap.wen.tools"
-          target="_blank"
-          className="text-xl flex flex-row items-center gap-1"
-          onClick={() => trackEvent("header_click", "nav", "Wen Swap")}
-        >
-          <p>wen swap</p>
-        </ListItemButton>
-      </List>
+        <nav aria-label="Main Navigation">
+          <List
+            className="hidden lg:flex flex-row items-center px-4 py-2 gap-2 text-xl "
+          >
+            <ListItemButton
+              component="a"
+              href="https://discord.com/oauth2/authorize?client_id=1325220652332089435"
+              target="_blank"
+              onClick={() => trackEvent("header_click", "nav", "Wen Bot")}
+            >
+              <p>wen bot</p>
+            </ListItemButton>
+            <ListItemButton
+              component="a"
+              href="https://wallet.wen.tools"
+              target="_blank"
+              onClick={() => trackEvent("header_click", "nav", "Wen Wallet")}
+            >
+              <p>wen wallet</p>
+            </ListItemButton>
+            <ListItemButton
+              component="a"
+              href="https://swap.wen.tools"
+              target="_blank"
+              className="text-xl flex flex-row items-center gap-1"
+              onClick={() => trackEvent("header_click", "nav", "Wen Swap")}
+            >
+              <p>wen swap</p>
+            </ListItemButton>
+          </List>
+        </nav>
       <ConnectButton />
       <SelectNetworkComponent />
       <div className="hidden lg:flex">

@@ -50,8 +50,9 @@ export function Footer() {
             className="opacity-100 transition-opacity hover:opacity-80"
             rel="noreferrer"
             onClick={() => trackEvent("footer_click", "social", "Twitter")}
+            aria-label="Follow wen.tools on X (Twitter)"
           >
-            <img src="/x-icon.png" alt="" className=" w-7 h-7" />
+            <img src="/x-icon.png" alt="X (formerly Twitter) Icon" className=" w-7 h-7" />
           </a>
           <a
             href="https://discord.gg/Mw2p5C6hAT"
@@ -59,8 +60,9 @@ export function Footer() {
             className="opacity-100 transition-opacity hover:opacity-80"
             rel="noreferrer"
             onClick={() => trackEvent("footer_click", "social", "Discord")}
+            aria-label="Join the wen.tools Discord community"
           >
-            <img src="/discord-icon.webp" alt="" className=" w-8 h-8" />
+            <img src="/discord-icon.webp" alt="Discord Icon" className=" w-8 h-8" />
           </a>
           <a
             className="opacity-100 transition-opacity hover:opacity-80"
@@ -68,8 +70,9 @@ export function Footer() {
             target="_blank"
             rel="noreferrer"
             onClick={() => trackEvent("footer_click", "social", "GitHub")}
+            aria-label="View wen.tools source code on GitHub"
           >
-            <img src="/github-icon.png" alt="" className=" w-9 h-9" />
+            <img src="/github-icon.png" alt="GitHub Icon" className=" w-9 h-9" />
           </a>
         </div>
       </div>

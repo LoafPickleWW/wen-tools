@@ -13,6 +13,7 @@ import {
 import InfinityModeComponent from "../components/InfinityModeComponent";
 import { useWallet } from "@txnlab/use-wallet-react";
 import ConnectButton from "../components/ConnectButton";
+import { Meta } from "../components/Meta";
 
 export function ARC19MintTool() {
   const [csvData, setCsvData] = useState(null as null | any);
@@ -222,6 +223,10 @@ export function ARC19MintTool() {
 
   return (
     <div className="mb-4 text-center flex flex-col items-center max-w-[40rem] gap-y-2 mx-auto text-white min-h-screen">
+      <Meta 
+        title="ARC-19 Mass Mint" 
+        description="Mass mint ARC-19 assets on Algorand. ARC-19 allows for dynamic metadata updates while maintaining decentralized integrity via IPFS and the Algorand ledger."
+      />
       <h1 className="text-2xl font-bold mt-6">
         {TOOLS.find((tool) => tool.path === window.location.pathname)?.label}
       </h1>
@@ -359,11 +364,27 @@ export function ARC19MintTool() {
       )}
       <p className="text-sm italic text-slate-200">Fee: Free</p>
 
-      <p className="text-center text-xs text-slate-400 py-1">
-        ⚠️If you reload or close this page, you will lose your progress⚠️
-        <br />
-        You can reload the page if you want to stop/restart the process!
+      <p className="text-center text-xs text-slate-600 py-4 italic">
+        ⚠️ If you reload or close this page, you will lose your progress. You can reload to restart the process.
       </p>
+
+      {/* Minting Ethics & Practitioner Section */}
+      <section className="mt-16 pt-12 border-t border-slate-800 w-full text-left">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div className="space-y-4">
+            <h2 className="text-xl font-bold text-white tracking-tight italic">Why ARC-19?</h2>
+            <p className="text-sm text-slate-400 leading-relaxed">
+              Standard NFTs (ARC-3) are immutable, which is great for digital art but difficult for dynamic assets like gaming items or membership cards. ARC-19 uses a reserve address pattern to allow the metadata CID to be updated by the creator, providing the perfect balance between decentralization and flexibility.
+            </p>
+          </div>
+          <div className="space-y-4">
+            <h2 className="text-xl font-bold text-white tracking-tight italic">Metadata Hygiene</h2>
+            <p className="text-sm text-slate-400 leading-relaxed">
+              Always ensure your media is pinned to multiple IPFS providers. While this tool automates the initial minting process, the long-term availability of your NFT's visual data depends on robust pinning strategies (Crust, Pinata, or a local IPFS node).
+            </p>
+          </div>
+        </div>
+      </section>
     </div>
   );
 }

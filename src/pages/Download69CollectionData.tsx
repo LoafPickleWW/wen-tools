@@ -5,6 +5,7 @@ import { Arc69, getIndexerURL } from "../utils";
 import { TOOLS } from "../constants";
 import { useWallet } from "@txnlab/use-wallet-react";
 import ConnectButton from "../components/ConnectButton";
+import { Meta } from "../components/Meta";
 
 export function Download69CollectionData() {
   const [creatorWallet, setCreatorWallet] = useState("");
@@ -152,6 +153,10 @@ export function Download69CollectionData() {
 
   return (
     <div className="mx-auto text-white mb-4 text-center flex flex-col items-center min-h-screen">
+      <Meta 
+        title="ARC-69 Data Export Tool" 
+        description="Extract and export data for ARC-69 NFT collections. Audit transaction notes, traits, and metadata for high-efficiency collection management."
+      />
       <h1 className="text-2xl font-bold mt-6">
         {TOOLS.find((tool) => tool.path === window.location.pathname)?.label}
       </h1>
@@ -215,6 +220,23 @@ export function Download69CollectionData() {
         <br />
         You can reload the page if you want to stop/restart the process!
       </p>
+      {/* Practitioner Section: Transaction Note Auditing */}
+      <section className="mt-20 pt-12 border-t border-slate-800 w-full max-w-4xl text-left px-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+          <div className="space-y-4">
+            <h2 className="text-xl font-bold text-white tracking-tight italic">Transaction Note Auditing</h2>
+            <p className="text-sm text-slate-400 leading-relaxed">
+              ARC-69 relies on the transaction note field for metadata storage, making it one of the most efficient standards on Algorand. Exporting this data involves scanning the blockchain for the latest configuration transaction for each asset. This utility automates that process, providing a comprehensive view of your collection's state without the need for complex indexing infrastructure.
+            </p>
+          </div>
+          <div className="space-y-4">
+            <h2 className="text-xl font-bold text-white tracking-tight italic">The ARC-69 Standard</h2>
+            <p className="text-sm text-slate-400 leading-relaxed">
+              As a practitioner, understanding the trade-offs between standards is key. ARC-69 offers a lightweight alternative to IPFS-based metadata, allowing for rapid updates and lower costs. By maintaining a local export of your ARC-69 data, you ensure that your project documentation is always in sync with the ledger, providing a professional foundation for your community and partners.
+            </p>
+          </div>
+        </div>
+      </section>
     </div>
   );
 }

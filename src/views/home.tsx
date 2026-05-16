@@ -1,9 +1,14 @@
 import { SelectToolComponent } from "../components/SelectToolComponent";
 import { trackEvent } from "../utils";
+import { Meta } from "../components/Meta";
 
 export default function Home() {
   return (
     <div className="bg-primary-black pt-2 flex justify-center flex-col text-white pb-10">
+      <Meta 
+        title="Home" 
+        description="A comprehensive suite of high-performance tools for Algorand developers. From ANCHOR supply chain security to WEN.DEPLOY decentralized hosting and advanced asset management."
+      />
       <main className="flex flex-col justify-center items-center mx-4 md:mx-10 rounded-lg">
         <SelectToolComponent />
       </main>

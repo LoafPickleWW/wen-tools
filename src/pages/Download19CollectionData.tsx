@@ -5,6 +5,7 @@ import { TOOLS } from "../constants";
 import { getARC19AssetMetadataData, getIndexerURL } from "../utils";
 import { useWallet } from "@txnlab/use-wallet-react";
 import ConnectButton from "../components/ConnectButton";
+import { Meta } from "../components/Meta";
 
 export function Download19CollectionData() {
   const [creatorWallet, setCreatorWallet] = useState("");
@@ -154,6 +155,10 @@ export function Download19CollectionData() {
 
   return (
     <div className="mx-auto text-white mb-4 text-center flex flex-col items-center min-h-screen">
+      <Meta 
+        title="ARC-19 Data Export Tool" 
+        description="Extract and export data for ARC-19 evolvable NFT collections. Audit reserve addresses, IPFS templates, and dynamic metadata for professional project management."
+      />
       <h1 className="text-2xl font-bold mt-6">
         {TOOLS.find((tool) => tool.path === window.location.pathname)?.label}
       </h1>
@@ -217,6 +222,23 @@ export function Download19CollectionData() {
         <br />
         You can reload the page if you want to stop/restart the process!
       </p>
+      {/* Practitioner Section: Evolvable Asset Auditing */}
+      <section className="mt-20 pt-12 border-t border-slate-800 w-full max-w-4xl text-left px-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+          <div className="space-y-4">
+            <h2 className="text-xl font-bold text-white tracking-tight italic">Evolvable Asset Auditing</h2>
+            <p className="text-sm text-slate-400 leading-relaxed">
+              ARC-19 introduces a dynamic layer to Algorand NFTs by utilizing the reserve address as a pointer to an IPFS template. Auditing these assets requires specialized tools to resolve the current metadata state. This utility provides a clean export of all ARC-19 specific parameters, ensuring that creators and auditors have a clear view of the collection's current configuration.
+            </p>
+          </div>
+          <div className="space-y-4">
+            <h2 className="text-xl font-bold text-white tracking-tight italic">The ARC-19 Lifecycle</h2>
+            <p className="text-sm text-slate-400 leading-relaxed">
+              Unlike static ARC-3 assets, ARC-19 collections are designed to evolve. Managing this lifecycle involves tracking changes to the CID over time and ensuring that the reserve address remains secure. By exporting this data regularly, practitioners can maintain a historical record of their collection's evolution, providing a transparent trail for their community.
+            </p>
+          </div>
+        </div>
+      </section>
     </div>
   );
 }

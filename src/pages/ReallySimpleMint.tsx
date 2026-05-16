@@ -14,6 +14,7 @@ import { useWallet } from "@txnlab/use-wallet-react";
 import "react-json-view-lite/dist/index.css";
 import { PreviewAssetComponent } from "../components/PreviewAssetComponent";
 import ConnectButton from "../components/ConnectButton";
+import { Meta } from "../components/Meta";
 
 const reallySimpleMintAtom = atomWithStorage("reallySimpleMint", {
   name: "",
@@ -419,6 +420,10 @@ wen.contentWindow.postMessage({
 
   return (
     <div className="mx-auto text-white mb-4 text-center flex flex-col items-center max-w-full gap-y-2 min-h-screen">
+      <Meta 
+        title="Really Simple Mint" 
+        description="A minimalist minting tool for Algorand, designed for speed and ease of use. Create ARC-69 NFTs in seconds."
+      />
       <h1 className="text-2xl font-bold mt-6">
         {TOOLS.find((tool) => tool.path === window.location.pathname)?.label}
       </h1>
@@ -567,6 +572,23 @@ wen.contentWindow.postMessage({
           },
         ]}
       />
+      {/* Practitioner Section: Minimalist Creation */}
+      <section className="mt-20 pt-12 border-t border-slate-800 w-full max-w-4xl text-left px-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+          <div className="space-y-4">
+            <h2 className="text-xl font-bold text-white tracking-tight italic">Minimalist Provenance</h2>
+            <p className="text-sm text-slate-400 leading-relaxed">
+              Really Simple Mint focuses on the ARC-69 standard—a lightweight, transaction-note based metadata pattern. It's the most efficient way to link media to an Algorand asset without the overhead of smart contracts, making it the preferred choice for quick drops and social NFTs.
+            </p>
+          </div>
+          <div className="space-y-4">
+            <h2 className="text-xl font-bold text-white tracking-tight italic">Frictionless Creation</h2>
+            <p className="text-sm text-slate-400 leading-relaxed">
+              In a fast-moving ecosystem, speed is a feature. This tool is designed to remove every possible hurdle between your media and the ledger. By automating the IPFS pinning and transaction group assembly, we let you focus on the creative side of the supply chain.
+            </p>
+          </div>
+        </div>
+      </section>
     </div>
   );
 }

@@ -14,6 +14,7 @@ import InfinityModeComponent from "../components/InfinityModeComponent";
 import FaqSectionComponent from "../components/FaqSectionComponent";
 import { useWallet } from "@txnlab/use-wallet-react";
 import ConnectButton from "../components/ConnectButton";
+import { Meta } from "../components/Meta";
 
 export function BatchOptin() {
   const [csvData, setCsvData] = useState(null as null | any);
@@ -105,6 +106,10 @@ export function BatchOptin() {
 
   return (
     <div className="mb-4 text-center flex flex-col items-center max-w-[40rem] gap-y-2 mx-auto text-white min-h-screen">
+      <Meta 
+        title="Batch Opt-in Tool" 
+        description="Quickly opt-in to multiple Algorand assets simultaneously. Streamline your wallet setup for airdrops, rewards, and collection participation."
+      />
       <h1 className="text-2xl font-bold mt-6">
         {TOOLS.find((tool) => tool.path === window.location.pathname)?.label}
       </h1>
@@ -218,6 +223,23 @@ export function BatchOptin() {
           },
         ]}
       />
+      {/* Practitioner Section: Permissioned Onboarding */}
+      <section className="mt-20 pt-12 border-t border-slate-800 w-full max-w-4xl text-left px-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+          <div className="space-y-4">
+            <h2 className="text-xl font-bold text-white tracking-tight italic">Permissioned Onboarding</h2>
+            <p className="text-sm text-slate-400 leading-relaxed">
+              Algorand's opt-in requirement is a fundamental security feature that prevents "spam" assets from entering a wallet without the owner's consent. Batch Opt-in streamlines this process for users participating in multi-asset ecosystems or large-scale distributions, allowing you to grant permission to a list of assets in a single, efficient session.
+            </p>
+          </div>
+          <div className="space-y-4">
+            <h2 className="text-xl font-bold text-white tracking-tight italic">MBR Economics</h2>
+            <p className="text-sm text-slate-400 leading-relaxed">
+              Every asset opt-in increases your wallet's Minimum Balance Requirement (MBR) by 0.1 Algos. This mechanism ensures that the ledger remains performant by attaching a small economic cost to account state expansion. Understanding these economics is key for practitioners managing high-volume portfolios or automated trading strategies.
+            </p>
+          </div>
+        </div>
+      </section>
     </div>
   );
 }

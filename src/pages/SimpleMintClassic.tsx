@@ -19,6 +19,7 @@ import { useWallet } from "@txnlab/use-wallet-react";
 import "react-json-view-lite/dist/index.css";
 import { PreviewAssetComponent } from "../components/PreviewAssetComponent";
 import ConnectButton from "../components/ConnectButton";
+import { Meta } from "../components/Meta";
 
 const simpleMintClassicAtom = atomWithStorage("simpleMintClassic", {
   name: "",
@@ -341,6 +342,10 @@ export function SimpleMintClassic() {
 
   return (
     <div className="mx-auto text-white mb-4 text-center flex flex-col items-center max-w-full gap-y-2 min-h-screen">
+      <Meta 
+        title="Simple Mint Classic" 
+        description="Mint classic Algorand assets (ASA) with a focus on simplicity and speed. A reliable utility for standard asset creation."
+      />
       <h1 className="text-2xl font-bold mt-6">
         {TOOLS.find((tool) => tool.path === window.location.pathname)?.label}
       </h1>
@@ -798,6 +803,23 @@ export function SimpleMintClassic() {
           },
         ]}
       />
+      {/* Practitioner Section: Technical Integrity */}
+      <section className="mt-20 pt-12 border-t border-slate-800 w-full max-w-4xl text-left px-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+          <div className="space-y-4">
+            <h2 className="text-xl font-bold text-white tracking-tight italic">Technical Integrity</h2>
+            <p className="text-sm text-slate-400 leading-relaxed">
+              Simple Mint Classic provides a reliable path for creating standard Algorand assets. By adhering to core ASA parameters and established metadata conventions, you ensure that your assets are recognizable and functional across all ecosystem wallets, explorers, and decentralized exchanges.
+            </p>
+          </div>
+          <div className="space-y-4">
+            <h2 className="text-xl font-bold text-white tracking-tight italic">Creator Sovereignty</h2>
+            <p className="text-sm text-slate-400 leading-relaxed">
+              We advocate for creator sovereignty through independent infrastructure. While we provide the tools to simplify the minting process, we encourage all creators to host their own metadata and media using personal IPFS tokens. Your project's longevity is directly tied to the autonomy of your data.
+            </p>
+          </div>
+        </div>
+      </section>
     </div>
   );
 }

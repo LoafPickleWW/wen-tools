@@ -12,6 +12,7 @@ import FileDownloadIcon from "@mui/icons-material/FileDownload";
 import { TOOLS } from "../constants";
 import InfinityModeComponent from "../components/InfinityModeComponent";
 import { useWallet } from "@txnlab/use-wallet-react";
+import { Meta } from "../components/Meta";
 import {
   createArc59GroupTxns,
   TxnInfoType,
@@ -218,6 +219,10 @@ export function AirdropTool() {
 
   return (
     <div className="mx-auto text-white mb-4 text-center flex flex-col items-center max-w-[40rem] gap-y-2 min-h-screen">
+      <Meta 
+        title="Mass Airdrop Tool" 
+        description="High-performance mass airdrop tool for Algorand. Distribute assets and Algos to thousands of wallets efficiently with CSV support and ARC-59 Asset Inboxes."
+      />
       <h1 className="text-2xl font-bold mt-6">
         {TOOLS.find((tool) => tool.path === window.location.pathname)?.label}
       </h1>
@@ -424,11 +429,27 @@ export function AirdropTool() {
           )}
         </div>
       )}
-      <p className="text-center text-xs text-slate-400 py-2">
-        ⚠️If you reload or close this page, you will lose your progress⚠️
-        <br />
-        You can reload the page if you want to stop/restart the process!
+      <p className="text-center text-xs text-slate-600 py-4 italic">
+        ⚠️ If you reload or close this page, you will lose your progress. You can reload to restart the process.
       </p>
+
+      {/* Practitioner Section: Airdrop Ethics & Inboxes */}
+      <section className="mt-16 pt-12 border-t border-slate-800 w-full text-left">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div className="space-y-4">
+            <h2 className="text-xl font-bold text-white tracking-tight italic">The Asset Inbox (ARC-59)</h2>
+            <p className="text-sm text-slate-400 leading-relaxed">
+              Standard airdrops often fail because recipients haven't opted into the asset. ARC-59 "Asset Inboxes" solve this by allowing you to send assets to a smart-contract controlled vault that the user can claim later. This ensures your airdrop reaches 100% of your target list regardless of their current opt-in status.
+            </p>
+          </div>
+          <div className="space-y-4">
+            <h2 className="text-xl font-bold text-white tracking-tight italic">Airdrop Hygiene</h2>
+            <p className="text-sm text-slate-400 leading-relaxed">
+              Large distributions can put significant load on indexers and wallets. Use "Infinity Mode" for very large lists (1k+ addresses) to process transactions in optimized batches. Always verify your CSV formatting using our template to prevent transaction failures mid-run.
+            </p>
+          </div>
+        </div>
+      </section>
     </div>
   );
 }

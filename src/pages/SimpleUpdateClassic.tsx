@@ -19,6 +19,7 @@ import { useWallet } from "@txnlab/use-wallet-react";
 import "react-json-view-lite/dist/index.css";
 import { PreviewAssetComponent } from "../components/PreviewAssetComponent";
 import ConnectButton from "../components/ConnectButton";
+import { Meta } from "../components/Meta";
 
 const simpleUpdateAtom = atomWithStorage("simpleUpdate", {
   name: "",
@@ -438,6 +439,10 @@ export function SimpleUpdateClassic() {
 
   return (
     <div className="mx-auto text-white mb-4 text-center flex flex-col items-center max-w-full gap-y-2 min-h-screen">
+      <Meta 
+        title="Simple Update Classic" 
+        description="Update standard Algorand asset (ASA) parameters and metadata notes. A reliable utility for maintaining your creator reputation."
+      />
       <h1 className="text-2xl font-bold mt-6">
         {TOOLS.find((tool) => tool.path === window.location.pathname)?.label}
       </h1>
@@ -870,6 +875,23 @@ export function SimpleUpdateClassic() {
         happens to publicly hosted images.
       </p>
       <p className="text-sm italic text-slate-200">Fee: Free</p>
+      {/* Practitioner Section: Asset Management */}
+      <section className="mt-20 pt-12 border-t border-slate-800 w-full max-w-4xl text-left px-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+          <div className="space-y-4">
+            <h2 className="text-xl font-bold text-white tracking-tight italic">Asset Management</h2>
+            <p className="text-sm text-slate-400 leading-relaxed">
+              Updating an asset on Algorand requires the specific authorization of the Manager address. This tool streamlines the configuration process, allowing you to modify metadata (for supported ARC standards) or update asset parameters like freeze and clawback addresses. Always verify your current management permissions before initiating an update.
+            </p>
+          </div>
+          <div className="space-y-4">
+            <h2 className="text-xl font-bold text-white tracking-tight italic">The ARC Standard Hierarchy</h2>
+            <p className="text-sm text-slate-400 leading-relaxed">
+              Different ARC standards offer varying levels of mutability. ARC-19 allows for full metadata and image evolution, while ARC-69 focuses on mutable transaction notes. ARC-3 is largely immutable once the URL is set. Choosing the right standard during the initial mint defines the long-term flexibility of your asset's lifecycle.
+            </p>
+          </div>
+        </div>
+      </section>
     </div>
   );
 }

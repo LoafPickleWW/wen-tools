@@ -13,6 +13,7 @@ import { TOOLS } from "../constants";
 import InfinityModeComponent from "../components/InfinityModeComponent";
 import { useWallet } from "@txnlab/use-wallet-react";
 import ConnectButton from "../components/ConnectButton";
+import { Meta } from "../components/Meta";
 
 export function BatchOptout() {
   const [csvData, setCsvData] = useState(null as null | any);
@@ -97,6 +98,10 @@ export function BatchOptout() {
 
   return (
     <div className="mb-4 text-center flex flex-col items-center max-w-[40rem] gap-y-2 mx-auto text-white min-h-screen">
+      <Meta 
+        title="Batch Opt-out Tool" 
+        description="Clean up your Algorand wallet by opting out of multiple assets at once. Reclaim your Minimum Balance Requirement (MBR) and optimize your on-chain state."
+      />
       <h1 className="text-2xl font-bold mt-6">
         {TOOLS.find((tool) => tool.path === window.location.pathname)?.label}
       </h1>
@@ -215,11 +220,27 @@ export function BatchOptout() {
           )}
         </div>
       )}
-      <p className="text-center text-xs text-slate-400 py-2">
-        ⚠️If you reload or close this page, you will lose your progress⚠️
-        <br />
-        You can reload the page if you want to stop/restart the process!
+      <p className="text-center text-xs text-slate-600 py-4 italic">
+        ⚠️ If you reload or close this page, you will lose your progress. You can reload to restart the process.
       </p>
+
+      {/* Practitioner Section: Wallet Optimization */}
+      <section className="mt-16 pt-12 border-t border-slate-800 w-full text-left px-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div className="space-y-4">
+            <h2 className="text-xl font-bold text-white tracking-tight italic">Wallet Optimization</h2>
+            <p className="text-sm text-slate-400 leading-relaxed">
+              Managing a high-performance Algorand wallet requires regular state maintenance. Batch Opt-out allows you to efficiently remove unwanted assets and reclaim the 0.1 Algo Minimum Balance Requirement (MBR) per asset. This tool is essential for practitioners who frequently interact with airdrops, testnet experiments, or transient project assets.
+            </p>
+          </div>
+          <div className="space-y-4">
+            <h2 className="text-xl font-bold text-white tracking-tight italic">State Cleanup</h2>
+            <p className="text-sm text-slate-400 leading-relaxed">
+              In a decentralized ecosystem, "ledger bloat" is a real consideration. By opting out of assets you no longer use, you are contributing to a cleaner on-chain environment while optimizing your own capital efficiency. Note that opting out of an asset with a remaining balance will send those units back to the creator, so always verify your holdings before a batch removal.
+            </p>
+          </div>
+        </div>
+      </section>
     </div>
   );
 }

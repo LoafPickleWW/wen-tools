@@ -28,6 +28,7 @@ import { FaCopy } from "react-icons/fa";
 import { NumberFormatter } from "../components/NumberFormatter";
 import { ALGORAND_ZERO_ADDRESS } from "../constants";
 import ConnectButton from "../components/ConnectButton";
+import { Meta } from "../components/Meta";
 
 interface LabelData {
   key: string;
@@ -709,6 +710,10 @@ export const ARC62ManagerTool = () => {
 
   return (
     <div className="mx-auto text-white mb-4 mt-4 text-center flex flex-col items-center max-w-full gap-y-2 min-h-screen">
+      <Meta 
+        title="ARC-62 Manager Tool" 
+        description="Monitor and manage Algorand asset circulating supply using the ARC-62 standard. Implement professional tokenomics reporting and transparency for your project."
+      />
       <h1 className="text-2xl font-bold mt-6">
         {TOOLS.find((tool) => tool.path === window.location.pathname)?.label}
       </h1>
@@ -1145,6 +1150,24 @@ export const ARC62ManagerTool = () => {
           You can reload the page if you want to stop/restart the process!
         </p>
       )}
+
+      {/* Practitioner Section: Circulating Supply Dynamics */}
+      <section className="mt-20 pt-12 border-t border-slate-800 w-full max-w-4xl text-left px-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+          <div className="space-y-4">
+            <h2 className="text-xl font-bold text-white tracking-tight italic">Circulating Supply Dynamics</h2>
+            <p className="text-sm text-slate-400 leading-relaxed">
+              Transparency in tokenomics is a key driver of investor trust. ARC-62 provides a standardized, on-chain method for reporting circulating supply by identifying non-circulating addresses (e.g., burn wallets, lockups, or reserves). This tool allows project managers to implement and manage these definitions, ensuring that public data sources reflect the true economic state of their asset.
+            </p>
+          </div>
+          <div className="space-y-4">
+            <h2 className="text-xl font-bold text-white tracking-tight italic">The ARC-62 Advantage</h2>
+            <p className="text-sm text-slate-400 leading-relaxed">
+              Before ARC-62, reporting supply often relied on off-chain data or proprietary API endpoints. By utilizing a smart-contract based approach, you anchor your project's transparency in the ledger itself. This machine-readable standard allows explorers and aggregators to pull real-time data automatically, reducing the administrative burden on your team while providing verified data to your community.
+            </p>
+          </div>
+        </div>
+      </section>
 
       <p className="text-center text-md text-gray-400 py-2 mt-4">
         Crafted with 💻 and ❤️ for Dev Track (Algorand India Summit 2024) by{" "}

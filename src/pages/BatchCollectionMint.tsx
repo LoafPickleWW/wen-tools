@@ -7,6 +7,7 @@ import { TOOLS } from "../constants";
 import InfinityModeComponent from "../components/InfinityModeComponent";
 import { useWallet } from "@txnlab/use-wallet-react";
 import ConnectButton from "../components/ConnectButton";
+import { Meta } from "../components/Meta";
 
 export function BatchCollectionMint() {
   const [csvData, setCsvData] = useState(null as null | any);
@@ -168,6 +169,10 @@ export function BatchCollectionMint() {
 
   return (
     <div className="mb-4 text-center flex flex-col items-center max-w-[40rem] gap-y-2 mx-auto text-white min-h-screen">
+      <Meta 
+        title="Batch Collection Mint" 
+        description="Mint entire NFT collections in a single workflow on Algorand. High-performance batch minting utility for creators and projects."
+      />
       <h1 className="text-2xl font-bold mt-6">
         {TOOLS.find((tool) => tool.path === window.location.pathname)?.label}
       </h1>
@@ -272,11 +277,27 @@ export function BatchCollectionMint() {
         </div>
       )}
       <p className="text-sm italic text-slate-200">Fee: Free</p>
-      <p className="text-center text-xs text-slate-400 py-2">
-        ⚠️If you reload or close this page, you will lose your progress⚠️
-        <br />
-        You can reload the page if you want to stop/restart the process!
+      <p className="text-center text-xs text-slate-600 py-4 italic">
+        ⚠️ If you reload or close this page, you will lose your progress. You can reload to restart the process.
       </p>
+
+      {/* Practitioner Section: Collection Provenance */}
+      <section className="mt-16 pt-12 border-t border-slate-800 w-full text-left">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div className="space-y-4">
+            <h2 className="text-xl font-bold text-white tracking-tight italic">Collection Provenance</h2>
+            <p className="text-sm text-slate-400 leading-relaxed">
+              Establishing a clear link between all assets in a collection is vital for authenticity. This tool helps you maintain consistent metadata structures (like ARC-69) across thousands of assets, ensuring your collection is easily indexable by explorers and marketplaces.
+            </p>
+          </div>
+          <div className="space-y-4">
+            <h2 className="text-xl font-bold text-white tracking-tight italic">Creator Ethics</h2>
+            <p className="text-sm text-slate-400 leading-relaxed">
+              As a creator, your reputation is tied to the technical quality of your mint. Using standardized metadata formats and ensuring long-term media availability through robust IPFS pinning are the hallmarks of a professional-grade Algorand project.
+            </p>
+          </div>
+        </div>
+      </section>
     </div>
   );
 }

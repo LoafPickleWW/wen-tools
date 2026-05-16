@@ -20,6 +20,7 @@ import {
 } from "../arc59-helpers";
 import algosdk from "algosdk";
 import ConnectButton from "../components/ConnectButton";
+import { Meta } from "../components/Meta";
 
 type PageState =
   | "INITIAL"
@@ -275,6 +276,10 @@ export function SimpleSendTool() {
 
   return (
     <div className="mx-auto text-white mb-4 text-center flex flex-col items-center max-w-[40rem] gap-y-2 min-h-screen">
+      <Meta 
+        title="Simple Send Tool" 
+        description="Efficiently send Algorand assets to multiple recipients or batch multiple assets to a single receiver. Professional logistics for ASA distribution."
+      />
       <h1 className="text-2xl font-bold mt-6">
         {TOOLS.find((tool) => tool.path === window.location.pathname)?.label}
       </h1>
@@ -572,6 +577,23 @@ export function SimpleSendTool() {
           },
         ]}
       />
+      {/* Practitioner Section: Atomic Delivery */}
+      <section className="mt-20 pt-12 border-t border-slate-800 w-full max-w-4xl text-left px-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+          <div className="space-y-4">
+            <h2 className="text-xl font-bold text-white tracking-tight italic">Atomic Delivery</h2>
+            <p className="text-sm text-slate-400 leading-relaxed">
+              Algorand's layer-1 architecture allows for highly efficient batch transfers. Simple Send optimizes these operations by grouping transactions into atomic units where possible, reducing the overhead for airdrops and logistical movements. This is the preferred tool for creators and project managers handling diverse inventory.
+            </p>
+          </div>
+          <div className="space-y-4">
+            <h2 className="text-xl font-bold text-white tracking-tight italic">Asset Inbox Logistics</h2>
+            <p className="text-sm text-slate-400 leading-relaxed">
+              When sending to recipients who haven't opted in, the ARC-59 Asset Inbox protocol provides a decentralized "waiting room". This tool supports direct integration with Asset Inboxes, allowing you to scale your distribution without the friction of pre-emptive opt-ins, ensuring your project's outreach remains broad and frictionless.
+            </p>
+          </div>
+        </div>
+      </section>
     </div>
   );
 }

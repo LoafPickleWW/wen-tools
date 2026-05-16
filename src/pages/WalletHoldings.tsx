@@ -4,6 +4,7 @@ import axios from "axios";
 import { getIndexerURL } from "../utils";
 import { TOOLS } from "../constants";
 import { useWallet } from "@txnlab/use-wallet-react";
+import { Meta } from "../components/Meta";
 
 export function WalletHoldings() {
   const [userWallet, setUserWallet] = useState("");
@@ -158,6 +159,10 @@ export function WalletHoldings() {
 
   return (
     <div className="mx-auto text-white mb-4 text-center flex flex-col items-center min-h-screen">
+      <Meta 
+        title="Wallet Holdings Tool" 
+        description="Analyze and export Algorand wallet holdings to CSV. Audit your asset inventory, track balances, and manage your on-chain portfolio efficiency."
+      />
       <h1 className="text-2xl font-bold mt-6">
         {TOOLS.find((tool) => tool.path === window.location.pathname)?.label}
       </h1>
@@ -230,6 +235,23 @@ export function WalletHoldings() {
           )}
         </>
       )}
+      {/* Practitioner Section: On-Chain Inventory Auditing */}
+      <section className="mt-20 pt-12 border-t border-slate-800 w-full max-w-4xl text-left px-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+          <div className="space-y-4">
+            <h2 className="text-xl font-bold text-white tracking-tight italic">On-Chain Inventory Auditing</h2>
+            <p className="text-sm text-slate-400 leading-relaxed">
+              Professional asset management starts with accurate data. Wallet Holdings provides a comprehensive snapshot of your Algorand portfolio, allowing you to export data for tax reporting, project auditing, or inventory tracking. By isolating created assets from holdings, practitioners can gain a clear view of their active involvement versus their creator legacy.
+            </p>
+          </div>
+          <div className="space-y-4">
+            <h2 className="text-xl font-bold text-white tracking-tight italic">The Cost of Ledger State</h2>
+            <p className="text-sm text-slate-400 leading-relaxed">
+              Every asset in your wallet represents a 0.1 Algo Minimum Balance Requirement (MBR). Auditing your holdings is a key step in capital efficiency; by identifying stale or low-value assets, you can make informed decisions about opting out to reclaim locked Algos. This tool is the first step in a broader strategy of wallet hygiene and on-chain resource optimization.
+            </p>
+          </div>
+        </div>
+      </section>
     </div>
   );
 }

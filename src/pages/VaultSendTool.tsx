@@ -13,6 +13,7 @@ import InfinityModeComponent from "../components/InfinityModeComponent";
 import FaqSectionComponent from "../components/FaqSectionComponent";
 import { useWallet } from "@txnlab/use-wallet-react";
 import ConnectButton from "../components/ConnectButton";
+import { Meta } from "../components/Meta";
 
 export function VaultSendTool() {
   const TOOL_TYPES = [
@@ -275,6 +276,10 @@ export function VaultSendTool() {
 
   return (
     <div className="mx-auto text-white mb-4 text-center flex flex-col items-center max-w-[40rem] gap-y-2 min-h-screen">
+      <Meta 
+        title="Vault Send Tool" 
+        description="Securely send Algorand assets to NFD vaults without requiring recipient opt-ins. Leverage ARC-59 and NFD smart contracts for frictionless distribution."
+      />
       <h1 className="text-2xl font-bold mt-6">
         {TOOLS.find((tool) => tool.path === window.location.pathname)?.label}
       </h1>
@@ -480,6 +485,23 @@ export function VaultSendTool() {
           },
         ]}
       />
+      {/* Practitioner Section: NFD Vault Mechanics */}
+      <section className="mt-20 pt-12 border-t border-slate-800 w-full max-w-4xl text-left px-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+          <div className="space-y-4">
+            <h2 className="text-xl font-bold text-white tracking-tight italic">NFD Vault Mechanics</h2>
+            <p className="text-sm text-slate-400 leading-relaxed">
+              Vault Send utilizes the smart contract capabilities of Non-Fungible Domains (NFDs) to bypass the traditional requirement for recipient opt-ins. By sending to the vault, the contract handles the asset acceptance, allowing for permissionless distribution. This tool is essential for community drops and targeted project engagement within the NFD ecosystem.
+            </p>
+          </div>
+          <div className="space-y-4">
+            <h2 className="text-xl font-bold text-white tracking-tight italic">Permissionless Distribution</h2>
+            <p className="text-sm text-slate-400 leading-relaxed">
+              True decentralized logistics should be frictionless. Leveraging vaults allows creators to reach their audience directly without manual coordination. When using this tool for large-scale "Segment Sends", you are participating in a sophisticated, protocol-level distribution strategy that ensures your assets land exactly where they are intended, regardless of the recipient's active state.
+            </p>
+          </div>
+        </div>
+      </section>
     </div>
   );
 }

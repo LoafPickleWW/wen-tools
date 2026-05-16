@@ -10,6 +10,7 @@ import {
 import { TOOLS } from "../constants";
 import { useWallet } from "@txnlab/use-wallet-react";
 import ConnectButton from "../components/ConnectButton";
+import { Meta } from "../components/Meta";
 
 export function CollectionSnapshot() {
   const [creatorWallet, setCreatorWallet] = useState("");
@@ -217,6 +218,10 @@ export function CollectionSnapshot() {
 
   return (
     <div className="mx-auto text-white mb-4 text-center flex flex-col items-center min-h-screen">
+      <Meta 
+        title="Collection Snapshot Tool" 
+        description="Capture real-time holder data for any Algorand NFT collection. Generate accurate snapshots for airdrops, governance, and community analytics."
+      />
       <h1 className="text-2xl font-bold mt-6">
         {TOOLS.find((tool) => tool.path === window.location.pathname)?.label}
       </h1>
@@ -313,6 +318,23 @@ export function CollectionSnapshot() {
         <br />
         You can reload the page if you want to stop/restart the process!
       </p>
+      {/* Practitioner Section: Snapshot Accuracy */}
+      <section className="mt-20 pt-12 border-t border-slate-800 w-full max-w-4xl text-left px-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+          <div className="space-y-4">
+            <h2 className="text-xl font-bold text-white tracking-tight italic">Snapshot Accuracy</h2>
+            <p className="text-sm text-slate-400 leading-relaxed">
+              Capturing a precise snapshot is the foundation of decentralized community management. This tool iterates through creator wallets to identify all associated assets and their current holders. For airdrops or gated access, ensuring that your data includes RandGallery listings and aggregated balances is crucial for maintaining fairness and trust within your ecosystem.
+            </p>
+          </div>
+          <div className="space-y-4">
+            <h2 className="text-xl font-bold text-white tracking-tight italic">The Holder Distribution Model</h2>
+            <p className="text-sm text-slate-400 leading-relaxed">
+              Analyzing your holder distribution reveals the health and decentralization of your project. Use "Non-aggregated" views for granular asset tracking, or aggregated lists to see your top supporters. Understanding these patterns allows practitioners to design better incentive structures and governance models, leveraging the transparency of the Algorand ledger for professional-grade community scaling.
+            </p>
+          </div>
+        </div>
+      </section>
     </div>
   );
 }

@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useWallet } from "@txnlab/use-wallet-react";
+import { Meta } from "../components/Meta";
 import algosdk from "algosdk";
 import nacl from "tweetnacl";
 
@@ -898,6 +899,10 @@ export function BeaconChat() {
 
   return (
     <div className="flex flex-col items-center justify-center w-full px-4 py-8 min-h-[80vh]">
+      <Meta 
+        title="BEACON Chat" 
+        description="Zero-infrastructure, serverless p2p chat on Algorand. BEACON uses on-chain signaling and WebRTC for secure, decentralized communication."
+      />
       <div className="w-full max-w-2xl">
         {phase === "home" && (
           <div className="bg-[#111] rounded-2xl p-8 border border-[#222] shadow-2xl">
@@ -1071,6 +1076,46 @@ export function BeaconChat() {
           </div>
         )}
       </div>
+
+      {/* BEACON Protocol - Practitioner Section */}
+      <section className="mt-20 pt-12 border-t border-[#222] w-full max-w-4xl mx-auto pb-20">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+          <div className="space-y-4">
+            <h2 className="text-xl font-bold text-white tracking-tight italic">The BEACON Protocol</h2>
+            <p className="text-sm text-gray-500 leading-relaxed">
+              BEACON is a serverless signaling protocol built on Algorand. Most p2p apps rely on centralized "STUN/TURN" or signaling servers to help peers find each other. BEACON replaces the signaling server with the Algorand ledger, using transaction notes to broadcast encrypted WebRTC handshakes (SDP). Once the link is established, data flows directly between users—never touching a server.
+            </p>
+          </div>
+          <div className="space-y-4">
+            <h2 className="text-xl font-bold text-white tracking-tight italic">Atomic Signaling</h2>
+            <p className="text-sm text-gray-500 leading-relaxed">
+              WebRTC handshakes can exceed Algorand's 1KB transaction limit. BEACON implements "Atomic Reassembly," splitting large payloads into multiple transactions grouped by a shared ID. This ensures the protocol remains 100% on-chain while supporting complex peer-to-peer negotiations across all network environments.
+            </p>
+          </div>
+        </div>
+        
+        <div className="mt-12 p-8 bg-primary-orange/5 border border-primary-orange/10 rounded-3xl">
+          <h3 className="text-xs font-bold text-primary-orange uppercase tracking-widest mb-4 text-center">BEACON Security Checklist</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="flex flex-col gap-2">
+              <span className="text-white font-bold text-xs uppercase">Identity</span>
+              <p className="text-[10px] text-gray-500">Keys are derived from a one-time session signature. Your master mnemonic is never exposed.</p>
+            </div>
+            <div className="flex flex-col gap-2">
+              <span className="text-white font-bold text-xs uppercase">Privacy</span>
+              <p className="text-[10px] text-gray-500">Signaling is end-to-end encrypted. On-chain metadata only shows that a connection was attempted.</p>
+            </div>
+            <div className="flex flex-col gap-2">
+              <span className="text-white font-bold text-xs uppercase">Persistence</span>
+              <p className="text-[10px] text-gray-500">Use "Bonds" to save contacts. A bond is a permanent record of a peer's public identity key.</p>
+            </div>
+            <div className="flex flex-col gap-2">
+              <span className="text-white font-bold text-xs uppercase">Hygiene</span>
+              <p className="text-[10px] text-gray-500">Revoke your identity if you believe your session has been compromised or after major updates.</p>
+            </div>
+          </div>
+        </div>
+      </section>
     </div>
   );
 }

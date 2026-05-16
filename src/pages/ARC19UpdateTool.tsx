@@ -13,6 +13,7 @@ import {
 import InfinityModeComponent from "../components/InfinityModeComponent";
 import { useWallet } from "@txnlab/use-wallet-react";
 import ConnectButton from "../components/ConnectButton";
+import { Meta } from "../components/Meta";
 
 export function ARC19UpdateTool() {
   const [csvData, setCsvData] = useState(null as null | any);
@@ -199,6 +200,10 @@ export function ARC19UpdateTool() {
 
   return (
     <div className="mb-4 text-center flex flex-col items-center max-w-[40rem] gap-y-2 mx-auto text-white min-h-screen">
+      <Meta 
+        title="ARC-19 Mass Update" 
+        description="Mass update ARC-19 asset metadata on Algorand. Modify CIDs for entire collections while maintaining decentralized integrity."
+      />
       <h1 className="text-2xl font-bold mt-6">
         {TOOLS.find((tool) => tool.path === window.location.pathname)?.label}
       </h1>
@@ -339,11 +344,27 @@ export function ARC19UpdateTool() {
       )}
       <p className="text-sm italic text-slate-200">Fee: Free</p>
 
-      <p className="text-center text-xs text-slate-400 py-1">
-        ⚠️If you reload or close this page, you will lose your progress⚠️
-        <br />
-        You can reload the page if you want to stop/restart the process!
+      <p className="text-center text-xs text-slate-600 py-4 italic">
+        ⚠️ If you reload or close this page, you will lose your progress. You can reload to restart the process.
       </p>
+
+      {/* Practitioner Section: Metadata Evolution */}
+      <section className="mt-16 pt-12 border-t border-slate-800 w-full text-left">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div className="space-y-4">
+            <h2 className="text-xl font-bold text-white tracking-tight italic">Metadata Evolution</h2>
+            <p className="text-sm text-slate-400 leading-relaxed">
+              ARC-19 is unique because it allows an asset's metadata CID to evolve over time. This is achieved by updating the Asset Reserve address to a template-derived address. This tool automates the complex process of calculating new CIDs and broadcasting the necessary transactions to update your entire collection in bulk.
+            </p>
+          </div>
+          <div className="space-y-4">
+            <h2 className="text-xl font-bold text-white tracking-tight italic">The Manager Role</h2>
+            <p className="text-sm text-slate-400 leading-relaxed">
+              To update an ARC-19 asset, you must be the current Manager of that asset. Always verify that your creator wallet retains management permissions before attempting a bulk update. If management has been revoked or transferred to a zero-address, the metadata becomes immutable.
+            </p>
+          </div>
+        </div>
+      </section>
     </div>
   );
 }
