@@ -49,6 +49,7 @@ import { BeaconDropTool } from './pages/BeaconDropTool';
 import WenDeployTool from './pages/WenDeployTool';
 import AnchorSetupTool from './pages/AnchorSetupTool';
 import VanityAddressTool from './pages/VanityAddressTool';
+import { Encyclopedia } from './pages/Encyclopedia';
 
 
 
@@ -149,6 +150,7 @@ function App() {
             <Route path='/deploy' element={<WenDeployTool />} />
             <Route path='/anchor-setup' element={<AnchorSetupTool />} />
             <Route path='/vanity' element={<VanityAddressTool />} />
+            <Route path='/encyclopedia' element={<Encyclopedia />} />
             <Route path="*" element={<Home />} />
           </Routes>
           <Footer />

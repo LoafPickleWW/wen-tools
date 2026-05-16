@@ -42,6 +42,13 @@ export function Footer() {
           >
             powered by Algonode.io
           </a>
+          <a
+            href="/encyclopedia"
+            className="font-normal text-md text-center font-sans hover:text-primary-gray transition text-white mb-3 md:mb-0 ml-4 hidden md:block"
+            onClick={() => trackEvent("footer_click", "nav", "Encyclopedia")}
+          >
+            Encyclopedia
+          </a>
         </div>
         <div className="flex gap-4 text-white sm:justify-center flex-row items-center">
           <a
