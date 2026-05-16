@@ -50,6 +50,7 @@ import WenDeployTool from './pages/WenDeployTool';
 import AnchorSetupTool from './pages/AnchorSetupTool';
 import VanityAddressTool from './pages/VanityAddressTool';
 import { Encyclopedia } from './pages/Encyclopedia';
+import WenSwapTool from './pages/WenSwapTool';
 
 
 
@@ -151,6 +152,7 @@ function App() {
             <Route path='/anchor-setup' element={<AnchorSetupTool />} />
             <Route path='/vanity' element={<VanityAddressTool />} />
             <Route path='/encyclopedia' element={<Encyclopedia />} />
+            <Route path='/wen-swap' element={<WenSwapTool />} />
             <Route path="*" element={<Home />} />
           </Routes>
           <Footer />

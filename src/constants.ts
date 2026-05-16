@@ -362,4 +362,12 @@ export const TOOLS = [
     category: "management",
     icon: "/icons/devtools.png"
   },
+  {
+    id: "wen_swap",
+    label: "Wen Swap",
+    description: "Trustless peer-to-peer atomic swaps on Algorand. Trade assets with no intermediary.",
+    path: "/wen-swap",
+    category: "apps",
+    icon: "/icons/send.png"
+  },
 ];
