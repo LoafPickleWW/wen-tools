@@ -16,6 +16,8 @@ export interface SwapItem {
   assetId: number | null;
   amount: number | null;
   txType: "pay" | "axfer" | "optin" | "";
+  assetUrl?: string;
+  assetReserve?: string;
 }
 
 export interface DecodedSwapTx {
@@ -29,10 +31,11 @@ export async function getAssetInfo(id: number) {
   const r = await fetch(`${INDEXER}/v2/assets/${id}?include-all=true`);
   if (!r.ok) throw new Error("Invalid Asset ID");
   const d = await r.json();
-  return d.asset as { index: number; params: { name: string; decimals: number; "unit-name": string } };
+  return d.asset as { index: number; params: { name: string; decimals: number; "unit-name": string; url?: string; reserve?: string } };
 }
 
 export async function resolveNfd(domain: string): Promise<string> {
+  domain = domain.toLowerCase();
   try {
     const r = await fetch(`https://api.nf.domains/nfd/${domain}?view=tiny`);
     if (r.ok) { const d = await r.json(); return d.depositAccount || ""; }
@@ -282,10 +285,18 @@ export async function fetchSwapFromTxIds(txIds: string[]): Promise<DecodedSwapTx
         });
       } else {
         let dec = 0;
-        try { const info = await getAssetInfo(txn.assetIndex); dec = info.params.decimals; } catch { /* ignore */ }
+        let url = "";
+        let reserve = "";
+        try { 
+          const info = await getAssetInfo(txn.assetIndex); 
+          dec = info.params.decimals; 
+          url = info.params.url || "";
+          reserve = info.params.reserve || "";
+        } catch { /* ignore */ }
         results.push({
           swap: { id: i, sender: from, receiver: to, assetId: txn.assetIndex,
-            amount: (txn.amount as number) / Math.pow(10, dec), txType: "axfer" },
+            amount: (txn.amount as number) / Math.pow(10, dec), txType: "axfer",
+            assetUrl: url, assetReserve: reserve },
           isSigned, bytes: rawTxns[i],
         });
       }

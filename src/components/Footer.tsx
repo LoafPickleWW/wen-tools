@@ -8,13 +8,13 @@ export function Footer() {
         <span className=" mb-2 font-sans font-normal text-center text-md">
           {new Date().getFullYear()}{" "} &copy;
           <a
-            href="https://wen.tools/"
+            href="https://loafpickle.com/"
             target="_blank"
             rel="noopener noreferrer"
             className="font-normal text-white transition hover:text-primary-gray pl-1 text-md"
-            onClick={() => trackEvent("footer_click", "nav", "Wen Tools Home")}
+            onClick={() => trackEvent("footer_click", "nav", "LoafPickle Worldwide")}
           >
-            Wen.Tools
+            LoafPickle Worldwide LLC
           </a>
         </span>
         <div className="flex flex-row items-center justify-center gap-3 sm:absolute sm:left-1/2 sm:-translate-x-1/2">
@@ -24,13 +24,6 @@ export function Footer() {
               target="_blank"
               rel="noopener noreferrer"
             >
-              {/* <img
-                src={"/af_logo.svg"}
-                alt="af-logo"
-                width={64}
-                height={64}
-                className="mb-2 md:mb-0"
-              /> */}
             </a>
           </Tooltip>
           <a
@@ -49,6 +42,8 @@ export function Footer() {
           >
             Encyclopedia
           </a>
+          <a href="/terms" className="font-normal text-md text-center font-sans hover:text-primary-gray transition text-white mb-3 md:mb-0 ml-4 hidden md:block">Terms</a>
+          <a href="/privacy" className="font-normal text-md text-center font-sans hover:text-primary-gray transition text-white mb-3 md:mb-0 ml-4 hidden md:block">Privacy</a>
         </div>
         <div className="flex gap-4 text-white sm:justify-center flex-row items-center">
           <a

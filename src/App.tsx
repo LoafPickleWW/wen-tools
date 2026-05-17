@@ -51,6 +51,8 @@ import AnchorSetupTool from './pages/AnchorSetupTool';
 import VanityAddressTool from './pages/VanityAddressTool';
 import { Encyclopedia } from './pages/Encyclopedia';
 import WenSwapTool from './pages/WenSwapTool';
+import { TermsOfUse } from "./pages/TermsOfUse";
+import { PrivacyPolicy } from "./pages/PrivacyPolicy";
 
 
 
@@ -153,6 +155,8 @@ function App() {
             <Route path='/vanity' element={<VanityAddressTool />} />
             <Route path='/encyclopedia' element={<Encyclopedia />} />
             <Route path='/wen-swap' element={<WenSwapTool />} />
+            <Route path="/terms" element={<TermsOfUse />} />
+            <Route path="/privacy" element={<PrivacyPolicy />} />
             <Route path="*" element={<Home />} />
           </Routes>
           <Footer />

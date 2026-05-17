@@ -9,6 +9,7 @@ import {
   buildSwapGroup, createShareTx, fetchSwapFromTxIds, claimSwap,
   getAssetInfo, getAccountAssets, getAccountAssetsWithInfo,
 } from "../utils/swap";
+import { getNFTImageUrl } from "../utils";
 
 // ── Recent Contacts (localStorage) ───────────────────────────────────────
 const CONTACTS_KEY = "wenswap_recent_contacts";
@@ -187,10 +188,20 @@ function ClaimView({ txIds }: { txIds: string[] }) {
   const [error, setError] = useState("");
   const [resultTx, setResultTx] = useState("");
   const [optinsNeeded, setOptinsNeeded] = useState<number[]>([]);
+  const [images, setImages] = useState<Record<number, string>>({});
 
   useEffect(() => {
     fetchSwapFromTxIds(txIds)
-      .then(d => setDecoded(d))
+      .then(d => {
+        setDecoded(d);
+        d.forEach((item, i) => {
+          if (item.swap.assetUrl && item.swap.assetId && item.swap.assetId > 1) {
+            getNFTImageUrl(item.swap.assetUrl, item.swap.assetReserve || "").then(url => {
+              if (url) setImages(prev => ({ ...prev, [i]: url }));
+            }).catch(() => {});
+          }
+        });
+      })
       .catch(e => setError(e.message))
       .finally(() => setLoading(false));
   }, [txIds]);
@@ -262,8 +273,13 @@ function ClaimView({ txIds }: { txIds: string[] }) {
     <div className="space-y-6 animate-fade-in">
       <div className="space-y-3">
         {decoded.map((d, i) => (
-          <div key={i} className={`flex items-center gap-4 p-4 rounded-xl border ${d.isSigned ? "bg-green-500/5 border-green-500/20" : "bg-orange-500/5 border-orange-500/20"}`}>
-            <div className={`w-2 h-2 rounded-full flex-shrink-0 ${d.isSigned ? "bg-green-500" : "bg-orange-500 animate-pulse"}`} />
+          <div key={i} className={`flex items-start gap-4 p-4 rounded-xl border ${d.isSigned ? "bg-green-500/5 border-green-500/20" : "bg-orange-500/5 border-orange-500/20"}`}>
+            <div className={`w-2 h-2 mt-1.5 rounded-full flex-shrink-0 ${d.isSigned ? "bg-green-500" : "bg-orange-500 animate-pulse"}`} />
+            
+            {images[i] && (
+              <img src={images[i]} alt="Asset" className="w-10 h-10 rounded bg-neutral-900 border border-neutral-800 object-cover flex-shrink-0" />
+            )}
+            
             <div className="flex-1 min-w-0 space-y-1">
               <div className="flex items-center gap-2 text-xs">
                 <span className={`font-bold uppercase tracking-wider ${d.isSigned ? "text-green-400" : "text-orange-400"}`}>
@@ -272,9 +288,25 @@ function ClaimView({ txIds }: { txIds: string[] }) {
                 {d.isSigned && <span className="text-green-500/60 text-[10px]">SIGNED</span>}
                 {!d.isSigned && <span className="text-orange-500/60 text-[10px]">NEEDS YOUR SIGNATURE</span>}
               </div>
-              <div className="text-neutral-400 text-[11px] font-mono truncate">
+              <div className="text-neutral-400 text-[11px] font-mono truncate flex items-center">
                 {shorten(d.swap.sender)} → {shorten(d.swap.receiver)}
-                {d.swap.txType !== "optin" && <span className="text-white ml-2">{d.swap.amount} {d.swap.assetId === 1 ? "ALGO" : `ASA #${d.swap.assetId}`}</span>}
+                {d.swap.txType !== "optin" && (
+                  <span className="text-white ml-2 flex items-center gap-1">
+                    {d.swap.amount}{" "}
+                    {d.swap.assetId === 1 ? (
+                      "ALGO"
+                    ) : (
+                      <a
+                        href={`https://explorer.perawallet.app/asset/${d.swap.assetId}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-orange-400 hover:text-orange-300 hover:underline transition-colors ml-0.5"
+                      >
+                        ASA #{d.swap.assetId} ↗
+                      </a>
+                    )}
+                  </span>
+                )}
               </div>
             </div>
           </div>
