@@ -610,6 +610,19 @@ function CreateView() {
             <p className="text-sm text-neutral-500 leading-relaxed max-w-3xl">
               Integrate WEN.SWAP into your Discord bots or dApps. Swaps are transmitted statelessly by encoding msgpack-signed transactions into the <code className="text-orange-400 bg-orange-500/10 px-1 py-0.5 rounded">note</code> field of a 0-ALGO payment transaction. The format is a header with transaction lengths followed by the concatenated msgpack bytes: <code className="text-orange-400 bg-orange-500/10 px-1 py-0.5 rounded">count:len1:len2$bytes</code>.
             </p>
+            <div className="mt-6 mb-8">
+              <div className="bg-neutral-900 border border-neutral-800 rounded-xl overflow-hidden flex flex-col">
+                <div className="bg-neutral-950 px-4 py-2 border-b border-neutral-800 flex justify-between items-center">
+                  <span className="text-xs font-bold text-cyan-400/80 uppercase tracking-widest flex items-center gap-1.5"><span>✦</span> AI Integration Prompt</span>
+                  <button onClick={() => { navigator.clipboard.writeText(WEN_SWAP_AI_PROMPT); toast.success("AI prompt copied to clipboard"); }} className="text-[10px] uppercase font-bold text-neutral-400 hover:text-white transition-colors bg-neutral-800 hover:bg-neutral-700 px-3 py-1 rounded-lg">Copy</button>
+                </div>
+                <div className="p-4 overflow-x-auto">
+                  <pre className="text-[11px] text-neutral-400 font-mono whitespace-pre-wrap leading-relaxed">
+                    {WEN_SWAP_AI_PROMPT}
+                  </pre>
+                </div>
+              </div>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -681,3 +694,36 @@ function generateSwapNote(txns: Uint8Array[]): Uint8Array {
     </div>
   );
 }
+
+const WEN_SWAP_AI_PROMPT = `I am building an Algorand application and I want to integrate the WEN.SWAP atomic swap protocol.
+
+WEN.SWAP is a stateless protocol where swaps are transmitted by encoding msgpack-encoded transactions into the 'note' field of a 0-ALGO payment transaction sent to the counterparty. The note format must be a header with transaction lengths followed by the concatenated msgpack bytes: "count:len1:len2$bytes".
+
+Important Constraints:
+1. Algorand transaction notes are limited to 1,000 bytes. 
+2. If my combined swap group exceeds this limit, the payload must be chunked into multiple 0-ALGO payment transactions to the same receiver, grouped together.
+3. The resulting transaction IDs are passed to the WEN.SWAP claim page via URL parameters (e.g., https://wen.tools/wen-swap?txid=A&txid=B).
+
+Here is the reference logic for generating the note payload:
+
+\`\`\`typescript
+function generateSwapNote(txns: Uint8Array[]): Uint8Array {
+  const count = txns.length;
+  const lengths = txns.map(t => t.length).join(':');
+  const headerStr = \`\${count}:\${lengths}$\`;
+  const headerBytes = new TextEncoder().encode(headerStr);
+  
+  const totalLength = headerBytes.length + txns.reduce((sum, t) => sum + t.length, 0);
+  const result = new Uint8Array(totalLength);
+  
+  result.set(headerBytes, 0);
+  let offset = headerBytes.length;
+  for (const t of txns) {
+    result.set(t, offset);
+    offset += t.length;
+  }
+  return result;
+}
+\`\`\`
+
+Please analyze my current codebase and help me write the necessary code to construct my Algorand transactions, encode them, and pack them into the WEN.SWAP note payload using this specification.`;
