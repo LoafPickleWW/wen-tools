@@ -100,10 +100,10 @@ export function Encyclopedia() {
           <section id="security" className="space-y-8">
             <h2 className="text-2xl font-bold italic border-l-4 border-slate-700 pl-6 text-white">Security & Sovereign Protocols</h2>
             <p className="text-slate-400 text-sm leading-relaxed">
-              Algorand provides a robust foundation for next-generation security. From post-quantum signatures to supply chain integrity via the ANCHOR protocol, we provide the tools to implement professional-grade sovereign systems.
+              Algorand provides a robust foundation for next-generation security and machine economies. From post-quantum signatures and secure P2P messaging to trustless supply chain attestation (ANCHOR) and machine-to-machine x402 API billing, we provide tools to run sovereign systems.
             </p>
             <div className="grid grid-cols-1 gap-6">
-              {TOOLS.filter(t => ["experimental", "apps"].includes(t.category) && ["post_quantum", "anchor_setup", "beacon_chat", "beacon_drop", "p2p_chat"].includes(t.id)).map(tool => (
+              {TOOLS.filter(t => ["experimental", "apps"].includes(t.category) && ["post_quantum", "anchor_setup", "beacon_chat", "beacon_drop", "p2p_chat", "agent_marketplace"].includes(t.id)).map(tool => (
                 <div key={tool.id} className="group border-b border-slate-900 pb-6">
                   <Link to={tool.path} className="text-lg font-bold text-slate-200 group-hover:text-white transition block mb-2">{tool.label}</Link>
                   <p className="text-sm text-slate-500 leading-relaxed">{tool.description}</p>
@@ -194,6 +194,12 @@ export function Encyclopedia() {
                 <h4 className="text-white font-bold">Inner Transactions</h4>
                 <p className="text-sm text-slate-400 leading-relaxed italic">
                   Smart contracts can issue transactions on their own behalf (e.g., sending payments, managing assets). These are called "Inner Transactions" and are the backbone of automated on-chain logic.
+                </p>
+              </div>
+              <div className="space-y-2">
+                <h4 className="text-white font-bold">x402 (Agentic Payments Standard)</h4>
+                <p className="text-sm text-slate-400 leading-relaxed italic">
+                  An on-chain billing and authorization standard for autonomous machine-to-machine agents. Instead of Web2 API keys or credits, agents specify their fee per call (e.g. 1 ALGO) on-chain. Clients submit native payments directly to the agent's wallet, enabling true gated pay-to-access zero-infrastructure APIs.
                 </p>
               </div>
               <div className="space-y-2">

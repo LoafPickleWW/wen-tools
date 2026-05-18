@@ -1,11 +1,11 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import algosdk from 'algosdk';
-import { AppClient } from '@algorandfoundation/algokit-utils/types/app-client';
 
-
-// Import ARC32
-import AgentFactoryARC32 from './build/AgentFactory.arc32.json';
+// Load ARC32 JSON spec dynamically to prevent ESM import resolution issues
+const AgentFactoryARC32 = JSON.parse(
+  fs.readFileSync(path.join(import.meta.dirname, 'build', 'AgentFactory.arc32.json'), 'utf8')
+);
 
 async function deployToNetwork(network: 'testnet' | 'mainnet', mnemonic: string) {
   console.log(`\nDeploying to ${network.toUpperCase()}...`);

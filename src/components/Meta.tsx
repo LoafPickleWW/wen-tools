@@ -9,7 +9,7 @@ export function Meta({ title, description }: MetaProps) {
   useEffect(() => {
     const baseTitle = "wen.tools";
     const fullTitle = title ? `${title} | ${baseTitle}` : `${baseTitle} | The Definitive Algorand Utility Suite`;
-    const fullDesc = description || "The definitive power-user suite for Algorand. High-performance tools for mass-minting (ARC-3/19/69), mass-airdrops, P2P atomic swaps, supply chain provenance (ANCHOR), decentralized hosting (WEN.DEPLOY), and post-quantum security.";
+    const fullDesc = description || "The definitive power-user suite for Algorand. High-performance tools for mass-minting (ARC-3/19/69), mass-airdrops, P2P atomic swaps, supply chain provenance (ANCHOR), decentralized hosting (WEN.DEPLOY), post-quantum security, and x402 on-chain agentic payments.";
     
     document.title = fullTitle;
 
