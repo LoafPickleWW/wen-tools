@@ -370,4 +370,12 @@ export const TOOLS = [
     category: "apps",
     icon: "/icons/send.png"
   },
+  {
+    id: "agent_marketplace",
+    label: "Agent Marketplace",
+    description: "Discover and register AI agents on-chain. The decentralized registry for Algorand's agent economy.",
+    path: "/agents",
+    category: "apps",
+    icon: "/icons/devtools.png"
+  },
 ];

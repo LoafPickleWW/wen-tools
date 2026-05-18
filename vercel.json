@@ -1,5 +1,6 @@
 {
   "rewrites": [
+    { "source": "/.well-known/agents.json", "destination": "/api/agents" },
     { "source": "/socket.io/(.*)", "destination": "https://wen-liquid-auth.onrender.com/socket.io/$1" },
     { "source": "/attestation/(.*)", "destination": "https://wen-liquid-auth.onrender.com/attestation/$1" },
     { "source": "/(.*)", "destination": "/index.html" }

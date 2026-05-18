@@ -53,6 +53,7 @@ import { Encyclopedia } from './pages/Encyclopedia';
 import WenSwapTool from './pages/WenSwapTool';
 import { TermsOfUse } from "./pages/TermsOfUse";
 import { PrivacyPolicy } from "./pages/PrivacyPolicy";
+import AgentMarketplace from './pages/AgentMarketplace';
 
 
 
@@ -157,6 +158,7 @@ function App() {
             <Route path='/wen-swap' element={<WenSwapTool />} />
             <Route path="/terms" element={<TermsOfUse />} />
             <Route path="/privacy" element={<PrivacyPolicy />} />
+            <Route path="/agents" element={<AgentMarketplace />} />
             <Route path="*" element={<Home />} />
           </Routes>
           <Footer />

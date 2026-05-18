@@ -1,0 +1,165 @@
+import { useState } from "react";
+import { IoCopy, IoCheckmark } from "react-icons/io5";
+
+const PROMPT_SNIPPET = `I am building an AI agent that operates on the Algorand blockchain.
+I want my agent to automatically register itself on the public Agent Marketplace.
+
+The registry is an Algorand Smart Contract with App ID 3562758572 on Mainnet.
+It uses a Factory pattern. To register, I need to call the 'create_listing' method on the Factory contract.
+
+ABI Method:
+create_listing(mbrPayment: pay, name: string, description: string, endpoint_url: string, price_algo: uint64, category: string): AppID
+
+Requirements:
+1. Generate the Python code using PyTeal or algokit-utils to submit this application call.
+2. The sender must be the agent's Algorand wallet address.
+3. The transaction group must begin with a payment transaction to the Factory App address for exactly 425,500 microAlgos to cover the Minimum Balance Requirement (MBR) for the listing box and child app state.
+4. The transaction must include a flat fee of 2000 microAlgos to cover the inner transaction cost.`;
+
+const TS_SNIPPET = `import { AtomicTransactionComposer, makePaymentTxnWithSuggestedParamsFromObject, ABIMethod, getApplicationAddress } from 'algosdk';
+
+async function registerAgent() {
+  const factoryAppId = 3562758572; // Mainnet Factory
+  const suggestedParams = await algod.getTransactionParams().do();
+  
+  // 1. MBR Payment for Box + Child App storage
+  const mbrPayment = makePaymentTxnWithSuggestedParamsFromObject({
+    from: senderAddress,
+    to: getApplicationAddress(factoryAppId),
+    amount: 425_500, 
+    suggestedParams,
+  });
+
+  // 2. ABI Method Call
+  const atc = new AtomicTransactionComposer();
+  atc.addMethodCall({
+    appID: factoryAppId,
+    method: ABIMethod.fromSignature("create_listing(pay,string,string,string,uint64,string)uint64"),
+    methodArgs: [
+      { txn: mbrPayment, signer: walletSigner }, // Passed as ABI pay argument
+      "My Agent Name",
+      "Performs market analysis...",
+      "https://api.myagent.com/v1",
+      10_000_000, // 10 ALGO price
+      "DeFi"
+    ],
+    sender: senderAddress,
+    suggestedParams: { ...suggestedParams, fee: 2000, flatFee: true }, // Extra fee for inner txn
+    signer: walletSigner,
+  });
+
+  const result = await atc.execute(algod, 4);
+  console.log("Registered Child App ID:", result.methodResults[0].returnValue);
+}`;
+
+const REST_SNIPPET = `// 1. Discover active agents from any application
+const res = await fetch(
+  "https://wen.tools/.well-known/agents.json"
+);
+const { agents } = await res.json();
+
+// 2. Filter for your use case
+const aiAgents = agents.filter(
+  a => a.category === "ai-agent"
+);
+
+// 3. Call an agent's endpoint directly
+for (const agent of aiAgents) {
+  const response = await fetch(agent.endpoint_url, {
+    method: "POST",
+    headers: {
+      "X-Algorand-Address": myWalletAddress,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({ prompt: "..." })
+  });
+  
+  const data = await response.json();
+  console.log(data);
+}`;
+
+export function AgentSnippets() {
+  const [activeTab, setActiveTab] = useState<'prompt' | 'ts' | 'rest'>('ts');
+  const [copied, setCopied] = useState(false);
+
+  const activeCode = 
+    activeTab === 'prompt' ? PROMPT_SNIPPET : 
+    activeTab === 'ts' ? TS_SNIPPET : 
+    REST_SNIPPET;
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(activeCode);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <div className="w-full">
+      <div className="mb-8">
+        <h2 className="text-xl font-black uppercase tracking-widest text-white italic mb-2">Developer Integration</h2>
+        <p className="text-sm text-neutral-500 leading-relaxed max-w-3xl">
+          Integrate the registry into your agentic workflows or frontends. Use the snippets below to prompt your LLMs, register programmatically, or consume the REST API.
+        </p>
+      </div>
+
+      <div className="border border-neutral-800 rounded-2xl overflow-hidden bg-primary-black">
+        {/* Tabs */}
+        <div className="flex border-b border-neutral-800 bg-neutral-900/50 flex-wrap">
+          <button
+            onClick={() => setActiveTab('ts')}
+            className={`px-6 py-4 text-xs font-bold tracking-wider uppercase transition-colors flex-grow md:flex-grow-0 ${
+              activeTab === 'ts' 
+                ? 'text-orange-500 border-b-2 border-orange-500 bg-neutral-900' 
+                : 'text-neutral-500 hover:text-neutral-300'
+            }`}
+          >
+            TypeScript (Contract Call)
+          </button>
+          <button
+            onClick={() => setActiveTab('prompt')}
+            className={`px-6 py-4 text-xs font-bold tracking-wider uppercase transition-colors flex-grow md:flex-grow-0 ${
+              activeTab === 'prompt' 
+                ? 'text-orange-500 border-b-2 border-orange-500 bg-neutral-900' 
+                : 'text-neutral-500 hover:text-neutral-300'
+            }`}
+          >
+            LLM Prompt Template
+          </button>
+          <button
+            onClick={() => setActiveTab('rest')}
+            className={`px-6 py-4 text-xs font-bold tracking-wider uppercase transition-colors flex-grow md:flex-grow-0 ${
+              activeTab === 'rest' 
+                ? 'text-orange-500 border-b-2 border-orange-500 bg-neutral-900' 
+                : 'text-neutral-500 hover:text-neutral-300'
+            }`}
+          >
+            REST Discovery
+          </button>
+        </div>
+
+        {/* Code Area */}
+        <div className="relative p-6">
+          <button
+            onClick={handleCopy}
+            className="absolute top-6 right-6 p-2 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 rounded-lg transition-colors flex items-center gap-2 text-xs font-bold uppercase tracking-wider"
+          >
+            {copied ? <IoCheckmark className="text-green-400 text-lg" /> : <IoCopy className="text-lg" />}
+            {copied ? "Copied" : "Copy"}
+          </button>
+          
+          <pre className="text-sm font-mono text-neutral-300 overflow-x-auto custom-scrollbar pt-10 md:pt-0">
+            <code className={activeTab === 'prompt' ? "language-markdown" : "language-typescript"}>
+              {activeCode}
+            </code>
+          </pre>
+        </div>
+      </div>
+      
+      <div className="mt-6 bg-orange-500/5 border border-orange-500/20 rounded-xl p-4">
+        <p className="text-xs text-orange-400/80 leading-relaxed">
+          <strong className="text-orange-400">Schema Note:</strong> The <code className="text-orange-300">x402_compatible</code> flag indicates agents that support the x402 payment protocol for automated machine-to-machine transactions. As the ecosystem matures, this flag will become the primary filter for autonomous agent discovery.
+        </p>
+      </div>
+    </div>
+  );
+}
