@@ -34,12 +34,76 @@ export function TestAgentModal({ open, onClose, listing, network }: TestAgentMod
   const [errorDetails, setErrorDetails] = useState("");
   const [testResult, setTestResult] = useState<any>(null);
   const [endpointUrl, setEndpointUrl] = useState("");
+  const [refundTxId, setRefundTxId] = useState<string | null>(null);
+  const [isPollingRefund, setIsPollingRefund] = useState(false);
 
   useEffect(() => {
     if (listing) {
       setEndpointUrl(listing.endpointUrl);
     }
   }, [listing]);
+
+  useEffect(() => {
+    if (!isPollingRefund || !testResult || !activeAddress) return;
+
+    let intervalId: any;
+    let attempts = 0;
+    const maxAttempts = 15; // Poll for up to 30 seconds
+
+    const poll = async () => {
+      attempts++;
+      if (attempts > maxAttempts) {
+        setIsPollingRefund(false);
+        return;
+      }
+
+      const isTestnet = network === NetworkId.TESTNET;
+      const indexerBase = isTestnet
+        ? "https://testnet-idx.algonode.cloud"
+        : "https://mainnet-idx.algonode.cloud";
+
+      try {
+        const assetLabel = testResult.echo?.asset || "USDC";
+        const txType = assetLabel === "ALGO" ? "pay" : "axfer";
+        const url = `${indexerBase}/v2/accounts/${activeAddress}/transactions?tx-type=${txType}&address-role=receiver&limit=5`;
+
+        const res = await fetch(url);
+        if (!res.ok) return;
+
+        const data = await res.json();
+        const txns = data.transactions || [];
+
+        // Find the matching refund transaction
+        const refundTx = txns.find((tx: any) => {
+          const isSenderMatch = tx.sender === testResult.echo?.receiver;
+          
+          let isNoteMatch = false;
+          if (tx.note) {
+            try {
+              const decodedNote = atob(tx.note).toLowerCase();
+              isNoteMatch = decodedNote.includes("refund");
+            } catch {
+              // Ignore decoding errors
+            }
+          }
+
+          return isSenderMatch || isNoteMatch;
+        });
+
+        if (refundTx) {
+          setRefundTxId(refundTx.id);
+          setIsPollingRefund(false);
+        }
+      } catch (err) {
+        console.error("Error polling indexer for refund:", err);
+      }
+    };
+
+    poll();
+    intervalId = setInterval(poll, 2000);
+
+    return () => clearInterval(intervalId);
+  }, [isPollingRefund, testResult, activeAddress, network]);
 
   if (!open || !listing) return null;
 
@@ -54,6 +118,8 @@ export function TestAgentModal({ open, onClose, listing, network }: TestAgentMod
     setStatusMessage("Pinging agent endpoint to retrieve x402 payment challenge...");
     setErrorDetails("");
     setTestResult(null);
+    setRefundTxId(null);
+    setIsPollingRefund(false);
 
     const isTestnet = network === NetworkId.TESTNET;
     const algodUrl = isTestnet
@@ -233,6 +299,9 @@ export function TestAgentModal({ open, onClose, listing, network }: TestAgentMod
       if (verifyRes.status === 200 || verifyRes.status === 201) {
         setTestResult(responseBody);
         setStep("success");
+        if (responseBody.refund?.refund_pending) {
+          setIsPollingRefund(true);
+        }
       } else {
         let errorMessage = responseBody.message || responseBody.error || `Verification failed with status ${verifyRes.status}`;
         
@@ -424,15 +493,17 @@ export function TestAgentModal({ open, onClose, listing, network }: TestAgentMod
                       <div className="flex justify-between border-b border-neutral-900 pb-2">
                         <span className="text-neutral-500">Refund Transaction ID</span>
                         <span className="text-neutral-300 font-mono">
-                          {testResult.refund.refund_tx_id ? (
+                          {refundTxId || testResult.refund.refund_tx_id ? (
                             <a
-                              href={`https://${network === NetworkId.TESTNET ? "testnet." : ""}explorer.perawallet.app/tx/${testResult.refund.refund_tx_id}`}
+                              href={`https://${network === NetworkId.TESTNET ? "testnet." : ""}explorer.perawallet.app/tx/${refundTxId || testResult.refund.refund_tx_id}`}
                               target="_blank"
                               rel="noreferrer"
                               className="text-orange-400 hover:underline"
                             >
-                              {testResult.refund.refund_tx_id.slice(0, 10)}...{testResult.refund.refund_tx_id.slice(-6)}
+                              {(refundTxId || testResult.refund.refund_tx_id).slice(0, 10)}...{(refundTxId || testResult.refund.refund_tx_id).slice(-6)}
                             </a>
+                          ) : isPollingRefund ? (
+                            <span className="text-orange-400 animate-pulse font-medium">Processing refund (polling blockchain...)</span>
                           ) : testResult.refund.refund_pending ? (
                             <span className="text-orange-400 animate-pulse font-medium">Processing in background...</span>
                           ) : (
@@ -452,11 +523,15 @@ export function TestAgentModal({ open, onClose, listing, network }: TestAgentMod
                 </pre>
               </div>
 
-              {testResult.refund && testResult.refund.note && (
+              {refundTxId ? (
+                <div className="bg-green-500/10 border border-green-500/20 text-green-300 rounded-xl p-4 text-xs font-medium animate-fadeIn">
+                  Auto-refund successfully processed and verified on the Algorand blockchain!
+                </div>
+              ) : testResult.refund && testResult.refund.note ? (
                 <div className="bg-green-500/10 border border-green-500/20 text-green-300 rounded-xl p-4 text-xs font-medium">
                   {testResult.refund.note}
                 </div>
-              )}
+              ) : null}
 
               <button
                 onClick={() => setStep("idle")}
