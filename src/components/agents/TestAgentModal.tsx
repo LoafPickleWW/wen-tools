@@ -245,7 +245,7 @@ export function TestAgentModal({ open, onClose, listing, network }: TestAgentMod
               if (decoded.error) {
                 errorMessage = decoded.error;
               }
-            } catch (e) {
+            } catch {
               // Ignore parsing errors, keep fallback message
             }
           }
