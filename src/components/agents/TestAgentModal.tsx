@@ -433,6 +433,8 @@ export function TestAgentModal({ open, onClose, listing, network }: TestAgentMod
                             >
                               {testResult.refund.refund_tx_id.slice(0, 10)}...{testResult.refund.refund_tx_id.slice(-6)}
                             </a>
+                          ) : testResult.refund.refund_pending ? (
+                            <span className="text-orange-400 animate-pulse font-medium">Processing in background...</span>
                           ) : (
                             <span className="text-red-400">Failed / Pending</span>
                           )}
