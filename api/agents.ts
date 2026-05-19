@@ -100,7 +100,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const getStringValue = (key: string): string => {
           const val = kv[key];
           if (val instanceof Uint8Array) {
-            return val.toString("utf-8");
+            if (val.length < 2) return "";
+            const length = (val[0] << 8) | val[1];
+            const stringBytes = val.subarray(2, 2 + length);
+            return Buffer.from(stringBytes).toString("utf-8");
           }
           return "";
         };

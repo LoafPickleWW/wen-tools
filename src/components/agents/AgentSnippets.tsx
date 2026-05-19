@@ -121,16 +121,17 @@ const result = await response.json();
 console.log("Agent output:", result.output);`;
 
 export function AgentSnippets() {
-  const [activeTab, setActiveTab] = useState<'prompt' | 'ts' | 'rest' | 'x402'>('ts');
+  const [activeTab, setActiveTab] = useState<'test' | 'ts' | 'prompt' | 'rest' | 'x402'>('test');
   const [copied, setCopied] = useState(false);
 
   const activeCode = 
     activeTab === 'prompt' ? PROMPT_SNIPPET : 
     activeTab === 'ts' ? TS_SNIPPET : 
     activeTab === 'rest' ? REST_SNIPPET :
-    X402_SNIPPET;
+    activeTab === 'x402' ? X402_SNIPPET : '';
 
   const handleCopy = () => {
+    if (!activeCode) return;
     navigator.clipboard.writeText(activeCode);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
@@ -148,6 +149,16 @@ export function AgentSnippets() {
       <div className="border border-neutral-800 rounded-2xl overflow-hidden bg-primary-black">
         {/* Tabs */}
         <div className="flex border-b border-neutral-800 bg-neutral-900/50 flex-wrap">
+          <button
+            onClick={() => setActiveTab('test')}
+            className={`px-6 py-4 text-xs font-bold tracking-wider uppercase transition-colors flex-grow md:flex-grow-0 ${
+              activeTab === 'test' 
+                ? 'text-orange-500 border-b-2 border-orange-500 bg-neutral-900' 
+                : 'text-neutral-500 hover:text-neutral-300'
+            }`}
+          >
+            How to Test x402
+          </button>
           <button
             onClick={() => setActiveTab('ts')}
             className={`px-6 py-4 text-xs font-bold tracking-wider uppercase transition-colors flex-grow md:flex-grow-0 ${
@@ -192,19 +203,79 @@ export function AgentSnippets() {
 
         {/* Code Area */}
         <div className="relative p-6">
-          <button
-            onClick={handleCopy}
-            className="absolute top-6 right-6 p-2 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 rounded-lg transition-colors flex items-center gap-2 text-xs font-bold uppercase tracking-wider"
-          >
-            {copied ? <IoCheckmark className="text-green-400 text-lg" /> : <IoCopy className="text-lg" />}
-            {copied ? "Copied" : "Copy"}
-          </button>
+          {activeTab !== 'test' && (
+            <button
+              onClick={handleCopy}
+              className="absolute top-6 right-6 p-2 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 rounded-lg transition-colors flex items-center gap-2 text-xs font-bold uppercase tracking-wider"
+            >
+              {copied ? <IoCheckmark className="text-green-400 text-lg" /> : <IoCopy className="text-lg" />}
+              {copied ? "Copied" : "Copy"}
+            </button>
+          )}
           
-          <pre className="text-sm font-mono text-neutral-300 overflow-x-auto custom-scrollbar pt-10 md:pt-0">
-            <code className={activeTab === 'prompt' ? "language-markdown" : "language-typescript"}>
-              {activeCode}
-            </code>
-          </pre>
+          {activeTab === 'test' ? (
+            <div className="space-y-6 pt-2">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <div className="flex gap-4">
+                    <div className="w-8 h-8 rounded-full bg-orange-500/10 border border-orange-500/30 flex items-center justify-center font-bold text-orange-400 text-sm flex-shrink-0">
+                      1
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-white text-sm">Switch Network &amp; Connect</h4>
+                      <p className="text-xs text-neutral-400 mt-1 leading-relaxed">
+                        Toggle the network switch above to <strong>TESTNET</strong> (or MAINNET) and click "Connect Wallet" at the top of the page.
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex gap-4">
+                    <div className="w-8 h-8 rounded-full bg-orange-500/10 border border-orange-500/30 flex items-center justify-center font-bold text-orange-400 text-sm flex-shrink-0">
+                      2
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-white text-sm">Search for Echo Agent</h4>
+                      <p className="text-xs text-neutral-400 mt-1 leading-relaxed">
+                        Search for "<strong>x402 Echo Service</strong>" in the search box above. This is our default test agent for integration testing.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="flex gap-4">
+                    <div className="w-8 h-8 rounded-full bg-orange-500/10 border border-orange-500/30 flex items-center justify-center font-bold text-orange-400 text-sm flex-shrink-0">
+                      3
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-white text-sm">Execute Test Call</h4>
+                      <p className="text-xs text-neutral-400 mt-1 leading-relaxed">
+                        Click "<strong>Test Call</strong>" on the agent card, input a custom payload message, and approve the payment transaction (costs 0.01 USDC).
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex gap-4">
+                    <div className="w-8 h-8 rounded-full bg-orange-500/10 border border-orange-500/30 flex items-center justify-center font-bold text-orange-400 text-sm flex-shrink-0">
+                      4
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-white text-sm">Verify Refund Delivery</h4>
+                      <p className="text-xs text-neutral-400 mt-1 leading-relaxed">
+                        Confirm you receive the echo JSON payload response, followed by an automatic refund transaction (<strong>0.009 USDC</strong>) returned to your wallet.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <pre className="text-sm font-mono text-neutral-300 overflow-x-auto custom-scrollbar pt-10 md:pt-0">
+              <code className={activeTab === 'prompt' ? "language-markdown" : "language-typescript"}>
+                {activeCode}
+              </code>
+            </pre>
+          )}
         </div>
       </div>
       

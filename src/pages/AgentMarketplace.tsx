@@ -9,6 +9,7 @@ import { AgentFilters } from "../components/agents/AgentFilters";
 import { AddListingModal } from "../components/agents/AddListingModal";
 import { SmartContractViewer } from "../components/agents/SmartContractViewer";
 import { AgentSnippets } from "../components/agents/AgentSnippets";
+import { TestAgentModal } from "../components/agents/TestAgentModal";
 import { agentListingsAtom, agentListingsLoadingAtom } from "../atoms/agentAtoms";
 import {
   getAllListings,
@@ -19,12 +20,19 @@ import type { AgentListing } from "../types/agent";
 import { trackEvent } from "../utils";
 
 export default function AgentMarketplace() {
-  const { activeAddress, signTransactions, algodClient } = useWallet();
+  const { activeAddress, signTransactions, algodClient, activeNetwork } = useWallet();
   const [listings, setListings] = useAtom(agentListingsAtom);
   const [loading, setLoading] = useAtom(agentListingsLoadingAtom);
 
   // Network toggle
   const [network, setNetwork] = useState<NetworkId>(NetworkId.MAINNET);
+
+  // Sync network with wallet active network
+  useEffect(() => {
+    if (activeNetwork) {
+      setNetwork(activeNetwork);
+    }
+  }, [activeNetwork]);
 
   // Filters
   const [search, setSearch] = useState("");
@@ -36,6 +44,9 @@ export default function AgentMarketplace() {
 
   // Owner's existing listing
   const [myListing, setMyListing] = useState<AgentListing | null>(null);
+
+  // Test modal state
+  const [testListing, setTestListing] = useState<AgentListing | null>(null);
 
   // ── Fetch listings ─────────────────────────────────────────────────────────
 
@@ -219,6 +230,7 @@ export default function AgentMarketplace() {
                 isOwner={activeAddress === listing.walletAddress}
                 onEdit={() => handleEdit(listing)}
                 onDelete={() => handleDelete(listing)}
+                onTestCall={(l) => setTestListing(l)}
               />
             ))}
           </div>
@@ -280,6 +292,12 @@ export default function AgentMarketplace() {
         onClose={() => setModalOpen(false)}
         onSuccess={handleSuccess}
         existingListing={editListing}
+        network={network}
+      />
+      <TestAgentModal
+        open={!!testListing}
+        onClose={() => setTestListing(null)}
+        listing={testListing}
         network={network}
       />
     </div>

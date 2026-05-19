@@ -62,8 +62,12 @@ function decodeGlobalState(
   const getStringValue = (key: string): string => {
     const val = kv[key];
     if (val instanceof Uint8Array) {
+      if (val.length < 2) return "";
+      // ABI strings have a 2-byte uint16 length prefix
+      const length = (val[0] << 8) | val[1];
+      const stringBytes = val.subarray(2, 2 + length);
       try {
-        return new TextDecoder().decode(val);
+        return new TextDecoder().decode(stringBytes);
       } catch (e) {
         console.error(`Failed to decode UTF-8 string for key "${key}":`, e);
         return "";

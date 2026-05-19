@@ -26,3 +26,15 @@ contracts/build/
 *.njsproj
 *.sln
 *.sw?
+
+# Build and Dev Artifacts
+.next/
+node_modules/
+dist/
+dist-ssr/
+contracts/build/
+vite.config.ts.timestamp-*
+.eslintcache
+coverage/
+.vercel
+

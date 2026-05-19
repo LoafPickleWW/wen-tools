@@ -212,7 +212,7 @@ export function AddListingModal({ open, onClose, onSuccess, existingListing, net
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-bold text-neutral-500 uppercase tracking-wider mb-1.5">
-                Price per call (ALGO)
+                Price per call (USDC)
               </label>
               <input
                 {...register("priceAlgo", {

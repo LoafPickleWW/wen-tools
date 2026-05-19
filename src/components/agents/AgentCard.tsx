@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { AgentListing } from "../../types/agent";
-import { IoLink, IoPencil, IoTrash } from "react-icons/io5";
+import { IoLink, IoPencil, IoTrash, IoPlay } from "react-icons/io5";
 import { toast } from "react-toastify";
 
 interface AgentCardProps {
@@ -8,6 +8,7 @@ interface AgentCardProps {
   isOwner: boolean;
   onEdit: () => void;
   onDelete: () => void;
+  onTestCall?: (listing: AgentListing) => void;
 }
 
 const CATEGORY_COLORS: Record<string, string> = {
@@ -26,7 +27,7 @@ function getCategoryClass(category: string): string {
   return CATEGORY_COLORS[category.toLowerCase()] || "bg-neutral-500/20 text-neutral-300 border-neutral-500/30";
 }
 
-export function AgentCard({ listing, isOwner, onEdit, onDelete }: AgentCardProps) {
+export function AgentCard({ listing, isOwner, onEdit, onDelete, onTestCall }: AgentCardProps) {
   const [expanded, setExpanded] = useState(false);
 
   const handleCopyEndpoint = () => {
@@ -56,7 +57,7 @@ export function AgentCard({ listing, isOwner, onEdit, onDelete }: AgentCardProps
           {/* Price badge */}
           <div className="bg-orange-500/10 border border-orange-500/20 rounded-xl px-3 py-1.5 text-center flex-shrink-0">
             <div className="text-sm font-black text-orange-400">
-              {listing.pricePerCallAlgo === 0 ? "FREE" : `${listing.pricePerCallAlgo} A`}
+              {listing.pricePerCallAlgo === 0 ? "FREE" : `${listing.pricePerCallAlgo} USDC`}
             </div>
             {listing.pricePerCallAlgo > 0 && (
               <div className="text-[9px] text-orange-500/60 uppercase tracking-wider">per call</div>
@@ -86,6 +87,16 @@ export function AgentCard({ listing, isOwner, onEdit, onDelete }: AgentCardProps
             <IoLink className="text-xs" />
             Copy Endpoint
           </button>
+
+          {listing.endpointUrl && onTestCall && (
+            <button
+              onClick={() => onTestCall(listing)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-orange-500/20 hover:bg-orange-500 hover:text-black text-orange-400 text-[10px] font-bold uppercase tracking-wider transition-all border border-orange-500/30"
+            >
+              <IoPlay className="text-xs" />
+              Test Call
+            </button>
+          )}
 
           <a
             href={`https://explorer.perawallet.app/application/${listing.appId}`}
