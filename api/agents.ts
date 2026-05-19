@@ -1,4 +1,5 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
+import algosdk from "algosdk";
 
 /**
  * GET /api/agents
@@ -24,9 +25,9 @@ const ALGOD_URLS: Record<string, string> = {
   testnet: "https://testnet-api.4160.nodely.dev",
 };
 
-function decodeStateValue(sv: { type: number; bytes?: string; uint?: number }): string | number {
+function decodeStateValue(sv: { type: number; bytes?: string; uint?: number }): Uint8Array | number {
   if (sv.type === 1) {
-    return Buffer.from(sv.bytes || "", "base64").toString("utf-8");
+    return Buffer.from(sv.bytes || "", "base64");
   }
   return sv.uint ?? 0;
 }
@@ -88,7 +89,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         if (!globalState) continue;
 
         // Decode global state
-        const kv: Record<string, string | number> = {};
+        const kv: Record<string, Uint8Array | number> = {};
         for (const entry of globalState) {
           const key = Buffer.from(entry.key, "base64").toString("utf-8");
           kv[key] = decodeStateValue(entry.value);
@@ -96,16 +97,39 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         if (kv["active"] !== 1) continue;
 
+        const getStringValue = (key: string): string => {
+          const val = kv[key];
+          if (val instanceof Uint8Array) {
+            return val.toString("utf-8");
+          }
+          return "";
+        };
+
+        const getAddressValue = (key: string): string => {
+          const val = kv[key];
+          if (val instanceof Uint8Array) {
+            if (val.length === 32) {
+              try {
+                return algosdk.encodeAddress(val);
+              } catch (e) {
+                console.error(`Failed to encode Algorand address for key "${key}":`, e);
+              }
+            }
+            return val.toString("utf-8");
+          }
+          return "";
+        };
+
         const priceMicro = typeof kv["price_algo"] === "number" ? kv["price_algo"] : 0;
 
         agents.push({
           id: childAppId,
-          name: kv["name"] || "",
-          description: kv["description"] || "",
-          endpoint_url: kv["endpoint_url"] || "",
+          name: getStringValue("name"),
+          description: getStringValue("description"),
+          endpoint_url: getStringValue("endpoint_url"),
           price_per_call_algo: priceMicro / 1_000_000,
-          category: kv["category"] || "other",
-          wallet_address: kv["wallet_address"] || "",
+          category: getStringValue("category") || "other",
+          wallet_address: getAddressValue("wallet_address"),
           x402_compatible: true,
         });
       } catch {

@@ -35,36 +35,72 @@ function getFactoryAppId(network: NetworkId): number {
   return FACTORY_APP_IDS[key];
 }
 
-// ─── Global state decoder ────────────────────────────────────────────────────
-
-function decodeStateValue(sv: { type: number; bytes?: string; uint?: number }): string | number {
-  if (sv.type === 1) {
-    // bytes → UTF-8 string
-    return atob(sv.bytes || "");
+// Helper to decode Base64 to Uint8Array
+function base64ToBytes(base64: string): Uint8Array {
+  const binaryString = atob(base64);
+  const bytes = new Uint8Array(binaryString.length);
+  for (let i = 0; i < binaryString.length; i++) {
+    bytes[i] = binaryString.charCodeAt(i);
   }
-  return sv.uint ?? 0;
+  return bytes;
 }
 
 function decodeGlobalState(
   appId: number,
   state: Array<{ key: string; value: { type: number; bytes?: string; uint?: number } }>
 ): AgentListing {
-  const kv: Record<string, string | number> = {};
+  const kv: Record<string, string | number | Uint8Array> = {};
   for (const entry of state) {
     const key = atob(entry.key);
-    kv[key] = decodeStateValue(entry.value);
+    if (entry.value.type === 1) {
+      kv[key] = base64ToBytes(entry.value.bytes || "");
+    } else {
+      kv[key] = entry.value.uint ?? 0;
+    }
   }
+
+  const getStringValue = (key: string): string => {
+    const val = kv[key];
+    if (val instanceof Uint8Array) {
+      try {
+        return new TextDecoder().decode(val);
+      } catch (e) {
+        console.error(`Failed to decode UTF-8 string for key "${key}":`, e);
+        return "";
+      }
+    }
+    return typeof val === "string" ? val : "";
+  };
+
+  const getAddressValue = (key: string): string => {
+    const val = kv[key];
+    if (val instanceof Uint8Array) {
+      if (val.length === 32) {
+        try {
+          return algosdk.encodeAddress(val);
+        } catch (e) {
+          console.error(`Failed to encode Algorand address for key "${key}":`, e);
+        }
+      }
+      try {
+        return new TextDecoder().decode(val);
+      } catch {
+        return "";
+      }
+    }
+    return typeof val === "string" ? val : "";
+  };
 
   const priceRaw = typeof kv["price_algo"] === "number" ? kv["price_algo"] : 0;
 
   return {
     appId,
-    name: (kv["name"] as string) || "",
-    description: (kv["description"] as string) || "",
-    endpointUrl: (kv["endpoint_url"] as string) || "",
+    name: getStringValue("name"),
+    description: getStringValue("description"),
+    endpointUrl: getStringValue("endpoint_url"),
     pricePerCallAlgo: priceRaw / 1_000_000,
-    category: (kv["category"] as string) || "other",
-    walletAddress: (kv["wallet_address"] as string) || "",
+    category: getStringValue("category") || "other",
+    walletAddress: getAddressValue("wallet_address"),
     active: kv["active"] === 1,
     x402Compatible: false, // Will be determined by endpoint probing in the future
   };
