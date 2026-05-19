@@ -78,14 +78,57 @@ for (const agent of aiAgents) {
   console.log(data);
 }`;
 
+const X402_SNIPPET = `// Integrate standard x402-avm packages developed by GoPlausible
+// npm install @x402-avm/core @x402-avm/avm @x402-avm/fetch
+
+// ───────── 1. SERVER-SIDE GATED API ROUTE (Express example) ─────────
+import express from 'express';
+import { x402ResourceServer } from '@x402-avm/core';
+import { ExactAvmScheme } from '@x402-avm/avm';
+
+const app = express();
+const server = new x402ResourceServer();
+
+// Register the gated resource (demands 1 ALGO fee for agent's wallet)
+server.register('algorand:mainnet', new ExactAvmScheme({
+  priceMicroAlgos: 1_000_000, 
+  receiverAddress: "WENFZQKZSLDSJTOH5PXUXSUXFY4UMSC2DB22GK6HL7QBEV7X7ESWNUEZ2U"
+}));
+
+app.get('/api/agent-task', async (req, res) => {
+  const challenge = await server.challenge(req);
+  if (challenge.status === 402) {
+    // Returns HTTP 402 Payment Required with blockchain transaction details
+    return res.status(402).json(challenge.headers);
+  }
+  
+  // Payment validated! Process LLM Task
+  res.json({ output: "Agent task finished successfully!" });
+});
+
+// ───────── 2. CLIENT-SIDE SERVICE CONSUMPTION (Fetch example) ────────
+import { x402HTTPClient } from '@x402-avm/fetch';
+
+const client = new x402HTTPClient({
+  walletSigner: myAlgorandSigner,
+  senderAddress: myClientAddress,
+});
+
+// Automatically handles the 402 challenge, submits the payment txn on-chain,
+// and returns the successful gated API response!
+const response = await client.fetch('https://api.myagent.com/api/agent-task');
+const result = await response.json();
+console.log("Agent output:", result.output);`;
+
 export function AgentSnippets() {
-  const [activeTab, setActiveTab] = useState<'prompt' | 'ts' | 'rest'>('ts');
+  const [activeTab, setActiveTab] = useState<'prompt' | 'ts' | 'rest' | 'x402'>('ts');
   const [copied, setCopied] = useState(false);
 
   const activeCode = 
     activeTab === 'prompt' ? PROMPT_SNIPPET : 
     activeTab === 'ts' ? TS_SNIPPET : 
-    REST_SNIPPET;
+    activeTab === 'rest' ? REST_SNIPPET :
+    X402_SNIPPET;
 
   const handleCopy = () => {
     navigator.clipboard.writeText(activeCode);
@@ -134,6 +177,16 @@ export function AgentSnippets() {
             }`}
           >
             REST Discovery
+          </button>
+          <button
+            onClick={() => setActiveTab('x402')}
+            className={`px-6 py-4 text-xs font-bold tracking-wider uppercase transition-colors flex-grow md:flex-grow-0 ${
+              activeTab === 'x402' 
+                ? 'text-orange-500 border-b-2 border-orange-500 bg-neutral-900' 
+                : 'text-neutral-500 hover:text-neutral-300'
+            }`}
+          >
+            x402 Integration (GoPlausible)
           </button>
         </div>
 
