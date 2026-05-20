@@ -3,6 +3,8 @@
 export interface AgentListing {
   /** On-chain child application ID */
   appId: number;
+  /** Nonce index for composite key */
+  nonce: number;
   /** Human-readable agent name */
   name: string;
   /** Description of what the agent does */

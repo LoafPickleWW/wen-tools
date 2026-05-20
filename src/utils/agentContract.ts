@@ -13,8 +13,8 @@ import type { AgentListing, CreateListingParams } from "../types/agent";
 // ─── Config ──────────────────────────────────────────────────────────────────
 
 const FACTORY_APP_IDS: Record<string, number> = {
-  mainnet: Number(import.meta.env.VITE_FACTORY_APP_ID_MAINNET || 3562772718),
-  testnet: Number(import.meta.env.VITE_FACTORY_APP_ID_TESTNET || 762783309),
+  mainnet: Number(import.meta.env.VITE_FACTORY_APP_ID_MAINNET || 3565950332),
+  testnet: Number(import.meta.env.VITE_FACTORY_APP_ID_TESTNET || 762952995),
 };
 
 function getAlgodClient(network: NetworkId): algosdk.Algodv2 {
@@ -47,6 +47,7 @@ function base64ToBytes(base64: string): Uint8Array {
 
 function decodeGlobalState(
   appId: number,
+  nonce: number,
   state: Array<{ key: string; value: { type: number; bytes?: string; uint?: number } }>
 ): AgentListing {
   const kv: Record<string, string | number | Uint8Array> = {};
@@ -99,6 +100,7 @@ function decodeGlobalState(
 
   return {
     appId,
+    nonce,
     name: getStringValue("name"),
     description: getStringValue("description"),
     endpointUrl: getStringValue("endpoint_url"),
@@ -140,9 +142,16 @@ export async function getAllListings(network: NetworkId): Promise<AgentListing[]
 
     for (const box of boxes) {
       try {
+        const boxNameBytes = new Uint8Array(Buffer.from(box.name, "base64"));
+        
+        // Extract nonce from the last 8 bytes
+        const nonceBytes = boxNameBytes.slice(32, 40);
+        const nonceView = new DataView(nonceBytes.buffer);
+        const nonce = Number(nonceView.getBigUint64(0));
+
         // Read box value (child app ID as uint64)
         const boxRes = await algod
-          .getApplicationBoxByName(factoryId, new Uint8Array(Buffer.from(box.name, "base64")))
+          .getApplicationBoxByName(factoryId, boxNameBytes)
           .do();
 
         // Decode uint64 from 8-byte value
@@ -160,7 +169,7 @@ export async function getAllListings(network: NetworkId): Promise<AgentListing[]
         const globalState = appData.application?.params?.["global-state"];
         if (!globalState) continue;
 
-        const listing = decodeGlobalState(childAppId, globalState);
+        const listing = decodeGlobalState(childAppId, nonce, globalState);
         if (listing.active) {
           listings.push(listing);
         }
@@ -177,44 +186,8 @@ export async function getAllListings(network: NetworkId): Promise<AgentListing[]
   }
 }
 
-/**
- * Check if a wallet already has a listing registered.
- */
-export async function getListingByWallet(
-  address: string,
-  network: NetworkId
-): Promise<AgentListing | null> {
-  const factoryId = getFactoryAppId(network);
-  if (!factoryId) return null;
-
-  const algod = getAlgodClient(network);
-  const indexerBase = getIndexerBase(network);
-
-  try {
-    // Read the box for this wallet address
-    const addrBytes = algosdk.decodeAddress(address).publicKey;
-    const boxRes = await algod
-      .getApplicationBoxByName(factoryId, addrBytes)
-      .do();
-
-    const view = new DataView(new Uint8Array(boxRes.value).buffer);
-    const childAppId = Number(view.getBigUint64(0));
-
-    if (childAppId === 0) return null;
-
-    // Read child global state
-    const appRes = await fetch(
-      `${indexerBase}/v2/applications/${childAppId}`
-    );
-    if (!appRes.ok) return null;
-    const appData = await appRes.json();
-    const globalState = appData.application?.params?.["global-state"];
-    if (!globalState) return null;
-
-    return decodeGlobalState(childAppId, globalState);
-  } catch {
-    return null;
-  }
+export async function getListingByWallet() {
+  return null;
 }
 
 // ─── Write operations ────────────────────────────────────────────────────────
@@ -232,12 +205,29 @@ export async function buildCreateListingTxns(
   if (!factoryId) throw new Error("Factory app not configured for this network");
 
   const algod = getAlgodClient(network);
+  const indexerBase = getIndexerBase(network);
   const suggestedParams = await algod.getTransactionParams().do();
+
+  // Read the next_nonce from the factory global state
+  let nextNonce = 1;
+  try {
+    const appRes = await fetch(`${indexerBase}/v2/applications/${factoryId}`);
+    if (appRes.ok) {
+      const appData = await appRes.json();
+      const globalState = appData.application?.params?.["global-state"] || [];
+      const nonceObj = globalState.find((st: any) => atob(st.key) === "next_nonce");
+      if (nonceObj && nonceObj.value && nonceObj.value.uint !== undefined) {
+        nextNonce = nonceObj.value.uint;
+      }
+    }
+  } catch (e) {
+    console.error("Failed to fetch next_nonce, defaulting to 1", e);
+  }
 
   const mbrPayment = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
     from: senderAddress,
     to: algosdk.getApplicationAddress(factoryId),
-    amount: 475_500, // Box MBR (18.5k) + Child App MBR (457k)
+    amount: 478_700, // Box MBR (21.7k) + Child App MBR (457k)
     suggestedParams,
   });
 
@@ -245,6 +235,14 @@ export async function buildCreateListingTxns(
 
   const atc = new algosdk.AtomicTransactionComposer();
   const dummySigner = async () => [];
+
+  // Build the expected box name (40 bytes: sender address + nonce)
+  const addrBytes = algosdk.decodeAddress(senderAddress).publicKey;
+  const nonceBytes = new Uint8Array(8);
+  new DataView(nonceBytes.buffer).setBigUint64(0, BigInt(nextNonce));
+  const boxName = new Uint8Array(40);
+  boxName.set(addrBytes, 0);
+  boxName.set(nonceBytes, 32);
 
   atc.addMethodCall({
     appID: factoryId,
@@ -261,7 +259,7 @@ export async function buildCreateListingTxns(
     sender: senderAddress,
     suggestedParams: { ...suggestedParams, fee: 2000, flatFee: true },
     signer: dummySigner,
-    boxes: [{ appIndex: factoryId, name: algosdk.decodeAddress(senderAddress).publicKey }],
+    boxes: [{ appIndex: factoryId, name: boxName }],
   });
 
   const group = atc.buildGroup();
@@ -338,6 +336,7 @@ export async function buildDeactivateListingTxn(
  */
 export async function buildDeleteListingTxns(
   childAppId: number,
+  nonce: number,
   senderAddress: string,
   network: NetworkId
 ): Promise<Uint8Array[]> {
@@ -351,14 +350,21 @@ export async function buildDeleteListingTxns(
   const dummySigner = async () => [];
 
   // Factory delete_listing now handles deleting the child app internally.
+  const addrBytes = algosdk.decodeAddress(senderAddress).publicKey;
+  const nonceBytes = new Uint8Array(8);
+  new DataView(nonceBytes.buffer).setBigUint64(0, BigInt(nonce));
+  const boxName = new Uint8Array(40);
+  boxName.set(addrBytes, 0);
+  boxName.set(nonceBytes, 32);
+
   atc.addMethodCall({
     appID: factoryId,
-    method: algosdk.ABIMethod.fromSignature("delete_listing()void"),
-    methodArgs: [],
+    method: algosdk.ABIMethod.fromSignature("delete_listing(uint64)void"),
+    methodArgs: [nonce],
     sender: senderAddress,
     suggestedParams: { ...suggestedParams, fee: 2000, flatFee: true }, // Inner txn fee coverage
     signer: dummySigner,
-    boxes: [{ appIndex: factoryId, name: algosdk.decodeAddress(senderAddress).publicKey }],
+    boxes: [{ appIndex: factoryId, name: boxName }],
     appForeignApps: [childAppId],
   });
 

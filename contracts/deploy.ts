@@ -25,10 +25,26 @@ async function deployToNetwork(network: 'testnet' | 'mainnet', mnemonic: string)
     throw new Error(`Insufficient funds on ${network}. Please fund ${account.addr}`);
   }
 
-  // Compile programs
-  const approvalTeal = Buffer.from(AgentFactoryARC32.source.approval, 'base64').toString('utf-8');
+  // Load AgentChild ARC32
+  const AgentChildARC32 = JSON.parse(
+    fs.readFileSync(path.join(import.meta.dirname, 'build', 'AgentChild.arc32.json'), 'utf8')
+  );
+  
+  // Compile AgentChild
+  const childApprovalTeal = Buffer.from(AgentChildARC32.source.approval, 'base64').toString('utf-8');
+  const childClearTeal = Buffer.from(AgentChildARC32.source.clear, 'base64').toString('utf-8');
+  
+  const childApprovalCompiled = await algod.compile(childApprovalTeal).do();
+  const childClearCompiled = await algod.compile(childClearTeal).do();
+
+  // Compile AgentFactory programs
+  let approvalTeal = Buffer.from(AgentFactoryARC32.source.approval, 'base64').toString('utf-8');
   const clearTeal = Buffer.from(AgentFactoryARC32.source.clear, 'base64').toString('utf-8');
   
+  // Inject Child bytes
+  approvalTeal = approvalTeal.replace('PENDING_COMPILE_APPROVAL: AgentChild', `byte base64(${childApprovalCompiled.result})`);
+  approvalTeal = approvalTeal.replace('PENDING_COMPILE_CLEAR: AgentChild', `byte base64(${childClearCompiled.result})`);
+
   const approvalCompiled = await algod.compile(approvalTeal).do();
   const clearCompiled = await algod.compile(clearTeal).do();
 

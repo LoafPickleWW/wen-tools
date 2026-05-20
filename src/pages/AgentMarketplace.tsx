@@ -83,7 +83,7 @@ export default function AgentMarketplace() {
     if (!confirm("Delete this listing? This will destroy the child contract and remove the registry entry. Your MBR will be refunded.")) return;
 
     try {
-      const txns = await buildDeleteListingTxns(listing.appId, activeAddress, network);
+      const txns = await buildDeleteListingTxns(listing.appId, listing.nonce, activeAddress, network);
       const signed = await signTransactions(txns);
       const validTxns = signed.filter((s): s is Uint8Array => s !== null);
       if (validTxns.length > 0) {

@@ -76,10 +76,12 @@ export class AgentChild extends Contract {
 
 export class AgentFactory extends Contract {
   total_listings = GlobalStateKey<uint64>({ key: 'total_listings' });
-  listings = BoxMap<Address, AppID>({ prefix: '' });
+  next_nonce = GlobalStateKey<uint64>({ key: 'next_nonce' });
+  listings = BoxMap<bytes, AppID>({ prefix: '' });
 
   createApplication(): void {
     this.total_listings.value = 0;
+    this.next_nonce.value = 1;
   }
 
   create_listing(
@@ -90,13 +92,18 @@ export class AgentFactory extends Contract {
     price_algo: uint64,
     category: string,
     info_url: string
-  ): AppID {
-    assert(!this.listings(this.txn.sender).exists);
+  ): uint64 {
+    const nonce = this.next_nonce.value;
+    const boxKey = concat(this.txn.sender, itob(nonce));
+    assert(!this.listings(boxKey).exists);
 
-    // Box MBR (18,500) + Child App MBR (100,000 + 2*28,500 + 6*50,000 = 457,000) = 475,500
+    // Box MBR (18,500) + Extra key size bytes + Child App MBR
+    // Box Key cost = 400 * 40 = 16,000. Box value = 8. Base = 2500. Total Box = 21,700
+    // Child MBR = 100,000 + 2*28,500 + 6*50,000 = 457,000
+    // Total = 478,700
     verifyPayTxn(mbrPayment, {
       receiver: this.app.address,
-      amount: { greaterThanEqualTo: 475_500 },
+      amount: { greaterThanEqualTo: 478_700 },
     });
 
     sendMethodCall<typeof AgentChild.prototype.createApplication>({
@@ -110,20 +117,23 @@ export class AgentFactory extends Contract {
 
     const childApp = this.itxn.createdApplicationID;
 
-    this.listings(this.txn.sender).value = childApp;
+    this.listings(boxKey).value = childApp;
     this.total_listings.value = this.total_listings.value + 1;
+    this.next_nonce.value = nonce + 1;
 
-    return childApp;
+    return nonce;
   }
 
-  get_listing_app(wallet: Address): AppID {
-    assert(this.listings(wallet).exists);
-    return this.listings(wallet).value;
+  get_listing_app(wallet: Address, nonce: uint64): AppID {
+    const boxKey = concat(wallet, itob(nonce));
+    assert(this.listings(boxKey).exists);
+    return this.listings(boxKey).value;
   }
 
-  delete_listing(): void {
-    assert(this.listings(this.txn.sender).exists);
-    const childApp = this.listings(this.txn.sender).value;
+  delete_listing(nonce: uint64): void {
+    const boxKey = concat(this.txn.sender, itob(nonce));
+    assert(this.listings(boxKey).exists);
+    const childApp = this.listings(boxKey).value;
 
     // Delete the child app first to recover its MBR
     sendMethodCall<typeof AgentChild.prototype.deleteApplication>({
@@ -135,11 +145,11 @@ export class AgentFactory extends Contract {
     // Refund the MBR to the user
     sendPayment({
       receiver: this.txn.sender,
-      amount: 475_500,
+      amount: 478_700,
       fee: 0,
     });
 
-    this.listings(this.txn.sender).delete();
+    this.listings(boxKey).delete();
     this.total_listings.value = this.total_listings.value - 1;
   }
 
