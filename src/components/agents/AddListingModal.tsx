@@ -26,6 +26,7 @@ interface FormData {
   endpointUrl: string;
   priceAlgo: string;
   category: string;
+  infoUrl: string;
 }
 
 export function AddListingModal({ open, onClose, onSuccess, existingListing, network }: AddListingModalProps) {
@@ -46,6 +47,7 @@ export function AddListingModal({ open, onClose, onSuccess, existingListing, net
       endpointUrl: "",
       priceAlgo: "0",
       category: "ai-agent",
+      infoUrl: "",
     },
   });
 
@@ -58,6 +60,7 @@ export function AddListingModal({ open, onClose, onSuccess, existingListing, net
         endpointUrl: existingListing.endpointUrl,
         priceAlgo: existingListing.pricePerCallAlgo.toString(),
         category: existingListing.category,
+        infoUrl: existingListing.infoUrl || "",
       });
     } else {
       reset({
@@ -66,6 +69,7 @@ export function AddListingModal({ open, onClose, onSuccess, existingListing, net
         endpointUrl: "",
         priceAlgo: "0",
         category: "ai-agent",
+        infoUrl: "",
       });
     }
   }, [existingListing, reset]);
@@ -85,6 +89,7 @@ export function AddListingModal({ open, onClose, onSuccess, existingListing, net
         endpointUrl: data.endpointUrl.trim(),
         priceAlgo: parseFloat(data.priceAlgo) || 0,
         category: data.category.trim(),
+        infoUrl: data.infoUrl.trim() || "",
       };
 
       let txns: Uint8Array[];
@@ -208,6 +213,27 @@ export function AddListingModal({ open, onClose, onSuccess, existingListing, net
             )}
           </div>
 
+          {/* Info URL */}
+          <div>
+            <label className="block text-xs font-bold text-neutral-500 uppercase tracking-wider mb-1.5">
+              Info URL (Optional)
+            </label>
+            <input
+              {...register("infoUrl", {
+                maxLength: { value: 100, message: "Max 100 characters" },
+                pattern: {
+                  value: /^(https?:\/\/.+)?$/,
+                  message: "Must be a valid URL starting with http(s)://",
+                },
+              })}
+              placeholder="https://example.com/docs"
+              className="w-full bg-primary-black border border-secondary-gray rounded-xl px-4 py-3 text-white text-sm font-mono focus:border-orange-500/50 outline-none transition-all"
+            />
+            {errors.infoUrl && (
+              <span className="text-red-400 text-[10px] mt-1">{errors.infoUrl.message}</span>
+            )}
+          </div>
+
           {/* Price + Category row */}
           <div className="grid grid-cols-2 gap-4">
             <div>
@@ -261,7 +287,7 @@ export function AddListingModal({ open, onClose, onSuccess, existingListing, net
           {!isEdit && (
             <div className="bg-orange-500/5 border border-orange-500/20 rounded-xl p-3">
               <p className="text-[10px] text-orange-400/80 leading-relaxed">
-                <strong className="text-orange-400">Note:</strong> Creating a listing deploys a child smart contract on Algorand. This requires a small minimum balance (~0.3 ALGO) to cover the on-chain storage. This is refunded if you delete the listing.
+                <strong className="text-orange-400">Note:</strong> Creating a listing deploys a child smart contract on Algorand. This requires a small minimum balance (~0.48 ALGO) to cover the on-chain storage. This is refunded if you delete the listing.
               </p>
             </div>
           )}

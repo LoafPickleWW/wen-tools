@@ -107,6 +107,7 @@ function decodeGlobalState(
     walletAddress: getAddressValue("wallet_address"),
     active: kv["active"] === 1,
     x402Compatible: false, // Will be determined by endpoint probing in the future
+    infoUrl: getStringValue("info_url"),
   };
 }
 
@@ -236,7 +237,7 @@ export async function buildCreateListingTxns(
   const mbrPayment = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
     from: senderAddress,
     to: algosdk.getApplicationAddress(factoryId),
-    amount: 425_500, // Box MBR (18.5k) + Child App MBR (407k)
+    amount: 475_500, // Box MBR (18.5k) + Child App MBR (457k)
     suggestedParams,
   });
 
@@ -247,14 +248,15 @@ export async function buildCreateListingTxns(
 
   atc.addMethodCall({
     appID: factoryId,
-    method: algosdk.ABIMethod.fromSignature("create_listing(pay,string,string,string,uint64,string)uint64"),
+    method: algosdk.ABIMethod.fromSignature("create_listing(pay,string,string,string,uint64,string,string)uint64"),
     methodArgs: [
       { txn: mbrPayment, signer: dummySigner },
       params.name,
       params.description,
       params.endpointUrl,
       priceMicro,
-      params.category
+      params.category,
+      params.infoUrl || ""
     ],
     sender: senderAddress,
     suggestedParams: { ...suggestedParams, fee: 2000, flatFee: true },
@@ -285,13 +287,14 @@ export async function buildUpdateListingTxns(
 
   atc.addMethodCall({
     appID: childAppId,
-    method: algosdk.ABIMethod.fromSignature("update_listing(string,string,string,uint64,string)void"),
+    method: algosdk.ABIMethod.fromSignature("update_listing(string,string,string,uint64,string,string)void"),
     methodArgs: [
       params.name,
       params.description,
       params.endpointUrl,
       priceMicro,
-      params.category
+      params.category,
+      params.infoUrl || ""
     ],
     sender: senderAddress,
     suggestedParams,

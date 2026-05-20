@@ -98,6 +98,17 @@ export function AgentCard({ listing, isOwner, onEdit, onDelete, onTestCall }: Ag
             </button>
           )}
 
+          {listing.infoUrl && (
+            <a
+              href={listing.infoUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-white text-[10px] font-bold uppercase tracking-wider transition-all"
+            >
+              ↗ Info
+            </a>
+          )}
+
           <a
             href={`https://explorer.perawallet.app/application/${listing.appId}`}
             target="_blank"

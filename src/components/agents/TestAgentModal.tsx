@@ -46,7 +46,6 @@ export function TestAgentModal({ open, onClose, listing, network }: TestAgentMod
   useEffect(() => {
     if (!isPollingRefund || !testResult || !activeAddress) return;
 
-    let intervalId: any;
     let attempts = 0;
     const maxAttempts = 15; // Poll for up to 30 seconds
 
@@ -100,7 +99,7 @@ export function TestAgentModal({ open, onClose, listing, network }: TestAgentMod
     };
 
     poll();
-    intervalId = setInterval(poll, 2000);
+    const intervalId = setInterval(poll, 2000);
 
     return () => clearInterval(intervalId);
   }, [isPollingRefund, testResult, activeAddress, network]);

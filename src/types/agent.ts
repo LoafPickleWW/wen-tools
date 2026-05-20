@@ -19,6 +19,8 @@ export interface AgentListing {
   active: boolean;
   /** Whether the endpoint advertises x402 compatibility */
   x402Compatible: boolean;
+  /** Optional on-chain info URL */
+  infoUrl?: string;
 }
 
 export interface CreateListingParams {
@@ -28,4 +30,6 @@ export interface CreateListingParams {
   /** Price in ALGO (will be converted to microAlgos for on-chain storage) */
   priceAlgo: number;
   category: string;
+  /** Optional on-chain info URL */
+  infoUrl?: string;
 }
