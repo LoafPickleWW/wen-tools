@@ -79,10 +79,10 @@ export function AgentCard({ listing, isOwner, onEdit, onDelete, onTestCall }: Ag
         )}
 
         {/* Actions row */}
-        <div className="flex items-center gap-2 pt-2 border-t border-secondary-gray/50">
+        <div className="flex items-center flex-wrap gap-2 pt-2 border-t border-secondary-gray/50">
           <button
             onClick={handleCopyEndpoint}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-white text-[10px] font-bold uppercase tracking-wider transition-all"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-white text-[10px] font-bold uppercase tracking-wider transition-all whitespace-nowrap"
           >
             <IoLink className="text-xs" />
             Copy Endpoint
@@ -91,7 +91,7 @@ export function AgentCard({ listing, isOwner, onEdit, onDelete, onTestCall }: Ag
           {listing.endpointUrl && onTestCall && (
             <button
               onClick={() => onTestCall(listing)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-orange-500/20 hover:bg-orange-500 hover:text-black text-orange-400 text-[10px] font-bold uppercase tracking-wider transition-all border border-orange-500/30"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-orange-500/20 hover:bg-orange-500 hover:text-black text-orange-400 text-[10px] font-bold uppercase tracking-wider transition-all border border-orange-500/30 whitespace-nowrap"
             >
               <IoPlay className="text-xs" />
               Test Call
@@ -103,7 +103,7 @@ export function AgentCard({ listing, isOwner, onEdit, onDelete, onTestCall }: Ag
               href={listing.infoUrl}
               target="_blank"
               rel="noreferrer"
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-white text-[10px] font-bold uppercase tracking-wider transition-all"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-white text-[10px] font-bold uppercase tracking-wider transition-all whitespace-nowrap"
             >
               ↗ Info
             </a>
@@ -113,7 +113,7 @@ export function AgentCard({ listing, isOwner, onEdit, onDelete, onTestCall }: Ag
             href={`https://explorer.perawallet.app/application/${listing.appId}`}
             target="_blank"
             rel="noreferrer"
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-neutral-400 hover:text-white text-[10px] font-bold uppercase tracking-wider transition-all"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-neutral-400 hover:text-white text-[10px] font-bold uppercase tracking-wider transition-all whitespace-nowrap"
           >
             ↗ Explorer
           </a>
@@ -122,14 +122,14 @@ export function AgentCard({ listing, isOwner, onEdit, onDelete, onTestCall }: Ag
             <>
               <button
                 onClick={onEdit}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 text-[10px] font-bold uppercase tracking-wider transition-all ml-auto"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 text-[10px] font-bold uppercase tracking-wider transition-all ml-auto whitespace-nowrap"
               >
                 <IoPencil className="text-xs" />
                 Edit
               </button>
               <button
                 onClick={onDelete}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 text-[10px] font-bold uppercase tracking-wider transition-all"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 text-[10px] font-bold uppercase tracking-wider transition-all whitespace-nowrap"
               >
                 <IoTrash className="text-xs" />
               </button>

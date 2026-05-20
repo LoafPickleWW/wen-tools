@@ -80,12 +80,7 @@ export default function AgentMarketplace() {
   // ── Handlers ───────────────────────────────────────────────────────────────
 
   const handleAddClick = () => {
-    if (myListing) {
-      // Already has a listing — open edit mode
-      setEditListing(myListing);
-    } else {
-      setEditListing(null);
-    }
+    setEditListing(null);
     setModalOpen(true);
     trackEvent("agent_marketplace_click", "marketplace", "open_modal");
   };
@@ -187,7 +182,7 @@ export default function AgentMarketplace() {
               className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-400 hover:to-orange-500 text-black font-black rounded-xl transition-all shadow-lg shadow-orange-500/20 text-sm uppercase tracking-wider whitespace-nowrap flex-shrink-0"
             >
               <IoAdd className="text-lg" />
-              {myListing ? "Edit My Agent" : "Register Agent"}
+              { "Register Agent" }
             </button>
           )}
         </div>
