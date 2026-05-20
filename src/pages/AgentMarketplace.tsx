@@ -13,7 +13,6 @@ import { TestAgentModal } from "../components/agents/TestAgentModal";
 import { agentListingsAtom, agentListingsLoadingAtom } from "../atoms/agentAtoms";
 import {
   getAllListings,
-  getListingByWallet,
   buildDeleteListingTxns,
 } from "../utils/agentContract";
 import type { AgentListing } from "../types/agent";
@@ -42,8 +41,6 @@ export default function AgentMarketplace() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editListing, setEditListing] = useState<AgentListing | null>(null);
 
-  // Owner's existing listing
-  const [myListing, setMyListing] = useState<AgentListing | null>(null);
 
   // Test modal state
   const [testListing, setTestListing] = useState<AgentListing | null>(null);
@@ -66,16 +63,6 @@ export default function AgentMarketplace() {
     fetchListings();
   }, [fetchListings]);
 
-  // Check if connected wallet has a listing
-  useEffect(() => {
-    if (!activeAddress) {
-      setMyListing(null);
-      return;
-    }
-    getListingByWallet(activeAddress, network)
-      .then(setMyListing)
-      .catch(() => setMyListing(null));
-  }, [activeAddress, network, listings]);
 
   // ── Handlers ───────────────────────────────────────────────────────────────
 
