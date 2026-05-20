@@ -106,8 +106,9 @@ export function AddListingModal({ open, onClose, onSuccess, existingListing, net
       }
 
       const signed = await signTransactions(txns);
-      for (const s of signed) {
-        if (s) await algodClient.sendRawTransaction(s).do();
+      const validTxns = signed.filter((s): s is Uint8Array => s !== null);
+      if (validTxns.length > 0) {
+        await algodClient.sendRawTransaction(validTxns).do();
       }
 
       toast.success(isEdit ? "Listing updated!" : "Agent registered on-chain!");
@@ -124,7 +125,7 @@ export function AddListingModal({ open, onClose, onSuccess, existingListing, net
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-[1200] flex items-center justify-center p-4">
       {/* Backdrop */}
       <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
 

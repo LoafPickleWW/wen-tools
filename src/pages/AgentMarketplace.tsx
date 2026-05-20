@@ -85,8 +85,9 @@ export default function AgentMarketplace() {
     try {
       const txns = await buildDeleteListingTxns(listing.appId, activeAddress, network);
       const signed = await signTransactions(txns);
-      for (const s of signed) {
-        if (s) await algodClient.sendRawTransaction(s).do();
+      const validTxns = signed.filter((s): s is Uint8Array => s !== null);
+      if (validTxns.length > 0) {
+        await algodClient.sendRawTransaction(validTxns).do();
       }
       toast.success("Listing deleted and MBR reclaimed");
       trackEvent("agent_marketplace_delete", "marketplace", listing.name);
