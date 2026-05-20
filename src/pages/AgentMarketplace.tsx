@@ -11,6 +11,7 @@ import { SmartContractViewer } from "../components/agents/SmartContractViewer";
 import { AgentSnippets } from "../components/agents/AgentSnippets";
 import { TestAgentModal } from "../components/agents/TestAgentModal";
 import { agentListingsAtom, agentListingsLoadingAtom } from "../atoms/agentAtoms";
+
 import {
   getAllListings,
   buildDeleteListingTxns,
@@ -229,6 +230,7 @@ export default function AgentMarketplace() {
 
         <div className="w-full border-t border-neutral-800 pt-8 mt-12 mb-12">
           <SmartContractViewer />
+          
         </div>
 
         {/* ── SEO / Practitioner Content ────────────────────────────────────── */}

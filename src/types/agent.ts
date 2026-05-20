@@ -35,3 +35,11 @@ export interface CreateListingParams {
   /** Optional on-chain info URL */
   infoUrl?: string;
 }
+
+/** Parameters for the X402 VRF endpoint */
+export interface VrfTestParams {
+  /** Mode must be 1‑6 */
+  mode: number;
+  /** Additional optional fields for the selected mode */
+  [key: string]: any;
+}

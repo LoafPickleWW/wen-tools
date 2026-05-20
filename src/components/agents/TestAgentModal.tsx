@@ -1,9 +1,12 @@
 import { useState, useEffect } from "react";
+import { walletSign } from "../../utils";
 import { useWallet, NetworkId } from "@txnlab/use-wallet-react";
 import algosdk from "algosdk";
 import { IoClose, IoPlay, IoCheckmarkCircle, IoAlertCircle, IoTerminal, IoHelpCircle } from "react-icons/io5";
-import { walletSign } from "../../utils";
 import type { AgentListing } from "../../types/agent";
+
+type VRFParam = { name: string; placeholder: string };
+type VRFMode = { value: string; name: string; params: VRFParam[] };
 
 interface TestAgentModalProps {
   open: boolean;
@@ -25,8 +28,9 @@ function bytesToBase64(bytes: Uint8Array): string {
 
 export function TestAgentModal({ open, onClose, listing, network }: TestAgentModalProps) {
   const { activeAddress, transactionSigner } = useWallet();
+  const [vrfMode, setVrfMode] = useState<string>("number");
   const [step, setStep] = useState<TestStep>("idle");
-  const [method, setMethod] = useState<"GET" | "POST">("GET");
+const [method, setMethod] = useState<"GET" | "POST">("GET");
   const [payloadText, setPayloadText] = useState(
     JSON.stringify({ message: "Hello from the wen.tools agent test panel!" }, null, 2)
   );
@@ -34,14 +38,71 @@ export function TestAgentModal({ open, onClose, listing, network }: TestAgentMod
   const [errorDetails, setErrorDetails] = useState("");
   const [testResult, setTestResult] = useState<any>(null);
   const [endpointUrl, setEndpointUrl] = useState("");
-  const [refundTxId, setRefundTxId] = useState<string | null>(null);
-  const [isPollingRefund, setIsPollingRefund] = useState(false);
+  // Unused VRF info (fetched but not displayed)
+  const [_vrfInfo, setVrfInfo] = useState<any>(null);
+
+  const isVrfAgent = !!(listing?.name?.toLowerCase().includes("vrf") || listing?.endpointUrl?.toLowerCase().includes("vrf"));
 
   useEffect(() => {
-    if (listing) {
-      setEndpointUrl(listing.endpointUrl);
+    if (open && listing) {
+      setEndpointUrl(listing.endpointUrl || "");
+      const isVrf = !!(listing.name?.toLowerCase().includes("vrf") || listing.endpointUrl?.toLowerCase().includes("vrf"));
+      if (isVrf) {
+        setMethod("POST");
+        setVrfMode("number");
+        setVrfParams({});
+      } else {
+        setMethod("GET");
+      }
+      setStep("idle");
+      setTestResult(null);
+      setErrorDetails("");
+      setRefundTxId(null);
     }
-  }, [listing]);
+  }, [open, listing]);
+  const [vrfInfoLoading, setVrfInfoLoading] = useState<boolean>(false);
+  const [vrfInfoError, setVrfInfoError] = useState<string>("");
+  const [vrfParams, setVrfParams] = useState<Record<string, string>>({});
+  // Refund handling state (restored after UI refactor)
+  const [refundTxId, setRefundTxId] = useState<string | null>(null);
+  const [isPollingRefund, setIsPollingRefund] = useState<boolean>(false);
+
+  useEffect(() => {
+    const fetchInfo = async () => {
+      setVrfInfoLoading(true);
+      try {
+        const res = await fetch("https://x402-vrf-agent.vercel.app/api/vrf/info");
+        if (!res.ok) throw new Error(`Failed ${res.status}`);
+        const data = await res.json();
+        setVrfInfo(data);
+      } catch (e: any) {
+        setVrfInfoError(e.message);
+      } finally {
+        setVrfInfoLoading(false);
+      }
+    };
+    fetchInfo();
+  }, []);
+
+  
+const defaultModeOptions: VRFMode[] = [
+  { value: "number", name: "Number", params: [{ name: "max", placeholder: "Maximum value" }] },
+  { value: "range", name: "Range", params: [{ name: "min", placeholder: "Minimum" }, { name: "max", placeholder: "Maximum" }] },
+  { value: "pick", name: "Pick", params: [{ name: "list", placeholder: "Comma-separated values" }] },
+  { value: "coin", name: "Coin", params: [] },
+  { value: "dice", name: "Dice", params: [{ name: "sides", placeholder: "Number of sides" }] },
+  { value: "shuffle", name: "Shuffle", params: [{ name: "list", placeholder: "Comma-separated values" }] },
+];
+const modeOptions: VRFMode[] = _vrfInfo && _vrfInfo.capabilities && Array.isArray(_vrfInfo.capabilities)
+  ? _vrfInfo.capabilities.map((capName: any) => {
+      const matched = defaultModeOptions.find(o => o.value === String(capName).toLowerCase());
+      return matched || {
+        value: String(capName).toLowerCase(),
+        name: String(capName).charAt(0).toUpperCase() + String(capName).slice(1),
+        params: []
+      };
+    })
+  : defaultModeOptions;
 
   useEffect(() => {
     if (!isPollingRefund || !testResult || !activeAddress) return;
@@ -128,12 +189,25 @@ export function TestAgentModal({ open, onClose, listing, network }: TestAgentMod
 
     try {
       // 1. Initial Call (probe for 402 challenge)
-      let initialPayload: any = null;
-      if (method === "POST") {
+      let initialPayload: any = {};
+      if (isVrfAgent) {
+        const cleanParams: Record<string, any> = {};
+        Object.entries(vrfParams).forEach(([k, v]) => {
+          if (v === "") return;
+          if (k === "list") {
+            cleanParams[k] = v;
+          } else if (!isNaN(Number(v))) {
+            cleanParams[k] = Number(v);
+          } else {
+            cleanParams[k] = v;
+          }
+        });
+        initialPayload = { mode: vrfMode, ...cleanParams };
+      } else {
         try {
           initialPayload = JSON.parse(payloadText);
         } catch {
-          // Fallback to raw text or leave null
+          initialPayload = {};
         }
       }
 
@@ -405,22 +479,65 @@ export function TestAgentModal({ open, onClose, listing, network }: TestAgentMod
                   </button>
                 </div>
               </div>
-
-              {method === "POST" && (
-                <div className="space-y-2 animate-fadeIn">
-                  <div className="flex justify-between items-center">
-                    <label className="text-sm font-bold text-neutral-300">Request Payload (JSON)</label>
-                    <span className="text-[10px] text-neutral-500">Optional POST body arguments</span>
-                  </div>
-                  <textarea
-                    value={payloadText}
-                    onChange={(e) => setPayloadText(e.target.value)}
-                    rows={4}
-                    className="w-full bg-neutral-950 border border-neutral-800 focus:border-orange-500 rounded-xl p-3 font-mono text-sm text-neutral-300 focus:outline-none transition-all"
-                    placeholder="{}"
-                  />
-                </div>
-              )}
+                {/* Mode selector for VRF testing */}
+                {isVrfAgent && (
+                  <>
+                    <label className="block">
+                      <span className="text-gray-300 mb-1 block">VRF Mode (1‑6)</span>
+                      <select
+                        value={vrfMode}
+                        onChange={e => setVrfMode(e.target.value)}
+                        className="w-full rounded-md border border-neutral-700 bg-neutral-800 p-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      >
+                      {modeOptions.map(opt => (
+                        <option key={opt.value} value={opt.value}>{opt.name}</option>
+                      ))}
+                      </select>
+                    </label>
+                    {/* Define static mode details */}
+                    {(() => {
+                      const def = modeOptions.find(o => o.value === vrfMode);
+                      return (
+                        <div className="mt-4">
+                          <p className="text-sm text-neutral-300 mb-2">{def?.name} Mode</p>
+                          {def?.params.map((param: VRFParam) => (
+                            <div key={param.name} className="mb-2">
+                              <label className="block text-xs font-bold text-neutral-400">{param.name}</label>
+                              <input
+                                type="text"
+                                value={vrfParams[param.name] || ""}
+                                onChange={e => setVrfParams(prev => ({ ...prev, [param.name]: e.target.value }))}
+                                className="w-full rounded-md border border-neutral-700 bg-neutral-800 p-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                placeholder={param.placeholder}
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      );
+                    })()}
+                    {vrfInfoLoading && (
+                      <div className="text-sm text-neutral-400 mt-2">Loading VRF mode info...</div>
+                    )}
+                    {vrfInfoError && (
+                      <div className="text-sm text-red-400 mt-2">Failed to load VRF info: {vrfInfoError}</div>
+                    )}
+                  </>
+                )}
+{method === "POST" && !isVrfAgent && (
+  <div className="space-y-2 animate-fadeIn">
+    <div className="flex justify-between items-center">
+      <label className="text-sm font-bold text-neutral-300">Request Payload (JSON)</label>
+      <span className="text-[10px] text-neutral-500">Optional POST body arguments</span>
+    </div>
+    <textarea
+      value={payloadText}
+      onChange={(e) => setPayloadText(e.target.value)}
+      rows={4}
+      className="w-full bg-neutral-950 border border-neutral-800 focus:border-orange-500 rounded-xl p-3 font-mono text-sm text-neutral-300 focus:outline-none transition-all"
+      placeholder="{}"
+    />
+  </div>
+)}
               
               <div className="bg-orange-500/5 border border-orange-500/10 rounded-xl p-4 flex gap-3 text-xs text-orange-300/80 leading-relaxed">
                 <IoHelpCircle className="text-lg flex-shrink-0 text-orange-400 mt-0.5" />
