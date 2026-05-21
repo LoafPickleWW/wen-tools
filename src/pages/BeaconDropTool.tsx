@@ -3,7 +3,7 @@ import { useWallet } from "@txnlab/use-wallet-react";
 import algosdk from "algosdk";
 import { toast } from "react-toastify";
 import nacl from "tweetnacl";
-import { MdClose, MdAttachFile, MdInfo } from "react-icons/md";
+import { MdClose, MdAttachFile, MdInfo, MdExpandMore, MdExpandLess, MdLockOutline, MdAccessTime } from "react-icons/md";
 import { pinJSONToCrust } from "../crust";
 import {
   encryptDeadDrop,
@@ -21,6 +21,23 @@ import { Meta } from "../components/Meta";
 const BEACON_PREFIX = "BEACON/1:";
 const BEACON_PREFIX_B64 = btoa(BEACON_PREFIX);
 
+function formatCountdown(targetMs: number) {
+  const diff = targetMs - Date.now();
+  if (diff <= 0) return "Unlocking...";
+  const secs = Math.floor(diff / 1000) % 60;
+  const mins = Math.floor(diff / (1000 * 60)) % 60;
+  const hours = Math.floor(diff / (1000 * 60 * 60)) % 24;
+  const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+
+  const parts = [];
+  if (days > 0) parts.push(`${days}d`);
+  if (hours > 0) parts.push(`${hours}h`);
+  if (mins > 0) parts.push(`${mins}m`);
+  parts.push(`${secs}s`);
+
+  return parts.join(" ");
+}
+
 export function BeaconDropTool() {
   const { activeAddress, algodClient, signTransactions } = useWallet();
 
@@ -36,6 +53,28 @@ export function BeaconDropTool() {
   const [ddFile, setDdFile] = useState<File | null>(null);
   const [ddLoading, setDdLoading] = useState(false);
   const [retrievedDrops, setRetrievedDrops] = useState<any[]>([]);
+  const [unlockDate, setUnlockDate] = useState<string>("");
+  const [pendingDrops, setPendingDrops] = useState<any[]>([]);
+  const [now, setNow] = useState<number>(Date.now());
+  const [showAdvanced, setShowAdvanced] = useState<boolean>(false);
+
+  // Update current time and check if any pending drops are ready to unlock
+  useEffect(() => {
+    if (pendingDrops.length === 0) return;
+
+    const timer = setInterval(() => {
+      const current = Date.now();
+      setNow(current);
+      
+      const ready = pendingDrops.filter(d => current >= d.notBefore);
+      if (ready.length > 0) {
+        setRetrievedDrops(prev => [...prev, ...ready]);
+        setPendingDrops(prev => prev.filter(d => current < d.notBefore));
+      }
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [pendingDrops]);
 
   // Check if active address has initialized their inbox
   useEffect(() => {
@@ -225,6 +264,10 @@ export function BeaconDropTool() {
         payloadData = { ...encrypted, type: "text", recipient: targetAddr };
       }
 
+      if (unlockDate) {
+        payloadData.notBefore = new Date(unlockDate).getTime();
+      }
+
       // Convert payload into BEACON format Note string
       const payloadString = JSON.stringify(payloadData);
       const payloadNoteStr = `${BEACON_PREFIX}${btoa(payloadString)}`;
@@ -256,6 +299,7 @@ export function BeaconDropTool() {
       toast.success(`BEACON Drop deployed! TxID: ${txId.slice(0, 8)}...`);
       setDdMessage("");
       setDdFile(null);
+      setUnlockDate("");
     } catch (err: any) {
       console.error(err);
       toast.error(err.message || "Failed to create BEACON drop");
@@ -341,11 +385,33 @@ export function BeaconDropTool() {
         // Filter out drops that failed to decrypt entirely
         const successfulDrops = processed.filter(d => !d.decrypted.includes("Decryption failed"));
 
-        setRetrievedDrops(successfulDrops);
-        if (successfulDrops.length > 0) {
-            toast.success(`Found and decrypted ${successfulDrops.length} drop(s)!`);
+        const scanTime = Date.now();
+        const finalSuccessful: any[] = [];
+        const finalPending: any[] = [];
+
+        for (const drop of successfulDrops) {
+          if (drop.notBefore && scanTime < drop.notBefore) {
+            finalPending.push(drop);
+          } else {
+            finalSuccessful.push(drop);
+          }
+        }
+
+        setRetrievedDrops(finalSuccessful);
+        setPendingDrops(finalPending);
+
+        if (finalSuccessful.length > 0 || finalPending.length > 0) {
+          let msg = "";
+          if (finalSuccessful.length > 0) {
+            msg += `Found and decrypted ${finalSuccessful.length} drop(s)!`;
+          }
+          if (finalPending.length > 0) {
+            if (msg) msg += " ";
+            msg += `Found ${finalPending.length} future drop(s) (locked).`;
+          }
+          toast.success(msg);
         } else {
-            toast.info(`Found ${allDrops.length} drops, but none were decryptable by your key.`);
+          toast.info(`Found ${allDrops.length} drops, but none were decryptable by your key.`);
         }
         
       } else {
@@ -411,6 +477,88 @@ export function BeaconDropTool() {
                   />
                 </label>
               </div>
+
+              {/* Collapsible Advanced Options */}
+              <div className="border border-white/5 bg-white/[0.02] rounded-xl overflow-hidden transition-all duration-300">
+                <button
+                  type="button"
+                  onClick={() => setShowAdvanced(!showAdvanced)}
+                  className="w-full flex items-center justify-between px-4 py-3.5 text-xs font-bold text-gray-400 hover:text-white transition-colors"
+                >
+                  <span className="flex items-center gap-2">
+                    <MdLockOutline size={16} className={showAdvanced || unlockDate ? "text-primary-orange" : "text-gray-500"} />
+                    Advanced Security Options
+                  </span>
+                  <span className="flex items-center gap-1.5">
+                    {unlockDate && (
+                      <span className="px-2 py-0.5 rounded bg-primary-orange/20 text-[9px] text-primary-orange font-bold font-mono">
+                        Time Lock Active
+                      </span>
+                    )}
+                    {showAdvanced ? <MdExpandLess size={18} /> : <MdExpandMore size={18} />}
+                  </span>
+                </button>
+
+                {showAdvanced && (
+                  <div className="p-4 border-t border-white/5 space-y-3 bg-[#242424]/20 animate-in fade-in slide-in-from-top-1 duration-200">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5 text-gray-400">
+                        <MdAccessTime size={14} className="text-primary-orange" />
+                        <label className="text-[10px] font-bold uppercase tracking-widest">
+                          Time Lock (Unlock After)
+                        </label>
+                      </div>
+                      {unlockDate && (
+                        <button
+                          type="button"
+                          onClick={() => setUnlockDate("")}
+                          className="text-[10px] text-red-400 font-bold uppercase tracking-wider hover:text-red-300 transition-colors"
+                        >
+                          Clear Lock
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="relative group">
+                      <input
+                        type="datetime-local"
+                        value={unlockDate}
+                        onChange={(e) => setUnlockDate(e.target.value)}
+                        className="w-full py-2.5 px-3 bg-[#1e1e1e] text-white text-xs rounded-lg border border-[#333] group-hover:border-[#444] outline-none focus:border-primary-orange transition-all font-mono"
+                      />
+                    </div>
+
+                    {/* Presets to make UI UX nice */}
+                    <div className="flex flex-wrap gap-1.5 pt-1">
+                      {[
+                        { label: "+1 Hour", value: 1 * 60 * 60 * 1000 },
+                        { label: "+1 Day", value: 24 * 60 * 60 * 1000 },
+                        { label: "+3 Days", value: 3 * 24 * 60 * 60 * 1000 },
+                        { label: "+1 Week", value: 7 * 24 * 60 * 60 * 1000 },
+                      ].map((preset) => (
+                        <button
+                          key={preset.label}
+                          type="button"
+                          onClick={() => {
+                            const d = new Date(Date.now() + preset.value);
+                            const pad = (n: number) => String(n).padStart(2, "0");
+                            const localIso = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+                            setUnlockDate(localIso);
+                          }}
+                          className="px-2.5 py-1 bg-white/5 hover:bg-primary-orange/20 hover:text-primary-orange text-[9px] text-gray-400 rounded border border-white/5 transition-all font-semibold"
+                        >
+                          {preset.label}
+                        </button>
+                      ))}
+                    </div>
+
+                    <p className="text-[9px] text-gray-500 leading-normal">
+                      By setting a time lock, the recipient's client will refuse to display the decrypted drop content until the specified time.
+                    </p>
+                  </div>
+                )}
+              </div>
+
               {ddFile && (
                 <div className="flex items-center justify-between px-4 py-2 bg-primary-orange/10 border border-primary-orange/20 rounded-lg text-[10px]">
                   <span className="text-primary-orange font-bold truncate">{ddFile.name} ({(ddFile.size / 1024).toFixed(1)} KB)</span>
@@ -434,10 +582,45 @@ export function BeaconDropTool() {
           <div className="p-6 rounded-xl bg-primary-orange/5 border border-primary-orange/20">
             <h3 className="text-sm font-bold text-primary-orange mb-4 uppercase tracking-widest">Pick Up a Drop</h3>
             
-            {retrievedDrops.length > 0 ? (
+            {retrievedDrops.length > 0 || pendingDrops.length > 0 ? (
               <div className="space-y-4 mb-6 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+                {/* Pending Drops */}
+                {pendingDrops.map((drop, idx) => {
+                  const unlockDateObj = new Date(drop.notBefore);
+                  const diff = drop.notBefore - now;
+                  const countdownText = diff > 0 ? formatCountdown(drop.notBefore) : "Unlocking...";
+                  
+                  return (
+                    <div key={`pending-${idx}`} className="p-4 bg-neutral-900/40 rounded-xl border border-neutral-800/80 animate-in fade-in slide-in-from-bottom-2 relative overflow-hidden text-left">
+                      <div className="flex items-center justify-between mb-2">
+                        <p className="text-[10px] text-neutral-500 font-bold uppercase tracking-widest flex items-center gap-1">
+                          <span>🔒 Locked Future Drop ({drop.type === 'file' ? 'File' : 'Text'})</span>
+                        </p>
+                        <span className="text-[10px] px-2 py-0.5 rounded bg-primary-orange/10 text-primary-orange font-bold font-mono">
+                          {countdownText}
+                        </span>
+                      </div>
+                      
+                      <div className="space-y-1">
+                        <p className="text-xs text-neutral-300">
+                          Unlocks: <span className="text-neutral-400 font-mono">{unlockDateObj.toLocaleString()}</span>
+                        </p>
+                        {drop.fileName && (
+                          <p className="text-[11px] text-neutral-500 truncate">
+                            File: {drop.fileName} ({drop.fileSize ? `${(drop.fileSize / 1024).toFixed(1)} KB` : ""})
+                          </p>
+                        )}
+                        <p className="text-[11px] text-neutral-600 italic">
+                          Message payload is encrypted and cannot be read by this client until the unlock date.
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })}
+
+                {/* Revealed Drops */}
                 {retrievedDrops.map((drop, idx) => (
-                  <div key={idx} className="p-4 bg-black/40 rounded-xl border border-primary-orange/30 group animate-in fade-in slide-in-from-bottom-2">
+                  <div key={`revealed-${idx}`} className="p-4 bg-black/40 rounded-xl border border-primary-orange/30 group animate-in fade-in slide-in-from-bottom-2 text-left">
                     <div className="flex items-center justify-between mb-3">
                       <p className="text-[10px] text-primary-orange font-black uppercase tracking-widest">
                         {drop.type === 'file' ? '📁 Secure File' : '📝 Encrypted Text'}
@@ -464,7 +647,16 @@ export function BeaconDropTool() {
                     </p>
                   </div>
                 ))}
-                <button onClick={() => setRetrievedDrops([])} className="w-full py-2 text-[10px] text-gray-500 uppercase font-black hover:text-white transition-colors">Clear Retrieved Drops</button>
+                
+                <button 
+                  onClick={() => {
+                    setRetrievedDrops([]);
+                    setPendingDrops([]);
+                  }} 
+                  className="w-full py-2 text-[10px] text-gray-500 uppercase font-black hover:text-white transition-colors"
+                >
+                  Clear Retrieved Drops
+                </button>
               </div>
             ) : (
               <p className="text-xs text-gray-400 mb-6 leading-relaxed">
