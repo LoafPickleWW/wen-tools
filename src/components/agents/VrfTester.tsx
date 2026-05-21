@@ -19,7 +19,7 @@ export function VrfTester() {
     let extra: Record<string, unknown> = {};
     try {
       extra = JSON.parse(extraJson);
-    } catch (_) {
+    } catch {
       // ignore, validation will catch malformed JSON later
     }
     return { mode, ...extra };

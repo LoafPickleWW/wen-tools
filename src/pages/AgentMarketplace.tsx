@@ -10,6 +10,7 @@ import { AddListingModal } from "../components/agents/AddListingModal";
 import { SmartContractViewer } from "../components/agents/SmartContractViewer";
 import { AgentSnippets } from "../components/agents/AgentSnippets";
 import { TestAgentModal } from "../components/agents/TestAgentModal";
+import { AgentLeaderboard } from "../components/agents/AgentLeaderboard";
 import { agentListingsAtom, agentListingsLoadingAtom } from "../atoms/agentAtoms";
 
 import {
@@ -131,7 +132,7 @@ export default function AgentMarketplace() {
             <div className="p-2 md:p-3 bg-orange-500 rounded-2xl shadow-lg shadow-orange-500/20">
               <IoSparkles className="text-3xl md:text-4xl text-black" aria-hidden="true" />
             </div>
-            <h1 className="text-3xl md:text-5xl font-black tracking-tight bg-gradient-to-r from-orange-300 via-orange-500 to-red-500 bg-clip-text text-transparent">
+            <h1 className="text-3xl md:text-5xl font-black tracking-tight bg-gradient-to-r from-orange-300 via-orange-500 to-red-500 bg-clip-text text-transparent py-2">
               Agent Marketplace
             </h1>
           </div>
@@ -227,6 +228,10 @@ export default function AgentMarketplace() {
             {category && ` in ${category}`}
           </div>
         )}
+
+        <div className="w-full border-t border-neutral-800 pt-8 mt-12">
+          <AgentLeaderboard network={network} />
+        </div>
 
         <div className="w-full border-t border-neutral-800 pt-8 mt-12 mb-12">
           <SmartContractViewer />
