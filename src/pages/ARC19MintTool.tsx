@@ -231,9 +231,7 @@ export function ARC19MintTool() {
         {TOOLS.find((tool) => tool.path === window.location.pathname)?.label}
       </h1>
       <ConnectButton inmain={true} />
-      {/* mnemonic */}
-      <InfinityModeComponent mnemonic={mnemonic} setMnemonic={setMnemonic} />
-      {/* end mnemonic */}
+
       <button className="text-center text-lg text-black mt-2 bg-primary-orange px-4 py-2 rounded">
         <a
           className="hover:text-black transition"
@@ -364,6 +362,9 @@ export function ARC19MintTool() {
       )}
       <p className="text-sm italic text-slate-200">Fee: Free</p>
 
+      {/* mnemonic */}
+      <InfinityModeComponent mnemonic={mnemonic} setMnemonic={setMnemonic} />
+      {/* end mnemonic */}
       <p className="text-center text-xs text-slate-600 py-4 italic">
         ⚠️ If you reload or close this page, you will lose your progress. You can reload to restart the process.
       </p>

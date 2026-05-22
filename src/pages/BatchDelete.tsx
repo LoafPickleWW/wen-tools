@@ -100,9 +100,7 @@ export function BatchDelete() {
         {TOOLS.find((tool) => tool.path === window.location.pathname)?.label}
       </h1>
       <ConnectButton inmain={true} />
-      {/* mnemonic */}
-      <InfinityModeComponent mnemonic={mnemonic} setMnemonic={setMnemonic} />
-      {/* end mnemonic */}
+
       <p>Enter Assets</p>
       {csvData === null ? (
         <div>
@@ -206,6 +204,9 @@ export function BatchDelete() {
         </div>
       )}
       <p className="text-sm italic text-slate-200">Fee: Free</p>
+      {/* mnemonic */}
+      <InfinityModeComponent mnemonic={mnemonic} setMnemonic={setMnemonic} />
+      {/* end mnemonic */}
       <p className="text-center text-xs text-slate-600 py-4 italic">
         ⚠️ If you reload or close this page, you will lose your progress. You can reload to restart the process.
       </p>

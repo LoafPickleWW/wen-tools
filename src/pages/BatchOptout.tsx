@@ -115,9 +115,7 @@ export function BatchOptout() {
           the asset back to the creator wallet and opt you out!
         </span>
       </p>
-      {/* mnemonic */}
-      <InfinityModeComponent mnemonic={mnemonic} setMnemonic={setMnemonic} />
-      {/* end mnemonic */}
+
       <p>Enter Assets</p>
       {csvData == null ? (
         <div>
@@ -220,6 +218,9 @@ export function BatchOptout() {
           )}
         </div>
       )}
+      {/* mnemonic */}
+      <InfinityModeComponent mnemonic={mnemonic} setMnemonic={setMnemonic} />
+      {/* end mnemonic */}
       <p className="text-center text-xs text-slate-600 py-4 italic">
         ⚠️ If you reload or close this page, you will lose your progress. You can reload to restart the process.
       </p>

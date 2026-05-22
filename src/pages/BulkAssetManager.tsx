@@ -12,6 +12,8 @@ import {
   SignWithMnemonic,
   sliceIntoChunks,
   walletSign,
+  createAssetBurnTransactions,
+  getNFTImageUrl,
   trackEvent,
 } from "../utils";
 import InfinityModeComponent from "../components/InfinityModeComponent";
@@ -31,9 +33,10 @@ import {
   IoSparkles,
   IoLockClosed,
   IoRefreshCircle,
+  IoFlame,
 } from "react-icons/io5";
 
-type TabMode = "optin" | "optout" | "destroy" | "freeze" | "clawback";
+type TabMode = "optin" | "optout" | "destroy" | "freeze" | "clawback" | "burn";
 
 interface BulkAssetManagerProps {
   defaultTab?: TabMode;
@@ -48,7 +51,11 @@ export function BulkAssetManager({ defaultTab = "optin" }: BulkAssetManagerProps
   const [assetIds, setAssetIds] = useState("");
   const [copiedLink, setCopiedLink] = useState(false);
   const [searchParams] = useSearchParams();
-  const { activeAddress, algodClient, transactionSigner } = useWallet();
+  const { activeAddress, algodClient, transactionSigner, activeNetwork } = useWallet();
+
+  // Burn Configuration State
+  const [isBurnConfiguring, setIsBurnConfiguring] = useState(false);
+  const [burnAssetsInfo, setBurnAssetsInfo] = useState<any[]>([]);
 
   useEffect(() => {
     if (searchParams.has("ids")) {
@@ -61,7 +68,8 @@ export function BulkAssetManager({ defaultTab = "optin" }: BulkAssetManagerProps
         tab === "optout" ||
         tab === "destroy" ||
         tab === "freeze" ||
-        tab === "clawback"
+        tab === "clawback" ||
+        tab === "burn"
       ) {
         setActiveTab(tab);
       }
@@ -76,6 +84,8 @@ export function BulkAssetManager({ defaultTab = "optin" }: BulkAssetManagerProps
     setCsvData(null);
     setIsTransactionsFinished(false);
     setTxSendingInProgress(false);
+    setIsBurnConfiguring(false);
+    setBurnAssetsInfo([]);
   };
 
   const handleCopyLink = () => {
@@ -86,6 +96,69 @@ export function BulkAssetManager({ defaultTab = "optin" }: BulkAssetManagerProps
     setCopiedLink(true);
     toast.success("Link copied!");
     setTimeout(() => setCopiedLink(false), 2000);
+  };
+
+  const initBurnConfig = async (data: any[]) => {
+    if (!activeAddress) {
+      toast.error("Wallet not connected!");
+      return;
+    }
+    setCsvData(data);
+    setIsBurnConfiguring(true);
+
+    const assets: number[] = [];
+    for (let i = 1; i < data.length; i++) {
+      if (data[i][0]) {
+        assets.push(parseInt(data[i][0]));
+      }
+    }
+
+    if (assets.some(isNaN)) {
+      toast.error("Invalid Asset IDs detected in the input!");
+      setIsBurnConfiguring(false);
+      setCsvData(null);
+      return;
+    }
+
+    try {
+      const accountInfo = await algodClient.accountInformation(activeAddress).do();
+      const userAssets = accountInfo.assets || [];
+
+      const loadedAssets: any[] = [];
+      for (let i = 0; i < assets.length; i++) {
+        const assetId = assets[i];
+        try {
+          const assetInfo = await algodClient.getAssetByID(assetId).do();
+          const userAsset = userAssets.find((a: any) => a["asset-id"] === assetId);
+          const balance = userAsset ? userAsset.amount : 0;
+
+          let imageUrl = "";
+          if (assetInfo.params.url) {
+            imageUrl = await getNFTImageUrl(assetInfo.params.url, assetInfo.params.reserve, false);
+          }
+
+          loadedAssets.push({
+            id: assetId,
+            name: assetInfo.params.name || "[Deleted Asset]",
+            unitName: assetInfo.params["unit-name"] || "N/A",
+            decimals: assetInfo.params.decimals || 0,
+            creator: assetInfo.params.creator,
+            imageUrl: imageUrl,
+            balance: balance,
+            amountToBurn: 0,
+            closeAsset: false,
+          });
+        } catch (e) {
+          console.error("Error fetching asset info for ", assetId);
+        }
+      }
+      setBurnAssetsInfo(loadedAssets);
+    } catch (e) {
+      console.error(e);
+      toast.error("Failed to load asset details.");
+      setIsBurnConfiguring(false);
+      setCsvData(null);
+    }
   };
 
   const handleExecuteAssetAction = async () => {
@@ -158,6 +231,31 @@ export function BulkAssetManager({ defaultTab = "optin" }: BulkAssetManagerProps
             signedTransactions = await walletSign(rawTxns, transactionSigner);
           }
           groups = sliceIntoChunks(signedTransactions, 2);
+        } else if (activeTab === "burn") {
+          const assetsToBurn = burnAssetsInfo.filter(a => a.amountToBurn > 0).map(a => ({
+            id: a.id,
+            amountToBurn: a.amountToBurn,
+            closeAsset: a.closeAsset
+          }));
+          
+          if (assetsToBurn.length === 0) {
+            toast.error("No assets selected to burn!");
+            setTxSendingInProgress(false);
+            return;
+          }
+
+          const rawTxns = await createAssetBurnTransactions(
+            assetsToBurn,
+            activeNetwork,
+            activeAddress,
+            algodClient
+          );
+          if (mnemonic !== "") {
+            signedTransactions = SignWithMnemonic(rawTxns.flat(), mnemonic);
+          } else {
+            signedTransactions = await walletSign(rawTxns, transactionSigner);
+          }
+          groups = sliceIntoChunks(signedTransactions, 16);
         }
       } else if (activeTab === "freeze") {
         let headers;
@@ -338,6 +436,19 @@ export function BulkAssetManager({ defaultTab = "optin" }: BulkAssetManagerProps
               "It is used for recovering tokens from lost wallets, correcting erroneous distributions, or enforcing administrative control in regulated tokenized systems. It requires the signing wallet to be the asset's Clawback Address.",
           },
         ];
+      case "burn":
+        return [
+          {
+            question: "What is burning an asset?",
+            answer:
+              "Burning an asset permanently removes it from circulation by sending it to the standardized Bonfire ARC-54 smart contract. Unlike opting out or destroying, you don't need to be the creator, and the asset is irrecoverably locked."
+          },
+          {
+            question: "Are there any fees to burn?",
+            answer:
+              "If the Bonfire smart contract hasn't opted into the asset yet, a 0.1 ALGO Minimum Balance Requirement (MBR) payment must be sent to the contract to fund its opt-in. Once you close out your balance, you'll receive your 0.1 ALGO MBR back from your own wallet."
+          }
+        ];
     }
   };
 
@@ -398,6 +509,17 @@ export function BulkAssetManager({ defaultTab = "optin" }: BulkAssetManagerProps
           >
             <IoTrash className="text-lg" />
             <span>Destroy</span>
+          </button>
+          <button
+            onClick={() => handleTabChange("burn")}
+            className={`flex-1 min-w-[90px] py-2.5 px-3 rounded-xl font-extrabold flex items-center justify-center gap-2 transition-all duration-300 text-xs md:text-sm ${
+              activeTab === "burn"
+                ? "bg-gradient-to-r from-orange-500 to-amber-500 text-black shadow-lg shadow-orange-500/10"
+                : "text-slate-400 hover:text-white hover:bg-white/[0.03]"
+            }`}
+          >
+            <IoFlame className="text-lg" />
+            <span>Burn</span>
           </button>
           <button
             onClick={() => handleTabChange("freeze")}
@@ -474,6 +596,15 @@ export function BulkAssetManager({ defaultTab = "optin" }: BulkAssetManagerProps
               </div>
             )}
 
+            {activeTab === "burn" && (
+              <div className="w-full bg-orange-500/5 border border-orange-500/20 rounded-2xl p-4 flex gap-3 text-sm text-orange-200 items-start text-left leading-relaxed">
+                <IoAlertCircle className="text-xl text-orange-400 shrink-0 mt-0.5" />
+                <div>
+                  <span className="font-bold text-white text-orange-400">Irreversible Burn:</span> Burning assets sends them to the Bonfire smart contract forever. You will be able to configure quantities before signing.
+                </div>
+              </div>
+            )}
+
             {/* Guide & Template links for Freeze and Clawback */}
             {(activeTab === "freeze" || activeTab === "clawback") && (
               <div className="flex flex-col sm:flex-row gap-4 w-full justify-center">
@@ -500,10 +631,7 @@ export function BulkAssetManager({ defaultTab = "optin" }: BulkAssetManagerProps
               </div>
             )}
 
-            {/* Infinity Mode (Mnemonic option) */}
-            <div className="w-full max-w-md">
-              <InfinityModeComponent mnemonic={mnemonic} setMnemonic={setMnemonic} />
-            </div>
+
 
             {/* Inputs Section */}
             <div className="w-full flex flex-col items-center">
@@ -573,13 +701,100 @@ export function BulkAssetManager({ defaultTab = "optin" }: BulkAssetManagerProps
 
                         const parsed = splitted.map((id) => [id]);
                         parsed.unshift(["asset_id"]); // header row
-                        setCsvData(parsed);
+                        if (activeTab === "burn") {
+                          initBurnConfig(parsed);
+                        } else {
+                          setCsvData(parsed);
+                        }
                       }}
                     >
                       Next
                     </button>
                   </div>
                 )
+              ) : isBurnConfiguring ? (
+                <div className="w-full flex flex-col items-center gap-4 text-center">
+                  <h2 className="text-xl font-bold text-white mb-2">Configure Burn Amounts</h2>
+                  {burnAssetsInfo.length === 0 ? (
+                    <div className="flex flex-col items-center gap-4 p-8">
+                      <div className="spinner-border animate-spin inline-block w-8 h-8 border-4 border-orange-500 border-t-transparent rounded-full" role="status"></div>
+                      <p className="text-sm text-slate-400">Fetching asset balances and metadata...</p>
+                    </div>
+                  ) : (
+                    <div className="w-full space-y-3">
+                      {burnAssetsInfo.map((asset, idx) => (
+                        <div key={idx} className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-[#0f0f11] p-3 rounded-2xl border border-white/5">
+                          <div className="flex items-center gap-3 w-full sm:w-1/2">
+                            {asset.imageUrl ? (
+                              <img 
+                                src={asset.imageUrl} 
+                                alt={asset.name} 
+                                className="w-12 h-12 rounded-lg object-cover bg-black/50"
+                                onError={(e) => {
+                                  (e.target as HTMLImageElement).onerror = null;
+                                  (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${asset.name}&background=2a2a2b&color=fff`;
+                                }}
+                              />
+                            ) : (
+                              <div className="w-12 h-12 rounded-lg bg-white/5 flex items-center justify-center text-xl text-orange-500">
+                                <IoFlame />
+                              </div>
+                            )}
+                            <div className="text-left">
+                              <p className="text-white font-bold text-sm truncate w-32 md:w-48">{asset.name}</p>
+                              <p className="text-xs text-slate-500">ID: {asset.id} • Bal: {asset.balance / 10**asset.decimals}</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2 w-full sm:w-1/2 justify-end">
+                            <input 
+                              type="number" 
+                              min="0"
+                              max={asset.balance / 10**asset.decimals}
+                              value={asset.amountToBurn / 10**asset.decimals}
+                              onChange={(e) => {
+                                const newAssets = [...burnAssetsInfo];
+                                const amt = parseFloat(e.target.value) || 0;
+                                newAssets[idx].amountToBurn = Math.floor(amt * 10**asset.decimals);
+                                newAssets[idx].closeAsset = newAssets[idx].amountToBurn === asset.balance && activeAddress !== asset.creator;
+                                setBurnAssetsInfo(newAssets);
+                              }}
+                              className="w-24 bg-black/50 text-white text-sm px-2 py-1.5 rounded-lg border border-white/10 outline-none focus:border-orange-500"
+                            />
+                            <button 
+                              className="text-xs font-bold bg-white/10 hover:bg-white/20 text-white px-2 py-1.5 rounded-lg transition"
+                              onClick={() => {
+                                const newAssets = [...burnAssetsInfo];
+                                newAssets[idx].amountToBurn = asset.balance;
+                                newAssets[idx].closeAsset = activeAddress !== asset.creator;
+                                setBurnAssetsInfo(newAssets);
+                              }}
+                            >
+                              Max
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                      
+                      <div className="flex gap-4 w-full mt-6 justify-center">
+                        <button
+                          className="flex-1 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-400 hover:to-amber-400 text-black font-black uppercase text-sm rounded-xl py-3.5 px-6 transition-all duration-300 shadow-lg shadow-orange-500/20 hover:scale-[0.98]"
+                          onClick={() => setIsBurnConfiguring(false)}
+                        >
+                          Confirm Burn Amounts
+                        </button>
+                        <button
+                          className="bg-white/5 hover:bg-white/10 text-white font-bold text-sm rounded-xl py-3.5 px-6 transition border border-white/10"
+                          onClick={() => {
+                            setIsBurnConfiguring(false);
+                            setCsvData(null);
+                          }}
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
               ) : (
                 <div className="flex flex-col items-center justify-center gap-5 w-full">
                   {isTransactionsFinished ? (
@@ -653,6 +868,11 @@ export function BulkAssetManager({ defaultTab = "optin" }: BulkAssetManagerProps
               <span>{copiedLink ? "Link Copied!" : "Copy Shareable Link 🔗"}</span>
             </button>
           </div>
+        </div>
+
+        {/* Infinity Mode (Mnemonic option) */}
+        <div className="w-full max-w-md mx-auto mt-4">
+          <InfinityModeComponent mnemonic={mnemonic} setMnemonic={setMnemonic} />
         </div>
 
         {/* FAQs */}

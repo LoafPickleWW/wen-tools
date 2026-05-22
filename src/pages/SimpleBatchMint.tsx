@@ -452,9 +452,7 @@ export function SimpleBatchMint() {
           CSV Template
         </a>
       </button>
-      {/* mnemonic */}
-      <InfinityModeComponent mnemonic={mnemonic} setMnemonic={setMnemonic} />
-      {/* end mnemonic */}
+
       <div className="mt-4 md:flex items-center text-start gap-x-4">
         <div className="flex flex-col md:mt-0 mt-2">
           <label className="mb-2 text-sm leading-none text-gray-200">
@@ -773,6 +771,10 @@ export function SimpleBatchMint() {
       <p className="text-sm italic text-slate-200">
         Site Fee: Free/Pinning Fee: Variable{" "}
       </p>
+      
+      {/* mnemonic */}
+      <InfinityModeComponent mnemonic={mnemonic} setMnemonic={setMnemonic} />
+      {/* end mnemonic */}
       <p className="text-center text-xs text-slate-400 py-2">
         ⚠️If you reload or close this page, you will lose your progress⚠️
         <br />

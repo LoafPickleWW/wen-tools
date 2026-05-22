@@ -257,7 +257,7 @@ export const BlukClaimTool = () => {
       </h1>
       <ConnectButton inmain={true} />
 
-      <InfinityModeComponent mnemonic={mnemonic} setMnemonic={setMnemonic} />
+
 
       {!activeAddress && (
         <p className="text-red-500">Please Connect your wallet!</p>
@@ -302,6 +302,7 @@ export const BlukClaimTool = () => {
       )}
 
       {/* Practitioner Section: Asset Recovery (ARC-59) */}
+      <InfinityModeComponent mnemonic={mnemonic} setMnemonic={setMnemonic} />
       <section className="mt-16 pt-12 border-t border-slate-800 w-full text-left px-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           <div className="space-y-4">

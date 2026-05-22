@@ -247,9 +247,7 @@ export function AirdropTool() {
           CSV Template
         </a>
       </button>
-      {/* mnemonic */}
-      <InfinityModeComponent mnemonic={mnemonic} setMnemonic={setMnemonic} />
-      {/* end mnemonic */}
+
       <p>Upload CSV file</p>
       {csvData == null ? (
         <label
@@ -429,6 +427,9 @@ export function AirdropTool() {
           )}
         </div>
       )}
+      {/* mnemonic */}
+      <InfinityModeComponent mnemonic={mnemonic} setMnemonic={setMnemonic} />
+      {/* end mnemonic */}
       <p className="text-center text-xs text-slate-600 py-4 italic">
         ⚠️ If you reload or close this page, you will lose your progress. You can reload to restart the process.
       </p>

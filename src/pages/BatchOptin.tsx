@@ -114,9 +114,7 @@ export function BatchOptin() {
         {TOOLS.find((tool) => tool.path === window.location.pathname)?.label}
       </h1>
       <ConnectButton inmain={true} />
-      {/* mnemonic */}
-      <InfinityModeComponent mnemonic={mnemonic} setMnemonic={setMnemonic} />
-      {/* end mnemonic */}
+
       <p>Enter Assets</p>
       {csvData == null ? (
         <div>
@@ -209,6 +207,9 @@ export function BatchOptin() {
         <br />
         You can reload the page if you want to stop/restart the process!
       </p>
+      {/* mnemonic */}
+      <InfinityModeComponent mnemonic={mnemonic} setMnemonic={setMnemonic} />
+      {/* end mnemonic */}
       <FaqSectionComponent
         faqData={[
           {

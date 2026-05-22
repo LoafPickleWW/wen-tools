@@ -476,10 +476,7 @@ export function BatchMint() {
 
         <ConnectButton inmain={true} />
 
-        {/* Mnemonic / Infinity Mode */}
-        <div className="mt-6 w-full">
-          <InfinityModeComponent mnemonic={mnemonic} setMnemonic={setMnemonic} />
-        </div>
+
 
         {/* step 1 settings */}
         {processStep === START_PROCESS && (
@@ -888,6 +885,11 @@ export function BatchMint() {
             </button>
           </div>
         )}
+      </div>
+
+      {/* Mnemonic / Infinity Mode */}
+      <div className="mt-4 w-full max-w-2xl">
+        <InfinityModeComponent mnemonic={mnemonic} setMnemonic={setMnemonic} />
       </div>
 
       {/* Guide link */}

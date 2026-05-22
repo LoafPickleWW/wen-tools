@@ -284,9 +284,7 @@ export function SimpleSendTool() {
         {TOOLS.find((tool) => tool.path === window.location.pathname)?.label}
       </h1>
       <ConnectButton inmain={true} />
-      {/* mnemonic */}
-      <InfinityModeComponent mnemonic={mnemonic} setMnemonic={setMnemonic} />
-      {/* end mnemonic */}
+
       <p>2- Select Tool Type</p>
       <div className="flex flex-col items-center">
         <select
@@ -549,6 +547,10 @@ export function SimpleSendTool() {
       {errMsg !== "" && (
         <p className="text-red-500 text-xs pt-2">{errMsg.toString()}</p>
       )}
+      
+      {/* mnemonic */}
+      <InfinityModeComponent mnemonic={mnemonic} setMnemonic={setMnemonic} />
+      {/* end mnemonic */}
       <p className="text-center text-xs text-slate-400 py-2">
         ⚠️If you reload or close this page, you will lose your progress⚠️
         <br />

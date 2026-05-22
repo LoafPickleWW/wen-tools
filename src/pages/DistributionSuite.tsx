@@ -2228,7 +2228,7 @@ export function DistributionSuite({
 
         {/* Mnemonic Passkey - Infinity Mode */}
         <div className="w-full max-w-md mx-auto mt-6">
-          <InfinityModeComponent mnemonic={mnemonic} setMnemonic={setMnemonic} />
+
         </div>
 
         {/* FAQs */}
@@ -2237,7 +2237,8 @@ export function DistributionSuite({
         </div>
 
         {/* Practitioner Section */}
-        <section className="mt-16 pt-12 border-t border-white/5 w-full max-w-4xl text-left px-4">
+        <InfinityModeComponent mnemonic={mnemonic} setMnemonic={setMnemonic} />
+      <section className="mt-16 pt-12 border-t border-white/5 w-full max-w-4xl text-left px-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
             <div className="space-y-4">
               <h2 className="text-lg font-bold text-white tracking-tight italic uppercase flex items-center gap-2">

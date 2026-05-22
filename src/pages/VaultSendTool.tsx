@@ -298,9 +298,7 @@ export function VaultSendTool() {
         for more details. Please note you will need to fund the Opt In for the
         Vault (0.1A)/Asset.
       </span>
-      {/* mnemonic */}
-      <InfinityModeComponent mnemonic={mnemonic} setMnemonic={setMnemonic} />
-      {/* end mnemonic */}
+
       <p>Select Tool Type</p>
       <div className="flex flex-col items-center">
         <select
@@ -461,6 +459,10 @@ export function VaultSendTool() {
           </>
         )}
       </div>
+      
+      {/* mnemonic */}
+      <InfinityModeComponent mnemonic={mnemonic} setMnemonic={setMnemonic} />
+      {/* end mnemonic */}
       <p className="text-center text-xs text-slate-400 py-2">
         ⚠️If you reload or close this page, you will lose your progress⚠️
         <br />

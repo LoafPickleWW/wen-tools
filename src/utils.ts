@@ -1866,3 +1866,122 @@ export const getNFTImageUrl = async (
     return "";
   }
 };
+
+export const BONFIRE_APP_IDS: Record<string, number> = {
+  mainnet: 1257620981,
+  testnet: 497806551,
+};
+
+export async function getBonfireAccountInfo(
+  activeNetwork: string,
+  algodClient: algosdk.Algodv2
+) {
+  const appId = BONFIRE_APP_IDS[activeNetwork];
+  if (!appId) return null;
+  const bonfireAddr = algosdk.getApplicationAddress(appId);
+  try {
+    const info = await algodClient.accountInformation(bonfireAddr).do();
+    return info as any;
+  } catch (e) {
+    console.error("Error fetching Bonfire info: ", e);
+    return null;
+  }
+}
+
+export async function createAssetBurnTransactions(
+  assetsToBurn: { id: number; amountToBurn: number; closeAsset: boolean }[],
+  activeNetwork: string,
+  address: string,
+  algodClient: algosdk.Algodv2
+) {
+  if (!address) {
+    throw Error("Wallet not found");
+  }
+
+  const appId = BONFIRE_APP_IDS[activeNetwork];
+  if (!appId) throw new Error("Bonfire not supported on this network");
+  const bonfireAddr = algosdk.getApplicationAddress(appId);
+
+  const bonfireInfo = await getBonfireAccountInfo(activeNetwork, algodClient);
+  const extraLogs = bonfireInfo ? Math.floor((bonfireInfo.amount - bonfireInfo["min-balance"]) / 100000) : 0;
+
+  const params = await algodClient.getTransactionParams().do();
+  
+  let numOptInCalls = 0;
+  const optInAssets: number[] = [];
+  const axfers: algosdk.Transaction[] = [];
+
+  for (let i = 0; i < assetsToBurn.length; i++) {
+    const asset = assetsToBurn[i];
+    
+    if (asset.amountToBurn > 0 && bonfireInfo?.assets?.find((a: any) => a["asset-id"] === asset.id) === undefined) {
+      optInAssets.push(asset.id);
+      numOptInCalls++;
+    }
+    
+    const axferObj: any = {
+      from: address,
+      to: bonfireAddr,
+      assetIndex: asset.id,
+      amount: asset.amountToBurn,
+      suggestedParams: params,
+      note: new TextEncoder().encode("via wen.tools & Bonfire")
+    };
+    
+    if (asset.closeAsset) {
+      axferObj.closeRemainderTo = bonfireAddr;
+    }
+    
+    const axfer = makeAssetTransferTxnWithSuggestedParamsFromObject(axferObj);
+    axfers.push(axfer);
+  }
+
+  const numMBRPayments = Math.max(numOptInCalls - extraLogs, 0);
+  
+  const txnsArray: algosdk.Transaction[] = [];
+  
+  if (numMBRPayments > 0) {
+    const payTxn = makePaymentTxnWithSuggestedParamsFromObject({
+      from: address,
+      to: bonfireAddr,
+      amount: 100000 * numMBRPayments,
+      suggestedParams: params,
+      note: new TextEncoder().encode("via wen.tools & Bonfire")
+    });
+    txnsArray.push(payTxn);
+  }
+
+  const arc54OptInMethod = new algosdk.ABIMethod({
+    name: "arc54_optIntoASA",
+    args: [{ type: "asset", name: "asset" }],
+    returns: { type: "void" }
+  });
+
+  optInAssets.forEach((id) => {
+    const appCall = algosdk.makeApplicationNoOpTxnFromObject({
+      from: address,
+      appIndex: appId,
+      appArgs: [
+        arc54OptInMethod.getSelector(),
+        algosdk.encodeUint64(0)
+      ],
+      foreignAssets: [id],
+      suggestedParams: { ...params, flatFee: true, fee: params.minFee * 2 },
+      note: new TextEncoder().encode("via wen.tools & Bonfire")
+    });
+    txnsArray.push(appCall);
+  });
+
+  axfers.forEach((txn) => {
+    txnsArray.push(txn);
+  });
+
+  const groups = sliceIntoChunks(txnsArray, 16);
+  for (let i = 0; i < groups.length; i++) {
+    const groupID = computeGroupID(groups[i]);
+    for (let j = 0; j < groups[i].length; j++) {
+      groups[i][j].group = groupID;
+    }
+  }
+  return groups;
+}

@@ -315,7 +315,7 @@ export function BatchUpdate() {
 
         {/* Mnemonic / Infinity Mode */}
         <div className="mt-6 w-full">
-          <InfinityModeComponent mnemonic={mnemonic} setMnemonic={setMnemonic} />
+
         </div>
 
         {/* Selector Switch */}
@@ -524,6 +524,7 @@ export function BatchUpdate() {
       </div>
 
       {/* Practitioner Section */}
+      <InfinityModeComponent mnemonic={mnemonic} setMnemonic={setMnemonic} />
       <section className="mt-16 pt-12 border-t border-slate-800 w-full text-left px-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           <div className="space-y-4">
