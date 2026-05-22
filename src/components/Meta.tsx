@@ -4,9 +4,10 @@ interface MetaProps {
   title?: string;
   description?: string;
   image?: string;
+  canonical?: string;
 }
 
-export function Meta({ title, description, image }: MetaProps) {
+export function Meta({ title, description, image, canonical }: MetaProps) {
   useEffect(() => {
     const baseTitle = "wen.tools";
     const fullTitle = title ? `${title} | ${baseTitle}` : `${baseTitle} | The Definitive Algorand Utility Suite`;
@@ -56,7 +57,20 @@ export function Meta({ title, description, image }: MetaProps) {
     updateTag('meta[name="twitter:description"]', fullDesc);
     updateTag('meta[name="twitter:url"]', window.location.href);
     updateTag('meta[name="twitter:image"]', fullImage);
-  }, [title, description, image]);
+
+    // Handle canonical link
+    let canonicalTag = document.querySelector('link[rel="canonical"]');
+    const canonicalUrl = canonical || window.location.href.split('?')[0]; // Default to current URL without query params
+
+    if (canonicalTag) {
+      canonicalTag.setAttribute("href", canonicalUrl);
+    } else {
+      canonicalTag = document.createElement("link");
+      canonicalTag.setAttribute("rel", "canonical");
+      canonicalTag.setAttribute("href", canonicalUrl);
+      document.head.appendChild(canonicalTag);
+    }
+  }, [title, description, image, canonical]);
 
   return null;
 }

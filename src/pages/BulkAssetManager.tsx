@@ -149,7 +149,7 @@ export function BulkAssetManager({ defaultTab = "optin" }: BulkAssetManagerProps
             closeAsset: false,
           });
         } catch (e) {
-          console.error("Error fetching asset info for ", assetId);
+          console.error("Error fetching asset info for ", assetId, e);
         }
       }
       setBurnAssetsInfo(loadedAssets);

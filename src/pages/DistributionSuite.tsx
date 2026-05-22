@@ -557,7 +557,7 @@ export function DistributionSuite({
       let parsedAssetIds: number[] = [];
       try {
         parsedAssetIds = splittedSpecifiedAssetIds.map((id) => parseInt(id));
-      } catch (_err) {
+      } catch {
         throw Error("Please enter valid specified asset IDs!");
       }
 
