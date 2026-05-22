@@ -869,11 +869,7 @@ export function SimpleUpdateClassic() {
           </button>
         </div>
       )}
-      <p className="text-sm italic text-slate-200 py-4">
-        **It is recommended that any Creator Host their own Files using their
-        own token. Evil Tools will not be held responsible for anything that
-        happens to publicly hosted images.
-      </p>
+
       <p className="text-sm italic text-slate-200">Fee: Free</p>
       {/* Practitioner Section: Asset Management */}
       <section className="mt-20 pt-12 border-t border-slate-800 w-full max-w-4xl text-left px-4">

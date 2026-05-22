@@ -10,35 +10,19 @@ import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.min.css";
 import { Header } from "./components/Header";
 import { Footer } from "./components/Footer";
-import { AirdropTool } from "./pages/AirdropTool";
-import { BatchCollectionMint } from "./pages/BatchCollectionMint";
+import { DistributionSuite } from "./pages/DistributionSuite";
 import { BatchOptin } from "./pages/BatchOptin";
 import { BatchOptout } from "./pages/BatchOptout";
-import { CollectionSnapshot } from "./pages/CollectionSnapshotComponent";
-import { Download69CollectionData } from "./pages/Download69CollectionData";
-import { BatchCollectionMetadataUpdate } from "./pages/BatchMetadataUpdateComponent";
-import { WalletHoldings } from "./pages/WalletHoldings";
-import { MultimintAssetHolders } from "./pages/MultimintAssetHolders";
-import { ARC3MintTool } from "./pages/ARC3MintTool";
-import { ARC19MintTool } from "./pages/ARC19MintTool";
-import { ARC19UpdateTool } from "./pages/ARC19UpdateTool";
-import { Download19CollectionData } from "./pages/Download19CollectionData";
+import { BatchUpdate } from "./pages/BatchUpdate";
+import { HoldingsAuditor } from "./pages/HoldingsAuditor";
 import { BatchDelete } from "./pages/BatchDelete";
-import { SimpleSendTool } from "./pages/SimpleSendTool";
-import { SimpleAirdropTool } from "./pages/SimpleAirdropTool";
 import { SimpleMint } from "./pages/SimpleMint";
 import { SimpleUpdate } from "./pages/SimpleUpdate";
-import { BatchClawback } from "./pages/BatchClawback";
-import { BatchFreeze } from "./pages/BatchFreeze";
-import { VaultSendTool } from "./pages/VaultSendTool";
-import { SimpleBatchMint } from "./pages/SimpleBatchMint";
-import { SimpleMintClassic } from "./pages/SimpleMintClassic";
-import { SimpleUpdateClassic } from "./pages/SimpleUpdateClassic";
+import { BatchMint } from "./pages/BatchMint";
 import { BlukClaimTool } from "./pages/BulkClaimTool";
 import ScrollToTop from "./components/ScrollToTop";
 import { Analytics } from "@vercel/analytics/react";
 import { ARC62ManagerTool } from "./pages/ARC62ManagerTool";
-import { ReallySimpleMint } from "./pages/ReallySimpleMint";
 import { WenPad } from './pages/WenPad';
 import { XGov } from './pages/XGov';
 import { Jukebox } from './pages/Jukebox';
@@ -54,6 +38,8 @@ import WenSwapTool from './pages/WenSwapTool';
 import { TermsOfUse } from "./pages/TermsOfUse";
 import { PrivacyPolicy } from "./pages/PrivacyPolicy";
 import AgentMarketplace from './pages/AgentMarketplace';
+import { BulkAssetManager } from "./pages/BulkAssetManager";
+import { MintingSuite } from "./pages/MintingSuite";
 
 
 
@@ -90,60 +76,73 @@ function App() {
           <Header />
           <Routes>
             <Route path="/" element={<Home />} />
-            <Route path="/airdrop" element={<AirdropTool />} />
-            <Route path="/simple-airdrop" element={<SimpleAirdropTool />} />
-            <Route path="/simple-send" element={<SimpleSendTool />} />
-            <Route path="/vault-send" element={<VaultSendTool />} />
+            <Route path="/distribution-suite" element={<DistributionSuite />} />
+            <Route path="/airdrop" element={<DistributionSuite defaultTab="custom" defaultSubMode="csv" />} />
+            <Route path="/simple-airdrop" element={<DistributionSuite defaultTab="creator-wallet" />} />
+            <Route path="/simple-send" element={<DistributionSuite defaultTab="custom" defaultSubMode="manual" />} />
+            <Route path="/vault-send" element={<DistributionSuite defaultTab="vault" />} />
             <Route
               path="/arc69-collection-mint"
-              element={<BatchCollectionMint />}
+              element={<BatchMint />}
             />
-            <Route path="/arc3-collection-mint" element={<ARC3MintTool />} />
+            <Route path="/arc3-collection-mint" element={<BatchMint />} />
             <Route
               path="/arc69-metadata-update"
-              element={<BatchCollectionMetadataUpdate />}
+              element={<BatchUpdate />}
+            />
+            <Route
+              path="/bulk-metadata-update"
+              element={<BatchUpdate />}
             />
             <Route path="/batch-optin" element={<BatchOptin />} />
             <Route path="/batch-optout" element={<BatchOptout />} />
             <Route path="/batch-destroy" element={<BatchDelete />} />
-            <Route path="/batch-clawback" element={<BatchClawback />} />
-            <Route path="/batch-freeze" element={<BatchFreeze />} />
+            <Route path="/bulk-asset-manager" element={<BulkAssetManager />} />
+            <Route path="/batch-clawback" element={<BulkAssetManager defaultTab="clawback" />} />
+            <Route path="/batch-freeze" element={<BulkAssetManager defaultTab="freeze" />} />
             <Route path="/bulk-claim" element={<BlukClaimTool />} />
             <Route path="/token-manager" element={<ARC62ManagerTool />} />
             <Route
               path="/find-collection-holders"
-              element={<CollectionSnapshot />}
+              element={<MintingSuite defaultPath="snapshot" />}
+            />
+            <Route
+              path="/download-collection-data"
+              element={<MintingSuite defaultPath="downloader" />}
             />
             <Route
               path="/download-arc69-collection-data"
-              element={<Download69CollectionData />}
+              element={<MintingSuite defaultPath="downloader" />}
             />
             <Route
               path="/download-arc19-collection-data"
-              element={<Download19CollectionData />}
+              element={<MintingSuite defaultPath="downloader" />}
             />
-            <Route path="/arc19-collection-mint" element={<ARC19MintTool />} />
+            <Route path="/arc19-collection-mint" element={<BatchMint />} />
             <Route
               path="/arc19-metadata-update"
-              element={<ARC19UpdateTool />}
+              element={<BatchUpdate />}
             />
-            <Route path="/wallet-holdings" element={<WalletHoldings />} />
+            <Route path="/holdings-auditor" element={<HoldingsAuditor />} />
+            <Route path="/wallet-holdings" element={<HoldingsAuditor defaultTab="wallet" />} />
             <Route
               path="/multimint-asset-holders"
-              element={<MultimintAssetHolders />}
+              element={<HoldingsAuditor defaultTab="asset" />}
             />
-            <Route path="/simple-batch-mint" element={<SimpleBatchMint />} />
+            <Route path="/simple-batch-mint" element={<BatchMint />} />
+            <Route path="/batch-collection-mint" element={<BatchMint />} />
             <Route path="/simple-mint" element={<SimpleMint />} />
             <Route path="/simple-update" element={<SimpleUpdate />} />
             <Route
               path="/simple-mint-classic"
-              element={<SimpleMintClassic />}
+              element={<SimpleMint />}
             />
             <Route
               path="/simple-update-classic"
-              element={<SimpleUpdateClassic />}
+              element={<SimpleUpdate />}
             />
-            <Route path="/really-simple-mint" element={<ReallySimpleMint />} />
+            <Route path="/minting-journey" element={<MintingSuite />} />
+            <Route path="/really-simple-mint" element={<SimpleMint />} />
             <Route path='/wen-pad' element={<WenPad />} />
             <Route path='/xgov' element={<XGov />} />
             <Route path='/jukebox' element={<Jukebox />} />

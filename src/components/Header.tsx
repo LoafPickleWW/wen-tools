@@ -77,15 +77,6 @@ export function Header() {
             >
               <p>wen wallet</p>
             </ListItemButton>
-            <ListItemButton
-              component="a"
-              href="https://swap.wen.tools"
-              target="_blank"
-              className="text-xl flex flex-row items-center gap-1"
-              onClick={() => trackEvent("header_click", "nav", "Wen Swap")}
-            >
-              <p>wen swap</p>
-            </ListItemButton>
           </List>
         </nav>
       <ConnectButton />

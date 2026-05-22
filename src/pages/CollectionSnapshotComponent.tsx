@@ -7,7 +7,6 @@ import {
   getRandCreatorListings,
   getCreatedAssets,
 } from "../utils";
-import { TOOLS } from "../constants";
 import { useWallet } from "@txnlab/use-wallet-react";
 import ConnectButton from "../components/ConnectButton";
 import { Meta } from "../components/Meta";
@@ -217,109 +216,115 @@ export function CollectionSnapshot() {
   }
 
   return (
-    <div className="mx-auto text-white mb-4 text-center flex flex-col items-center min-h-screen">
+    <div className="mx-auto text-white mb-4 text-center flex flex-col items-center min-h-screen px-4 max-w-5xl">
       <Meta 
         title="Collection Snapshot Tool" 
         description="Capture real-time holder data for any Algorand NFT collection. Generate accurate snapshots for airdrops, governance, and community analytics."
       />
-      <h1 className="text-2xl font-bold mt-6">
-        {TOOLS.find((tool) => tool.path === window.location.pathname)?.label}
+      <h1 className="text-3xl font-extrabold mt-8 bg-gradient-to-r from-primary-yellow to-secondary-orange bg-clip-text text-transparent">
+        Collection Snapshot Tool
       </h1>
-      <ConnectButton inmain={true} />
-      <textarea
-        rows={creatorWallet.split(",").length > 1 ? 3 : 1}
-        id="creatorWallet"
-        placeholder="Enter Creator Wallet Address List"
-        className="bg-gray-800 text-white border-2 border-gray-700 rounded-lg p-2 my-2 w-64 text-sm mx-auto placeholder:text-center placeholder:text-sm"
-        value={creatorWallet}
-        onChange={(e) => setCreatorWallet(e.target.value)}
-      />
-      <input
-        type="text"
-        id="unitNamePrefix"
-        placeholder="(Opt.) Unit Name Prefixes"
-        className="bg-gray-800 text-white border-2 border-gray-700 rounded-lg p-2 mb-2 w-48 text-sm mx-auto placeholder:text-center placeholder:text-sm"
-        value={unitNamePrefix}
-        onChange={(e) => setUnitNamePrefix(e.target.value)}
-      />
-      <div className="flex flex-col items-start text-sm py-2 bg-black/20 px-4 rounded-xl">
-        <div className="flex items-center justify-center">
-          <input
-            type="checkbox"
-            id="check_separated"
-            className="mr-2"
-            checked={checkSeparated}
-            onChange={(e) => setCheckSeparated(e.target.checked)}
-          />
-          <label htmlFor="check_separated" className="text-slate-300">
-            Non-aggregated Holder List
-          </label>
-        </div>
-        <div className="flex items-center justify-center">
-          <input
-            type="checkbox"
-            id="check_rand"
-            className="mr-2"
-            checked={checkRandSupport}
-            onChange={(e) => setCheckRandSupport(e.target.checked)}
-          />
-          <label htmlFor="check_rand" className="text-slate-300">
-            RandGallery listing support
-          </label>
-        </div>
-      </div>
-      <p className="text-center text-xs my-2 text-slate-300">
-        Separate multiple wallet addresses and prefixes with commas.
-        <br />
-        Just works with 1/1 ASAs.
+      <p className="text-slate-400 mt-2 text-sm max-w-xl">
+        Capture real-time holder data for any Algorand NFT collection. Generate accurate snapshots for airdrops, governance, and community analytics.
       </p>
-      <button
-        className="mb-2 bg-secondary-orange/80 hover:bg-secondary-orange text-black text-base font-semibold rounded py-2 w-fit px-2 mx-auto mt-1 hover:scale-95 duration-700"
-        onClick={getCollectionData}
-      >
-        Get Holders Data
-      </button>
+
+      <div className="w-full max-w-2xl mt-8 bg-slate-900/60 border border-slate-700/50 backdrop-blur-md rounded-2xl p-6 md:p-8 shadow-2xl flex flex-col items-center gap-4">
+        <ConnectButton inmain={true} />
+        
+        <div className="w-full flex flex-col items-start gap-1 text-left">
+          <label className="text-slate-300 text-sm font-semibold">Creator Wallet Addresses</label>
+          <textarea
+            rows={creatorWallet.split(",").length > 1 ? 3 : 1}
+            id="creatorWallet"
+            placeholder="Enter Creator Wallet Address List (comma, space, or newline separated)"
+            className="bg-slate-950/80 text-white placeholder-slate-500 border border-slate-800 rounded-xl p-4 w-full h-24 focus:ring-2 focus:ring-primary-orange focus:border-transparent outline-none font-mono text-sm leading-relaxed"
+            value={creatorWallet}
+            onChange={(e) => setCreatorWallet(e.target.value)}
+          />
+        </div>
+
+        <div className="w-full flex flex-col items-start gap-1 text-left">
+          <label className="text-slate-300 text-sm font-semibold">Unit Name Prefixes (Optional)</label>
+          <input
+            type="text"
+            id="unitNamePrefix"
+            placeholder="e.g. CARD, HERO (comma separated)"
+            className="bg-slate-950/80 text-white placeholder-slate-500 border border-slate-800 rounded-xl p-3 w-full focus:ring-2 focus:ring-primary-orange focus:border-transparent outline-none font-mono text-sm"
+            value={unitNamePrefix}
+            onChange={(e) => setUnitNamePrefix(e.target.value)}
+          />
+        </div>
+
+        <div className="w-full flex flex-col gap-2.5 p-4 bg-slate-950/40 border border-slate-800/80 rounded-xl text-left">
+          <div className="flex items-center">
+            <input
+              type="checkbox"
+              id="check_separated"
+              className="mr-2 rounded border-slate-800 text-primary-orange focus:ring-primary-orange bg-slate-950"
+              checked={checkSeparated}
+              onChange={(e) => setCheckSeparated(e.target.checked)}
+            />
+            <label htmlFor="check_separated" className="text-slate-300 text-sm cursor-pointer select-none">
+              Non-aggregated Holder List (separate row per asset holding)
+            </label>
+          </div>
+          <div className="flex items-center">
+            <input
+              type="checkbox"
+              id="check_rand"
+              className="mr-2 rounded border-slate-800 text-primary-orange focus:ring-primary-orange bg-slate-950"
+              checked={checkRandSupport}
+              onChange={(e) => setCheckRandSupport(e.target.checked)}
+            />
+            <label htmlFor="check_rand" className="text-slate-300 text-sm cursor-pointer select-none">
+              Include RandGallery Listings (reconcile escrows to sellers)
+            </label>
+          </div>
+        </div>
+
+        <p className="text-xs text-slate-400 text-left w-full">
+          * Works with 1/1 ASAs (NFTs). Separate multiple addresses and prefixes with commas.
+        </p>
+
+        <button
+          className="mt-2 w-full px-8 py-3 bg-gradient-to-r from-primary-yellow to-secondary-orange hover:from-primary-yellow/90 hover:to-secondary-orange/90 text-black font-bold rounded-xl transition shadow-lg hover:scale-95 duration-200 cursor-pointer"
+          onClick={getCollectionData}
+        >
+          Get Holders Data
+        </button>
+      </div>
+
       {collectionData.length > 0 && (
-        <>
-          {collectionData && (
-            <div className="flex flex-col justify-center items-center">
-              <p className="text-center text-sm text-slate-300">
-                Wallets has{" "}
-                <span className="text-slate-100 font-semibold text-base animate-pulse">
-                  {collectionData.length}
-                </span>{" "}
-                created assets.
-              </p>
-            </div>
-          )}
+        <div className="w-full max-w-2xl mt-6 bg-slate-900/40 border border-slate-800 rounded-xl p-6 flex flex-col items-center gap-4">
+          <p className="text-sm text-slate-300">
+            Found <span className="text-primary-orange font-bold">{collectionData.length}</span> created assets.
+          </p>
+
           {loading ? (
-            <div className="mx-auto flex flex-col">
-              <div
-                className="spinner-border animate-spin inline-block mx-auto mt-4 w-8 h-8 border-4 rounded-full"
-                role="status"
-              ></div>
-              Fetching data from blockchain...
-              <p className="text-center text-sm text-slate-300">
-                {counter}/{collectionData.length}
-              </p>
+            <div className="flex flex-col items-center gap-2 mt-2">
+              <div className="animate-spin rounded-full border-4 border-slate-800 border-t-primary-orange h-8 w-8"></div>
+              <span className="text-sm text-slate-300">Fetching holder balances from blockchain...</span>
+              <span className="text-xs text-slate-400 font-mono">
+                {counter} / {collectionData.length} assets audited
+              </span>
             </div>
           ) : (
             <button
               onClick={downloadCollectionDataAsCSV}
-              className="mb-2 bg-primary-orange hover:bg-primary-orange text-black text-base font-semibold rounded py-2 w-fit px-2 mx-auto mt-1 hover:scale-95 duration-700"
+              className="px-8 py-3 bg-green-500 hover:bg-green-600 text-black font-bold rounded-xl transition shadow-lg hover:scale-95 duration-200 cursor-pointer"
             >
-              Download Holders Data
+              Download Holders CSV
             </button>
           )}
-        </>
+        </div>
       )}
-      <p className="text-center text-xs text-slate-400 py-2">
-        ⚠️If you reload or close this page, you will lose your progress⚠️
-        <br />
-        You can reload the page if you want to stop/restart the process!
+
+      <p className="text-center text-xs text-slate-500 mt-6 max-w-md leading-relaxed">
+        ⚠️ If you reload or close this page, you will lose your progress. You can reload the page if you need to stop/restart the process.
       </p>
+
       {/* Practitioner Section: Snapshot Accuracy */}
-      <section className="mt-20 pt-12 border-t border-slate-800 w-full max-w-4xl text-left px-4">
+      <section className="mt-20 pt-12 border-t border-slate-800 w-full max-w-4xl text-left">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
           <div className="space-y-4">
             <h2 className="text-xl font-bold text-white tracking-tight italic">Snapshot Accuracy</h2>

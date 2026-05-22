@@ -1,96 +1,143 @@
 import { useState, useMemo } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { TOOLS } from "../constants";
 import CarouselComponent from "./CarouselComponent";
 import { ToolSearch } from "./ToolSearch";
 import { trackEvent } from "../utils";
-import { IoChevronBack, IoChevronForward } from "react-icons/io5";
 
-
-const CATEGORIES = [
-  { id: "featured", label: "Featured" },
-  { id: "mint", label: "Minting" },
-  { id: "management", label: "Management" },
-  { id: "distribution", label: "Distribution" },
-  { id: "apps", label: "Apps & Social" },
-  { id: "analytics", label: "Analytics" },
-  { id: "experimental", label: "Experimental" },
+const SUITES = [
+  {
+    id: "assets",
+    label: "Asset Suite",
+    description: "Manage, control, and distribute your Algorand assets in bulk. Enforces ARC-62 supply controls, dynamic freeze/clawback rules, vault security, and multi-recipient token airdrops.",
+    features: [
+      "Bulk Asset Manager (Opt-in, opt-out, destroy)",
+      "Batch Freeze & Clawback control parameters",
+      "Token supply management using ARC-62 standard",
+      "Secure Vault & NFD Transfers",
+      "Simple & Coordinated Bulk Token Airdrops"
+    ],
+    icon: "/icons/manager.png"
+  },
+  {
+    id: "creator",
+    label: "Creator Suite",
+    description: "End-to-end workspace for artwork generation and smart contract deployment. Mint collections in ARC-3, ARC-19, or ARC-69 formats and perform metadata audits.",
+    features: [
+      "Layered artwork & metadata generator (WenPad)",
+      "Simple single-asset & bulk-collection minter",
+      "Collection metadata updater (individual or CSV bulk)",
+      "Auto-detect Collection Data Downloader (CSV export)"
+    ],
+    icon: "/icons/mint.png",
+    path: "/minting-journey"
+  },
+  {
+    id: "analytics",
+    label: "Wallets & Analytics",
+    description: "Advanced account cryptography and portfolio analysis tools. Snapshot holdings across multiple assets and generate vanity addresses.",
+    features: [
+      "Falcon-1024 Post-Quantum secured account creator",
+      "Holdings Auditor (Wallet holdings & asset distribution)",
+      "Vanity address generator for custom prefixes"
+    ],
+    icon: "/icons/pqwallet.png"
+  },
+  {
+    id: "apps",
+    label: "Apps & Social",
+    description: "Decentralized social tools, encrypted communications, and community applications built natively on Algorand.",
+    features: [
+      "End-to-end encrypted peer-to-peer chat",
+      "BEACON chat with serverless signaling",
+      "Serverless BEACON dead drop",
+      "Music NFT Jukebox player",
+      "xGov governance proposal bulk voting tracker"
+    ],
+    icon: "/icons/p2pchat.svg"
+  },
+  {
+    id: "protocols",
+    label: "Protocols",
+    description: "Developer integration pipelines and automated deployment configurations for GitHub Actions and the ANCHOR protocol.",
+    features: [
+      "GitHub to IPFS deployment pipeline (Wen Deploy)",
+      "ANCHOR protocol integration & agent setup"
+    ],
+    icon: "/icons/devtools.png"
+  }
 ];
 
-const FEATURED_TOOLS = [
-  "Simple Mint",
-  "Airdrop",
-  "Simple Send",
-  "BEACON Chat",
+function ToolCard({ tool, index }: { tool: any; index: number }) {
+  return (
+    <Link 
+      to={tool.path} 
+      className="animate-fade-in"
+      style={{ animationDelay: `${index * 30}ms` }}
+      onClick={() => trackEvent("tool_click", "home", tool.label)}
+      aria-label={`Open ${tool.label}: ${tool.description}`}
+    >
+      <div className="button-link group relative flex flex-col h-full rounded-[36px] bg-banner-grey p-2.5 text-center transition-all duration-300 ease-in-out hover:scale-[1.02] hover:bg-secondary-gray border border-transparent hover:border-amber-400/30">
+        <div className="relative flex items-center mb-[50px] w-full h-[70px] rounded-t-[28px] bg-gradient-to-r from-[#E4E808] to-[#FD941D]">
+          <div className="absolute top-[85%] left-1/2 -translate-x-1/2 -translate-y-1/2 z-10">
+            <div className="relative flex items-center justify-center w-20 h-20 text-center rounded-full bg-[#262626] flex-shrink-0 border-transparent bg-gradient-to-r from-yellow-400 to-orange-400 p-1 ">
+              <div className="flex items-center justify-center w-full h-full rounded-full bg-[#262626]">
+                <img
+                  src={tool.icon}
+                  alt="icon"
+                  className="w-[70%] h-[70%] invert-[0.9] group-hover:scale-110 transition-transform"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+        <h5 className="text-xl xl:text-2xl font-bold text-white group-hover:text-amber-400 transition-colors">
+          {tool.label}
+        </h5>
+        <p className="text-sm xl:text-base font-light text-slate-300 p-2 mt-2 leading-relaxed">
+          {tool.description}
+        </p>
+      </div>
+    </Link>
+  );
+}
+
+const FEATURED_TOOL_LABELS = [
+  "Creator Suite",
+  "Bulk Asset Manager",
+  "Agent Marketplace",
+  "Post-Quantum Wallet",
 ];
 
 export function SelectToolComponent() {
-  const [activeTab, setActiveTab] = useState("featured");
   const [searchQuery, setSearchQuery] = useState("");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const selectedSuiteId = searchParams.get("suite");
+
+  const featuredTools = useMemo(() => {
+    return TOOLS.filter(t => FEATURED_TOOL_LABELS.includes(t.label));
+  }, []);
 
   const filteredTools = useMemo(() => {
-    const tools = TOOLS;
+    const tools = TOOLS.filter(t => !t.hideFromLanding);
+    if (!searchQuery) return tools;
     
-    // If searching, ignore tabs and search globally
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      return tools.filter(
-        (t) =>
-          t.label.toLowerCase().includes(query) ||
-          t.description.toLowerCase().includes(query)
-      );
-    }
+    const query = searchQuery.toLowerCase();
+    return tools.filter(
+      (t) =>
+        t.label.toLowerCase().includes(query) ||
+        t.description.toLowerCase().includes(query)
+    );
+  }, [searchQuery]);
 
-    // Otherwise filter by category
-    if (activeTab === "featured") {
-      return tools.filter(t => FEATURED_TOOLS.includes(t.label));
-    } else {
-      return tools.filter(t => t.category === activeTab);
-    }
-  }, [activeTab, searchQuery]);
+  const activeSuite = useMemo(() => {
+    return SUITES.find(s => s.id === selectedSuiteId);
+  }, [selectedSuiteId]);
 
-  const handlePrevCategory = () => {
-    const currentIndex = CATEGORIES.findIndex(c => c.id === activeTab);
-    const prevIndex = (currentIndex - 1 + CATEGORIES.length) % CATEGORIES.length;
-    setActiveTab(CATEGORIES[prevIndex].id);
-    setSearchQuery("");
-  };
-
-  const handleNextCategory = () => {
-    const currentIndex = CATEGORIES.findIndex(c => c.id === activeTab);
-    const nextIndex = (currentIndex + 1) % CATEGORIES.length;
-    setActiveTab(CATEGORIES[nextIndex].id);
-    setSearchQuery("");
-  };
-
-  const [touchStart, setTouchStart] = useState<number | null>(null);
-  const [touchEnd, setTouchEnd] = useState<number | null>(null);
-
-  const minSwipeDistance = 50;
-
-  const onTouchStart = (e: React.TouchEvent) => {
-    setTouchEnd(null);
-    setTouchStart(e.targetTouches[0].clientX);
-  };
-
-  const onTouchMove = (e: React.TouchEvent) => {
-    setTouchEnd(e.targetTouches[0].clientX);
-  };
-
-  const onTouchEnd = () => {
-    if (!touchStart || !touchEnd) return;
-    const distance = touchStart - touchEnd;
-    const isLeftSwipe = distance > minSwipeDistance;
-    const isRightSwipe = distance < -minSwipeDistance;
-    
-    if (isLeftSwipe) {
-      handleNextCategory();
-      trackEvent("category_swipe", "home", "left");
-    } else if (isRightSwipe) {
-      handlePrevCategory();
-      trackEvent("category_swipe", "home", "right");
-    }
-  };
+  const suiteTools = useMemo(() => {
+    if (!selectedSuiteId) return [];
+    return TOOLS.filter(t => !t.hideFromLanding && t.category === selectedSuiteId);
+  }, [selectedSuiteId]);
 
   return (
     <main className="text-center w-full max-w-7xl mx-auto px-4" aria-label="Algorand Tool Discovery">
@@ -100,11 +147,6 @@ export function SelectToolComponent() {
           <CarouselComponent
             images={[
               { path: "./wenwallet.png", url: "https://wallet.wen.tools" },
-              { path: "./wenswap.png", url: "https://swap.wen.tools" },
-              {
-                path: "./wenbot.png",
-                url: "https://discord.com/oauth2/authorize?client_id=1325220652332089435",
-              },
             ]}
           />
           <CarouselComponent
@@ -116,127 +158,151 @@ export function SelectToolComponent() {
       </div>
 
       {/* Navigation & Search */}
-      <div className="sticky top-[64px] md:top-[72px] z-20 bg-primary-black/80 backdrop-blur-md py-4 mb-6 border-b border-secondary-gray/30 shadow-xl shadow-black/20">
+      <div className="sticky top-[64px] md:top-[72px] z-20 bg-primary-black/80 backdrop-blur-md py-4 mb-10 border-b border-secondary-gray/30 shadow-xl shadow-black/20">
         <ToolSearch query={searchQuery} setQuery={setSearchQuery} />
-        
-        {/* Desktop Categories */}
-        <div className="hidden lg:flex overflow-x-auto no-scrollbar pb-2 gap-2 px-2 justify-center">
-          {CATEGORIES.map((cat) => (
-            <button
-              key={cat.id}
-              onClick={() => {
-                setActiveTab(cat.id);
-                setSearchQuery("");
-              }}
-              className={`whitespace-nowrap px-6 py-2 rounded-full font-medium transition-all duration-200 ${
-                activeTab === cat.id && !searchQuery
-                  ? "bg-amber-400 text-black shadow-lg shadow-amber-400/20 scale-105"
-                  : "bg-banner-grey text-slate-300 hover:text-white hover:bg-secondary-gray"
-              }`}
-            >
-              {cat.label}
-            </button>
-          ))}
-        </div>
-
-        {/* Mobile Category Slideshow */}
-        {!searchQuery && (
-          <div 
-            className="lg:hidden flex items-center justify-between px-2 py-1 max-w-sm mx-auto"
-            onTouchStart={onTouchStart}
-            onTouchMove={onTouchMove}
-            onTouchEnd={onTouchEnd}
-          >
-            <button 
-              onClick={handlePrevCategory} 
-              className="p-3 text-amber-400 hover:scale-110 active:scale-95 transition-transform"
-            >
-              <IoChevronBack size={28} />
-            </button>
-            
-            <div className="flex-1 overflow-hidden relative h-12 flex items-center justify-center">
-              <div 
-                key={activeTab}
-                className="text-xl font-black text-amber-400 tracking-tight animate-fade-in whitespace-nowrap uppercase italic"
-              >
-                {CATEGORIES.find(c => c.id === activeTab)?.label}
-              </div>
-            </div>
-
-            <button 
-              onClick={handleNextCategory} 
-              className="p-3 text-amber-400 hover:scale-110 active:scale-95 transition-transform"
-            >
-              <IoChevronForward size={28} />
-            </button>
-          </div>
-        )}
       </div>
 
-      {/* Tools Grid */}
-      <div 
-        className="min-h-[400px]"
-        onTouchStart={onTouchStart}
-        onTouchMove={onTouchMove}
-        onTouchEnd={onTouchEnd}
-      >
-        {searchQuery && (
-          <h2 className="text-xl text-slate-400 mb-6 animate-fade-in">
-            Found {filteredTools.length} tools matching "{searchQuery}"
-          </h2>
-        )}
-        
-        {!searchQuery && (
-          <h1 className="text-2xl lg:text-4xl font-semibold tracking-tight text-white font-sans mb-8 animate-fade-in capitalize">
-            {activeTab === "featured" ? "Our " : "All "} 
-            <span className="text-amber-400">{activeTab === "featured" ? "Top" : activeTab}</span> tools
-          </h1>
-        )}
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 items-stretch mb-12">
-          {filteredTools.map((tool, index) => (
-            <Link 
-              to={tool.path} 
-              key={tool.id + '-' + activeTab}
-              className="animate-fade-in"
-              style={{ animationDelay: `${index * 50}ms` }}
-              onClick={() => trackEvent("tool_click", "home", tool.label)}
-              aria-label={`Open ${tool.label}: ${tool.description}`}
+      {/* Tools Listing */}
+      <div className="min-h-[400px]">
+        {searchQuery ? (
+          <div className="animate-fade-in">
+            <h2 className="text-xl text-slate-400 mb-8 text-left">
+              Found {filteredTools.length} tools matching "{searchQuery}"
+            </h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 items-stretch mb-12">
+              {filteredTools.map((tool, index) => (
+                <ToolCard key={tool.id} tool={tool} index={index} />
+              ))}
+            </div>
+            {filteredTools.length === 0 && (
+              <div className="text-center py-20">
+                <p className="text-2xl text-slate-500">No tools found matching your search.</p>
+                <button 
+                  onClick={() => setSearchQuery("")}
+                  className="mt-4 text-amber-400 hover:underline font-semibold"
+                >
+                  Clear search
+                </button>
+              </div>
+            )}
+          </div>
+        ) : activeSuite ? (
+          <div className="animate-fade-in text-left">
+            <button 
+              onClick={() => setSearchParams({})}
+              className="mb-8 px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-gray-200 border border-slate-800 rounded-xl transition flex items-center gap-2 font-bold text-xs shadow-md"
             >
-              <div className="button-link group relative flex flex-col h-full rounded-[36px] bg-banner-grey p-2.5 text-center transition-all duration-300 ease-in-out hover:scale-[1.02] hover:bg-secondary-gray border border-transparent hover:border-amber-400/30">
-                <div className="relative flex items-center mb-[50px] w-full h-[70px] rounded-t-[28px] bg-gradient-to-r from-[#E4E808] to-[#FD941D]">
-                  <div className="absolute top-[85%] left-1/2 -translate-x-1/2 -translate-y-1/2 z-10">
-                    <div className="relative flex items-center justify-center w-20 h-20 text-center rounded-full bg-[#262626] flex-shrink-0 border-transparent bg-gradient-to-r from-yellow-400 to-orange-400 p-1 ">
-                      <div className="flex items-center justify-center w-full h-full rounded-full bg-[#262626]">
-                        <img
-                          src={tool.icon}
-                          alt="icon"
-                          className="w-[70%] h-[70%] invert-[0.9] group-hover:scale-110 transition-transform"
-                        />
+              ← Back to Discovery
+            </button>
+            
+            <div className="mb-10 bg-slate-900/40 border border-slate-800/80 p-6 md:p-8 rounded-3xl backdrop-blur-md">
+              <h2 className="text-3xl font-black italic uppercase tracking-tight text-white mb-2 bg-gradient-to-r from-white to-slate-500 bg-clip-text text-transparent">
+                {activeSuite.label}
+              </h2>
+              <p className="text-slate-300 text-sm leading-relaxed">
+                {activeSuite.description}
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 items-stretch mb-20">
+              {suiteTools.map((tool, index) => (
+                <ToolCard key={tool.id} tool={tool} index={index} />
+              ))}
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-16">
+            {/* Featured Tools Section */}
+            <section className="text-left animate-fade-in">
+              <h2 className="text-2xl font-black italic uppercase tracking-tight text-white mb-6 border-l-4 border-amber-400 pl-4 bg-gradient-to-r from-white to-slate-500 bg-clip-text text-transparent">
+                Featured Tools
+              </h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 items-stretch">
+                {featuredTools.map((tool, index) => (
+                  <ToolCard key={tool.id} tool={tool} index={index} />
+                ))}
+              </div>
+            </section>
+
+            {/* Tool Suites Section */}
+            <section className="text-left animate-fade-in">
+              <h2 className="text-2xl font-black italic uppercase tracking-tight text-white mb-6 border-l-4 border-amber-400 pl-4 bg-gradient-to-r from-white to-slate-500 bg-clip-text text-transparent">
+                Tool Suites
+              </h2>
+              <div className="space-y-6 mb-20 max-w-6xl mx-auto">
+                {SUITES.map((suite) => {
+                  const cardContent = (
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                      <div className="flex flex-col md:flex-row md:items-start gap-6 flex-grow">
+                        {/* Icon */}
+                        <div className="w-14 h-14 rounded-2xl bg-gradient-to-r from-amber-400 to-orange-500 p-0.5 flex-shrink-0 shadow-lg shadow-orange-500/10">
+                          <div className="w-full h-full rounded-[14px] bg-[#1a1a1a] flex items-center justify-center">
+                            <img 
+                              src={suite.icon} 
+                              alt={suite.label} 
+                              className="w-[60%] h-[60%] object-contain invert"
+                            />
+                          </div>
+                        </div>
+                        {/* Details */}
+                        <div className="space-y-2 max-w-4xl">
+                          <h3 className="text-2xl font-black italic uppercase tracking-tight text-white group-hover:text-amber-400 transition-colors">
+                            {suite.label}
+                          </h3>
+                          <p className="text-slate-300 text-sm leading-relaxed">
+                            {suite.description}
+                          </p>
+                          <div className="flex flex-wrap gap-2 pt-2">
+                            {suite.features.map((feat, i) => (
+                              <span key={i} className="text-slate-400 text-xs flex items-center gap-1.5 bg-slate-950/40 px-3 py-1 rounded-xl border border-slate-800/40">
+                                <span className="text-amber-400 font-bold">•</span>
+                                {feat}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                      {/* Arrow Indicator */}
+                      <div className="flex-shrink-0 self-end md:self-center flex items-center gap-2 text-amber-400 font-bold group-hover:translate-x-2 transition-transform duration-300">
+                        <span className="text-xs uppercase tracking-wider opacity-0 group-hover:opacity-100 transition-opacity">Launch Suite</span>
+                        <svg
+                          className="w-5 h-5"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
+                        </svg>
                       </div>
                     </div>
-                  </div>
-                </div>
-                <h5 className="text-xl xl:text-2xl font-bold text-white group-hover:text-amber-400 transition-colors">
-                  {tool.label}
-                </h5>
-                <p className="text-sm xl:text-base font-light text-slate-300 p-2 mt-2 leading-relaxed">
-                  {tool.description}
-                </p>
+                  );
+
+                  const cardClasses = "block w-full bg-slate-900/60 border border-slate-800/60 hover:border-amber-400/40 hover:bg-secondary-gray/40 rounded-3xl p-6 md:p-8 transition-all duration-300 shadow-2xl group cursor-pointer hover:scale-[1.01]";
+
+                  if (suite.path) {
+                    return (
+                      <Link 
+                        key={suite.id}
+                        to={suite.path}
+                        className={cardClasses}
+                      >
+                        {cardContent}
+                      </Link>
+                    );
+                  }
+
+                  return (
+                    <button 
+                      key={suite.id}
+                      onClick={() => setSearchParams({ suite: suite.id })}
+                      className={`${cardClasses} text-left`}
+                    >
+                      {cardContent}
+                    </button>
+                  );
+                })}
               </div>
-            </Link>
-          ))}
-        </div>
-        
-        {filteredTools.length === 0 && (
-          <div className="text-center py-20 animate-fade-in">
-            <p className="text-2xl text-slate-500">No tools found matching your search.</p>
-            <button 
-              onClick={() => setSearchQuery("")}
-              className="mt-4 text-amber-400 hover:underline"
-            >
-              Clear search
-            </button>
+            </section>
           </div>
         )}
       </div>

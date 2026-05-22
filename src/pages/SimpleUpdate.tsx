@@ -11,8 +11,10 @@ import {
   sliceIntoChunks,
   Arc69,
   getARC19AssetMetadataData,
+  updateARC19AssetMintArray,
   updateARC19AssetMintArrayV2,
   walletSign,
+  pinImageToPinata,
 } from "../utils";
 import { TOOLS, IPFS_ENDPOINT, ASSET_PREVIEW } from "../constants";
 import { isCrustAuth } from "../crust-auth";
@@ -41,9 +43,13 @@ const simpleUpdateAtom = atomWithStorage("simpleUpdate", {
   extras: [],
 } as any);
 const suAssetIdAtom = atomWithStorage("suAssetId", "");
+const suTokenAtom = atomWithStorage("suToken", "");
+const simpleUpdateProviderAtom = atomWithStorage("simpleUpdateProvider", "crust");
 
 export function SimpleUpdate() {
   const [formData, setFormData] = useAtom(simpleUpdateAtom);
+  const [pinningProvider, setPinningProvider] = useAtom(simpleUpdateProviderAtom);
+  const [token, setToken] = useAtom(suTokenAtom);
 
   const [processStep, setProcessStep] = useState(0);
   const [transaction, setTransaction] = useState(null as any);
@@ -269,7 +275,7 @@ export function SimpleUpdate() {
         formData.unitName === "" ||
         formData.totalSupply === "" ||
         formData.decimals === "" ||
-        (!isCrustAuth() && formData.format === "ARC19")
+        (!isCrustAuth() && formData.format === "ARC19" && pinningProvider === "crust")
       ) {
         toast.error("Please fill all the required fields");
         return;
@@ -328,21 +334,43 @@ export function SimpleUpdate() {
       ) {
         toast.info("Uploading the image to IPFS...");
 
-        const atoken = localStorage.getItem("authBasic");
-        imageCid = await pinImageToCrust(atoken, formData.image);
-        const imageURL = "ipfs://" + imageCid;
-        if (
-          formData.image &&
-          formData.image instanceof File &&
-          formData.image.type.includes("video")
-        ) {
-          metadata.animation_url = imageURL;
-          metadata.animation_mime_type = formData.image
-            ? formData.image.type
-            : "";
+        if (pinningProvider === "crust") {
+          const atoken = localStorage.getItem("authBasic");
+          imageCid = await pinImageToCrust(atoken, formData.image);
+          const imageURL = "ipfs://" + imageCid;
+          if (
+            formData.image &&
+            formData.image instanceof File &&
+            formData.image.type.includes("video")
+          ) {
+            metadata.animation_url = imageURL;
+            metadata.animation_mime_type = formData.image
+              ? formData.image.type
+              : "";
+          } else {
+            metadata.image = imageURL;
+            metadata.image_mime_type = formData.image ? formData.image.type : "";
+          }
         } else {
-          metadata.image = imageURL;
-          metadata.image_mime_type = formData.image ? formData.image.type : "";
+          if (!token) {
+            toast.error("Please enter a Pinata JWT token");
+            return;
+          }
+          const cid = await pinImageToPinata(token, formData.image);
+          const imageURL = "ipfs://" + cid;
+          if (
+            formData.image &&
+            formData.image instanceof File &&
+            formData.image.type.includes("video")
+          ) {
+            metadata.animation_url = imageURL;
+            metadata.animation_mime_type = formData.image
+              ? formData.image.type
+              : "";
+          } else {
+            metadata.image = imageURL;
+            metadata.image_mime_type = formData.image ? formData.image.type : "";
+          }
         }
       } else if (formData.format === "ARC3") {
         throw Error("ARC3 assets can't be updated");
@@ -376,32 +404,41 @@ export function SimpleUpdate() {
 
         ipfs_data = metadata;
 
-        // V1
-        // const unsignedAssetTransactions = await updateARC19AssetMintArray(
-        //   [transaction_data], activeAddress, algodClient,
-        //   token
-        // );
-        // if (unsignedAssetTransactions.length === 0) {
-        //   toast.error("Something went wrong while creating transactions");
-        //   return;
-        // }
-        // setTransaction(unsignedAssetTransactions);
-
-        const { atc, pinCids: cids } = await updateARC19AssetMintArrayV2(
-          [transaction_data],
-          activeAddress,
-          algodClient,
-          transactionSigner,
-          imageCid ? [imageCid] : []
-        );
-
-        // Bundle pins into the same group
-        for (const cid of cids) {
-          atc.addMethodCall(
-            await makeCrustPinTx(cid, transactionSigner, activeAddress, algodClient)
+        if (pinningProvider === "crust") {
+          const { atc, pinCids: cids } = await updateARC19AssetMintArrayV2(
+            [transaction_data],
+            activeAddress,
+            algodClient,
+            transactionSigner,
+            imageCid ? [imageCid] : []
           );
+
+          // Bundle pins into the same group
+          for (const cid of cids) {
+            atc.addMethodCall(
+              await makeCrustPinTx(cid, transactionSigner, activeAddress, algodClient)
+            );
+          }
+          setBatchATC(atc);
+          setTransaction(null);
+        } else {
+          if (!token) {
+            toast.error("Please enter a Pinata JWT token");
+            return;
+          }
+          const unsignedAssetTransactions = await updateARC19AssetMintArray(
+            [transaction_data],
+            activeAddress,
+            algodClient,
+            token
+          );
+          if (unsignedAssetTransactions.length === 0) {
+            toast.error("Something went wrong while creating transactions");
+            return;
+          }
+          setTransaction(unsignedAssetTransactions);
+          setBatchATC(null);
         }
-        setBatchATC(atc);
       } else if (formData.format === "ARC69") {
         metadata.properties = metadata.properties.traits;
         const transaction_data = {
@@ -417,6 +454,7 @@ export function SimpleUpdate() {
           algodClient
         );
         setTransaction(signedTransactions);
+        setBatchATC(null);
       } else if (formData.format === "Token") {
         const transaction_data = {
           asset_id: assetID,
@@ -431,6 +469,7 @@ export function SimpleUpdate() {
           algodClient
         );
         setTransaction(signedTransactions);
+        setBatchATC(null);
       } else {
         throw Error("ARC3 assets can't be updated");
       }
@@ -617,6 +656,43 @@ export function SimpleUpdate() {
               </div>
             </div>
           </div>
+          {formData.format === "ARC19" && (
+            <div className="mt-4 md:flex items-center text-start gap-x-4">
+              <div className="flex flex-col">
+                <label className="mb-2 text-sm leading-none text-gray-200">
+                  IPFS Pinning Provider*
+                </label>
+                <div className="inline-flex items-center space-x-2">
+                  <select
+                    className="bg-gray-300 rounded border-gray-300 font-medium text-center text-black transition px-2 py-1 w-64"
+                    required
+                    onChange={(e) => {
+                      setPinningProvider(e.target.value);
+                    }}
+                    value={pinningProvider}
+                  >
+                    <option value="crust">Crust Network (1.4A - 2.8A fee)</option>
+                    <option value="pinata">Pinata (Free - uses custom JWT)</option>
+                  </select>
+                </div>
+              </div>
+              {pinningProvider === "pinata" && (
+                <div className="flex flex-col md:mt-0 mt-4">
+                  <label className="mb-2 text-sm leading-none text-gray-200">
+                    Pinata JWT Token*
+                  </label>
+                  <input
+                    type="password"
+                    placeholder="Paste Pinata JWT Token"
+                    className="w-64 bg-gray-300 text-sm font-medium text-center leading-none text-black placeholder:text-black/30 px-3 py-2 border rounded border-gray-200"
+                    required
+                    value={token}
+                    onChange={(e) => setToken(e.target.value)}
+                  />
+                </div>
+              )}
+            </div>
+          )}
           {formData.image_url && formData.format !== "Token" && (
             <img
               src={
@@ -962,12 +1038,18 @@ export function SimpleUpdate() {
           </button>
         </div>
       )}
-      <p className="text-sm italic text-slate-200 py-4">
-        **It is recommended that any Creator Host their own Files using their
-        own token. Evil Tools will not be held responsible for anything that
-        happens to publicly hosted images.
+
+      <p className="text-sm italic text-slate-200">
+        {formData.format === "ARC19" ? (
+          pinningProvider === "crust" ? (
+            <>Pin Fee (Crust): ARC19 with new image - 2.8 ALGO, without new image - 1.4 ALGO</>
+          ) : (
+            <>Pin Fee (Pinata): Free (requires your own Pinata account / JWT)</>
+          )
+        ) : (
+          <>Pin Fee: Free (ARC69 / Token updates do not require IPFS pinning)</>
+        )}
       </p>
-      <p className="text-sm italic text-slate-200"> Pin Fee: Arc69 - Free, Arc3/19 - 2.8A </p>
       {/* Practitioner Section: Asset Management */}
       <section className="mt-20 pt-12 border-t border-slate-800 w-full max-w-4xl text-left px-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-12">

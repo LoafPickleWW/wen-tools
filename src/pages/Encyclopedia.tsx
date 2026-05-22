@@ -55,7 +55,7 @@ export function Encyclopedia() {
               Minting on Algorand is uniquely efficient due to the protocol's low fees and instant finality. However, choosing the right metadata standard is critical for long-term utility and provenance.
             </p>
             <div className="grid grid-cols-1 gap-6">
-              {TOOLS.filter(t => t.category === "mint").map(tool => (
+              {TOOLS.filter(t => t.category === "creator" && !t.id.endsWith("_classic") && t.id !== "really_simple_mint" && !["arc69_collection_mint", "arc3_collection_mint", "arc19_collection_mint", "simple_batch_mint", "arc69_metadata_update", "arc19_metadata_update"].includes(t.id)).map(tool => (
                 <div key={tool.id} className="group border-b border-slate-900 pb-6">
                   <Link to={tool.path} className="text-lg font-bold text-slate-200 group-hover:text-white transition block mb-2">{tool.label}</Link>
                   <p className="text-sm text-slate-500 leading-relaxed">{tool.description}</p>
@@ -71,7 +71,7 @@ export function Encyclopedia() {
               Managing state on Algorand involves handling Opt-ins, Minimum Balance Requirements (MBR), and asset parameters. Professional practitioners use batch tools to optimize their account hygiene and recover locked Algos.
             </p>
             <div className="grid grid-cols-1 gap-6">
-              {TOOLS.filter(t => t.category === "management").map(tool => (
+              {TOOLS.filter(t => t.category === "assets" && !["airdrop", "simple_airdrop", "simple_send", "vault_send", "bulk_claim", "wen_swap", "batch_optin", "batch_optout", "batch_destroy", "distribution_suite"].includes(t.id)).map(tool => (
                 <div key={tool.id} className="group border-b border-slate-900 pb-6">
                   <Link to={tool.path} className="text-lg font-bold text-slate-200 group-hover:text-white transition block mb-2">{tool.label}</Link>
                   <p className="text-sm text-slate-500 leading-relaxed">{tool.description}</p>
@@ -87,7 +87,7 @@ export function Encyclopedia() {
               Distributing rewards or inventory requires sophisticated coordination. Our tools support ARC-59 Asset Inboxes and NFD Vaults, allowing for frictionless, permissionless delivery to your community.
             </p>
             <div className="grid grid-cols-1 gap-6">
-              {TOOLS.filter(t => t.category === "distribution").map(tool => (
+              {TOOLS.filter(t => t.category === "assets" && ["airdrop", "simple_airdrop", "simple_send", "vault_send", "bulk_claim", "wen_swap", "distribution_suite"].includes(t.id)).map(tool => (
                 <div key={tool.id} className="group border-b border-slate-900 pb-6">
                   <Link to={tool.path} className="text-lg font-bold text-slate-200 group-hover:text-white transition block mb-2">{tool.label}</Link>
                   <p className="text-sm text-slate-500 leading-relaxed">{tool.description}</p>
@@ -103,7 +103,7 @@ export function Encyclopedia() {
               Algorand provides a robust foundation for next-generation security and machine economies. From post-quantum signatures and secure P2P messaging to trustless supply chain attestation (ANCHOR) and machine-to-machine x402 API billing, we provide tools to run sovereign systems.
             </p>
             <div className="grid grid-cols-1 gap-6">
-              {TOOLS.filter(t => ["experimental", "apps"].includes(t.category) && ["post_quantum", "anchor_setup", "beacon_chat", "beacon_drop", "p2p_chat", "agent_marketplace"].includes(t.id)).map(tool => (
+              {TOOLS.filter(t => ["post_quantum", "anchor_setup", "beacon_chat", "beacon_drop", "p2p_chat", "agent_marketplace", "wen_deploy"].includes(t.id)).map(tool => (
                 <div key={tool.id} className="group border-b border-slate-900 pb-6">
                   <Link to={tool.path} className="text-lg font-bold text-slate-200 group-hover:text-white transition block mb-2">{tool.label}</Link>
                   <p className="text-sm text-slate-500 leading-relaxed">{tool.description}</p>
@@ -153,7 +153,7 @@ export function Encyclopedia() {
               Transparency is the hallmark of the Algorand ledger. Our analytics tools allow you to audit collections, track holder distributions, and export technical state data to CSV for professional reporting.
             </p>
             <div className="grid grid-cols-1 gap-6">
-              {TOOLS.filter(t => t.category === "analytics").map(tool => (
+              {TOOLS.filter(t => t.category === "analytics" && t.id !== "post_quantum" && !t.hideFromLanding).map(tool => (
                 <div key={tool.id} className="group border-b border-slate-900 pb-6">
                   <Link to={tool.path} className="text-lg font-bold text-slate-200 group-hover:text-white transition block mb-2">{tool.label}</Link>
                   <p className="text-sm text-slate-500 leading-relaxed">{tool.description}</p>

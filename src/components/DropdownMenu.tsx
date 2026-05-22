@@ -10,7 +10,6 @@ import {
 } from "@mui/material";
 
 import { FaWallet } from "react-icons/fa";
-import { IoSwapHorizontal } from "react-icons/io5";
 import { type DropdownMenu } from "../types";
 import DonationDialog from "./DonationDialog";
 
@@ -56,19 +55,6 @@ const DropdownMenu = ({ onClose, isOpen }: DropdownMenu) => {
           </ListItemIcon>
           <ListItemText
             primary="Wen Wallet"
-            sx={{ color: "white", fontWeight: "bold" }}
-          />
-        </ListItemButton>
-        <ListItemButton
-          component="a"
-          href="https://swap.wen.tools"
-          target="_blank"
-        >
-          <ListItemIcon>
-            <IoSwapHorizontal size={24} color="white" />
-          </ListItemIcon>
-          <ListItemText
-            primary="Wen Swap"
             sx={{ color: "white", fontWeight: "bold" }}
           />
         </ListItemButton>
