@@ -504,9 +504,6 @@ export function AgentLeaderboard({ network }: AgentLeaderboardProps) {
             </div>
             <div className="text-lg font-black text-white">
               {activeAgentsCount}
-              <span className="text-neutral-600 text-sm font-normal">
-                /{totalAgentsCount}
-              </span>
             </div>
           </div>
         </div>
@@ -582,12 +579,12 @@ export function AgentLeaderboard({ network }: AgentLeaderboardProps) {
       {!loading && sorted.length > 0 && (
         <div className="space-y-2">
           {/* Column headers */}
-          <div className="grid grid-cols-[40px_1fr_100px_80px_80px] sm:grid-cols-[48px_1fr_120px_100px_100px] gap-2 px-4 py-2 text-[10px] text-neutral-600 uppercase tracking-wider font-bold">
+          <div className="hidden sm:grid sm:grid-cols-[48px_1fr_120px_100px_100px] gap-2 px-4 py-2 text-[10px] text-neutral-600 uppercase tracking-wider font-bold">
             <span>#</span>
             <span>Agents (Operator Wallet)</span>
             <span className="text-right">Volume</span>
             <span className="text-right">Txns</span>
-            <span className="text-right hidden sm:block">Last Payment</span>
+            <span className="text-right">Last Payment</span>
           </div>
 
           {displayed.map((entry, idx) => {
@@ -597,35 +594,35 @@ export function AgentLeaderboard({ network }: AgentLeaderboardProps) {
             return (
               <div
                 key={entry.walletAddress}
-                className={`grid grid-cols-[40px_1fr_100px_80px_80px] sm:grid-cols-[48px_1fr_120px_100px_100px] gap-2 items-start px-4 py-3.5 rounded-xl border transition-all duration-200 hover:border-orange-500/20 ${
+                className={`grid grid-cols-[32px_1fr_auto] sm:grid-cols-[48px_1fr_120px_100px_100px] gap-3 items-center sm:items-start px-3 sm:px-4 py-3 sm:py-3.5 rounded-xl border transition-all duration-200 hover:border-orange-500/20 ${
                   isTopThree
                     ? RANK_STYLES[rank - 1]
                     : "bg-banner-grey/30 border-secondary-gray/30 hover:bg-banner-grey/50"
                 }`}
               >
                 {/* Rank */}
-                <div className="flex items-center justify-center pt-0.5">
+                <div className="flex items-center justify-center sm:pt-0.5">
                   {isTopThree ? (
-                    <span className="text-lg leading-none">{RANK_ICONS[rank - 1]}</span>
+                    <span className="text-base sm:text-lg leading-none">{RANK_ICONS[rank - 1]}</span>
                   ) : (
-                    <span className="text-sm font-bold text-neutral-500 font-mono leading-none">
+                    <span className="text-xs sm:text-sm font-bold text-neutral-500 font-mono leading-none">
                       {rank}
                     </span>
                   )}
                 </div>
 
                 {/* Agent & Wallet info */}
-                <div className="min-w-0 flex-1">
+                <div className="min-w-0">
                   <div className="flex items-center gap-1.5 flex-wrap">
                     {nfdNames[entry.walletAddress] ? (
                       <span 
-                        className="text-sm font-black text-orange-400 leading-none"
+                        className="text-xs sm:text-sm font-black text-orange-400 leading-none truncate max-w-[120px] xs:max-w-[160px] sm:max-w-none"
                         title={entry.walletAddress}
                       >
                         {nfdNames[entry.walletAddress]}
                       </span>
                     ) : (
-                      <span className="text-sm font-black text-white font-mono leading-none">
+                      <span className="text-xs sm:text-sm font-black text-white font-mono leading-none">
                         {shortAddr(entry.walletAddress)}
                       </span>
                     )}
@@ -639,32 +636,32 @@ export function AgentLeaderboard({ network }: AgentLeaderboardProps) {
                       ↗
                     </a>
                     {nfdNames[entry.walletAddress] && (
-                      <span className="text-[9px] text-neutral-600 font-mono leading-none">
+                      <span className="text-[9px] text-neutral-600 font-mono leading-none hidden sm:inline">
                         ({shortAddr(entry.walletAddress)})
                       </span>
                     )}
                   </div>
                   
                   {/* Associated Agents */}
-                  <div className="flex flex-wrap gap-1.5 mt-2">
+                  <div className="flex flex-wrap gap-1 mt-1.5 sm:mt-2">
                     {entry.agents.map((agent) => {
                       const catClass = CATEGORY_COLORS[agent.category.toLowerCase()] || "bg-neutral-500/20 text-neutral-300 border-neutral-500/30";
                       return (
                         <div 
                           key={agent.appId} 
-                          className="flex items-center gap-1.5 bg-neutral-900/60 border border-secondary-gray/20 px-2 py-0.5 rounded-md"
+                          className="flex items-center gap-1 bg-neutral-900/60 border border-secondary-gray/20 px-1.5 py-0.5 rounded"
                         >
-                          <span className="text-[10px] font-bold text-neutral-300">
+                          <span className="text-[9px] sm:text-[10px] font-bold text-neutral-300 max-w-[90px] xs:max-w-[120px] sm:max-w-none truncate">
                             {agent.name}
                           </span>
-                          <span className={`text-[7px] font-extrabold uppercase tracking-wider px-1 py-0.2 rounded border ${catClass}`}>
+                          <span className={`text-[6px] sm:text-[7px] font-extrabold uppercase tracking-wider px-1 py-0.2 rounded border ${catClass}`}>
                             {agent.category}
                           </span>
                           <a
                             href={`https://explorer.perawallet.app/application/${agent.appId}`}
                             target="_blank"
                             rel="noreferrer"
-                            className="text-[8px] text-orange-500/40 hover:text-orange-400 transition-colors font-mono"
+                            className="text-[7px] sm:text-[8px] text-orange-500/40 hover:text-orange-400 transition-colors font-mono"
                             title={`App ID: ${agent.appId}`}
                           >
                             #{agent.appId} ↗
@@ -675,23 +672,26 @@ export function AgentLeaderboard({ network }: AgentLeaderboardProps) {
                   </div>
                 </div>
 
-                {/* Volume */}
-                <div className="text-right pt-0.5">
-                  <span className={`text-sm font-black ${
+                {/* Volume & Txs Stack on Mobile, Volume on Desktop */}
+                <div className="text-right sm:pt-0.5 flex flex-col justify-center">
+                  <span className={`text-xs sm:text-sm font-black ${
                     isTopThree ? "text-orange-400" : "text-neutral-200"
                   }`}>
                     {formatUSDC(entry.totalVolumeUSDC)}
                   </span>
+                  <span className="text-[9px] font-bold text-neutral-500 sm:hidden mt-0.5">
+                    {formatCount(entry.totalTransactions)} txs
+                  </span>
                 </div>
 
-                {/* Transaction count */}
-                <div className="text-right pt-0.5">
+                {/* Transaction count (desktop only) */}
+                <div className="text-right pt-0.5 hidden sm:block">
                   <span className="text-sm font-bold text-neutral-400">
                     {formatCount(entry.totalTransactions)}
                   </span>
                 </div>
 
-                {/* Last payment */}
+                {/* Last payment (desktop only) */}
                 <div className="text-right hidden sm:flex items-center justify-end gap-1 pt-1">
                   {entry.lastPaymentTimestamp > 0 ? (
                     <>
