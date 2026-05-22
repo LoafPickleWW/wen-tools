@@ -426,7 +426,6 @@ export function AgentLeaderboard({ network }: AgentLeaderboardProps) {
   // Aggregate stats
   const totalVolume = entries.reduce((s, e) => s + e.totalVolumeUSDC, 0);
   const totalTxns = entries.reduce((s, e) => s + e.totalTransactions, 0);
-  const totalAgentsCount = entries.reduce((s, e) => s + e.agents.length, 0);
   const activeAgentsCount = entries
     .filter((e) => e.totalTransactions > 0)
     .reduce((s, e) => s + e.agents.length, 0);
