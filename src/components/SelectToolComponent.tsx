@@ -190,12 +190,12 @@ export function SelectToolComponent() {
           <div className="animate-fade-in text-left">
             <button 
               onClick={() => setSearchParams({})}
-              className="mb-8 px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-gray-200 border border-slate-800 rounded-xl transition flex items-center gap-2 font-bold text-xs shadow-md"
+              className="mb-8 px-5 py-2.5 bg-banner-grey hover:bg-secondary-gray text-gray-200 border border-white/5 rounded-xl transition flex items-center gap-2 font-bold text-xs shadow-md"
             >
               ← Back to Discovery
             </button>
             
-            <div className="mb-10 bg-slate-900/40 border border-slate-800/80 p-6 md:p-8 rounded-3xl backdrop-blur-md">
+            <div className="mb-10 bg-banner-grey/40 border border-white/5 p-6 md:p-8 rounded-3xl backdrop-blur-md">
               <h2 className="text-3xl font-black italic uppercase tracking-tight text-white mb-2 bg-gradient-to-r from-white to-slate-500 bg-clip-text text-transparent">
                 {activeSuite.label}
               </h2>
@@ -254,7 +254,7 @@ export function SelectToolComponent() {
                           </p>
                           <div className="flex flex-wrap gap-2 pt-2">
                             {suite.features.map((feat, i) => (
-                              <span key={i} className="text-slate-400 text-xs flex items-center gap-1.5 bg-slate-950/40 px-3 py-1 rounded-xl border border-slate-800/40">
+                              <span key={i} className="text-slate-400 text-xs flex items-center gap-1.5 bg-slate-950/40 px-3 py-1 rounded-xl border border-white/5">
                                 <span className="text-amber-400 font-bold">•</span>
                                 {feat}
                               </span>
@@ -277,7 +277,7 @@ export function SelectToolComponent() {
                     </div>
                   );
 
-                  const cardClasses = "block w-full bg-slate-900/60 border border-slate-800/60 hover:border-amber-400/40 hover:bg-secondary-gray/40 rounded-3xl p-6 md:p-8 transition-all duration-300 shadow-2xl group cursor-pointer hover:scale-[1.01]";
+                  const cardClasses = "block w-full bg-banner-grey/40 border border-white/5 hover:border-amber-400/40 hover:bg-secondary-gray/40 rounded-3xl p-6 md:p-8 transition-all duration-300 shadow-2xl group cursor-pointer hover:scale-[1.01]";
 
                   if (suite.path) {
                     return (
