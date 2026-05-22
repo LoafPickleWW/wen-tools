@@ -142,11 +142,11 @@ export function CollectionDataDownloader() {
           if (metadata && (metadata.description || metadata.properties || metadata.attributes)) {
             standard = "ARC-69";
           }
-        } catch (e) {
+        } catch (_e) {
           metadata = {};
         }
       }
-    } catch (e) {
+    } catch (_e) {
       // Fallback
     }
 

@@ -139,7 +139,7 @@ export function BatchMint() {
         }
       }
 
-      let data: any[] = [];
+      const data: any[] = [];
 
       if (formData.sourceMode === "csv") {
         let headers: string[] = [];

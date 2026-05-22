@@ -397,7 +397,7 @@ export function DistributionSuite({
       }
     }
 
-    let assetIdsMap: any = {};
+    const assetIdsMap: any = {};
     for (let i = 0; i < data.length; i++) {
       if (data[i].asset_id) {
         assetIdsMap[data[i].asset_id] = true;
@@ -549,7 +549,7 @@ export function DistributionSuite({
         .filter((p) => p !== "");
       splittedPrefixes = [...new Set(splittedPrefixes)];
 
-      let splittedSpecifiedAssetIds = creatorSpecifiedAssetIds
+      const splittedSpecifiedAssetIds = creatorSpecifiedAssetIds
         .split(/[\n,]/)
         .map((id) => id.trim())
         .filter((id) => id !== "");
@@ -557,7 +557,7 @@ export function DistributionSuite({
       let parsedAssetIds: number[] = [];
       try {
         parsedAssetIds = splittedSpecifiedAssetIds.map((id) => parseInt(id));
-      } catch (err) {
+      } catch (_err) {
         throw Error("Please enter valid specified asset IDs!");
       }
 
