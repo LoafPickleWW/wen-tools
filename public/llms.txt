@@ -1,0 +1,45 @@
+# wen.tools
+
+> A comprehensive no-code frontend suite for bulk operations, asset management, and sovereign protocols—such as the **x402 standard** for agentic payments and machine-to-machine billing—on the Algorand blockchain.
+
+wen.tools provides creator, asset, wallet, analytics, social, and protocol tools to onboard developers, creators, and collectors to Algorand.
+
+## Core Features & Navigation
+
+### Creator Suite
+- [/minting-journey](/minting-journey): Unified workspace organizing the creator journey from generation (WenPad) to minting, updating, and exporting.
+- [/simple-mint](/simple-mint): Mint a single asset (NFT or Token) on Algorand. Supports Simple/Custom modes with Pinata and Crust Network.
+- [/really-simple-mint](/really-simple-mint): Ultra-fast single-click minting for simple assets.
+- [/batch-collection-mint](/batch-collection-mint): Mint bulk collections in ARC-3, ARC-19, or ARC-69 formats using CSV file uploads or range generation.
+- [/bulk-metadata-update](/bulk-metadata-update): Update metadata notes (ARC-69) or reserve address CIDs (ARC-19) for multiple assets in bulk.
+- [/wen-pad](/wen-pad): Generate and mint NFT collections for free with automated IPFS pinning.
+
+### Asset Suite (Management & Distribution)
+- [/bulk-asset-manager](/bulk-asset-manager): Consolidated opt-in, opt-out, and destroy manager for Algorand assets.
+- [/token-manager](/token-manager): Set and manage your token's circulation supply using the ARC62 Standard.
+- [/bulk-claim](/bulk-claim): Claim multiple assets from your asset Inbox & NFD vault in one go.
+- [/distribution-suite](/distribution-suite): Consolidated tool to send and airdrop assets manually, via CSV, to creator wallets, specific asset holders, or NFD vaults.
+- [/wen-swap](/wen-swap): Atomic, peer-to-peer on-chain asset swapping protocol for Algos and custom ASAs.
+
+### Wallets & Analytics
+- [/post-quantum](/post-quantum): Create & manage Falcon-1024 post-quantum secured Algorand accounts.
+- [/holdings-auditor](/holdings-auditor): Consolidated auditor to review wallet asset inventories and track distribution balances across multiple assets.
+- [/vanity](/vanity): Generate custom Algorand wallet addresses with specific prefixes for your projects and protocols.
+
+### Apps & Social
+- [/agents](/agents): Discover and register AI agents using the **x402 standard** for agentic payments, machine-to-machine billing, and pay-to-access APIs on-chain. The decentralized registry for Algorand's autonomous agent economy.
+- [/beacon-chat](/beacon-chat): Zero-infrastructure, on-chain encrypted chat with serverless P2P signaling via Algorand.
+- [/beacon-drop](/beacon-drop): Serverless, on-chain dead drop powered by the BEACON Protocol.
+- [/p2p-chat](/p2p-chat): End-to-end encrypted peer-to-peer chat & file transfer via LiquidAuth.
+- [/jukebox](/jukebox): Scan your wallet for music NFTs and play them directly.
+- [/xgov](/xgov): Premium dashboard for tracking active xGov proposals, history, and bulk voting.
+
+### Protocols
+- [/deploy](/deploy): Zero-infrastructure, in-browser build & deploy pipeline for GitHub repositories to IPFS & Algorand ARC-19.
+- [/anchor-setup](/anchor-setup): Generate the integration assets, GitHub Actions, and agent prompts needed to enroll your repository in the ANCHOR protocol.
+
+### Education
+- [/encyclopedia](/encyclopedia): The Algorand Developer & Creator Encyclopedia. A comprehensive directory of high-performance tools, decentralized protocols, and technical standards for the Algorand ecosystem.
+
+## Resources
+- [/llms-full.txt](/llms-full.txt): Comprehensive site index and detailed Algorand Search FAQ database containing 50 search-optimized questions & answers.

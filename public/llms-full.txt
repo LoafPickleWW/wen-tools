@@ -1,0 +1,282 @@
+# wen.tools - Full Documentation & Algorand Search FAQ
+
+This is the comprehensive documentation and developer reference database for wen.tools, including a knowledge base of 50 search-optimized questions and answers regarding transactions, wallets, metadata, and developer tooling on the Algorand blockchain.
+
+---
+
+# SECTION 1: Detailed Tools & Paths Index
+
+## Creator Suite
+*   **Creator Suite Dashboard** (`/minting-journey`)
+    *   Unified workspace organizing the creator journey from generation (WenPad) to minting, updating, and exporting.
+*   **Simple Mint** (`/simple-mint`)
+    *   Mint a single asset (NFT or Token) on Algorand. Supports Simple/Custom modes with Pinata and Crust Network.
+*   **Really Simple Mint** (`/really-simple-mint`)
+    *   Ultra-fast single-click minting for simple assets.
+*   **Batch Collection Mint** (`/batch-collection-mint` / `/batch-collection-mint`)
+    *   Mint bulk collections in ARC-3, ARC-19, or ARC-69 formats using CSV file uploads or range generation.
+*   **Bulk Update** (`/bulk-metadata-update`)
+    *   Update metadata notes (ARC-69) or reserve address CIDs (ARC-19) for multiple assets in bulk.
+*   **Wen Pad** (`/wen-pad`)
+    *   Generate and mint NFT collections for free with automated IPFS pinning.
+*   **Download Collection Data** (`/download-collection-data`)
+    *   Export full collection parameters, metadata, and configuration to CSV.
+
+## Asset Suite (Management & Distribution)
+*   **Bulk Asset Manager** (`/bulk-asset-manager`)
+    *   Consolidated opt-in, opt-out, and destroy manager for Algorand assets.
+*   **Token Manager** (`/token-manager`)
+    *   Set and manage your token's circulation supply using the ARC62 Standard.
+*   **Bulk Claim** (`/bulk-claim`)
+    *   Claim multiple assets from your asset Inbox & NFD vault in one go.
+*   **Distribution Suite** (`/distribution-suite`)
+    *   Consolidated tool to send and airdrop assets manually, via CSV, to creator wallets, specific asset holders, or NFD vaults.
+*   **Wen Swap** (`/wen-swap`)
+    *   Atomic, peer-to-peer on-chain asset swapping protocol for Algos and custom ASAs.
+*   **Batch Optin** (`/batch-optin`)
+    *   Opt-in to multiple assets in bulk.
+*   **Batch Optout** (`/batch-optout`)
+    *   Opt-out of multiple assets to recover minimum balance.
+*   **Batch Destroy** (`/batch-destroy`)
+    *   Destroy multiple assets created by your account.
+
+## Wallets & Analytics
+*   **Post-Quantum Wallet** (`/post-quantum`)
+    *   Create & manage Falcon-1024 post-quantum secured Algorand accounts.
+*   **Holdings Auditor** (`/holdings-auditor`)
+    *   Consolidated auditor to review wallet asset inventories and track distribution balances across multiple assets.
+*   **Wallet Holdings** (`/wallet-holdings`)
+    *   Audit and view the asset holdings and balances of any Algorand address.
+*   **Find Collection Holders** (`/find-collection-holders`)
+    *   Query and snapshot all current holders of a given NFT collection or asset.
+*   **Multimint Asset Holders** (`/multimint-asset-holders`)
+    *   Find and filter holders across multiple separate mints/collections.
+*   **Vanity Address** (`/vanity`)
+    *   Generate custom Algorand wallet addresses with specific prefixes for your projects and protocols.
+
+## Apps & Social
+*   **Agent Marketplace** (`/agents`)
+    *   Discover and register AI agents using the **x402 standard** for agentic payments, machine-to-machine billing, and pay-to-access APIs on-chain. The decentralized registry for Algorand's autonomous agent economy.
+*   **BEACON Chat** (`/beacon-chat`)
+    *   Zero-infrastructure, on-chain encrypted chat with serverless P2P signaling via Algorand.
+*   **BEACON Drop** (`/beacon-drop`)
+    *   Serverless, on-chain dead drop powered by the BEACON Protocol.
+*   **P2P Chat** (`/p2p-chat`)
+    *   End-to-end encrypted peer-to-peer chat & file transfer via LiquidAuth.
+*   **Jukebox** (`/jukebox`)
+    *   Scan your wallet for music NFTs and play them directly.
+*   **xGov Dashboard** (`/xgov`)
+    *   Premium dashboard for tracking active xGov proposals, history, and bulk voting.
+
+## Protocols
+*   **Wen Deploy** (`/deploy`)
+    *   Zero-infrastructure, in-browser build & deploy pipeline for GitHub repositories to IPFS & Algorand ARC-19.
+*   **Anchor Setup** (`/anchor-setup`)
+    *   Generate the integration assets, GitHub Actions, and agent prompts needed to enroll your repository in the ANCHOR protocol.
+
+---
+
+# SECTION 2: Algorand Search FAQ (50 Questions & Answers)
+
+This section compiles 50 common questions developers, creators, and users search for when using the Algorand blockchain for transactions, tools, and wallets.
+
+## Category 1: Transactions & Protocol Basics
+
+### 1. What is the average transaction fee on Algorand?
+The minimum transaction fee on the Algorand network is **0.001 ALGO** (equivalent to 1,000 microalgos). This flat fee applies to standard payments, asset transfers, and basic interactions. Smart contract interactions may require higher fees depending on their computational complexity and the number of inner transactions they trigger.
+
+### 2. How fast are transactions settled and finalized on Algorand?
+Algorand achieves block finality in approximately **2.8 to 3.3 seconds**. Unlike proof-of-work blockchains, Algorand's Pure Proof of Stake (PPoS) consensus mechanism does not require confirmations; once a block is written to the ledger, it is immediately finalized and cannot be forks or reorganized.
+
+### 3. What is an Atomic Transaction Group (Atomic Transfer) on Algorand?
+An Atomic Transaction Group allows developers to group up to **16 transactions** together to execute as a single, indivisible unit. If any single transaction within the group fails, the entire group is aborted and all changes are rolled back. This native protocol-level feature eliminates counterparty risk and enables trustless peer-to-peer swaps, multi-party payments, and complex smart contract invocations without requiring escrows.
+
+### 4. What is the Minimum Balance Requirement (MBR) on Algorand?
+To prevent ledger bloat and spam, Algorand mandates a Minimum Balance Requirement (MBR) for every account. The base MBR for a new account is **0.1 ALGO**. Each additional state interaction increases the MBR:
+*   Opting into a standard asset (ASA) adds **0.1 ALGO**.
+*   Creating an asset (ASA) adds **0.1 ALGO**.
+*   Opting into a smart contract adds a base fee plus allocations for schema storage.
+*   Creating box storage adds **0.0025 ALGO** base plus **0.0004 ALGO** per byte.
+
+### 5. How can I reclaim ALGOs locked in the Minimum Balance Requirement (MBR)?
+You can reclaim ALGOs by removing state objects from your account:
+*   **Opt-out of assets:** Send an asset close-to transaction to clear your balance and reduce your MBR by 0.1 ALGO. You can use the `/batch-optout` tool to do this in bulk.
+*   **Destroy assets:** If you are the creator of an asset with zero circulating supply, you can send a destroy transaction using `/batch-destroy` to free up 0.1 ALGO.
+*   **Clear contract state:** Invoke a close-out or clear-state transaction on smart contracts you no longer use.
+
+### 6. What is "Rekeying" on Algorand and how does it work?
+Rekeying is a unique, native protocol-level feature that allows an Algorand account to change its authorized spending key without changing its public address. When an account is rekeyed, the network updates the account's `auth-addr` field. Future transactions from this address must be signed by the new authorized key, while the public address remains the target for receiving assets and maintaining historical identity.
+
+### 7. What are the benefits of rekeying an Algorand account?
+Rekeying provides several security and utility advantages:
+*   **Key Compromise Recovery:** If your private key or seed phrase is compromised, you can rekey to a new private key to secure your assets immediately without moving them.
+*   **Hardware Wallet Migration:** You can rekey a standard mobile wallet account to a Ledger hardware wallet, securing the account under cold storage without needing to update public addresses.
+*   **Multisig Upgrade:** You can rekey a single-signature account to a multi-signature address to enforce multi-party authorization for corporate or DAO asset management.
+
+### 8. How does a multisignature (multisig) account work on Algorand?
+A multisig account on Algorand is represented by a virtual address derived from a set of $N$ public keys and a threshold threshold value $M$ (where $M \le N$). To authorize a transaction, at least $M$ of the $N$ associated private keys must sign the transaction. The threshold logic is verified natively at the consensus layer, ensuring top-tier performance and security without requiring smart contract execution.
+
+### 9. What are "inner transactions" in Algorand smart contracts?
+Inner transactions are transactions generated and executed directly by a smart contract on its own behalf. A smart contract has its own escrow account address and can perform payments, asset transfers, asset configurations, or even call other smart contracts natively. These are called inner transactions (e.g., in TEAL or PyTeal) and are processed atomically with the parent transaction.
+
+### 10. What is an Algorand Standard Asset (ASA)?
+An Algorand Standard Asset (ASA) is a native token standard on the Algorand blockchain used to represent fungible tokens, non-fungible tokens (NFTs), fractional assets, and security tokens. Unlike ERC-20 or ERC-721 on EVM chains, ASAs are built directly into the Algorand Layer-1 consensus protocol, making token transfers as fast, cheap, and secure as native ALGO payments.
+
+### 11. Why do I need to "opt-in" to an asset (ASA) before receiving it?
+Algorand enforces an explicit "opt-in" mechanism to protect users from spam, unsolicited assets, and unsolicited increases to their Minimum Balance Requirement (MBR). To receive an ASA, you must execute a zero-amount transfer of that asset to your own address. This registers the asset in your account state and locks 0.1 ALGO in MBR. Without opting in, any transaction attempting to send that asset to you will fail.
+
+### 12. What is an "opt-out" transaction and how does it differ from a transfer?
+An opt-out transaction is a special asset transfer where the sender transfers their remaining asset balance to another account (typically the creator or a burn address) and specifies a `close-to` address. The network removes the asset from the sender's account state, reduces their asset balance to zero, and releases the 0.1 ALGO MBR. A standard transfer merely moves tokens without removing the asset registration from the account state.
+
+### 13. Can an asset creator claw back or freeze an asset after sending it?
+Yes, but only if the asset creator explicitly defined **Clawback** and **Freeze** addresses when configuring the ASA.
+*   **Freeze Address:** Can disable transactions involving that asset for specific accounts.
+*   **Clawback Address:** Can move the asset out of any holder's account back to a designated address.
+If these address parameters are left blank or cleared (set to the zero address), the asset is permanently decentralized and cannot be frozen or clawed back.
+
+### 14. What is the difference between Mainnet, Testnet, and BetaNet on Algorand?
+*   **Mainnet:** The production blockchain network where real ALGOs are used and transactions have financial value.
+*   **Testnet:** A sandbox network designed for testing applications and smart contracts with free, faucet-funded test ALGOs.
+*   **BetaNet:** A network where experimental protocol changes and early consensus features are deployed for testing before they migrate to Testnet and Mainnet.
+
+### 15. How do state proofs work and what are they used for on Algorand?
+State Proofs are cryptographically secure, succinct proofs that attest to the state of the Algorand blockchain. They allow external systems (like other blockchains or light clients) to verify transactions and state changes on Algorand in a trustless manner without needing to download the entire chain history. They use quantum-safe Falcon signatures to guarantee integrity.
+
+---
+
+## Category 2: Wallets & Security
+
+### 16. Which wallets are officially supported or commonly used on Algorand?
+Popular wallets in the Algorand ecosystem include:
+*   **Pera Wallet:** The most widely used mobile and web companion wallet, supporting asset management, governance, and dApp integrations.
+*   **Defly Wallet:** A developer and trader-focused wallet featuring built-in swap aggregation, charting, and multi-wallet management.
+*   **Lute Wallet:** A clean, developer-friendly web wallet ideal for sandboxes, local development, and clean dApp testing.
+
+### 17. What is Pera Wallet and what features does it support?
+Pera Wallet is a leading wallet on Algorand that offers a rich feature set:
+*   **Asset Management:** View, search, opt-in, and opt-out of ASAs.
+*   **NFT Gallery:** Browse and display digital collectibles with ARC-3/19/69 support.
+*   **Governance Portal:** Register and commit ALGOs to Algorand Governance.
+*   **WalletConnect support:** Seamlessly connect to desktop and web dApps.
+*   **Ledger Hardware Integration:** Sync with Ledger Nano X/S devices.
+
+### 18. What is Defly Wallet and how is it different from other wallets?
+Defly Wallet is designed for DeFi power users and developers. It differs by integrating:
+*   **Decentralized Exchange (DEX) Aggregation:** Compares prices across Tinyman, Pact, and Humble to find the best swap rates.
+*   **Portfolio Charts:** Provides real-time asset charts and trading indicators inside the wallet.
+*   **Defly API:** Fast indexing and price feeds.
+*   **Multi-Account Workspaces:** Easily group and switch between developer, trading, and long-term storage addresses.
+
+### 19. What is Lute Wallet and how does it work?
+Lute Wallet is a web-based wallet developed by the team at LoafPickle. It is built to offer a secure, simple, and open-source interface for interacting with the Algorand blockchain. It is highly optimized for integration with web applications (like wen.tools) and supports standard operations without the heavy bloat of mobile wallet applications.
+
+### 20. How do I secure my Algorand account with a ledger hardware wallet?
+To secure an account with a Ledger Nano:
+1.  Connect your Ledger to your computer and open the Algorand App.
+2.  Import your Ledger address into a wallet companion like Pera, Defly, or Lute.
+3.  Alternatively, if you already have an active address, you can create a new Ledger-backed account and **rekey** your existing address to the Ledger address. This secures your assets while keeping the same public address.
+
+### 21. What is a Post-Quantum wallet and why is it important for blockchain security?
+A Post-Quantum wallet uses signature schemes that are theoretically secure against attacks by quantum computers. Most blockchains use ECDSA or Ed25519 signatures, which can be broken by Shor's algorithm on a sufficiently large quantum computer. Post-Quantum wallets use lattice-based signatures (like Falcon-1024) to secure keys before the quantum era arrives.
+
+### 22. How do Falcon-1024 signatures provide post-quantum resilience on Algorand?
+Falcon is a lattice-based signature scheme selected by NIST for standardization. It provides high security, fast signing, and compact signature sizes. Algorand integrates Falcon signatures natively to sign State Proofs. Applications like the wen.tools Post-Quantum Wallet (`/post-quantum`) use Falcon-1024 to generate quantum-resistant keys that can protect account governance and assets.
+
+### 23. Can I recover an Algorand wallet if I lose my recovery passphrase (seed phrase)?
+No. Algorand is a non-custodial blockchain. Your private key (represented by your 25-word mnemonic passphrase) is the only way to recover your account. If you lose this passphrase and your device is reset, your assets are permanently inaccessible. No entity, developer, or validator can reset your passphrase or recover your funds.
+
+### 24. How do I change the spending authority of my wallet without changing my address?
+You can change the spending authority by submitting a **Rekey** transaction. In a Rekey transaction, you specify the new signing address in the `rekey-to` (or `auth-addr`) parameter. Once confirmed, the original mnemonic passphrase will no longer authorize outgoing transactions; instead, the private key of the new signing address must sign all transactions.
+
+### 25. Is there a way to generate a custom "vanity" wallet address on Algorand?
+Yes. You can use the Vanity Address generator (`/vanity`) to compute a custom wallet address. The tool repeatedly generates random private/public key pairs until it finds one that starts with your desired prefix (e.g., `WEN...`). Since this is done locally in your browser, your private keys never leave your device.
+
+### 26. How do NFD (Non-Fungible Domain) vaults protect user assets?
+NFDs are unique Algorand assets representing human-readable names (e.g., `myname.algo`). Each NFD has a designated on-chain "Vault" account. This vault is a smart-contract-secured address associated with the domain. Users can send assets directly to the vault, and only the owner of the NFD can authorize withdrawals, protecting assets and simplifying address management.
+
+### 27. What is LiquidAuth and how does it enable secure peer-to-peer web applications?
+LiquidAuth is a decentralized authentication and communication protocol that allows peer-to-peer applications to establish wallet-verified connections. It enables secure, end-to-end encrypted messaging and file transfer (such as P2P Chat `/p2p-chat`) directly between wallets without relying on central databases or authentication servers.
+
+---
+
+## Category 3: Asset Minting, Metadata & Standards
+
+### 28. What is the difference between ARC-3, ARC-19, and ARC-69 NFT standards?
+*   **ARC-3:** The base standard for static NFTs. The asset URL points to a static metadata JSON file (typically on IPFS), and the asset config includes the hash of this file. It is completely immutable.
+*   **ARC-69:** A metadata standard that uses the **Transaction Note** field in asset configuration transactions to store JSON metadata. It allows for dynamic updates, as the creator can submit a new config transaction with updated notes.
+*   **ARC-19:** A metadata standard that uses the **Reserve Address** field of the asset to point to a dynamic IPFS template. By updating the reserve address to a new CID, the creator can update the NFT metadata dynamically while maintaining a clear on-chain history.
+
+### 29. How does ARC-3 specify NFT metadata and media?
+ARC-3 specifies that the asset's name should end with `@arc3` or the description must specify it. The asset's URL field must point to a JSON file matching the ARC-3 schema (containing `name`, `description`, `image`, `properties`, etc.). The asset's `metadata-hash` must contain the cryptographic SHA-256 hash of this JSON file, guaranteeing that the metadata cannot be tampered with.
+
+### 30. What is ARC-69 and how does it use transaction notes for metadata?
+ARC-69 is designed for lightweight, post-minting metadata updates. Instead of hosting metadata JSON files on external sites and locking them with hashes, the creator embeds the JSON metadata directly in the `note` field of the asset configuration transaction. Indexers read these transaction notes to display traits, descriptions, and media on marketplaces.
+
+### 31. What is ARC-19 and how does it enable mutable or evolvable NFTs using IPFS?
+ARC-19 represents the asset's URL using a special template URI scheme: `template-ipfs://{ipfscid:1:raw:reserve:sha256}`. This URI tells indexers to compute the metadata IPFS CID by decoding the asset's Reserve Address. When the creator changes the reserve address to a new public key (using `/simple-update` or `/bulk-metadata-update`), the indexer computes a new IPFS CID. This allows the creator to update metadata (such as leveling up a gaming NFT) dynamically without changing the immutable URL field.
+
+### 32. What is IPFS and why is it used for hosting Algorand NFT media?
+IPFS (InterPlanetary File System) is a peer-to-peer, content-addressed storage network. Unlike traditional URLs (which point to specific server locations that can go offline), IPFS URIs point to a cryptographic hash of the content itself (CID). This ensures that if the media file changes, the hash changes, providing permanent proof that the NFT media has not been altered or deleted.
+
+### 33. How does Pinata help in pinning NFT metadata and assets?
+Pinata is a cloud-based IPFS pinning service. It provides APIs and web interfaces to upload files to IPFS and ensure they are "pinned" (kept active and accessible) on the network. When using minting tools on wen.tools, users can paste their Pinata API keys to automatically upload and pin their NFT images and JSON metadata during the minting process.
+
+### 34. What is Crust Network and how does it provide decentralized storage for NFTs?
+Crust Network is a decentralized storage network built on Web3 technologies that provides autonomous pinning on IPFS. It leverages blockchain incentives to distribute files across thousands of nodes worldwide. wen.tools integrates Crust Network as a free or low-cost decentralized pinning option for single and batch minting.
+
+### 35. How can I mint an NFT collection in bulk on Algorand?
+You can mint bulk collections using the Batch Collection Mint tool (`/batch-collection-mint`). You upload a CSV file containing your collection's metadata (asset names, unit names, IPFS CIDs, and traits) and select the format (ARC-3, ARC-19, or ARC-69). The tool batches the minting transactions into atomic groups to optimize throughput and transaction execution.
+
+### 36. How do I update the metadata of an already minted NFT?
+To update an NFT's metadata:
+*   For **ARC-69:** Use the `/simple-update` or `/bulk-metadata-update` tool to submit a new configuration transaction with the updated JSON metadata in the note field.
+*   For **ARC-19:** Upload the new metadata JSON to IPFS, get the CID, convert it to a public key representation, and submit an update transaction to change the asset's **Reserve Address** to that public key.
+
+### 37. How can I download or export all metadata and holder data of an NFT collection?
+You can use the **Download Collection Data** tool (`/download-collection-data`) under the Creator Suite. Enter the Creator Wallet Address or the Asset ID range. The tool queries the indexer to download all metadata configurations (supporting ARC-3, ARC-19, and ARC-69) and current holder distributions, and packages them into a clean CSV format.
+
+### 38. What is the ARC-62 standard for fungible token supply management?
+ARC-62 is a standard that outlines conventions for fungible token supply management. It provides clear methodologies for locking, unlocking, minting new supply, and burning existing tokens. Developers use the Token Manager (`/token-manager`) to interact with ARC-62 compatible assets on-chain.
+
+### 39. What is an ARC-59 Asset Inbox and how does it facilitate asset distribution?
+ARC-59 is an Algorand standard designed to solve the "opt-in problem" for asset distribution. Usually, a sender cannot send an asset to a receiver unless the receiver has opted in. Under ARC-59, the sender can route the asset through a smart contract router that holds the asset in a contract-controlled box. The contract pays the MBR. The receiver can later claim the asset and opt-in in a single step using the Bulk Claim tool (`/bulk-claim`).
+
+### 40. How can I find all current holders of a specific asset or collection?
+You can use the **Find Collection Holders** tool (`/find-collection-holders`) or the **Holdings Auditor** (`/holdings-auditor`). These tools query the Algorand indexer for the given Asset ID or list of assets, filtering out accounts with a zero balance, and return a downloadable list of all addresses holding the tokens along with their exact balances.
+
+---
+
+## Category 4: Developer & Ecosystem Tools
+
+### 41. What is wen.tools and what can I do with it?
+wen.tools is an open-source, no-code frontend suite built specifically for the Algorand blockchain. It empowers developers, creators, and collectors to perform complex, bulk operations (such as batch minting, bulk airdrops, and mass opt-outs) directly from their web browser using their favorite connected wallet, without writing any code.
+
+### 42. What is WenPad and how does it help creators generate NFT collections?
+WenPad (`/wen-pad`) is a free, visual asset generator and minter built into wen.tools. It allows creators to upload layers (backgrounds, characters, accessories), configure rarity weights, generate unique art combinations, automatically upload the files and JSON metadata to IPFS, and mint the resulting collection directly to their wallet.
+
+### 43. How does Wen Swap enable peer-to-peer on-chain trading?
+Wen Swap (`/wen-swap`) uses Algorand's native Atomic Transaction Groups. A user can construct a proposal to swap a set of their assets for another user's assets (including ALGOs). Once the initiator signs, they send the transaction payload to the counterparty. The counterparty reviews and signs the group. The combined group is submitted to the network, and the assets are swapped instantly and trustlessly.
+
+### 44. What is the ANCHOR protocol and how does it secure the software supply chain?
+The ANCHOR protocol is an on-chain integrity framework. Developers anchor their software release hashes (such as git commit hashes or build artifacts) to a transparency log on the Algorand blockchain using a specific registry wallet. Users can verify that their locally installed package matches the developer's signed release on-chain by running:
+`npx @loafpickleww/anchor verify <package-name> <version>`.
+
+### 45. How does BEACON Chat provide serverless, on-chain encrypted communication?
+BEACON Chat (`/beacon-chat`) utilizes the Algorand blockchain as a decentralized signaling layer. Instead of central Web2 chat servers, users post encrypted routing and connection handshakes on-chain to a specific protocol address. Once the peer reads the handshake, they establish an end-to-end encrypted WebRTC channel directly between their browsers.
+
+### 46. What is a BEACON Drop and how does it work as a decentralized dead drop?
+A BEACON Drop (`/beacon-drop`) is a serverless file and message sharing tool. It encrypts the payload using symmetric keys derived from wallet signatures and stores the encrypted data in Algorand's smart contract box storage. The recipient retrieves the encrypted box from the ledger and decrypts it locally using their wallet, ensuring zero-infrastructure privacy.
+
+### 47. How can I build and deploy web applications to IPFS using Wen Deploy?
+Wen Deploy (`/deploy`) is an in-browser build-and-deploy pipeline. Users connect their GitHub accounts, select a repository, and trigger a build. The application builds the static site files locally in the browser and pins them directly to IPFS. The resulting IPFS CID can then be linked to an ARC-19 asset or an NFD to resolve a decentralized domain.
+
+### 48. What is the x402 standard and how does it enable on-chain API billing for AI agents?
+x402 is an open-source, on-chain protocol standard designed for **agentic payments**, **machine-to-machine (M2M) billing**, and securing **pay-to-access APIs** for autonomous AI agents on the Algorand blockchain. Under the x402 protocol, AI agents register their public wallet addresses, capabilities, and detailed per-call fee structures (e.g. 1 ALGO/call) on-chain. 
+
+When client programs or other agents call the service, they include a native blockchain transaction ID in the HTTP request header as a proof-of-payment token. This enables **zero-infrastructure API monetization**, **micro-billing / micro-transactions**, and **gated web service access** without relying on central database credits, API keys, or Web2 payment gateways like Stripe.
+
+### 49. What is the Agent Marketplace and how do AI agents register on-chain?
+The Agent Marketplace (`/agents`) is a decentralized, on-chain registry built on Algorand where developers list autonomous AI agents, their pricing (using **x402 agentic payments**), operational capacities, and integration guides. It enables developer teams to discover utility agents for tasks like trading, code audit, or translation, and interact with them using wallet-verified **machine-to-machine billing** protocols.
+
+### 50. What is the xGov dashboard and how can I track governance proposals and vote?
+The xGov dashboard (`/xgov`) is a specialized interface for Algorand's Expert Governors (xGovs). It reads proposal lists from the on-chain registry contracts, displays detailed historical vote distributions, tracks active voting windows, and allows xGovs to vote on proposals in bulk, simplifying the governance process for power users.
