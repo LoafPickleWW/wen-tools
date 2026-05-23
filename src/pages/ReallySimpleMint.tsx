@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 
 import algosdk from "algosdk";
 import { toast } from "react-toastify";
@@ -43,7 +43,8 @@ export function ReallySimpleMint() {
   // batchATC is a AtomicTransactionComposer to batch and send all transactions
   const [batchATC, setBatchATC] = useState(null as any);
   const [pinCids, setPinCids] = useState<string[]>([]);
-  const { activeAddress, algodClient, transactionSigner } = useWallet();
+  const { activeAddress, algodClient, transactionSigner, activeNetwork } = useWallet();
+  const isTestnet = activeNetwork === "testnet";
   const [previewAsset, setPreviewAsset] = useState(null as any);
   const [showIntegratorPortal, setShowIntegratorPortal] = useState(false);
   const [searchParams] = useSearchParams();
@@ -234,6 +235,11 @@ wen.contentWindow.postMessage({
   };
 
   async function mint() {
+    if (isTestnet) {
+      toast.error("Crust pinning is not supported on Testnet.");
+      return;
+    }
+
     if (!activeAddress) {
       toast.error("Please connect your wallet");
       return;
@@ -525,6 +531,21 @@ wen.contentWindow.postMessage({
           <div className="mx-auto flex flex-col">
             <div className="spinner-border animate-spin inline-block mx-auto w-8 h-8 border-4 rounded-full" role="status"></div>
             Creating transaction...
+          </div>
+        ) : isTestnet ? (
+          <div className="mt-4 p-4 bg-red-950/40 border border-red-800/60 rounded-xl text-center shadow-lg backdrop-blur-sm max-w-[20rem]">
+            <p className="text-red-200 text-sm font-semibold mb-2">
+              ⚠️ Crust Pinning Disabled on Testnet
+            </p>
+            <p className="text-xs text-slate-300 mb-3">
+              Crust Network does not support Algorand Testnet contracts. Please use the main Simple Mint tool with Pinata instead.
+            </p>
+            <Link
+              to="/simple-mint"
+              className="inline-block text-xs bg-secondary-orange hover:bg-secondary-orange/80 transition text-black font-semibold px-3 py-1.5 rounded"
+            >
+              Go to Simple Mint
+            </Link>
           </div>
         ) : (
           <button

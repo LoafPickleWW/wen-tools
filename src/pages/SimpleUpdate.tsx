@@ -63,6 +63,8 @@ export function SimpleUpdate() {
   const [batchATC, setBatchATC] = useState(null as any);
   const { activeAddress, activeNetwork, algodClient, transactionSigner } =
     useWallet();
+  const isTestnet = activeNetwork === "testnet";
+  const effectiveProvider = isTestnet ? "pinata" : pinningProvider;
 
   const TraitMetadataInputField = (id: string, type: string) => {
     return (
@@ -275,7 +277,7 @@ export function SimpleUpdate() {
         formData.unitName === "" ||
         formData.totalSupply === "" ||
         formData.decimals === "" ||
-        (!isCrustAuth() && formData.format === "ARC19" && pinningProvider === "crust")
+        (!isCrustAuth() && formData.format === "ARC19" && effectiveProvider === "crust")
       ) {
         toast.error("Please fill all the required fields");
         return;
@@ -334,7 +336,7 @@ export function SimpleUpdate() {
       ) {
         toast.info("Uploading the image to IPFS...");
 
-        if (pinningProvider === "crust") {
+        if (effectiveProvider === "crust") {
           const atoken = localStorage.getItem("authBasic");
           imageCid = await pinImageToCrust(atoken, formData.image);
           const imageURL = "ipfs://" + imageCid;
@@ -404,7 +406,7 @@ export function SimpleUpdate() {
 
         ipfs_data = metadata;
 
-        if (pinningProvider === "crust") {
+        if (effectiveProvider === "crust") {
           const { atc, pinCids: cids } = await updateARC19AssetMintArrayV2(
             [transaction_data],
             activeAddress,
@@ -663,20 +665,26 @@ export function SimpleUpdate() {
                   IPFS Pinning Provider*
                 </label>
                 <div className="inline-flex items-center space-x-2">
-                  <select
-                    className="bg-gray-300 rounded border-gray-300 font-medium text-center text-black transition px-2 py-1 w-64"
-                    required
-                    onChange={(e) => {
-                      setPinningProvider(e.target.value);
-                    }}
-                    value={pinningProvider}
-                  >
-                    <option value="crust">Crust Network (1.4A - 2.8A fee)</option>
-                    <option value="pinata">Pinata (Free - uses custom JWT)</option>
-                  </select>
+                  {isTestnet ? (
+                    <div className="bg-slate-900/60 p-2 border border-slate-700 rounded text-xs text-amber-500 font-medium w-64 text-center">
+                      Crust is disabled on Testnet. Pinata is used as the only IPFS pinning provider.
+                    </div>
+                  ) : (
+                    <select
+                      className="bg-gray-300 rounded border-gray-300 font-medium text-center text-black transition px-2 py-1 w-64"
+                      required
+                      onChange={(e) => {
+                        setPinningProvider(e.target.value);
+                      }}
+                      value={effectiveProvider}
+                    >
+                      <option value="crust">Crust Network (1.4A - 2.8A fee)</option>
+                      <option value="pinata">Pinata (Free - uses custom JWT)</option>
+                    </select>
+                  )}
                 </div>
               </div>
-              {pinningProvider === "pinata" && (
+              {effectiveProvider === "pinata" && (
                 <div className="flex flex-col md:mt-0 mt-4">
                   <label className="mb-2 text-sm leading-none text-gray-200">
                     Pinata JWT Token*
@@ -1041,7 +1049,7 @@ export function SimpleUpdate() {
 
       <p className="text-sm italic text-slate-200">
         {formData.format === "ARC19" ? (
-          pinningProvider === "crust" ? (
+          effectiveProvider === "crust" ? (
             <>Pin Fee (Crust): ARC19 with new image - 2.8 ALGO, without new image - 1.4 ALGO</>
           ) : (
             <>Pin Fee (Pinata): Free (requires your own Pinata account / JWT)</>

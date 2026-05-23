@@ -29,6 +29,9 @@ const MintStep = () => {
   const [isMinting, setIsMinting] = useState(false);
   const [progress, setProgress] = useState({ current: 0, total: previewItems.length, status: '' });
 
+  const isTestnet = activeNetwork === 'testnet';
+  const effectiveProvider = isTestnet ? 'Pinata' : provider;
+
   const generateBlob = async (item: any) => {
     const canvas = document.createElement('canvas');
     canvas.width = project.imageWidth || 1000;
@@ -67,7 +70,7 @@ const MintStep = () => {
         const blob = await generateBlob(item);
         
         let imageCid = '';
-        if (provider === 'Crust') {
+        if (effectiveProvider === 'Crust') {
           imageCid = await pinImageToCrust(ipfsToken, blob);
         } else {
           imageCid = await pinImageToPinata(ipfsToken, blob);
@@ -98,12 +101,12 @@ const MintStep = () => {
            assetData.asset_note = metadata;
         } else {
            setProgress({ current: i + 1, total: previewItems.length, status: `Pinning metadata #${item.index}...` });
-           let jsonCid = '';
-           if (provider === 'Crust') {
-             jsonCid = await pinJSONToCrust(ipfsToken, JSON.stringify(metadata));
-           } else {
-             jsonCid = await pinJSONToPinata(ipfsToken, JSON.stringify(metadata));
-           }
+            let jsonCid = '';
+            if (effectiveProvider === 'Crust') {
+              jsonCid = await pinJSONToCrust(ipfsToken, JSON.stringify(metadata));
+            } else {
+              jsonCid = await pinJSONToPinata(ipfsToken, JSON.stringify(metadata));
+            }
            assetData.cid = jsonCid;
            assetData.ipfs_data = metadata;
         }
@@ -199,23 +202,28 @@ const MintStep = () => {
           <div className="space-y-3">
             <label className="text-[10px] font-black text-primary-orange uppercase tracking-[0.2em] ml-1">IPFS Provider</label>
             <div className="grid grid-cols-2 gap-2">
-              {['Crust', 'Pinata'].map((p) => (
+              {(isTestnet ? ['Pinata'] : ['Crust', 'Pinata']).map((p) => (
                 <button
                   key={p}
                   onClick={() => setProvider(p as any)}
                   className={`py-3 rounded-2xl border text-xs font-black transition-all ${
-                    provider === p ? 'bg-primary-orange text-black border-primary-orange shadow-lg shadow-primary-orange/20' : 'bg-gray-900/50 border-gray-800 text-gray-500 hover:border-gray-700'
+                    effectiveProvider === p ? 'bg-primary-orange text-black border-primary-orange shadow-lg shadow-primary-orange/20' : 'bg-gray-900/50 border-gray-800 text-gray-500 hover:border-gray-700'
                   }`}
                 >
                   {p}
                 </button>
               ))}
             </div>
+            {isTestnet && (
+              <p className="mt-2 text-xs text-amber-500 font-medium">
+                ⚠️ Crust pinning is disabled on Testnet. Pinata is used as the only IPFS pinning provider.
+              </p>
+            )}
           </div>
         </div>
 
         <div className="space-y-3">
-          <label className="text-[10px] font-black text-primary-orange uppercase tracking-[0.2em] ml-1">{provider} API Token</label>
+          <label className="text-[10px] font-black text-primary-orange uppercase tracking-[0.2em] ml-1">{effectiveProvider} API Token</label>
           <input 
             type="password"
             value={ipfsToken}
@@ -223,7 +231,7 @@ const MintStep = () => {
                setIpfsToken(e.target.value);
                localStorage.setItem('authBasic', e.target.value);
             }}
-            placeholder={`Paste your ${provider} API Key here...`}
+            placeholder={`Paste your ${effectiveProvider} API Key here...`}
             className="w-full bg-gray-900/50 border border-gray-800 rounded-2xl px-5 py-4 text-sm focus:outline-none focus:border-primary-orange/50 transition-all placeholder:text-gray-700"
           />
         </div>

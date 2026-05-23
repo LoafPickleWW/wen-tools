@@ -64,6 +64,9 @@ const simpleMintProviderAtom = atomWithStorage("simpleMintProvider", "crust");
 export function SimpleMint() {
   const [formData, setFormData] = useAtom(simpleMintAtom);
   const [pinningProvider, setPinningProvider] = useAtom(simpleMintProviderAtom);
+  const { activeAddress, algodClient, transactionSigner, activeNetwork } = useWallet();
+  const isTestnet = activeNetwork === "testnet";
+  const effectiveProvider = isTestnet ? "pinata" : pinningProvider;
   const [token, setToken] = useAtom(smTokenAtom);
   const [isCustomMode, setIsCustomMode] = useState(false);
   const [processStep, setProcessStep] = useState(0);
@@ -72,7 +75,6 @@ export function SimpleMint() {
 
   const [batchATC, setBatchATC] = useState(null as any);
   const [pinCids, setPinCids] = useState<string[]>([]);
-  const { activeAddress, algodClient, transactionSigner } = useWallet();
   const [previewAsset, setPreviewAsset] = useState(null as any);
   const [showIntegratorPortal, setShowIntegratorPortal] = useState(false);
   const [searchParams] = useSearchParams();
@@ -435,7 +437,7 @@ wen.contentWindow.postMessage({
           toast.error("Please select an image");
           return;
         }
-        if (pinningProvider === "crust") {
+        if (effectiveProvider === "crust") {
           toast.info("Uploading the image to IPFS via Crust...");
           let authBasic = localStorage.getItem("authBasic");
           if (!authBasic) {
@@ -498,7 +500,7 @@ wen.contentWindow.postMessage({
         image: imageURLForPreview,
       };
 
-      if (pinningProvider === "crust") {
+      if (effectiveProvider === "crust") {
         if (finalFormat === "ARC3") {
           const { atc, pinCids: cids } = await createARC3AssetMintArrayV2(
             [metadataForIPFS],
@@ -934,32 +936,38 @@ wen.contentWindow.postMessage({
               <label className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-400">
                 IPFS Pinning Provider*
               </label>
-              <div className="flex bg-slate-900/80 p-1.5 rounded-xl border border-slate-700 w-full">
-                <button
-                  type="button"
-                  className={`flex-1 py-2 text-xs md:text-sm font-bold rounded-lg transition-all duration-300 ${
-                    pinningProvider === "crust"
-                      ? "bg-gradient-to-r from-orange-500 to-amber-500 text-black shadow-md font-extrabold"
-                      : "text-slate-400 hover:text-white"
-                  }`}
-                  onClick={() => setPinningProvider("crust")}
-                >
-                  Crust Network
-                </button>
-                <button
-                  type="button"
-                  className={`flex-1 py-2 text-xs md:text-sm font-bold rounded-lg transition-all duration-300 ${
-                    pinningProvider === "pinata"
-                      ? "bg-gradient-to-r from-orange-500 to-amber-500 text-black shadow-md font-extrabold"
-                      : "text-slate-400 hover:text-white"
-                  }`}
-                  onClick={() => setPinningProvider("pinata")}
-                >
-                  Pinata (JWT)
-                </button>
-              </div>
+              {isTestnet ? (
+                <div className="bg-slate-900/60 p-4 border border-slate-800 rounded-xl text-xs text-amber-500 font-medium">
+                  Crust is disabled on Testnet. Pinata is used as the only IPFS pinning provider.
+                </div>
+              ) : (
+                <div className="flex bg-slate-900/80 p-1.5 rounded-xl border border-slate-700 w-full">
+                  <button
+                    type="button"
+                    className={`flex-1 py-2 text-xs md:text-sm font-bold rounded-lg transition-all duration-300 ${
+                      effectiveProvider === "crust"
+                        ? "bg-gradient-to-r from-orange-500 to-amber-500 text-black shadow-md font-extrabold"
+                        : "text-slate-400 hover:text-white"
+                    }`}
+                    onClick={() => setPinningProvider("crust")}
+                  >
+                    Crust Network
+                  </button>
+                  <button
+                    type="button"
+                    className={`flex-1 py-2 text-xs md:text-sm font-bold rounded-lg transition-all duration-300 ${
+                      effectiveProvider === "pinata"
+                        ? "bg-gradient-to-r from-orange-500 to-amber-500 text-black shadow-md font-extrabold"
+                        : "text-slate-400 hover:text-white"
+                    }`}
+                    onClick={() => setPinningProvider("pinata")}
+                  >
+                    Pinata (JWT)
+                  </button>
+                </div>
+              )}
             </div>
-            {pinningProvider === "pinata" && (
+            {effectiveProvider === "pinata" && (
               <div className="flex flex-col animate-fadeIn">
                 <label className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-400">
                   Pinata JWT Token*
@@ -1243,7 +1251,7 @@ wen.contentWindow.postMessage({
         </div>
 
         <p className="text-xs font-semibold text-slate-400 text-center mt-2">
-          {pinningProvider === "crust" ? (
+          {effectiveProvider === "crust" ? (
             <span>Pin Fee (Crust): {finalFormat === "ARC69" ? "1.4 ALGO" : finalFormat === "Token" ? "Free" : "2.8 ALGO"}</span>
           ) : (
             <span>Pin Fee (Pinata): Free (requires custom Pinata JWT)</span>

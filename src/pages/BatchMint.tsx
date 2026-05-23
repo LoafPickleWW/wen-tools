@@ -64,7 +64,11 @@ export function BatchMint() {
   const [assetTransactions, setAssetTransactions] = useState([] as algosdk.Transaction[][]);
   const [previewAsset, setPreviewAsset] = useState(null as any);
 
-  const { activeAddress, algodClient, transactionSigner, activeWallet } = useWallet();
+  const { activeAddress, algodClient, transactionSigner, activeWallet, activeNetwork } = useWallet();
+  const isTestnet = activeNetwork === "testnet";
+  const effectiveProvider = isTestnet
+    ? (formData.pinningProvider === "crust" ? "pinata" : formData.pinningProvider)
+    : formData.pinningProvider;
 
   const handleCsvUpload = (file: File) => {
     Papa.parse(file, {
@@ -81,10 +85,10 @@ export function BatchMint() {
   };
 
   const getPinFeeText = () => {
-    if (formData.pinningProvider === "none") {
+    if (effectiveProvider === "none") {
       return "Free (No pinning service selected)";
     }
-    if (formData.pinningProvider === "pinata") {
+    if (effectiveProvider === "pinata") {
       return "Free (Uses your custom Pinata JWT)";
     }
     // Crust Network fees
@@ -101,12 +105,12 @@ export function BatchMint() {
         return;
       }
 
-      if (formData.pinningProvider === "crust" && !isCrustAuth()) {
+      if (effectiveProvider === "crust" && !isCrustAuth()) {
         toast.error("Crust authentication is not complete. Please sign in via the wallet connect button.");
         return;
       }
 
-      if (formData.pinningProvider === "pinata" && !formData.pinataToken) {
+      if (effectiveProvider === "pinata" && !formData.pinataToken) {
         toast.error("Please enter your Pinata JWT Token.");
         return;
       }
@@ -189,7 +193,7 @@ export function BatchMint() {
       const minBalance = accountInfo.amount - accountInfo["min-balance"] / 10 ** 6;
       
       let estimatedCostPerAsset = 0.1 + MINT_FEE_PER_ASA + 0.002; // network fee + site fee + tx fees
-      if (formData.pinningProvider === "crust") {
+      if (effectiveProvider === "crust") {
         estimatedCostPerAsset += formData.collectionFormat === "ARC69" ? 1.4 : 2.8;
       }
 
@@ -292,7 +296,7 @@ export function BatchMint() {
       let unsignedAssetTransaction: algosdk.Transaction[][] = [];
 
       if (formData.collectionFormat === "ARC3") {
-        if (formData.pinningProvider === "crust") {
+        if (effectiveProvider === "crust") {
           toast.info("Generating Crust-based ARC3 Transactions...");
           const { txnsArray } = await createARC3AssetMintArrayV2Batch(
             data_for_txns,
@@ -302,7 +306,7 @@ export function BatchMint() {
             mnemonic
           );
           unsignedAssetTransaction = txnsArray;
-        } else if (formData.pinningProvider === "pinata") {
+        } else if (effectiveProvider === "pinata") {
           toast.info("Generating Pinata-based ARC3 Transactions...");
           unsignedAssetTransaction = await createARC3AssetMintArray(
             data_for_txns,
@@ -327,7 +331,7 @@ export function BatchMint() {
           );
         }
       } else if (formData.collectionFormat === "ARC19") {
-        if (formData.pinningProvider === "crust") {
+        if (effectiveProvider === "crust") {
           toast.info("Generating Crust-based ARC19 Transactions...");
           const { txnsArray } = await createARC19AssetMintArrayV2Batch(
             data_for_txns,
@@ -337,7 +341,7 @@ export function BatchMint() {
             mnemonic
           );
           unsignedAssetTransaction = txnsArray;
-        } else if (formData.pinningProvider === "pinata") {
+        } else if (effectiveProvider === "pinata") {
           toast.info("Generating Pinata-based ARC19 Transactions...");
           unsignedAssetTransaction = await createARC19AssetMintArray(
             data_for_txns,
@@ -405,7 +409,7 @@ export function BatchMint() {
       }
 
       // Crust groups are 4 txs, Pinata / None / ARC69 are 2 txs
-      const chunkSize = (formData.pinningProvider === "crust" && formData.collectionFormat !== "ARC69") ? 4 : 2;
+      const chunkSize = (effectiveProvider === "crust" && formData.collectionFormat !== "ARC69") ? 4 : 2;
       const groups = sliceIntoChunks(signedTransactions, chunkSize);
 
       for (let i = 0; i < groups.length; i++) {
@@ -503,21 +507,23 @@ export function BatchMint() {
                   IPFS Pinning Provider
                 </label>
                 <div className="flex bg-slate-900/80 p-1.5 rounded-xl border border-slate-700 w-full">
+                  {!isTestnet && (
+                    <button
+                      type="button"
+                      className={`flex-1 py-2 text-xs md:text-sm font-bold rounded-lg transition-all duration-300 ${
+                        effectiveProvider === "crust"
+                          ? "bg-gradient-to-r from-orange-500 to-amber-500 text-black shadow-md font-extrabold"
+                          : "text-slate-400 hover:text-white"
+                      }`}
+                      onClick={() => setFormData({ ...formData, pinningProvider: "crust" })}
+                    >
+                      Crust Network
+                    </button>
+                  )}
                   <button
                     type="button"
                     className={`flex-1 py-2 text-xs md:text-sm font-bold rounded-lg transition-all duration-300 ${
-                      formData.pinningProvider === "crust"
-                        ? "bg-gradient-to-r from-orange-500 to-amber-500 text-black shadow-md font-extrabold"
-                        : "text-slate-400 hover:text-white"
-                    }`}
-                    onClick={() => setFormData({ ...formData, pinningProvider: "crust" })}
-                  >
-                    Crust Network
-                  </button>
-                  <button
-                    type="button"
-                    className={`flex-1 py-2 text-xs md:text-sm font-bold rounded-lg transition-all duration-300 ${
-                      formData.pinningProvider === "pinata"
+                      effectiveProvider === "pinata"
                         ? "bg-gradient-to-r from-orange-500 to-amber-500 text-black shadow-md font-extrabold"
                         : "text-slate-400 hover:text-white"
                     }`}
@@ -528,7 +534,7 @@ export function BatchMint() {
                   <button
                     type="button"
                     className={`flex-1 py-2 text-xs md:text-sm font-bold rounded-lg transition-all duration-300 ${
-                      formData.pinningProvider === "none"
+                      effectiveProvider === "none"
                         ? "bg-gradient-to-r from-orange-500 to-amber-500 text-black shadow-md font-extrabold"
                         : "text-slate-400 hover:text-white"
                     }`}
@@ -537,11 +543,16 @@ export function BatchMint() {
                     None
                   </button>
                 </div>
+                {isTestnet && (
+                  <p className="mt-2 text-xs text-amber-500 font-medium">
+                    ⚠️ Crust pinning is disabled on Testnet. Pinata (JWT) or None are the only options.
+                  </p>
+                )}
               </div>
             </div>
 
             {/* Pinata JWT Field */}
-            {formData.pinningProvider === "pinata" && (
+            {effectiveProvider === "pinata" && (
               <div className="bg-slate-900/40 p-4 rounded-xl border border-slate-800 animate-fadeIn">
                 <label className="block mb-2 text-xs font-semibold text-gray-300 uppercase tracking-wider">
                   Pinata JWT Token
