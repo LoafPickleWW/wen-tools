@@ -7,8 +7,9 @@ import { SimpleUpdate } from "./SimpleUpdate";
 import { BatchUpdate } from "./BatchUpdate";
 import { CollectionDataDownloader } from "./CollectionDataDownloader";
 import { CollectionSnapshot } from "./CollectionSnapshotComponent";
+import { NFTImportTool } from "./NFTImportTool";
 
-type CreatorPath = null | "generate" | "mint_options" | "update_options" | "downloader" | "snapshot" | "simple_mint" | "batch_mint" | "simple_update" | "bulk_update";
+type CreatorPath = null | "generate" | "mint_options" | "update_options" | "downloader" | "snapshot" | "simple_mint" | "batch_mint" | "simple_update" | "bulk_update" | "import";
 
 interface MintingSuiteProps {
   defaultPath?: CreatorPath;
@@ -57,6 +58,8 @@ export function MintingSuite({ defaultPath = null }: MintingSuiteProps) {
         return <CollectionDataDownloader />;
       case "snapshot":
         return <CollectionSnapshot />;
+      case "import":
+        return <NFTImportTool />;
 
       case "mint_options":
         return (
@@ -165,7 +168,7 @@ export function MintingSuite({ defaultPath = null }: MintingSuiteProps) {
             >
               <img src="/icons/mintupdate.png" alt="Update" className="w-12 h-12 mb-4 object-contain invert" />
               <h3 className="text-xl font-bold group-hover:text-orange-400 transition">
-                Already Minted Collection
+                Update Minted Collection
               </h3>
               <p className="text-gray-300 text-sm mt-3 leading-relaxed">
                 Modify configurations, update transaction notes, or alter dynamic metadata reserve references on-chain.
@@ -191,7 +194,7 @@ export function MintingSuite({ defaultPath = null }: MintingSuiteProps) {
             {/* Path 5: Find Collection Holders */}
             <div
               onClick={() => setCurrentPath("snapshot")}
-              className="bg-white/5 backdrop-blur-md border border-white/10 hover:border-orange-500/30 hover:bg-white/10 rounded-2xl p-6 md:p-8 cursor-pointer transition shadow-xl group duration-300 transform hover:scale-[1.01] md:col-span-2 max-w-xl mx-auto w-full"
+              className="bg-white/5 backdrop-blur-md border border-white/10 hover:border-orange-500/30 hover:bg-white/10 rounded-2xl p-6 md:p-8 cursor-pointer transition shadow-xl group duration-300 transform hover:scale-[1.01]"
             >
               <img src="/icons/devtools.png" alt="Holders" className="w-12 h-12 mb-4 object-contain invert" />
               <h3 className="text-xl font-bold group-hover:text-orange-400 transition">
@@ -201,6 +204,21 @@ export function MintingSuite({ defaultPath = null }: MintingSuiteProps) {
                 Query and snapshot all current holders of a given NFT collection or asset. Generate accurate snapshots for airdrops or community analytics.
               </p>
               <span className="text-orange-400 text-xs font-semibold mt-6 block">Snapshot Holders →</span>
+            </div>
+
+            {/* Path 6: Import from other chains */}
+            <div
+              onClick={() => setCurrentPath("import")}
+              className="bg-white/5 backdrop-blur-md border border-white/10 hover:border-orange-500/30 hover:bg-white/10 rounded-2xl p-6 md:p-8 cursor-pointer transition shadow-xl group duration-300 transform hover:scale-[1.01]"
+            >
+              <img src="/icons/mint.png" alt="Import" className="w-12 h-12 mb-4 object-contain invert" />
+              <h3 className="text-xl font-bold group-hover:text-orange-400 transition">
+                Import from other chains
+              </h3>
+              <p className="text-gray-300 text-sm mt-3 leading-relaxed">
+                Have NFTs from other chains you want to move over? Scan and re-mint your XRPL collections on Algorand.
+              </p>
+              <span className="text-orange-400 text-xs font-semibold mt-6 block">Launch NFT Import Tool →</span>
             </div>
           </div>
         );

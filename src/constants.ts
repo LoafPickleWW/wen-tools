@@ -180,6 +180,15 @@ export const TOOLS = [
     icon: "/icons/wenpad.png",
     hideFromLanding: true
   },
+  {
+    id: "nft_import",
+    label: "NFT Import Tool",
+    description: "Import your NFTs from other chains (XRP Ledger, etc.) and re-mint them on Algorand.",
+    path: "/nft-import",
+    category: "creator",
+    icon: "/icons/mint.png",
+    hideFromLanding: true
+  },
 
   // ── ASSET SUITE (MANAGEMENT & DISTRIBUTION) ────────────────────────────────
   {

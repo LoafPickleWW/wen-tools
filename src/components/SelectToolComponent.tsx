@@ -27,7 +27,8 @@ const SUITES = [
       "Layered artwork & metadata generator (WenPad)",
       "Simple single-asset & bulk-collection minter",
       "Collection metadata updater (individual or CSV bulk)",
-      "Auto-detect Collection Data Downloader (CSV export)"
+      "Auto-detect Collection Data Downloader (CSV export)",
+      "Import NFTs from other chains (XRP Ledger, etc.)"
     ],
     icon: "/icons/mint.png",
     path: "/minting-journey"

@@ -144,6 +144,10 @@ function App() {
               element={<SimpleUpdate />}
             />
             <Route path="/minting-journey" element={<MintingSuite />} />
+            <Route
+              path="/nft-import"
+              element={<MintingSuite defaultPath="import" />}
+            />
             <Route path="/really-simple-mint" element={<SimpleMint />} />
             <Route path='/wen-pad' element={<WenPad />} />
             <Route path='/xgov' element={<XGov />} />

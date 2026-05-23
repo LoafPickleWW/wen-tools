@@ -108,6 +108,18 @@ export default defineConfig({
       "Cross-Origin-Opener-Policy": "same-origin",
     },
     proxy: {
+      '/api/xrpl-mainnet': {
+        target: 'https://s2-clio.ripple.com:51234',
+        changeOrigin: true,
+        secure: false,
+        rewrite: (path) => path.replace(/^\/api\/xrpl-mainnet/, '')
+      },
+      '/api/xrpl-testnet': {
+        target: 'https://clio.altnet.rippletest.net:51234',
+        changeOrigin: true,
+        secure: false,
+        rewrite: (path) => path.replace(/^\/api\/xrpl-testnet/, '')
+      },
       '/socket.io': {
         target: 'https://wen-liquid-auth.onrender.com',
         changeOrigin: true,
