@@ -40,6 +40,8 @@ import { PrivacyPolicy } from "./pages/PrivacyPolicy";
 import AgentMarketplace from './pages/AgentMarketplace';
 import { BulkAssetManager } from "./pages/BulkAssetManager";
 import { MintingSuite } from "./pages/MintingSuite";
+import { WenWallet } from "./pages/WenWallet";
+import WalletAssetDetail from "./pages/WalletAssetDetail";
 
 
 
@@ -158,6 +160,9 @@ function App() {
             <Route path="/terms" element={<TermsOfUse />} />
             <Route path="/privacy" element={<PrivacyPolicy />} />
             <Route path="/agents" element={<AgentMarketplace />} />
+            <Route path="/wallet" element={<WenWallet />} />
+            <Route path="/wallet/account/:account" element={<WenWallet />} />
+            <Route path="/wallet/asset/:assetId" element={<WalletAssetDetail />} />
             <Route path="*" element={<Home />} />
           </Routes>
           <Footer />

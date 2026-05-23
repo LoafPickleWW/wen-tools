@@ -7,7 +7,7 @@ export const MAINNET_NFD_API_BASE_URL = "https://api.nf.domains";
 export const TESTNET_NFD_API_BASE_URL = "https://api.testnet.nf.domains";
 
 // ASSET PREVIEW
-export const ASSET_PREVIEW = "https://wallet.wen.tools/asset/";
+export const ASSET_PREVIEW = "/wallet/asset/";
 
 // DONATION WALLETS
 export const DONATE_WALLET_1 =
@@ -306,6 +306,14 @@ export const TOOLS = [
   },
 
   // ── WALLETS & ANALYTICS ────────────────────────────────────────────────────
+  {
+    id: "wen_wallet",
+    label: "Wen Wallet",
+    description: "Visual portfolio asset browser with integrated bulk operations including send, opt-in, opt-out, and destroy.",
+    path: "/wallet",
+    category: "analytics",
+    icon: "/icons/wallet.png"
+  },
   {
     id: "post_quantum",
     label: "Post-Quantum Wallet",

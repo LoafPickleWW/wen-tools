@@ -1,5 +1,5 @@
-// src/Carousel.js
 import React, { useState } from "react";
+import { Link } from "react-router-dom";
 import { Image } from "../types";
 import { trackEvent } from "../utils";
 
@@ -19,14 +19,9 @@ const CarouselComponent = ({ images }: { images: Image[] }) => {
   return (
     <div className="mx-auto my-2 md:my-4">
       <div>
-        {images.map((image, index) => (
-          <a 
-            href={image.url} 
-            target="_blank" 
-            rel="noreferrer" 
-            key={index}
-            onClick={() => trackEvent("carousel_click", "home", image.path)}
-          >
+        {images.map((image, index) => {
+          const isExternal = image.url.startsWith("http");
+          const imgElement = (
             <img
               src={image.path}
               alt={image.path}
@@ -34,8 +29,28 @@ const CarouselComponent = ({ images }: { images: Image[] }) => {
                 index === currentIndex ? "block" : "hidden"
               } h-24 md:h-28 mx-auto rounded-md`}
             />
-          </a>
-        ))}
+          );
+
+          return isExternal ? (
+            <a
+              href={image.url}
+              target="_blank"
+              rel="noreferrer"
+              key={index}
+              onClick={() => trackEvent("carousel_click", "home", image.path)}
+            >
+              {imgElement}
+            </a>
+          ) : (
+            <Link
+              to={image.url}
+              key={index}
+              onClick={() => trackEvent("carousel_click", "home", image.path)}
+            >
+              {imgElement}
+            </Link>
+          );
+        })}
       </div>
     </div>
   );

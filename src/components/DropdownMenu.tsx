@@ -10,6 +10,7 @@ import {
 } from "@mui/material";
 
 import { FaWallet } from "react-icons/fa";
+import { Link } from "react-router-dom";
 import { type DropdownMenu } from "../types";
 import DonationDialog from "./DonationDialog";
 
@@ -46,9 +47,9 @@ const DropdownMenu = ({ onClose, isOpen }: DropdownMenu) => {
       <Divider color="white" />
       <List className="text-center">
         <ListItemButton
-          component="a"
-          href="https://wallet.wen.tools"
-          target="_blank"
+          component={Link}
+          to="/wallet"
+          onClick={onClose}
         >
           <ListItemIcon>
             <FaWallet size={20} color="white" />

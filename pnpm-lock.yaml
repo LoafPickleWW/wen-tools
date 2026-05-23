@@ -74,6 +74,9 @@ importers:
       file-saver:
         specifier: ^2.0.5
         version: 2.0.5
+      fuse.js:
+        specifier: ^7.3.0
+        version: 7.3.0
       jotai:
         specifier: ^2.10.1
         version: 2.11.1(@types/react@18.3.18)(react@18.3.1)
@@ -122,6 +125,9 @@ importers:
       tweetnacl-util:
         specifier: ^0.15.1
         version: 0.15.1
+      uint8-to-base64:
+        specifier: ^0.2.1
+        version: 0.2.1
       uuid:
         specifier: ^14.0.0
         version: 14.0.0
@@ -131,6 +137,9 @@ importers:
       xterm-addon-fit:
         specifier: ^0.8.0
         version: 0.8.0(xterm@5.3.0)
+      zustand:
+        specifier: ^5.0.13
+        version: 5.0.13(@types/react@18.3.18)(react@18.3.1)(use-sync-external-store@1.4.0(react@18.3.1))
     devDependencies:
       '@algorandfoundation/algokit-utils':
         specifier: 7.1.0
@@ -2080,6 +2089,10 @@ packages:
   function-bind@1.1.2:
     resolution: {integrity: sha512-7XHNxH7qX9xG5mIwxkhumTox/MIRNcOgDrxWsMt2pAr23WHp6MrRlN7FBSFpCpr+oVO0F744iUgR82nJMfG2SA==}
 
+  fuse.js@7.3.0:
+    resolution: {integrity: sha512-plz8RVjfcDedTGfVngWH1jmJvBvAwi1v2jecfDerbEnMcmOYUEEwKFTHbNoCiYyzaK2Ws8lABkTCcRSqCY1q4w==}
+    engines: {node: '>=10'}
+
   gensync@1.0.0-beta.2:
     resolution: {integrity: sha512-3hN7NaskYvMDLQY55gnW3NQ+mesEAepTqlg+VEbj7zzqEMBVNhzcGYYeqFo/TlYz6eQiFcp1HcsCZO+nGgS8zg==}
     engines: {node: '>=6.9.0'}
@@ -3163,6 +3176,9 @@ packages:
     engines: {node: '>=14.17'}
     hasBin: true
 
+  uint8-to-base64@0.2.1:
+    resolution: {integrity: sha512-uO/84GaoDUfiAxpa8EksjVLE77A9Kc7ZTziN4zRpq4de9yLaLcZn3jx1/sVjyupsywcVX6RKWbqLe7gUNyzH+Q==}
+
   uncrypto@0.1.3:
     resolution: {integrity: sha512-Ql87qFHB3s/De2ClA9e0gsnS6zXG27SkTiSJwjCc9MebbfapQfuPzumMIUMi38ezPZVNFcHI9sUIepeQfw8J8Q==}
 
@@ -3368,6 +3384,24 @@ packages:
 
   zod@3.22.4:
     resolution: {integrity: sha512-iC+8Io04lddc+mVqQ9AZ7OQ2MrUKGN+oIQyq1vemgt46jwCwLfhq7/pwnBnNXXXZb8VTVLKwp9EDkx+ryxIWmg==}
+
+  zustand@5.0.13:
+    resolution: {integrity: sha512-efI2tVaVQPqtOh114loML/Z80Y4NP3yc+Ff0fYiZJPauNeWZeIp/bRFD7I9bfmCOYBh/PHxlglQ9+wvlwnPikQ==}
+    engines: {node: '>=12.20.0'}
+    peerDependencies:
+      '@types/react': '>=18.0.0'
+      immer: '>=9.0.6'
+      react: '>=18.0.0'
+      use-sync-external-store: '>=1.2.0'
+    peerDependenciesMeta:
+      '@types/react':
+        optional: true
+      immer:
+        optional: true
+      react:
+        optional: true
+      use-sync-external-store:
+        optional: true
 
 snapshots:
 
@@ -5320,6 +5354,8 @@ snapshots:
 
   function-bind@1.1.2: {}
 
+  fuse.js@7.3.0: {}
+
   gensync@1.0.0-beta.2: {}
 
   get-caller-file@2.0.5: {}
@@ -6411,6 +6447,8 @@ snapshots:
 
   typescript@5.9.3: {}
 
+  uint8-to-base64@0.2.1: {}
+
   uncrypto@0.1.3: {}
 
   undici-types@5.26.5: {}
@@ -6569,3 +6607,9 @@ snapshots:
   yocto-queue@0.1.0: {}
 
   zod@3.22.4: {}
+
+  zustand@5.0.13(@types/react@18.3.18)(react@18.3.1)(use-sync-external-store@1.4.0(react@18.3.1)):
+    optionalDependencies:
+      '@types/react': 18.3.18
+      react: 18.3.1
+      use-sync-external-store: 1.4.0(react@18.3.1)

@@ -224,8 +224,8 @@ export function Encyclopedia() {
               The wen.tools suite is part of a broader ecosystem designed to decentralize the web. For non-developer operations, visit our companion platforms:
             </p>
             <div className="flex gap-6">
-              <a href="https://wallet.wen.tools" className="text-sm text-amber-400 hover:underline">Wen Wallet</a>
-              <a href="https://swap.wen.tools" className="text-sm text-amber-400 hover:underline">Wen Swap</a>
+              <Link to="/wallet" className="text-sm text-amber-400 hover:underline">Wen Wallet</Link>
+              <Link to="/wen-swap" className="text-sm text-amber-400 hover:underline">Wen Swap</Link>
             </div>
           </section>
 

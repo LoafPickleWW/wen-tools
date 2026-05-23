@@ -36,6 +36,7 @@
     "falcon-signatures": "^1.4.2",
     "fflate": "^0.8.2",
     "file-saver": "^2.0.5",
+    "fuse.js": "^7.3.0",
     "jotai": "^2.10.1",
     "lute-connect": "^1.4.1",
     "multiformats": "^13.3.1",
@@ -52,9 +53,11 @@
     "redis": "^5.12.1",
     "tweetnacl": "^1.0.3",
     "tweetnacl-util": "^0.15.1",
+    "uint8-to-base64": "^0.2.1",
     "uuid": "^14.0.0",
     "xterm": "^5.3.0",
-    "xterm-addon-fit": "^0.8.0"
+    "xterm-addon-fit": "^0.8.0",
+    "zustand": "^5.0.13"
   },
   "devDependencies": {
     "@algorandfoundation/algokit-utils": "7.1.0",

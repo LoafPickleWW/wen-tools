@@ -37,6 +37,7 @@ const SUITES = [
     label: "Wallets & Analytics",
     description: "Advanced account cryptography and portfolio analysis tools. Snapshot holdings across multiple assets and generate vanity addresses.",
     features: [
+      "Wen Wallet (Visual explorer & bulk send/opt-in/opt-out/destroy)",
       "Falcon-1024 Post-Quantum secured account creator",
       "Holdings Auditor (Wallet holdings & asset distribution)",
       "Vanity address generator for custom prefixes"
@@ -146,7 +147,7 @@ export function SelectToolComponent() {
         <div className="flex flex-col lg:flex-row items-center justify-center lg:gap-8 gap-6">
           <CarouselComponent
             images={[
-              { path: "./wenwallet.png", url: "https://wallet.wen.tools" },
+              { path: "./wenwallet.png", url: "/wallet" },
             ]}
           />
           <CarouselComponent

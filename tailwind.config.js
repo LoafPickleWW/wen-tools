@@ -22,6 +22,7 @@ export default {
         "secondary-black": "#000a02",
         "banner-grey": "#262626",
         "text-white": "#f9fafb",
+        "asset-detail-bg": "#1e1e1e",
       },
       fontSize: {
         xxs: "0.6rem",
