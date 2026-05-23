@@ -399,7 +399,7 @@ export function NFTImportTool() {
         </div>
 
         {/* Step Indicator */}
-        <div className="flex items-center justify-center gap-2 mb-8">
+        <div className="flex flex-wrap items-center justify-center gap-2 mb-8">
           {[
             { key: "input", label: "Configure" },
             { key: "scanning", label: "Scan" },
@@ -440,7 +440,7 @@ export function NFTImportTool() {
             {/* Source Chain */}
             <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-6">
               <label className="block text-sm font-semibold text-gray-300 mb-3">Source Chain</label>
-              <div className="flex gap-3">
+              <div className="flex flex-wrap gap-3">
                 <button
                   className={`flex items-center gap-2 px-5 py-3 rounded-xl text-sm font-semibold transition-all ${
                     sourceChain === "xrpl"
@@ -464,7 +464,7 @@ export function NFTImportTool() {
             {/* Source Network */}
             <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-6 animate-fadeIn">
               <label className="block text-sm font-semibold text-gray-300 mb-3">Source Network</label>
-              <div className="flex gap-3">
+              <div className="flex flex-wrap gap-3">
                 <button
                   onClick={() => setXrplNetwork("mainnet")}
                   className={`px-5 py-3 rounded-xl text-sm font-semibold transition-all ${
@@ -530,7 +530,7 @@ export function NFTImportTool() {
               <p className="text-xs text-gray-500 mb-3">
                 Specify a range of NFTs to load from the filtered list. Pera Wallet has a maximum signing limit of around 500 transactions.
               </p>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xxs text-gray-500 uppercase font-bold mb-1">Start Index</label>
                   <input
@@ -610,7 +610,7 @@ export function NFTImportTool() {
               <label className="block text-sm font-semibold text-gray-300 mb-2">
                 IPFS Pinning Provider
               </label>
-              <div className="flex gap-3 mb-3">
+              <div className="flex flex-wrap gap-3 mb-3">
                 <button
                   onClick={() => setPinningProvider("crust")}
                   className={`px-4 py-2 rounded-lg text-sm font-semibold transition ${
@@ -699,7 +699,7 @@ export function NFTImportTool() {
         {step === "preview" && (
           <div className="animate-fadeIn space-y-6">
             {/* Collection Summary Panel */}
-            <div className="bg-white/5 border border-white/10 rounded-2xl p-6 backdrop-blur-md grid grid-cols-2 md:grid-cols-5 gap-4 text-left">
+            <div className="bg-white/5 border border-white/10 rounded-2xl p-6 backdrop-blur-md grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4 text-left">
               <div className="space-y-1">
                 <span className="text-[10px] text-gray-500 uppercase font-bold tracking-wider">XRP Address</span>
                 <p className="text-sm font-mono text-gray-300 truncate" title={xrpAddress}>{xrpAddress}</p>
@@ -908,7 +908,7 @@ export function NFTImportTool() {
               {mintedAssets.length > 0 && (
                 <div className="bg-black/30 border border-white/10 rounded-xl p-4 mb-6 text-left max-h-60 overflow-y-auto">
                   <span className="text-xs text-gray-500 block mb-2 font-semibold">Created Asset IDs:</span>
-                  <div className="grid grid-cols-2 gap-2 text-xs font-mono">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs font-mono">
                     {mintedAssets.map((assetId) => {
                       const isTestnet = activeNetwork === "testnet";
                       const explorerBase = isTestnet

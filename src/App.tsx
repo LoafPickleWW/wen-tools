@@ -144,6 +144,8 @@ function App() {
               element={<SimpleUpdate />}
             />
             <Route path="/minting-journey" element={<MintingSuite />} />
+            <Route path="/creator-suite" element={<MintingSuite />} />
+            <Route path="/creator-suite/:toolId" element={<MintingSuite />} />
             <Route
               path="/nft-import"
               element={<MintingSuite defaultPath="import" />}

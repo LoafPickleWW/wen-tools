@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+
+import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { Meta } from "../components/Meta";
 import { WenPad } from "./WenPad";
 import { SimpleMint } from "./SimpleMint";
@@ -16,11 +17,52 @@ interface MintingSuiteProps {
 }
 
 export function MintingSuite({ defaultPath = null }: MintingSuiteProps) {
-  const [currentPath, setCurrentPath] = useState<CreatorPath>(defaultPath);
+  const { toolId } = useParams<{ toolId?: string }>();
+  const navigate = useNavigate();
+  const location = useLocation();
 
-  useEffect(() => {
-    setCurrentPath(defaultPath);
-  }, [defaultPath]);
+  const getPathFromSlug = (slug?: string): CreatorPath => {
+    switch (slug) {
+      case "wenpad": return "generate";
+      case "mint-options": return "mint_options";
+      case "update-options": return "update_options";
+      case "downloader": return "downloader";
+      case "snapshot": return "snapshot";
+      case "simple-mint": return "simple_mint";
+      case "bulk-mint": return "batch_mint";
+      case "simple-update": return "simple_update";
+      case "bulk-update": return "bulk_update";
+      case "nft-import": return "import";
+      default: return null;
+    }
+  };
+
+  const getSlugFromPath = (path: CreatorPath): string => {
+    switch (path) {
+      case "generate": return "wenpad";
+      case "mint_options": return "mint-options";
+      case "update_options": return "update-options";
+      case "downloader": return "downloader";
+      case "snapshot": return "snapshot";
+      case "simple_mint": return "simple-mint";
+      case "batch_mint": return "bulk-mint";
+      case "simple_update": return "simple-update";
+      case "bulk_update": return "bulk-update";
+      case "import": return "nft-import";
+      default: return "";
+    }
+  };
+
+  const isCreatorSuiteRoute = location.pathname.startsWith("/creator-suite");
+  const currentPath = isCreatorSuiteRoute ? getPathFromSlug(toolId) : defaultPath;
+
+  const setCurrentPath = (path: CreatorPath) => {
+    if (path === null) {
+      navigate("/creator-suite");
+    } else {
+      navigate(`/creator-suite/${getSlugFromPath(path)}`);
+    }
+  };
 
   const getBackState = (): CreatorPath => {
     switch (currentPath) {
