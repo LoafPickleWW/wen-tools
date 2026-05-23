@@ -82,7 +82,7 @@ const AssetTransferDialog: React.FC<AssetTransferDialogProps> = ({
         return;
       }
 
-      let assetsForTransfer = [];
+      const assetsForTransfer = [];
       const assets = toolState.selectedAssets;
       for (let i = 0; i < assets.length; i++) {
         let storedAsset = useWalletAssetStore.getState().assets.find(a => a.index === assets[i]);

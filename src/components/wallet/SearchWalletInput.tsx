@@ -11,7 +11,7 @@ export default function SearchWalletInput() {
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    let walletAddress = searchWallet.trim();
+    const walletAddress = searchWallet.trim();
     if (walletAddress.toLowerCase().includes(".algo")) {
       const response = await getWalletAddressFromNfDomain(
         walletAddress.toLowerCase()
@@ -32,7 +32,7 @@ export default function SearchWalletInput() {
           toast.error("Invalid wallet address!");
           return;
         }
-      } catch (error) {
+      } catch {
         toast.error("Invalid wallet address!");
         return;
       }

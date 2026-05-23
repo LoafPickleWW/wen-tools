@@ -11,23 +11,17 @@ import {
   formatAsARC3,
   formatAsARC19,
   formatAsARC69,
-  resolveUri,
+
   XRPL_MAINNET_ENDPOINT,
   XRPL_TESTNET_ENDPOINT,
   type ResolvedNFTMetadata,
   type AlgorandARC,
 } from "../utils/xrplImport";
 import {
-  createARC3AssetMintArrayV2,
-  createARC19AssetMintArrayV2,
-  createAssetMintArrayV2,
   sliceIntoChunks,
   walletSign,
-  pinImageToPinata,
-  pinJSONToPinata,
 } from "../utils";
-import { pinImageToCrust, pinJSONToCrust } from "../crust";
-import { TOOLS } from "../constants";
+import { TOOLS, MINT_FEE_WALLET } from "../constants";
 import FaqSectionComponent from "../components/FaqSectionComponent";
 
 type ImportStep = "input" | "scanning" | "resolving" | "preview" | "minting" | "done";
@@ -51,8 +45,7 @@ export function NFTImportTool() {
   const [endIndex, setEndIndex] = useState("500");
   const [arcFormat, setArcFormat] = useState<AlgorandARC>("ARC19");
   const [collectionName, setCollectionName] = useState("");
-  const [pinningProvider, setPinningProvider] = useState<"crust" | "pinata">("crust");
-  const [pinataToken, setPinataToken] = useState("");
+
   const [xrplNetwork, setXrplNetwork] = useState<"mainnet" | "testnet">("mainnet");
 
   // Sync network state when active wallet connects
@@ -195,10 +188,6 @@ export function NFTImportTool() {
       toast.error("No NFTs selected for import");
       return;
     }
-    if (pinningProvider === "pinata" && !pinataToken.trim()) {
-      toast.error("Please enter your Pinata API token");
-      return;
-    }
 
     const toMint = resolvedNFTs.filter((n) => selectedNFTs.has(n.nft_id));
     setStep("minting");
@@ -207,76 +196,67 @@ export function NFTImportTool() {
     abortRef.current = false;
 
     try {
-      // Build mint data based on selected ARC format
-      const mintDataArray: any[] = [];
+      const suggestedParams = await algodClient.getTransactionParams().do();
+      suggestedParams.flatFee = true;
+      suggestedParams.fee = 2000;
+
+      const allTxns: algosdk.Transaction[] = [];
+      let totalPrepared = 0;
 
       for (let i = 0; i < toMint.length; i++) {
         if (abortRef.current) break;
         const nft = toMint[i];
-
-        // First, re-pin the image to IPFS (so it's on Algorand-accessible pinning)
-        let imageCid = nft.imageIpfsCid;
-
-        if (nft.image && !imageCid) {
-          // Need to fetch and re-pin the image
-          try {
-            toast.info(`Fetching image for ${nft.name}...`, { autoClose: 1000 });
-            const imageResp = await fetch(resolveUri(nft.image));
-            const imageBlob = await imageResp.blob();
-            const imageFile = new File([imageBlob], `${nft.nft_serial}.png`, {
-              type: imageBlob.type || "image/png",
-            });
-
-            if (pinningProvider === "pinata") {
-              imageCid = await pinImageToPinata(pinataToken, imageFile);
-            } else {
-              let authBasic = localStorage.getItem("authBasic");
-              if (!authBasic) {
-                authBasic = "YWxnby1CQ0FQV0pBTFdBM04zRUlaUkZDTzU1UFEzWUJZQ1NHUFpYTkRIT09BNlI3Q0dIVElTVjJHQ1NZQzZZOkZyYjl6RWhudVVKZ0ZaY0d1cmRTUE45dW1SL1hHMnRlalc0VFpkb3huN3ZXMTVKOFd6TGMva3R2LytnMklWRVFRMVN4Vnk3N0plZ3laZkVKMkRxaEFRPT0=";
-                localStorage.setItem("authBasic", authBasic);
-              }
-              // For crust, we use the existing crust pinning
-              imageCid = await pinImageToCrust(authBasic, imageFile);
-            }
-          } catch (err) {
-            console.warn(`Failed to re-pin image for ${nft.name}`, err);
-            // Use original image URL as fallback
-          }
+        
+        let finalFormat = arcFormat;
+        // If they chose ARC19/ARC3 but the metadata is not IPFS, force fallback to ARC69
+        if (finalFormat !== "ARC69" && !nft.metadataIpfsCid && !nft.decodedUri.startsWith("ipfs://")) {
+          toast.warn(`Non-IPFS metadata detected for ${nft.name}. Enforcing ARC69 format.`, { autoClose: 3500 });
+          finalFormat = "ARC69";
         }
 
-        const imageUrl = imageCid ? `ipfs://${imageCid}` : nft.image;
-
-        // Update the NFT image reference
-        const updatedNft = { ...nft, image: imageUrl, imageIpfsCid: imageCid || "" };
-
-        if (arcFormat === "ARC69") {
-          const data = formatAsARC69(updatedNft, collectionName);
-          mintDataArray.push(data);
-        } else if (arcFormat === "ARC3") {
-          const { mintData, metadataJson } = formatAsARC3(updatedNft, collectionName);
-          // Pin metadata JSON to IPFS
-          let metadataCid: string;
-          if (pinningProvider === "pinata") {
-            metadataCid = await pinJSONToPinata(pinataToken, JSON.stringify(metadataJson));
-          } else {
-            let authBasic = localStorage.getItem("authBasic");
-            if (!authBasic) {
-              authBasic = "YWxnby1CQ0FQV0pBTFdBM04zRUlaUkZDTzU1UFEzWUJZQ1NHUFpYTkRIT09BNlI3Q0dIVElTVjJHQ1NZQzZZOkZyYjl6RWhudVVKZ0ZaY0d1cmRTUE45dW1SL1hHMnRlalc0VFpkb3huN3ZXMTVKOFd6TGMva3R2LytnMklWRVFRMVN4Vnk3N0plZ3laZkVKMkRxaEFRPT0=";
-              localStorage.setItem("authBasic", authBasic);
-            }
-            metadataCid = await pinJSONToCrust(authBasic, JSON.stringify(metadataJson));
-          }
-          mintData.asset_url = `ipfs://${metadataCid}#arc3`;
-          mintDataArray.push(mintData);
+        let mintData: any;
+        if (finalFormat === "ARC69") {
+          mintData = formatAsARC69(nft, collectionName);
+        } else if (finalFormat === "ARC3") {
+          mintData = formatAsARC3(nft, collectionName);
         } else {
-          // ARC19
-          const { mintData, metadataJson } = formatAsARC19(updatedNft, collectionName);
-          mintData.ipfs_data = metadataJson;
-          mintDataArray.push(mintData);
+          mintData = formatAsARC19(nft, collectionName);
         }
 
-        setMintProgress({ done: i + 1, total: toMint.length });
-        toast.info(`Prepared ${i + 1}/${toMint.length}: ${nft.name}`, {
+        // Build native asset create txn
+        const asset_create_tx = algosdk.makeAssetCreateTxnWithSuggestedParamsFromObject({
+          from: activeAddress,
+          manager: activeAddress,
+          assetName: mintData.asset_name,
+          unitName: mintData.unit_name,
+          total: BigInt(mintData.total_supply) * 10n ** BigInt(mintData.decimals),
+          decimals: parseInt(mintData.decimals as any),
+          reserve: mintData.reserve_address || activeAddress, // Default to activeAddress for non-ARC19
+          freeze: mintData.has_freeze === "Y" ? activeAddress : undefined,
+          assetURL: mintData.asset_url,
+          suggestedParams: { ...suggestedParams, fee: 2000 },
+          clawback: mintData.has_clawback === "Y" ? activeAddress : undefined,
+          defaultFrozen: mintData.default_frozen === "Y" ? true : false,
+          note: mintData.asset_note ? new TextEncoder().encode(JSON.stringify(mintData.asset_note)) : undefined,
+        });
+
+        // Appending 0 ALGO tracking fee
+        const fee_tx = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
+          from: activeAddress,
+          to: MINT_FEE_WALLET,
+          amount: 0,
+          suggestedParams: { ...suggestedParams, fee: 1000 },
+          note: new TextEncoder().encode("via wen.tools cross-chain importer | " + Math.random().toString(36).substring(2)),
+        });
+
+        // Group the two transactions together natively
+        const group = algosdk.assignGroupID([asset_create_tx, fee_tx]);
+        allTxns.push(...group);
+
+        totalPrepared++;
+        setMintProgress({ done: totalPrepared, total: toMint.length });
+        
+        toast.info(`Prepared ${totalPrepared}/${toMint.length}: ${nft.name}`, {
           autoClose: 500,
         });
       }
@@ -286,54 +266,28 @@ export function NFTImportTool() {
         return;
       }
 
-      // Batch mint in groups of 16 (Algorand atomic txn limit)
-      const chunks = sliceIntoChunks(mintDataArray, 16);
+      // We have an array of transactions in groups of 2.
+      // We will batch sign them (max 16 txns = 8 NFTs at a time)
+      const txnChunks = sliceIntoChunks(allTxns, 16);
       const allCreatedIds: number[] = [];
 
-      for (let c = 0; c < chunks.length; c++) {
-        toast.info(`Signing batch ${c + 1} of ${chunks.length}...`);
-
-        let result: any;
-        if (arcFormat === "ARC69") {
-          result = await createAssetMintArrayV2(
-            chunks[c],
-            activeAddress,
-            algodClient,
-            transactionSigner
-          );
-        } else if (arcFormat === "ARC3") {
-          result = await createARC3AssetMintArrayV2(
-            chunks[c],
-            activeAddress,
-            algodClient,
-            transactionSigner
-          );
-        } else {
-          result = await createARC19AssetMintArrayV2(
-            chunks[c],
-            activeAddress,
-            algodClient,
-            transactionSigner
-          );
-        }
-
-        // Sign and submit
-        const signedTxns = await walletSign(
-          result.atc.buildGroup().map((t: any) => t.txn),
-          transactionSigner
-        );
-
-        // Submit in groups
-        const txnChunks = sliceIntoChunks(Array.from(signedTxns), 4);
-        for (const txnChunk of txnChunks) {
+      for (let c = 0; c < txnChunks.length; c++) {
+        toast.info(`Signing batch ${c + 1} of ${txnChunks.length}...`);
+        
+        // walletSign natively accepts array of un-signed txns
+        const signedTxns = await walletSign(txnChunks[c], transactionSigner);
+        
+        // Submit in groups of 2 (individual NFTs) to ensure we can reliably parse the asset-index
+        const signedGroups = sliceIntoChunks(Array.from(signedTxns), 2);
+        for(const signedGroup of signedGroups) {
           try {
-            const { txid } = await algodClient.sendRawTransaction(txnChunk).do();
+            const { txid } = await algodClient.sendRawTransaction(signedGroup).do();
             const confirmed = await algosdk.waitForConfirmation(algodClient, txid, 4);
             if (confirmed["asset-index"]) {
               allCreatedIds.push(confirmed["asset-index"]);
             }
-          } catch (err) {
-            console.warn("Txn submission error (may be partial success):", err);
+          } catch(e) {
+             console.warn("Group submission error:", e);
           }
         }
       }
@@ -354,8 +308,6 @@ export function NFTImportTool() {
     resolvedNFTs,
     arcFormat,
     collectionName,
-    pinningProvider,
-    pinataToken,
   ]);
 
   // ─── Filtering ─────────────────────────────────────────────────────────────
@@ -605,43 +557,7 @@ export function NFTImportTool() {
               <p className="text-xxs text-gray-600 mt-1">Max 8 characters, alphanumeric</p>
             </div>
 
-            {/* IPFS Provider */}
-            <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-6">
-              <label className="block text-sm font-semibold text-gray-300 mb-2">
-                IPFS Pinning Provider
-              </label>
-              <div className="flex flex-wrap gap-3 mb-3">
-                <button
-                  onClick={() => setPinningProvider("crust")}
-                  className={`px-4 py-2 rounded-lg text-sm font-semibold transition ${
-                    pinningProvider === "crust"
-                      ? "bg-orange-500/20 border border-orange-500 text-orange-400"
-                      : "bg-white/5 border border-white/10 text-gray-400 hover:border-white/20"
-                  }`}
-                >
-                  Crust Network
-                </button>
-                <button
-                  onClick={() => setPinningProvider("pinata")}
-                  className={`px-4 py-2 rounded-lg text-sm font-semibold transition ${
-                    pinningProvider === "pinata"
-                      ? "bg-orange-500/20 border border-orange-500 text-orange-400"
-                      : "bg-white/5 border border-white/10 text-gray-400 hover:border-white/20"
-                  }`}
-                >
-                  Pinata
-                </button>
-              </div>
-              {pinningProvider === "pinata" && (
-                <input
-                  type="password"
-                  value={pinataToken}
-                  onChange={(e) => setPinataToken(e.target.value)}
-                  placeholder="Pinata JWT Token"
-                  className="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-orange-500/50 transition text-sm"
-                />
-              )}
-            </div>
+
 
             {/* Scan Button */}
             <div className="flex justify-center pt-2">

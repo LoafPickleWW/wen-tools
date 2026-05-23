@@ -1,4 +1,5 @@
 import axios from "axios";
+import { createReserveAddressFromIpfsCid } from "../utils";
 
 // ─── XRPL Public Endpoints ──────────────────────────────────────────────────
 // Using Vercel/Vite proxy to Clio-enabled public nodes for nfts_by_issuer support
@@ -33,18 +34,15 @@ export interface ResolvedNFTMetadata {
   owner: string;
   nft_serial: number;
   nft_taxon: number;
-  // Decoded URI
-  decodedUri: string;
-  // Resolved metadata from IPFS/HTTP
+  decodedUri: string; // The raw XRPL URI
   name: string;
   description: string;
-  image: string; // resolved IPFS/HTTP URL to the image
-  imageIpfsCid: string; // raw IPFS CID of the image (if IPFS)
+  image: string; // The resolved HTTP URL of the image
+  imageIpfsCid: string; // The extracted CID if the image was on IPFS
+  metadataIpfsCid: string; // The extracted CID of the JSON metadata if it was on IPFS
   external_url: string;
   attributes: { trait_type: string; value: string }[];
-  // Raw metadata JSON
   rawMetadata: any;
-  // Status
   metadataResolved: boolean;
   imageResolved: boolean;
   error?: string;
@@ -63,6 +61,7 @@ export interface AlgorandMintData {
   has_clawback: string;
   has_freeze: string;
   default_frozen: string;
+  reserve_address?: string;
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -281,16 +280,17 @@ export async function resolveNFTMetadata(
   const decodedUri = decodeHexUri(nft.uri);
 
   const result: ResolvedNFTMetadata = {
-    nft_id: nft.nft_id,
-    issuer: nft.issuer,
-    owner: nft.owner,
-    nft_serial: nft.nft_serial,
-    nft_taxon: nft.nft_taxon,
-    decodedUri,
-    name: `XRPL NFT #${nft.nft_serial}`,
+    nft_id: nft.nft_id || "unknown",
+    issuer: nft.issuer || "",
+    owner: nft.owner || "",
+    nft_serial: nft.nft_serial || 0,
+    nft_taxon: nft.nft_taxon || 0,
+    decodedUri: decodedUri || "",
+    name: "Unknown NFT",
     description: "",
     image: "",
     imageIpfsCid: "",
+    metadataIpfsCid: "",
     external_url: "",
     attributes: [],
     rawMetadata: null,
@@ -320,6 +320,7 @@ export async function resolveNFTMetadata(
     // Try to fetch as JSON metadata
     const metadata = await fetchJsonWithFallback(decodedUri);
     result.rawMetadata = metadata;
+    result.metadataIpfsCid = extractIpfsCid(decodedUri) || "";
     result.metadataResolved = true;
 
     // Extract fields (handle both ERC-721 and XLS-24 formats)
@@ -394,6 +395,7 @@ export async function resolveAllMetadata(
           description: "",
           image: "",
           imageIpfsCid: "",
+          metadataIpfsCid: "",
           external_url: "",
           attributes: [],
           rawMetadata: null,
@@ -447,82 +449,63 @@ export function formatAsARC69(
 
 /**
  * Format a resolved XRPL NFT into Algorand ARC-3 mint data
- * (metadata JSON is pinned to IPFS, asset_url points to metadata)
+ * (asset_url points directly to the existing IPFS CID with #arc3)
  */
 export function formatAsARC3(
   nft: ResolvedNFTMetadata,
   collectionName: string = ""
-): { mintData: AlgorandMintData; metadataJson: any } {
-  const metadata: any = {
-    name: nft.name,
-    description: nft.description,
-    image: nft.image.startsWith("ipfs://")
-      ? nft.image
-      : nft.imageIpfsCid
-        ? `ipfs://${nft.imageIpfsCid}`
-        : nft.image,
-    image_mimetype: guessMimeType(nft.image),
-    external_url: nft.external_url,
-    properties: {} as Record<string, string>,
-  };
-
-  for (const attr of nft.attributes) {
-    metadata.properties[attr.trait_type] = attr.value;
-  }
-
+): AlgorandMintData {
   return {
-    mintData: {
-      asset_name: sanitizeAssetName(nft.name),
-      unit_name: sanitizeUnitName(collectionName || nft.name),
-      total_supply: 1,
-      decimals: 0,
-      asset_url: "", // will be filled after IPFS pinning
-      has_clawback: "N",
-      has_freeze: "N",
-      default_frozen: "N",
-    },
-    metadataJson: metadata,
+    asset_name: sanitizeAssetName(nft.name),
+    unit_name: sanitizeUnitName(collectionName || nft.name),
+    total_supply: 1,
+    decimals: 0,
+    asset_url: nft.metadataIpfsCid ? `ipfs://${nft.metadataIpfsCid}#arc3` : nft.decodedUri,
+    has_clawback: "N",
+    has_freeze: "N",
+    default_frozen: "N",
   };
 }
 
 /**
  * Format a resolved XRPL NFT into Algorand ARC-19 mint data
- * (uses reserve address to encode IPFS CID)
+ * (uses reserve address to encode the existing JSON Metadata IPFS CID)
  */
 export function formatAsARC19(
   nft: ResolvedNFTMetadata,
   collectionName: string = ""
-): { mintData: AlgorandMintData; metadataJson: any } {
-  const metadata: any = {
-    name: nft.name,
+): AlgorandMintData {
+  // Compute reserve address from the JSON metadata CID
+  let assetURL = "";
+  let reserveAddress = "";
+  
+  if (nft.metadataIpfsCid) {
+    const ret = createReserveAddressFromIpfsCid(nft.metadataIpfsCid);
+    assetURL = ret.assetURL;
+    reserveAddress = ret.reserveAddress;
+  }
+
+  const arc19Note = {
+    standard: "arc19",
     description: nft.description,
-    image: nft.image.startsWith("ipfs://")
-      ? nft.image
-      : nft.imageIpfsCid
-        ? `ipfs://${nft.imageIpfsCid}`
-        : nft.image,
-    image_mimetype: guessMimeType(nft.image),
-    external_url: nft.external_url,
     properties: {} as Record<string, string>,
   };
 
   for (const attr of nft.attributes) {
-    metadata.properties[attr.trait_type] = attr.value;
+    arc19Note.properties[attr.trait_type] = attr.value;
   }
 
   return {
-    mintData: {
-      asset_name: sanitizeAssetName(nft.name),
-      unit_name: sanitizeUnitName(collectionName || nft.name),
-      total_supply: 1,
-      decimals: 0,
-      asset_url: "", // template-ipfs:// URL generated during mint
-      ipfs_data: metadata,
-      has_clawback: "N",
-      has_freeze: "N",
-      default_frozen: "N",
-    },
-    metadataJson: metadata,
+    asset_name: sanitizeAssetName(nft.name),
+    unit_name: sanitizeUnitName(collectionName || nft.name),
+    total_supply: 1,
+    decimals: 0,
+    asset_url: assetURL,
+    reserve_address: reserveAddress,
+    asset_note: arc19Note,
+    has_clawback: "N",
+    has_freeze: "N",
+    default_frozen: "N",
   };
 }
 

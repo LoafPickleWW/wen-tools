@@ -262,7 +262,7 @@ const AssetImageCard = ({
     }
     if (!asset["asset-id"]) return;
     getData();
-  }, [asset]);
+  }, [asset, indexerUrl]);
 
   const handleCardClick = (assetId: number) => {
     const selectedAssets = toolState.selectedAssets;

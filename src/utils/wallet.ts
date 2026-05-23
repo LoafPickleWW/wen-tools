@@ -73,7 +73,7 @@ export async function getAssetTraitData(
 ): Promise<AssetMetadataResponse> {
   try {
     const assetFormat = findAssetFormat(assetData.params.url);
-    let metadata: AssetMetadataResponse = {
+    const metadata: AssetMetadataResponse = {
       filters: [],
       traits: [],
     };
@@ -177,7 +177,7 @@ async function getARC19AssetMetadataData(
   reserve: string
 ): Promise<any> {
   try {
-    let chunks = url.split("://");
+    const chunks = url.split("://");
     if (chunks[0] === "template-ipfs" && chunks[1].startsWith("{ipfscid:")) {
       const cidComponents = chunks[1].split(":");
       const cidVersion = cidComponents[1];
@@ -201,7 +201,7 @@ async function getARC19AssetMetadataData(
       }
     }
     return {};
-  } catch (error) {
+  } catch {
     return {};
   }
 }
@@ -211,7 +211,7 @@ export async function getOwnerAddressOfAsset(assetId: number, indexerUrl: string
     const url = `${indexerUrl}/v2/assets/${assetId}/balances?currency-greater-than=0`;
     const response = await axios.get(url);
     return response.data.balances[0].address;
-  } catch (err) {
+  } catch {
     return "";
   }
 }
@@ -232,7 +232,7 @@ export async function getAccountAssetData(
         isOptedIn: true,
       } as AssetAccountDataResponse;
     }
-  } catch (error) {
+  } catch {
     return { amount: 0, isOptedIn: false } as AssetAccountDataResponse;
   }
 }
@@ -257,7 +257,7 @@ export async function getAssetsFromAddress(
   indexerUrl: string
 ): Promise<AssetsType[]> {
   let threshold = 1000;
-  let userAssets = await axios.get<AccountAssetsDataResponse>(
+  const userAssets = await axios.get<AccountAssetsDataResponse>(
     `${indexerUrl}/v2/accounts/${walletAddress}/assets?include-all=false`
   );
   while (userAssets.data.assets.length === threshold) {
@@ -280,7 +280,7 @@ export async function getCreatedAssetsFromAddress(
   indexerUrl: string
 ): Promise<SingleAssetDataResponse[]> {
   let threshold = 1000;
-  let createdAssets = await axios.get(
+  const createdAssets = await axios.get(
     `${indexerUrl}/v2/accounts/${walletAddress}/created-assets?include-all=false`
   );
   while (createdAssets.data.assets.length === threshold) {
@@ -316,7 +316,7 @@ export async function getNfdDomain(wallet: string): Promise<string> {
     } else {
       return wallet;
     }
-  } catch (error) {
+  } catch {
     return wallet;
   }
 }
@@ -333,7 +333,7 @@ export async function getWalletAddressFromNfDomain(
     } else {
       return "";
     }
-  } catch (error) {
+  } catch {
     return "";
   }
 }
@@ -379,14 +379,14 @@ export const ipfsToUrl = async (
       return `${IPFS_ENDPOINT}/${assetUrl.slice(7)}${optimizer}`;
     }
     return assetUrl;
-  } catch (error) {
+  } catch {
     return "";
   }
 };
 
 export async function getARC19AssetData(url: string, reserve: string) {
   try {
-    let chunks = url.split("://");
+    const chunks = url.split("://");
     if (chunks[0] === "template-ipfs" && chunks[1].startsWith("{ipfscid:")) {
       const cidComponents = chunks[1].split(":");
       const cidVersion = parseInt(cidComponents[1]);
@@ -410,7 +410,7 @@ export async function getARC19AssetData(url: string, reserve: string) {
     } else {
       throw new Error("invalid url" + url);
     }
-  } catch (error) {
+  } catch {
     throw new Error("invalid url" + url);
   }
 }
@@ -457,13 +457,9 @@ async function getCreatorWalletOfAsset(assetId: number, indexerUrl: string) {
 }
 
 export async function sendSignedTransaction(signedTxns: Uint8Array[], algodClient: Algodv2) {
-  try {
-    const { txId } = await algodClient.sendRawTransaction(signedTxns).do();
-    await waitForConfirmation(algodClient, txId, 3);
-    return txId;
-  } catch (error) {
-    throw error;
-  }
+  const { txId } = await algodClient.sendRawTransaction(signedTxns).do();
+  await waitForConfirmation(algodClient, txId, 3);
+  return txId;
 }
 
 export const copyAssetIds = (assets: number[]) => {
@@ -489,7 +485,7 @@ export async function createAssetOptInTransactions(
     );
   }
   const params = await algodClient.getTransactionParams().do();
-  let txnsArray: Transaction[] = [];
+  const txnsArray: Transaction[] = [];
   for (let i = 0; i < assets.length; i++) {
     const tx = makeAssetTransferTxnWithSuggestedParamsFromObject({
       from: walletAddress.trim(),
@@ -517,7 +513,7 @@ export async function createAssetOptoutTransactions(
     );
   }
   const params = await algodClient.getTransactionParams().do();
-  let txnsArray: Transaction[] = [];
+  const txnsArray: Transaction[] = [];
   for (let i = 0; i < assets.length; i++) {
     const creatorAddress = await getCreatorWalletOfAsset(assets[i], indexerUrl);
     if (creatorAddress !== "") {
@@ -548,7 +544,7 @@ export async function createDeletedAssetOptoutTransactions(
     );
   }
   const params = await algodClient.getTransactionParams().do();
-  let txnsArray: Transaction[] = [];
+  const txnsArray: Transaction[] = [];
   for (let i = 0; i < assets.length; i++) {
     const tx = makeAssetTransferTxnWithSuggestedParamsFromObject({
       from: walletAddress.trim(),
@@ -577,7 +573,7 @@ export async function createAssetDestroyTransactions(
     );
   }
   const params = await algodClient.getTransactionParams().do();
-  let txnsArray: Transaction[] = [];
+  const txnsArray: Transaction[] = [];
   for (let i = 0; i < assets.length; i++) {
     const creatorAddress = await getCreatorWalletOfAsset(assets[i], indexerUrl);
     if (creatorAddress !== "") {
@@ -605,7 +601,7 @@ export async function createAssetSendTransactions(
     );
   }
   const params = await algodClient.getTransactionParams().do();
-  let txnsArray: Transaction[] = [];
+  const txnsArray: Transaction[] = [];
   for (let i = 0; i < assets.length; i++) {
     const tx = makeAssetTransferTxnWithSuggestedParamsFromObject({
       from: walletAddress.trim(),
@@ -632,7 +628,7 @@ export async function createAssetTransferTransactions(
     );
   }
   const params = await algodClient.getTransactionParams().do();
-  let txnsArray: Transaction[][] = [];
+  const txnsArray: Transaction[][] = [];
   for (let i = 0; i < assets.length; i++) {
     const optin_tx = makeAssetTransferTxnWithSuggestedParamsFromObject({
       from: assets[i].receiver.trim(),

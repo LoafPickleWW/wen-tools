@@ -97,7 +97,7 @@ export function WenWallet() {
   const handleOrderBy = (orderBy: SelectChangeEvent<string>) => {
     const { value } = orderBy.target;
     switch (value) {
-      case "newest":
+      case "newest": {
         const newestAssets = [...filteredAssets].sort(
           (a, b) => b["opted-in-at-round"] - a["opted-in-at-round"]
         );
@@ -105,7 +105,8 @@ export function WenWallet() {
         setTotalPages(Math.ceil(newestAssets.length / PAGE_SIZE));
         setCurrentPage(1);
         break;
-      case "oldest":
+      }
+      case "oldest": {
         const oldestAssets = [...filteredAssets].sort(
           (a, b) => a["opted-in-at-round"] - b["opted-in-at-round"]
         );
@@ -113,7 +114,8 @@ export function WenWallet() {
         setTotalPages(Math.ceil(oldestAssets.length / PAGE_SIZE));
         setCurrentPage(1);
         break;
-      case "asset-id-asc":
+      }
+      case "asset-id-asc": {
         const assetIdAsc = [...filteredAssets].sort(
           (a, b) => a["asset-id"] - b["asset-id"]
         );
@@ -121,7 +123,8 @@ export function WenWallet() {
         setTotalPages(Math.ceil(assetIdAsc.length / PAGE_SIZE));
         setCurrentPage(1);
         break;
-      case "asset-id-desc":
+      }
+      case "asset-id-desc": {
         const assetIdDesc = [...filteredAssets].sort(
           (a, b) => b["asset-id"] - a["asset-id"]
         );
@@ -129,24 +132,27 @@ export function WenWallet() {
         setTotalPages(Math.ceil(assetIdDesc.length / PAGE_SIZE));
         setCurrentPage(1);
         break;
+      }
       case "showAll":
         setFilteredAssets(assets);
         setTotalPages(Math.ceil(assets.length / PAGE_SIZE));
         setCurrentPage(1);
         break;
-      case "showZero":
+      case "showZero": {
         const showZeroResult = assets.filter((asset) => asset.amount === 0);
         setFilteredAssets(showZeroResult);
         setTotalPages(Math.ceil(showZeroResult.length / PAGE_SIZE));
         setCurrentPage(1);
         break;
-      case "showNonZero":
+      }
+      case "showNonZero": {
         const showNonZeroResult = assets.filter((asset) => asset.amount !== 0);
         setFilteredAssets(showNonZeroResult);
         setTotalPages(Math.ceil(showNonZeroResult.length / PAGE_SIZE));
         setCurrentPage(1);
         break;
-      case "showCreated":
+      }
+      case "showCreated": {
         const createdAssetsIds = useWalletAssetStore
           .getState()
           .assets.filter((asset) => asset.params.creator === searchWallet)
@@ -158,7 +164,8 @@ export function WenWallet() {
         setTotalPages(Math.ceil(showCreatedResult.length / PAGE_SIZE));
         setCurrentPage(1);
         break;
-      case "showNonCreated":
+      }
+      case "showNonCreated": {
         const nonCreatedAssetsIds = useWalletAssetStore
           .getState()
           .assets.filter((asset) => asset.params.creator !== searchWallet)
@@ -170,6 +177,7 @@ export function WenWallet() {
         setTotalPages(Math.ceil(showNonCreatedResult.length / PAGE_SIZE));
         setCurrentPage(1);
         break;
+      }
       default:
         break;
     }
@@ -179,7 +187,7 @@ export function WenWallet() {
   useEffect(() => {
     async function convertDomainToWalletAddress() {
       if (account) {
-        let walletAddress = account.trim();
+        const walletAddress = account.trim();
         setIsResolving(true);
         if (walletAddress.toLowerCase().includes(".algo")) {
           setResolvedAccountName(walletAddress.toLowerCase());
