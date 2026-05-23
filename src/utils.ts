@@ -1244,17 +1244,32 @@ function codeToCodec(code: any) {
       return "raw";
     case "70":
       return "dag-pb";
+    case "71":
+      return "dag-cbor";
+    case "51":
+      return "cbor";
+    case "129":
+      return "dag-json";
+    case "200":
+      return "json";
     default:
-      throw Error("Unknown codec");
+      throw Error(`Unknown codec: 0x${code.toString(16)}`);
   }
 }
 
-export function createReserveAddressFromIpfsCid(ipfsCid: any) {
-  const decoded = CID.parse(ipfsCid.toString());
+export function createReserveAddressFromIpfsCid(ipfsCidAndPath: any) {
+  const parts = ipfsCidAndPath.toString().split("/");
+  const cidString = parts[0];
+  const pathStr = parts.slice(1).join("/");
+
+  const decoded = CID.parse(cidString);
   const version = decoded.version;
   const codec = codeToCodec(decoded.code);
 
-  const assetURL = `template-ipfs://{ipfscid:${version}:${codec}:reserve:sha2-256}`;
+  let assetURL = `template-ipfs://{ipfscid:${version}:${codec}:reserve:sha2-256}`;
+  if (pathStr) {
+    assetURL += `/${pathStr}`;
+  }
 
   const reserveAddress = encodeAddress(
     Uint8Array.from(Buffer.from(decoded.multihash.digest))
