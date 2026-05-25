@@ -19,6 +19,7 @@ import { Meta } from "../components/Meta";
 export function BatchUpdate() {
   const [updateFormat, setUpdateFormat] = useState("ARC69"); // ARC69 or ARC19
   const [csvData, setCsvData] = useState(null as null | any);
+  const [effectiveProvider, setPinningProvider] = useState("pinata");
   const [token, setToken] = useState("");
   const [assetTransactions, setAssetTransactions] = useState([] as algosdk.Transaction[][]);
   const [mnemonic, setMnemonic] = useState("");
@@ -60,7 +61,7 @@ export function BatchUpdate() {
       toast.error("Please upload a valid CSV file first!");
       return;
     }
-    if (updateFormat === "ARC19" && !token) {
+    if (updateFormat === "ARC19" && effectiveProvider === "pinata" && !token) {
       toast.error("Please enter a Pinata JWT token for ARC-19 updates!");
       return;
     }
@@ -206,8 +207,53 @@ export function BatchUpdate() {
           });
         });
 
-        toast.info("Uploading metadata CIDs to Pinata IPFS & generating reserve address configs...");
-        txns = await updateARC19AssetMintArray(data_for_txns, activeAddress, algodClient, token);
+        if (effectiveProvider === "pinata") {
+          toast.info("Uploading metadata CIDs to Pinata IPFS & generating reserve address configs...");
+          txns = await updateARC19AssetMintArray(data_for_txns, activeAddress, algodClient, token);
+        } else {
+          toast.info("Uploading metadata CIDs to Crust IPFS & generating reserve address configs...");
+          let params = await algodClient.getTransactionParams().do();
+          const authBasic = localStorage.getItem("authBasic");
+          
+          for (let i = 0; i < data_for_txns.length; i++) {
+            const jsonString = JSON.stringify(data_for_txns[i].ipfs_data);
+            const cid = await (await import("../crust")).pinJSONToCrust(authBasic, jsonString);
+            const { reserveAddress } = (await import("../utils")).createReserveAddressFromIpfsCid(cid);
+            
+            const update_tx = algosdk.makeAssetConfigTxnWithSuggestedParamsFromObject({
+              from: activeAddress,
+              assetIndex: parseInt(data_for_txns[i].asset_id),
+              note: new TextEncoder().encode(JSON.stringify(data_for_txns[i].ipfs_data)),
+              manager: activeAddress,
+              reserve: reserveAddress,
+              freeze: data_for_txns[i].freeze || undefined,
+              clawback: data_for_txns[i].clawback || undefined,
+              suggestedParams: params,
+              strictEmptyAddressChecking: false,
+            });
+
+            const fee_tx = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
+              from: activeAddress,
+              to: "WEN7BTVZXXGTYZXZ4LFWUUTN5YVUM3242Z26GOKOIKG4FUKQUTHTV74KSE",
+              amount: algosdk.algosToMicroalgos(0.05),
+              suggestedParams: params,
+              note: new TextEncoder().encode("via wen.tools - free tools for creators and collectors"),
+            });
+
+            const { makeCrustPinTx } = await import("../crust");
+            const atc = new algosdk.AtomicTransactionComposer();
+            atc.addTransaction({ txn: update_tx, signer: transactionSigner });
+            atc.addTransaction({ txn: fee_tx, signer: transactionSigner });
+            atc.addMethodCall(await makeCrustPinTx(cid, transactionSigner, activeAddress, algodClient));
+
+            const group = atc.buildGroup().map(t => t.txn);
+            txns.push(group);
+            
+            if (i % 50 === 0) {
+              params = await algodClient.getTransactionParams().do();
+            }
+          }
+        }
       }
 
       if (txns.length === 0) {
@@ -378,28 +424,62 @@ export function BatchUpdate() {
 
           {/* Pinata JWT Field for ARC-19 */}
           {updateFormat === "ARC19" && (
-            <div className="bg-slate-900/40 p-4 rounded-xl border border-slate-800 animate-fadeIn space-y-2">
-              <label className="block text-xs font-semibold text-gray-300 uppercase tracking-wider">
-                Pinata JWT Token
-              </label>
-              <input
-                type="password"
-                placeholder="Paste Pinata JWT Token"
-                className="w-full bg-slate-900/60 border border-slate-700 text-sm font-medium text-white placeholder:text-slate-500 px-4 py-3 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary-orange focus:border-primary-orange transition-all"
-                value={token}
-                onChange={(e) => setToken(e.target.value)}
-              />
-              <span className="text-xs text-gray-400 block">
-                Need a token? Create one in your{" "}
-                <a
-                  href="https://knowledge.pinata.cloud/en/articles/6191471-how-to-create-an-pinata-api-key"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-orange-400 hover:underline"
-                >
-                  Pinata account
-                </a>.
-              </span>
+            <div className="bg-slate-900/40 p-4 rounded-xl border border-slate-800 animate-fadeIn space-y-4">
+              <div>
+                <label className="block mb-2 text-xs font-semibold text-gray-300 uppercase tracking-wider">
+                  IPFS Pinning Provider*
+                </label>
+                <div className="flex bg-slate-900/80 p-1.5 rounded-xl border border-slate-700 w-full">
+                  <button
+                    type="button"
+                    className={`flex-1 py-2 text-xs md:text-sm font-bold rounded-lg transition-all duration-300 ${
+                      effectiveProvider === "crust"
+                        ? "bg-gradient-to-r from-orange-500 to-amber-500 text-black shadow-md font-extrabold"
+                        : "text-slate-400 hover:text-white"
+                    }`}
+                    onClick={() => setPinningProvider("crust")}
+                  >
+                    Crust Network
+                  </button>
+                  <button
+                    type="button"
+                    className={`flex-1 py-2 text-xs md:text-sm font-bold rounded-lg transition-all duration-300 ${
+                      effectiveProvider === "pinata"
+                        ? "bg-gradient-to-r from-orange-500 to-amber-500 text-black shadow-md font-extrabold"
+                        : "text-slate-400 hover:text-white"
+                    }`}
+                    onClick={() => setPinningProvider("pinata")}
+                  >
+                    Pinata (JWT)
+                  </button>
+                </div>
+              </div>
+              
+              {effectiveProvider === "pinata" && (
+                <div className="space-y-2 animate-fadeIn">
+                  <label className="block text-xs font-semibold text-gray-300 uppercase tracking-wider">
+                    Pinata JWT Token
+                  </label>
+                  <input
+                    type="password"
+                    placeholder="Paste Pinata JWT Token"
+                    className="w-full bg-slate-900/60 border border-slate-700 text-sm font-medium text-white placeholder:text-slate-500 px-4 py-3 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary-orange focus:border-primary-orange transition-all"
+                    value={token}
+                    onChange={(e) => setToken(e.target.value)}
+                  />
+                  <span className="text-xs text-gray-400 block">
+                    Need a token? Create one in your{" "}
+                    <a
+                      href="https://knowledge.pinata.cloud/en/articles/6191471-how-to-create-an-pinata-api-key"
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-orange-400 hover:underline"
+                    >
+                      Pinata account
+                    </a>.
+                  </span>
+                </div>
+              )}
               <span className="block text-xs text-red-400 font-medium">
                 ⚠️ This tool is not compatible with NFTs minted from algonfts.art ⚠️
               </span>
