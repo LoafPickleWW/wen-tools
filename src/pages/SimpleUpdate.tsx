@@ -504,13 +504,13 @@ export function SimpleUpdate() {
       setProcessStep(3);
 
       // use ATC batch, test asset ID: 2315438437
-      if (formData.format === "ARC19") {
+      if (formData.format === "ARC19" && batchATC) {
         // Use atc.execute for robust signing and submission of the entire group
         const { txIDs } = await batchATC.execute(algodClient, 4);
         const txId = txIDs[0];
         await algosdk.waitForConfirmation(algodClient, txId, 4);
       } else {
-        // other formats
+        // other formats or Pinata paths
         const signedAssetTransaction = await walletSign(
           transaction,
           transactionSigner
@@ -522,7 +522,8 @@ export function SimpleUpdate() {
         }
         const groups = sliceIntoChunks(signedAssetTransaction, 2);
 
-        await algodClient.sendRawTransaction(groups[0]).do();
+        const { txId } = await algodClient.sendRawTransaction(groups[0]).do();
+        await algosdk.waitForConfirmation(algodClient, txId, 4);
       }
 
       toast.success("Asset updated successfully!");
