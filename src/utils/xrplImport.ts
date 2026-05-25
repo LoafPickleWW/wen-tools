@@ -125,28 +125,57 @@ export function resolveUri(uri: string): string {
 }
 
 /**
+ * Race multiple IPFS gateways for the same CID in parallel
+ */
+async function fetchJsonFromIPFSRace(cidOrPath: string): Promise<any> {
+  const controller = new AbortController();
+  const signal = controller.signal;
+
+  const promises = IPFS_GATEWAYS.map(async (gateway) => {
+    const url = `${gateway}${cidOrPath}`;
+    const resp = await axios.get(url, {
+      signal,
+      timeout: 5000,
+    });
+    controller.abort();
+    return resp.data;
+  });
+
+  return new Promise((resolve, reject) => {
+    let rejectedCount = 0;
+    const errors: any[] = [];
+
+    if (promises.length === 0) {
+      reject(new Error("No IPFS gateways configured"));
+      return;
+    }
+
+    promises.forEach((p, idx) => {
+      p.then((val) => {
+        resolve(val);
+      }).catch((err) => {
+        errors[idx] = err;
+        rejectedCount++;
+        if (rejectedCount === promises.length) {
+          reject(new Error(`Failed to fetch from all IPFS gateways: ${cidOrPath}`));
+        }
+      });
+    });
+  });
+}
+
+/**
  * Fetch JSON from a URI with IPFS gateway fallback
  */
 async function fetchJsonWithFallback(uri: string): Promise<any> {
   const cidOrPath = extractIpfsCid(uri);
 
   if (cidOrPath) {
-    // Try each gateway
-    for (const gateway of IPFS_GATEWAYS) {
-      try {
-        const resp = await axios.get(`${gateway}${cidOrPath}`, {
-          timeout: 15000,
-        });
-        return resp.data;
-      } catch {
-        continue;
-      }
-    }
-    throw new Error(`Failed to fetch from all IPFS gateways: ${cidOrPath}`);
+    return fetchJsonFromIPFSRace(cidOrPath);
   }
 
   // Regular HTTP
-  const resp = await axios.get(resolveUri(uri), { timeout: 15000 });
+  const resp = await axios.get(resolveUri(uri), { timeout: 8000 });
   return resp.data;
 }
 
@@ -365,26 +394,27 @@ export async function resolveNFTMetadata(
  */
 export async function resolveAllMetadata(
   nfts: XRPLNFToken[],
-  concurrency: number = 5,
+  concurrency: number = 25,
   onProgress?: (resolved: number, total: number) => void
 ): Promise<ResolvedNFTMetadata[]> {
-  const results: ResolvedNFTMetadata[] = [];
-  let resolved = 0;
+  const results: ResolvedNFTMetadata[] = new Array(nfts.length);
+  let currentIndex = 0;
+  let resolvedCount = 0;
 
-  // Process in batches
-  for (let i = 0; i < nfts.length; i += concurrency) {
-    const batch = nfts.slice(i, i + concurrency);
-    const batchResults = await Promise.allSettled(
-      batch.map((nft) => resolveNFTMetadata(nft))
-    );
+  if (nfts.length === 0) return [];
 
-    for (const r of batchResults) {
-      if (r.status === "fulfilled") {
-        results.push(r.value);
-      } else {
-        // Create error entry
-        const nft = batch[results.length - resolved];
-        results.push({
+  // Define a worker function
+  const worker = async () => {
+    while (currentIndex < nfts.length) {
+      const idx = currentIndex++;
+      if (idx >= nfts.length) break;
+
+      const nft = nfts[idx];
+      try {
+        const metadata = await resolveNFTMetadata(nft);
+        results[idx] = metadata;
+      } catch (err: any) {
+        results[idx] = {
           nft_id: nft?.nft_id || "unknown",
           issuer: nft?.issuer || "",
           owner: nft?.owner || "",
@@ -401,13 +431,24 @@ export async function resolveAllMetadata(
           rawMetadata: null,
           metadataResolved: false,
           imageResolved: false,
-          error: r.reason?.message || "Unknown error",
-        });
+          error: err.message || "Unknown error",
+        };
+      } finally {
+        resolvedCount++;
+        onProgress?.(resolvedCount, nfts.length);
       }
-      resolved++;
-      onProgress?.(resolved, nfts.length);
     }
+  };
+
+  // Launch workers
+  const workers: Promise<void>[] = [];
+  const limit = Math.min(concurrency, nfts.length);
+  for (let i = 0; i < limit; i++) {
+    workers.push(worker());
   }
+
+  // Wait for all workers to finish
+  await Promise.all(workers);
 
   return results;
 }

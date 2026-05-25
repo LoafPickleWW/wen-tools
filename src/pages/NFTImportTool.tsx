@@ -138,7 +138,7 @@ export function NFTImportTool() {
       setStep("resolving");
       setResolveProgress({ done: 0, total: slicedNfts.length });
 
-      const resolved = await resolveAllMetadata(slicedNfts, 5, (done, total) => {
+      const resolved = await resolveAllMetadata(slicedNfts, 25, (done, total) => {
         setResolveProgress({ done, total });
       });
 
@@ -267,30 +267,31 @@ export function NFTImportTool() {
       }
 
       // We have an array of transactions in groups of 2.
-      // We will batch sign them (max 16 txns = 8 NFTs at a time)
-      const txnChunks = sliceIntoChunks(allTxns, 16);
-      const allCreatedIds: number[] = [];
+      // Sign all transactions at once in a single wallet prompt
+      toast.info(`Signing all ${allTxns.length} transactions...`);
+      const signedTxns = await walletSign(allTxns, transactionSigner);
+      const signedGroups = sliceIntoChunks(Array.from(signedTxns), 2);
+      // Submit all groups in parallel to avoid waiting sequentially for each confirmation
+      toast.info(`Submitting ${signedGroups.length} NFTs in parallel...`);
+      setMintProgress({ done: 0, total: signedGroups.length });
 
-      for (let c = 0; c < txnChunks.length; c++) {
-        toast.info(`Signing batch ${c + 1} of ${txnChunks.length}...`);
-        
-        // walletSign natively accepts array of un-signed txns
-        const signedTxns = await walletSign(txnChunks[c], transactionSigner);
-        
-        // Submit in groups of 2 (individual NFTs) to ensure we can reliably parse the asset-index
-        const signedGroups = sliceIntoChunks(Array.from(signedTxns), 2);
-        for(const signedGroup of signedGroups) {
-          try {
-            const { txid } = await algodClient.sendRawTransaction(signedGroup).do();
-            const confirmed = await algosdk.waitForConfirmation(algodClient, txid, 4);
-            if (confirmed["asset-index"]) {
-              allCreatedIds.push(confirmed["asset-index"]);
-            }
-          } catch(e) {
-             console.warn("Group submission error:", e);
+      const submissionPromises = signedGroups.map(async (signedGroup, idx) => {
+        try {
+          const { txId } = await algodClient.sendRawTransaction(signedGroup).do();
+          const confirmed = await algosdk.waitForConfirmation(algodClient, txId, 4);
+          if (confirmed["asset-index"]) {
+            setMintProgress((prev) => ({ ...prev, done: prev.done + 1 }));
+            return confirmed["asset-index"];
           }
+        } catch (e) {
+          console.warn(`NFT ${idx + 1} submission error:`, e);
         }
-      }
+        setMintProgress((prev) => ({ ...prev, done: prev.done + 1 }));
+        return null;
+      });
+
+      const results = await Promise.all(submissionPromises);
+      const allCreatedIds = results.filter((id): id is number => id !== null);
 
       setMintedAssets(allCreatedIds);
       setStep("done");
@@ -785,7 +786,7 @@ export function NFTImportTool() {
               </div>
               <h3 className="text-lg font-bold mb-2">Importing to Algorand...</h3>
               <p className="text-gray-400 text-sm mb-4">
-                Pinning assets and building transactions
+                Preparing import transactions
               </p>
               <div className="w-full bg-white/10 rounded-full h-2 overflow-hidden">
                 <div
