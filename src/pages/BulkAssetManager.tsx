@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { toast } from "react-toastify";
 import { useSearchParams } from "react-router-dom";
 import Papa from "papaparse";
@@ -21,6 +21,7 @@ import FaqSectionComponent from "../components/FaqSectionComponent";
 import { useWallet } from "@txnlab/use-wallet-react";
 import ConnectButton from "../components/ConnectButton";
 import { Meta } from "../components/Meta";
+import { getAccountAssetsWithInfo } from "../utils/swap";
 import {
   IoAddCircle,
   IoRemoveCircle,
@@ -56,6 +57,88 @@ export function BulkAssetManager({ defaultTab = "optin" }: BulkAssetManagerProps
   // Burn Configuration State
   const [isBurnConfiguring, setIsBurnConfiguring] = useState(false);
   const [burnAssetsInfo, setBurnAssetsInfo] = useState<any[]>([]);
+
+  // Search bar dropdown states for assets in wallet
+  const [walletAssets, setWalletAssets] = useState<any[]>([]);
+  const [assetsLoading, setAssetsLoading] = useState(false);
+  const [assetSearch, setAssetSearch] = useState("");
+  const [showDropdown, setShowDropdown] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Fetch active wallet's assets
+  useEffect(() => {
+    if (!activeAddress) {
+      setWalletAssets([]);
+      return;
+    }
+    let cancelled = false;
+    setAssetsLoading(true);
+    getAccountAssetsWithInfo(activeAddress, (batch) => {
+      if (!cancelled) setWalletAssets(batch);
+    })
+      .catch(() => {})
+      .finally(() => {
+        if (!cancelled) setAssetsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [activeAddress]);
+
+  // Click outside to close dropdown
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setShowDropdown(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  const handleSelectAsset = (assetId: number, assetName: string) => {
+    setAssetIds((prev) => {
+      const splitted = prev
+        .split(/[\n,\s]+/)
+        .map((x) => x.trim())
+        .filter(Boolean);
+      if (splitted.includes(String(assetId))) {
+        toast.info(`${assetName} (ID: ${assetId}) is already in the list!`);
+        return prev;
+      }
+      splitted.push(String(assetId));
+      return splitted.join("\n");
+    });
+    toast.success(`Added ${assetName} (ID: ${assetId}) to the list!`);
+    setShowDropdown(false);
+    setAssetSearch("");
+  };
+
+  const handleAddAllWalletAssets = () => {
+    if (walletAssets.length === 0) {
+      toast.info("No assets found in your wallet to add!");
+      return;
+    }
+    setAssetIds((prev) => {
+      const splitted = prev
+        .split(/[\n,\s]+/)
+        .map((x) => x.trim())
+        .filter(Boolean);
+      let count = 0;
+      walletAssets.forEach((a) => {
+        if (!splitted.includes(String(a.id))) {
+          splitted.push(String(a.id));
+          count++;
+        }
+      });
+      if (count === 0) {
+        toast.info("All your wallet assets are already in the list!");
+      } else {
+        toast.success(`Added ${count} assets from your wallet to the list!`);
+      }
+      return splitted.join("\n");
+    });
+  };
 
   useEffect(() => {
     if (searchParams.has("ids")) {
@@ -121,8 +204,13 @@ export function BulkAssetManager({ defaultTab = "optin" }: BulkAssetManagerProps
     }
 
     try {
-      const accountInfo = await algodClient.accountInformation(activeAddress).do();
-      const userAssets = accountInfo.assets || [];
+      let userAssets: any[] = [];
+      try {
+        const accountInfo = await algodClient.accountInformation(activeAddress).do();
+        userAssets = accountInfo.assets || [];
+      } catch (err) {
+        console.warn("Failed to fetch account information:", err);
+      }
 
       const loadedAssets: any[] = [];
       for (let i = 0; i < assets.length; i++) {
@@ -145,8 +233,9 @@ export function BulkAssetManager({ defaultTab = "optin" }: BulkAssetManagerProps
             creator: assetInfo.params.creator,
             imageUrl: imageUrl,
             balance: balance,
-            amountToBurn: 0,
-            closeAsset: false,
+            amountToBurn: balance,
+            closeAsset: balance > 0 && activeAddress !== assetInfo.params.creator,
+            totalSupply: assetInfo.params.total,
           });
         } catch (e) {
           console.error("Error fetching asset info for ", assetId, e);
@@ -181,7 +270,8 @@ export function BulkAssetManager({ defaultTab = "optin" }: BulkAssetManagerProps
       if (
         activeTab === "optin" ||
         activeTab === "optout" ||
-        activeTab === "destroy"
+        activeTab === "destroy" ||
+        activeTab === "burn"
       ) {
         const assets: number[] = [];
         for (let i = 1; i < csvData.length; i++) {
@@ -235,7 +325,8 @@ export function BulkAssetManager({ defaultTab = "optin" }: BulkAssetManagerProps
           const assetsToBurn = burnAssetsInfo.filter(a => a.amountToBurn > 0).map(a => ({
             id: a.id,
             amountToBurn: a.amountToBurn,
-            closeAsset: a.closeAsset
+            closeAsset: a.closeAsset,
+            totalSupply: a.totalSupply
           }));
           
           if (assetsToBurn.length === 0) {
@@ -253,9 +344,16 @@ export function BulkAssetManager({ defaultTab = "optin" }: BulkAssetManagerProps
           if (mnemonic !== "") {
             signedTransactions = SignWithMnemonic(rawTxns.flat(), mnemonic);
           } else {
-            signedTransactions = await walletSign(rawTxns, transactionSigner);
+            signedTransactions = await walletSign(rawTxns.flat(), transactionSigner);
           }
-          groups = sliceIntoChunks(signedTransactions, 16);
+          
+          // Reconstruct groups using original rawTxns shapes to avoid group mismatch
+          let sliceIdx = 0;
+          groups = rawTxns.map(group => {
+            const chunk = signedTransactions.slice(sliceIdx, sliceIdx + group.length);
+            sliceIdx += group.length;
+            return chunk;
+          });
         }
       } else if (activeTab === "freeze") {
         let headers;
@@ -676,15 +774,116 @@ export function BulkAssetManager({ defaultTab = "optin" }: BulkAssetManagerProps
                     </label>
                   </div>
                 ) : (
-                  <div className="flex flex-col items-center w-full gap-5">
-                    <textarea
-                      id="asset_id_list"
-                      placeholder="Asset IDs (one per line, space, or comma separated)"
-                      className="w-full max-w-md bg-[#0f0f11] text-white border border-white/10 rounded-2xl p-4 text-sm font-mono focus:border-orange-500/50 outline-none transition-all placeholder:text-slate-600 focus:ring-1 focus:ring-orange-500/30"
-                      style={{ height: "10rem" }}
-                      value={assetIds}
-                      onChange={(e) => setAssetIds(e.target.value)}
-                    />
+                  <div className="flex flex-col items-center w-full gap-4">
+                    {activeAddress && (
+                      <div className="w-full max-w-md relative" ref={dropdownRef}>
+                        <label className="block text-xs font-semibold text-slate-400 mb-1.5 text-left w-full">
+                          Select from wallet
+                        </label>
+                        <div className="relative">
+                          <input
+                            type="text"
+                            className="w-full bg-[#0f0f11] border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder:text-slate-600 focus:border-orange-500/50 focus:ring-1 focus:ring-orange-500/30 outline-none transition-all"
+                            placeholder={
+                              assetsLoading
+                                ? "Loading assets from wallet..."
+                                : walletAssets.length > 0
+                                ? "Search wallet assets by name or ID..."
+                                : "No assets found in wallet"
+                            }
+                            value={showDropdown ? assetSearch : ""}
+                            onChange={(e) => {
+                              setAssetSearch(e.target.value);
+                              setShowDropdown(true);
+                            }}
+                            onFocus={() => {
+                              setShowDropdown(true);
+                              setAssetSearch("");
+                            }}
+                          />
+                          {assetsLoading && (
+                            <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                              <div className="w-4 h-4 border-2 border-orange-500/20 border-t-orange-500 rounded-full animate-spin" />
+                            </div>
+                          )}
+                          {!assetsLoading && walletAssets.length > 0 && (
+                            <button
+                              type="button"
+                              onClick={handleAddAllWalletAssets}
+                              className="absolute right-3 top-1/2 -translate-y-1/2 text-xxs font-bold uppercase tracking-wider text-orange-400 hover:text-orange-300 transition-colors bg-white/5 hover:bg-white/10 px-2 py-1 rounded"
+                            >
+                              Add All
+                            </button>
+                          )}
+                        </div>
+
+                        {showDropdown && walletAssets.length > 0 && (
+                          <div className="absolute z-50 left-0 right-0 top-full mt-1.5 max-h-48 overflow-y-auto bg-[#0f0f11] border border-white/10 rounded-xl shadow-2xl shadow-black/80 backdrop-blur-md">
+                            {walletAssets.filter((a) => {
+                              if (!assetSearch) return true;
+                              const q = assetSearch.toLowerCase();
+                              return (
+                                a.name.toLowerCase().includes(q) ||
+                                a.unitName.toLowerCase().includes(q) ||
+                                String(a.id).includes(q)
+                              );
+                            }).length === 0 ? (
+                              <div className="px-4 py-3 text-slate-500 text-xs text-left">
+                                No wallet assets match "{assetSearch}"
+                              </div>
+                            ) : (
+                              walletAssets
+                                .filter((a) => {
+                                  if (!assetSearch) return true;
+                                  const q = assetSearch.toLowerCase();
+                                  return (
+                                    a.name.toLowerCase().includes(q) ||
+                                    a.unitName.toLowerCase().includes(q) ||
+                                    String(a.id).includes(q)
+                                  );
+                                })
+                                .slice(0, 50)
+                                .map((a) => (
+                                  <button
+                                    key={a.id}
+                                    type="button"
+                                    className="w-full text-left px-4 py-2.5 text-sm hover:bg-white/5 transition-colors flex items-center justify-between gap-3 text-white border-b border-white/[0.02]"
+                                    onClick={() => handleSelectAsset(a.id, a.name || `ASA #${a.id}`)}
+                                  >
+                                    <div className="min-w-0">
+                                      <span className="font-semibold truncate block text-sm">
+                                        {a.name || `ASA #${a.id}`}
+                                      </span>
+                                      <span className="text-[10px] text-slate-500">
+                                        {a.unitName} · ID {a.id}
+                                      </span>
+                                    </div>
+                                    <span className="text-[10px] text-slate-400 flex-shrink-0">
+                                      Bal: {(a.amount / Math.pow(10, a.decimals)).toLocaleString()}
+                                    </span>
+                                  </button>
+                                ))
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    <div className="w-full max-w-md">
+                      {activeAddress && (
+                        <label className="block text-xs font-semibold text-slate-400 mb-1.5 text-left w-full">
+                          Or enter manually
+                        </label>
+                      )}
+                      <textarea
+                        id="asset_id_list"
+                        placeholder="Asset IDs (one per line, space, or comma separated)"
+                        className="w-full bg-[#0f0f11] text-white border border-white/10 rounded-2xl p-4 text-sm font-mono focus:border-orange-500/50 outline-none transition-all placeholder:text-slate-600 focus:ring-1 focus:ring-orange-500/30"
+                        style={{ height: "10rem" }}
+                        value={assetIds}
+                        onChange={(e) => setAssetIds(e.target.value)}
+                      />
+                    </div>
                     <button
                       id="confirm-input"
                       className="w-full max-w-xs bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-400 hover:to-amber-400 text-black font-black uppercase text-sm rounded-xl py-3.5 px-8 transition-all duration-300 shadow-lg shadow-orange-500/20 hover:shadow-orange-500/30 hover:scale-[0.98]"
@@ -745,32 +944,30 @@ export function BulkAssetManager({ defaultTab = "optin" }: BulkAssetManagerProps
                               <p className="text-xs text-slate-500">ID: {asset.id} • Bal: {asset.balance / 10**asset.decimals}</p>
                             </div>
                           </div>
-                          <div className="flex items-center gap-2 w-full sm:w-1/2 justify-end">
-                            <input 
-                              type="number" 
-                              min="0"
-                              max={asset.balance / 10**asset.decimals}
-                              value={asset.amountToBurn / 10**asset.decimals}
-                              onChange={(e) => {
-                                const newAssets = [...burnAssetsInfo];
-                                const amt = parseFloat(e.target.value) || 0;
-                                newAssets[idx].amountToBurn = Math.floor(amt * 10**asset.decimals);
-                                newAssets[idx].closeAsset = newAssets[idx].amountToBurn === asset.balance && activeAddress !== asset.creator;
-                                setBurnAssetsInfo(newAssets);
-                              }}
-                              className="w-24 bg-black/50 text-white text-sm px-2 py-1.5 rounded-lg border border-white/10 outline-none focus:border-orange-500"
-                            />
-                            <button 
-                              className="text-xs font-bold bg-white/10 hover:bg-white/20 text-white px-2 py-1.5 rounded-lg transition"
-                              onClick={() => {
-                                const newAssets = [...burnAssetsInfo];
-                                newAssets[idx].amountToBurn = asset.balance;
-                                newAssets[idx].closeAsset = activeAddress !== asset.creator;
-                                setBurnAssetsInfo(newAssets);
-                              }}
-                            >
-                              Max
-                            </button>
+                          <div className="flex flex-col items-end gap-1 w-full sm:w-1/2 justify-end">
+                            <div className="flex items-center gap-1.5 justify-end">
+                              <span className="text-xs text-slate-500 font-medium">Burn:</span>
+                              <input 
+                                type="number" 
+                                min="0"
+                                max={asset.balance / 10**asset.decimals}
+                                value={asset.amountToBurn / 10**asset.decimals}
+                                onChange={(e) => {
+                                  const newAssets = [...burnAssetsInfo];
+                                  const amt = parseFloat(e.target.value) || 0;
+                                  newAssets[idx].amountToBurn = Math.floor(amt * 10**asset.decimals);
+                                  newAssets[idx].closeAsset = newAssets[idx].amountToBurn === asset.balance && activeAddress !== asset.creator;
+                                  setBurnAssetsInfo(newAssets);
+                                }}
+                                className="w-24 bg-black/50 text-white text-sm px-2 py-1.5 rounded-lg border border-white/10 outline-none focus:border-orange-500 font-mono text-center font-bold"
+                              />
+                              <span className="text-xs text-orange-400 font-bold">{asset.unitName}</span>
+                            </div>
+                            {asset.closeAsset && (
+                              <p className="text-[10px] text-green-400 font-medium">
+                                Will close and reclaim MBR
+                              </p>
+                            )}
                           </div>
                         </div>
                       ))}
@@ -780,7 +977,7 @@ export function BulkAssetManager({ defaultTab = "optin" }: BulkAssetManagerProps
                           className="flex-1 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-400 hover:to-amber-400 text-black font-black uppercase text-sm rounded-xl py-3.5 px-6 transition-all duration-300 shadow-lg shadow-orange-500/20 hover:scale-[0.98]"
                           onClick={() => setIsBurnConfiguring(false)}
                         >
-                          Confirm Burn Amounts
+                          Confirm quantities to burn
                         </button>
                         <button
                           className="bg-white/5 hover:bg-white/10 text-white font-bold text-sm rounded-xl py-3.5 px-6 transition border border-white/10"

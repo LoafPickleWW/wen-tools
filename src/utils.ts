@@ -1967,7 +1967,7 @@ export async function getBonfireAccountInfo(
   if (!appId) return null;
   const bonfireAddr = algosdk.getApplicationAddress(appId);
   try {
-    const info = await algodClient.accountInformation(bonfireAddr).do();
+    const info = await algodClient.accountInformation(bonfireAddr).exclude("all").do();
     return info as any;
   } catch (e) {
     console.error("Error fetching Bonfire info: ", e);
@@ -1975,8 +1975,21 @@ export async function getBonfireAccountInfo(
   }
 }
 
+export async function isAccountOptedIn(
+  algodClient: algosdk.Algodv2,
+  address: string,
+  assetId: number
+): Promise<boolean> {
+  try {
+    await algodClient.accountAssetInformation(address, assetId).do();
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
 export async function createAssetBurnTransactions(
-  assetsToBurn: { id: number; amountToBurn: number; closeAsset: boolean }[],
+  assetsToBurn: { id: number; amountToBurn: number; closeAsset: boolean; totalSupply?: number }[],
   activeNetwork: string,
   address: string,
   algodClient: algosdk.Algodv2
@@ -1993,19 +2006,65 @@ export async function createAssetBurnTransactions(
   const extraLogs = bonfireInfo ? Math.floor((bonfireInfo.amount - bonfireInfo["min-balance"]) / 100000) : 0;
 
   const params = await algodClient.getTransactionParams().do();
-  
-  let numOptInCalls = 0;
-  const optInAssets: number[] = [];
-  const axfers: algosdk.Transaction[] = [];
+
+  const arc54OptInMethod = new algosdk.ABIMethod({
+    name: "arc54_optIntoASA",
+    args: [{ type: "asset", name: "asset" }],
+    returns: { type: "void" }
+  });
+
+  const dummySigner = algosdk.makeBasicAccountTransactionSigner({
+    addr: address,
+    sk: new Uint8Array(64)
+  });
+
+  const groups: algosdk.Transaction[][] = [];
+  let optInCount = 0;
 
   for (let i = 0; i < assetsToBurn.length; i++) {
     const asset = assetsToBurn[i];
-    
-    if (asset.amountToBurn > 0 && bonfireInfo?.assets?.find((a: any) => a["asset-id"] === asset.id) === undefined) {
-      optInAssets.push(asset.id);
-      numOptInCalls++;
+    if (asset.amountToBurn <= 0) continue;
+
+    // Check opt-in status. If total supply = 1 (NFT), assume it's not opted in.
+    let optedIn = false;
+    if (asset.totalSupply !== undefined && BigInt(asset.totalSupply) === 1n) {
+      optedIn = false;
+    } else {
+      optedIn = await isAccountOptedIn(algodClient, bonfireAddr, asset.id);
     }
-    
+
+    const assetTxns: algosdk.Transaction[] = [];
+
+    if (!optedIn) {
+      optInCount++;
+      if (optInCount > extraLogs) {
+        // 1. MBR Payment
+        const payTxn = makePaymentTxnWithSuggestedParamsFromObject({
+          from: address,
+          to: bonfireAddr,
+          amount: 100000,
+          suggestedParams: params,
+          note: new TextEncoder().encode("via wen.tools & Bonfire")
+        });
+        assetTxns.push(payTxn);
+      }
+
+      // 2. App Call (arc54_optIntoASA)
+      const atc = new algosdk.AtomicTransactionComposer();
+      atc.addMethodCall({
+        appID: appId,
+        method: arc54OptInMethod,
+        methodArgs: [asset.id],
+        sender: address,
+        suggestedParams: { ...params, flatFee: true, fee: params.minFee * 2 },
+        signer: dummySigner,
+        note: new TextEncoder().encode("via wen.tools & Bonfire")
+      });
+      const built = atc.buildGroup();
+      assetTxns.push(built[0].txn);
+    }
+
+    // 3. Asset Transfer (axfer)
     const axferObj: any = {
       from: address,
       to: bonfireAddr,
@@ -2020,55 +2079,18 @@ export async function createAssetBurnTransactions(
     }
     
     const axfer = makeAssetTransferTxnWithSuggestedParamsFromObject(axferObj);
-    axfers.push(axfer);
-  }
+    assetTxns.push(axfer);
 
-  const numMBRPayments = Math.max(numOptInCalls - extraLogs, 0);
-  
-  const txnsArray: algosdk.Transaction[] = [];
-  
-  if (numMBRPayments > 0) {
-    const payTxn = makePaymentTxnWithSuggestedParamsFromObject({
-      from: address,
-      to: bonfireAddr,
-      amount: 100000 * numMBRPayments,
-      suggestedParams: params,
-      note: new TextEncoder().encode("via wen.tools & Bonfire")
-    });
-    txnsArray.push(payTxn);
-  }
-
-  const arc54OptInMethod = new algosdk.ABIMethod({
-    name: "arc54_optIntoASA",
-    args: [{ type: "asset", name: "asset" }],
-    returns: { type: "void" }
-  });
-
-  optInAssets.forEach((id) => {
-    const appCall = algosdk.makeApplicationNoOpTxnFromObject({
-      from: address,
-      appIndex: appId,
-      appArgs: [
-        arc54OptInMethod.getSelector(),
-        algosdk.encodeUint64(0)
-      ],
-      foreignAssets: [id],
-      suggestedParams: { ...params, flatFee: true, fee: params.minFee * 2 },
-      note: new TextEncoder().encode("via wen.tools & Bonfire")
-    });
-    txnsArray.push(appCall);
-  });
-
-  axfers.forEach((txn) => {
-    txnsArray.push(txn);
-  });
-
-  const groups = sliceIntoChunks(txnsArray, 16);
-  for (let i = 0; i < groups.length; i++) {
-    const groupID = computeGroupID(groups[i]);
-    for (let j = 0; j < groups[i].length; j++) {
-      groups[i][j].group = groupID;
+    // Compute group ID if there are multiple transactions in the group (1 asset = 1 group)
+    if (assetTxns.length > 1) {
+      const groupID = computeGroupID(assetTxns);
+      for (let j = 0; j < assetTxns.length; j++) {
+        assetTxns[j].group = groupID;
+      }
     }
+
+    groups.push(assetTxns);
   }
+
   return groups;
 }
