@@ -11,12 +11,25 @@ import {
   formatAsARC3,
   formatAsARC19,
   formatAsARC69,
-
   XRPL_MAINNET_ENDPOINT,
   XRPL_TESTNET_ENDPOINT,
   type ResolvedNFTMetadata,
   type AlgorandARC,
 } from "../utils/xrplImport";
+import {
+  isValidPolicyId,
+  fetchNFTsByPolicy,
+  resolveCardanoMetadata,
+  type ResolvedCardanoNFT,
+  type CardanoNetwork,
+} from "../utils/cardanoImport";
+import {
+  isValidEthAddress,
+  fetchNFTsByContract,
+  resolveEthMetadata,
+  type ResolvedEthNFT,
+  type EthNetwork,
+} from "../utils/ethereumImport";
 import {
   sliceIntoChunks,
   walletSign,
@@ -25,10 +38,31 @@ import { TOOLS, MINT_FEE_WALLET } from "../constants";
 import FaqSectionComponent from "../components/FaqSectionComponent";
 
 type ImportStep = "input" | "scanning" | "resolving" | "preview" | "minting" | "done";
+type SourceChain = "xrpl" | "cardano" | "ethereum";
+
+/** Unified shape so the preview grid + minting pipeline can be chain-agnostic. */
+interface UnifiedNFT {
+  id: string;
+  name: string;
+  description: string;
+  image: string;
+  imageResolved: boolean;
+  metadataResolved: boolean;
+  // Source-chain specifics shown in the grid
+  serialOrId: string;       // Token serial (XRPL), asset_name_hex (ADA), tokenId (ETH)
+  collectionTag: string;    // Taxon (XRPL), Policy ID prefix (ADA), Contract symbol (ETH)
+  metadataStandard?: string; // CIP-25/CIP-68 (ADA), ERC-721/ERC-1155 (ETH)
+  metadataIpfsCid?: string;
+  decodedUri?: string;
+  // Keep the raw source data for minting formatting
+  _xrpl?: ResolvedNFTMetadata;
+  _cardano?: ResolvedCardanoNFT;
+  _eth?: ResolvedEthNFT;
+}
 
 const TOOL_META = TOOLS.find((t) => t.id === "nft_import") || {
   label: "NFT Import Tool",
-  description: "Import NFTs from other chains (XRP Ledger) and mint them on Algorand.",
+  description: "Import NFTs from other chains (XRP Ledger, Cardano, Ethereum) and mint them on Algorand.",
 };
 
 export function NFTImportTool() {
@@ -38,15 +72,27 @@ export function NFTImportTool() {
   const [step, setStep] = useState<ImportStep>("input");
 
   // ── Input state ──
-  const [sourceChain] = useState<"xrpl">("xrpl"); // extensible later
+  const [sourceChain, setSourceChain] = useState<SourceChain>("xrpl");
+
+  // XRPL-specific
   const [xrpAddress, setXrpAddress] = useState("");
-  const [taxonId, setTaxonId] = useState(""); // optional Taxon ID filter
+  const [taxonId, setTaxonId] = useState("");
+  const [xrplNetwork, setXrplNetwork] = useState<"mainnet" | "testnet">("mainnet");
+
+  // Cardano-specific
+  const [cardanoPolicyId, setCardanoPolicyId] = useState("");
+  const [cardanoNetwork, setCardanoNetwork] = useState<CardanoNetwork>("mainnet");
+
+  // Ethereum-specific
+  const [ethContractAddress, setEthContractAddress] = useState("");
+  const [ethNetwork, setEthNetwork] = useState<EthNetwork>("mainnet");
+  const [alchemyApiKey, setAlchemyApiKey] = useState((import.meta.env.VITE_ALCHEMY_API_KEY as string) || "");
+
+  // Shared
   const [startIndex, setStartIndex] = useState("0");
   const [endIndex, setEndIndex] = useState("500");
   const [arcFormat, setArcFormat] = useState<AlgorandARC>("ARC19");
   const [collectionName, setCollectionName] = useState("");
-
-  const [xrplNetwork, setXrplNetwork] = useState<"mainnet" | "testnet">("mainnet");
 
   // Sync network state when active wallet connects
   const hasSyncedNetwork = useRef(false);
@@ -59,137 +105,200 @@ export function NFTImportTool() {
 
   // ── Scan / Resolve state ──
   const [scanProgress, setScanProgress] = useState(0);
-  const [totalScanned, setTotalScanned] = useState(0); // overall found on issuer before taxon filtering
+  const [totalScanned, setTotalScanned] = useState(0);
   const [resolveProgress, setResolveProgress] = useState({ done: 0, total: 0 });
 
-  // ── Preview state ──
-  const [resolvedNFTs, setResolvedNFTs] = useState<ResolvedNFTMetadata[]>([]);
+  // ── Preview state (unified) ──
+  const [unifiedNFTs, setUnifiedNFTs] = useState<UnifiedNFT[]>([]);
   const [selectedNFTs, setSelectedNFTs] = useState<Set<string>>(new Set());
   const [searchFilter, setSearchFilter] = useState("");
 
   // ── Mint state ──
   const [mintProgress, setMintProgress] = useState({ done: 0, total: 0 });
   const [mintedAssets, setMintedAssets] = useState<number[]>([]);
-
   const abortRef = useRef(false);
 
-  // ─── Handlers ──────────────────────────────────────────────────────────────
+  // ─── Convert source-chain results into UnifiedNFT[] ───────────────────────
+
+  function unifyXrpl(nfts: ResolvedNFTMetadata[]): UnifiedNFT[] {
+    return nfts.map((n) => ({
+      id: n.nft_id,
+      name: n.name,
+      description: n.description,
+      image: n.image,
+      imageResolved: n.imageResolved,
+      metadataResolved: n.metadataResolved,
+      serialOrId: String(n.nft_serial),
+      collectionTag: `T: ${n.nft_taxon}`,
+      metadataIpfsCid: n.metadataIpfsCid,
+      decodedUri: n.decodedUri,
+      _xrpl: n,
+    }));
+  }
+
+  function unifyCardano(nfts: ResolvedCardanoNFT[]): UnifiedNFT[] {
+    return nfts.map((n) => ({
+      id: n.asset_id,
+      name: n.name,
+      description: n.description,
+      image: n.image,
+      imageResolved: n.imageResolved,
+      metadataResolved: n.metadataResolved,
+      serialOrId: n.fingerprint.slice(0, 12) + "…",
+      collectionTag: n.metadataStandard,
+      metadataStandard: n.metadataStandard,
+      _cardano: n,
+    }));
+  }
+
+  function unifyEth(nfts: ResolvedEthNFT[]): UnifiedNFT[] {
+    return nfts.map((n) => ({
+      id: `${n.contract_address}:${n.token_id}`,
+      name: n.name,
+      description: n.description,
+      image: n.image,
+      imageResolved: n.imageResolved,
+      metadataResolved: n.metadataResolved,
+      serialOrId: `#${n.token_id}`,
+      collectionTag: n.tokenType,
+      metadataStandard: n.tokenType,
+      decodedUri: n.tokenUri,
+      _eth: n,
+    }));
+  }
+
+  // ─── Handlers ─────────────────────────────────────────────────────────────
 
   const handleScan = useCallback(async () => {
-    if (!xrpAddress.trim()) {
-      toast.error("Please enter an XRP wallet address");
-      return;
-    }
-    if (!isValidXRPAddress(xrpAddress.trim())) {
-      toast.error("Invalid XRP address format. Addresses start with 'r'.");
-      return;
-    }
-
     abortRef.current = false;
     setStep("scanning");
     setScanProgress(0);
-    setResolvedNFTs([]);
+    setUnifiedNFTs([]);
     setSelectedNFTs(new Set());
     setTotalScanned(0);
 
     try {
-      toast.info("Scanning XRPL for NFTs...");
-      const endpoint = xrplNetwork === "testnet" ? XRPL_TESTNET_ENDPOINT : XRPL_MAINNET_ENDPOINT;
+      let unified: UnifiedNFT[] = [];
 
-      const nfts = await fetchNFTsByIssuer(xrpAddress.trim(), (count) => {
-        setScanProgress(count);
-      }, endpoint);
+      // ── XRPL ──
+      if (sourceChain === "xrpl") {
+        if (!xrpAddress.trim()) { toast.error("Please enter an XRP wallet address"); setStep("input"); return; }
+        if (!isValidXRPAddress(xrpAddress.trim())) { toast.error("Invalid XRP address format. Addresses start with 'r'."); setStep("input"); return; }
 
-      if (nfts.length === 0) {
-        toast.warning("No NFTs found for this address");
-        setStep("input");
-        return;
-      }
+        toast.info("Scanning XRPL for NFTs...");
+        const endpoint = xrplNetwork === "testnet" ? XRPL_TESTNET_ENDPOINT : XRPL_MAINNET_ENDPOINT;
+        const nfts = await fetchNFTsByIssuer(xrpAddress.trim(), (count) => setScanProgress(count), endpoint);
 
-      setTotalScanned(nfts.length);
+        if (nfts.length === 0) { toast.warning("No NFTs found for this address"); setStep("input"); return; }
+        setTotalScanned(nfts.length);
 
-      // Filter by Taxon ID if provided
-      let filteredNfts = nfts;
-      if (taxonId.trim() !== "") {
-        const taxonNum = parseInt(taxonId.trim(), 10);
-        if (!isNaN(taxonNum)) {
-          filteredNfts = nfts.filter((nft) => nft.nft_taxon === taxonNum);
+        let filteredNfts = nfts;
+        if (taxonId.trim() !== "") {
+          const taxonNum = parseInt(taxonId.trim(), 10);
+          if (!isNaN(taxonNum)) filteredNfts = nfts.filter((nft) => nft.nft_taxon === taxonNum);
         }
+        if (filteredNfts.length === 0) { toast.warning(`No NFTs found matching Taxon ID ${taxonId}`); setStep("input"); return; }
+
+        const start = Math.max(0, parseInt(startIndex, 10) || 0);
+        const end = endIndex.trim() !== "" ? Math.max(start, parseInt(endIndex, 10)) : filteredNfts.length;
+        const slicedNfts = filteredNfts.slice(start, end);
+        if (slicedNfts.length === 0) { toast.warning(`No NFTs found within range ${start} to ${end}`); setStep("input"); return; }
+
+        toast.info(`Found ${filteredNfts.length} matching NFTs. Resolving metadata for range ${start} to ${start + slicedNfts.length}...`);
+        setStep("resolving");
+        setResolveProgress({ done: 0, total: slicedNfts.length });
+
+        const resolved = await resolveAllMetadata(slicedNfts, 25, (done, total) => setResolveProgress({ done, total }));
+        unified = unifyXrpl(resolved);
       }
 
-      if (filteredNfts.length === 0) {
-        toast.warning(`No NFTs found matching Taxon ID ${taxonId}`);
-        setStep("input");
-        return;
+      // ── CARDANO ──
+      if (sourceChain === "cardano") {
+        if (!cardanoPolicyId.trim()) { toast.error("Please enter a Cardano Policy ID"); setStep("input"); return; }
+        if (!isValidPolicyId(cardanoPolicyId.trim())) { toast.error("Invalid Policy ID format. Must be 56 hex characters."); setStep("input"); return; }
+
+        toast.info("Scanning Cardano for NFTs via Koios...");
+        const rawNfts = await fetchNFTsByPolicy(cardanoPolicyId.trim(), cardanoNetwork, (count) => setScanProgress(count));
+
+        if (rawNfts.length === 0) { toast.warning("No assets found for this Policy ID"); setStep("input"); return; }
+        setTotalScanned(rawNfts.length);
+
+        const start = Math.max(0, parseInt(startIndex, 10) || 0);
+        const end = endIndex.trim() !== "" ? Math.max(start, parseInt(endIndex, 10)) : rawNfts.length;
+        const slicedNfts = rawNfts.slice(start, end);
+        if (slicedNfts.length === 0) { toast.warning(`No NFTs found within range ${start} to ${end}`); setStep("input"); return; }
+
+        toast.info(`Found ${rawNfts.length} assets. Resolving metadata for range ${start} to ${start + slicedNfts.length}...`);
+        setStep("resolving");
+        setResolveProgress({ done: 0, total: slicedNfts.length });
+
+        const resolved = await resolveCardanoMetadata(slicedNfts, 10, (done, total) => setResolveProgress({ done, total }));
+        unified = unifyCardano(resolved);
       }
 
-      // Apply Index Slicing (Start/End Range)
-      const start = Math.max(0, parseInt(startIndex, 10) || 0);
-      const end = endIndex.trim() !== "" ? Math.max(start, parseInt(endIndex, 10)) : filteredNfts.length;
-      const slicedNfts = filteredNfts.slice(start, end);
+      // ── ETHEREUM ──
+      if (sourceChain === "ethereum") {
+        if (!ethContractAddress.trim()) { toast.error("Please enter an Ethereum contract address"); setStep("input"); return; }
+        if (!isValidEthAddress(ethContractAddress.trim())) { toast.error("Invalid Ethereum address. Must start with 0x followed by 40 hex chars."); setStep("input"); return; }
+        if (!alchemyApiKey.trim()) { toast.error("Ethereum import is not configured. Please define VITE_ALCHEMY_API_KEY in your env variables."); setStep("input"); return; }
 
-      if (slicedNfts.length === 0) {
-        toast.warning(`No NFTs found within range ${start} to ${end}`);
-        setStep("input");
-        return;
+        toast.info("Scanning Ethereum for NFTs via Alchemy...");
+        const rawNfts = await fetchNFTsByContract(ethContractAddress.trim(), alchemyApiKey.trim(), ethNetwork, (count) => setScanProgress(count));
+
+        if (rawNfts.length === 0) { toast.warning("No NFTs found for this contract"); setStep("input"); return; }
+        setTotalScanned(rawNfts.length);
+
+        const start = Math.max(0, parseInt(startIndex, 10) || 0);
+        const end = endIndex.trim() !== "" ? Math.max(start, parseInt(endIndex, 10)) : rawNfts.length;
+        const slicedNfts = rawNfts.slice(start, end);
+        if (slicedNfts.length === 0) { toast.warning(`No NFTs found within range ${start} to ${end}`); setStep("input"); return; }
+
+        toast.info(`Found ${rawNfts.length} NFTs. Resolving metadata for range ${start} to ${start + slicedNfts.length}...`);
+        setStep("resolving");
+        setResolveProgress({ done: 0, total: slicedNfts.length });
+
+        const resolved = await resolveEthMetadata(slicedNfts, (done, total) => setResolveProgress({ done, total }));
+        unified = unifyEth(resolved);
       }
 
-      toast.info(`Found ${filteredNfts.length} matching NFTs. Resolving metadata for range ${start} to ${start + slicedNfts.length}...`);
-      setStep("resolving");
-      setResolveProgress({ done: 0, total: slicedNfts.length });
-
-      const resolved = await resolveAllMetadata(slicedNfts, 25, (done, total) => {
-        setResolveProgress({ done, total });
-      });
-
-      setResolvedNFTs(resolved);
-      setSelectedNFTs(new Set(resolved.filter((n) => n.metadataResolved || n.imageResolved).map((n) => n.nft_id)));
+      // ── Set preview state ──
+      setUnifiedNFTs(unified);
+      setSelectedNFTs(new Set(unified.filter((n) => n.metadataResolved || n.imageResolved).map((n) => n.id)));
       setStep("preview");
 
-      const successCount = resolved.filter((n) => n.metadataResolved || n.imageResolved).length;
-      toast.success(`Loaded ${successCount} NFTs (range ${start} to ${start + slicedNfts.length})`);
+      const successCount = unified.filter((n) => n.metadataResolved || n.imageResolved).length;
+      toast.success(`Loaded ${successCount} NFTs ready for import`);
     } catch (err: any) {
       console.error(err);
-      let errMsg = err.message || "Failed to scan XRPL";
+      let errMsg = err.message || "Failed to scan source chain";
       if (errMsg.includes("Account not found")) {
-        errMsg = "Account not found. Please verify the address and check if you are on the correct network (Mainnet vs Testnet).";
+        errMsg = "Account not found. Please verify the address and check if you are on the correct network.";
       }
       toast.error(errMsg);
       setStep("input");
     }
-  }, [xrpAddress, taxonId, startIndex, endIndex, xrplNetwork]);
+  }, [sourceChain, xrpAddress, taxonId, startIndex, endIndex, xrplNetwork, cardanoPolicyId, cardanoNetwork, ethContractAddress, ethNetwork, alchemyApiKey]);
 
   const handleToggleNFT = useCallback((nftId: string) => {
     setSelectedNFTs((prev) => {
       const next = new Set(prev);
-      if (next.has(nftId)) next.delete(nftId);
-      else next.add(nftId);
+      if (next.has(nftId)) next.delete(nftId); else next.add(nftId);
       return next;
     });
   }, []);
 
   const handleSelectAll = useCallback(() => {
-    const validIds = resolvedNFTs
-      .filter((n) => n.metadataResolved || n.imageResolved)
-      .map((n) => n.nft_id);
+    const validIds = unifiedNFTs.filter((n) => n.metadataResolved || n.imageResolved).map((n) => n.id);
     setSelectedNFTs(new Set(validIds));
-  }, [resolvedNFTs]);
+  }, [unifiedNFTs]);
 
-  const handleDeselectAll = useCallback(() => {
-    setSelectedNFTs(new Set());
-  }, []);
+  const handleDeselectAll = useCallback(() => { setSelectedNFTs(new Set()); }, []);
 
   const handleMint = useCallback(async () => {
-    if (!activeAddress) {
-      toast.error("Please connect your Algorand wallet");
-      return;
-    }
-    if (selectedNFTs.size === 0) {
-      toast.error("No NFTs selected for import");
-      return;
-    }
+    if (!activeAddress) { toast.error("Please connect your Algorand wallet"); return; }
+    if (selectedNFTs.size === 0) { toast.error("No NFTs selected for import"); return; }
 
-    const toMint = resolvedNFTs.filter((n) => selectedNFTs.has(n.nft_id));
+    const toMint = unifiedNFTs.filter((n) => selectedNFTs.has(n.id));
     setStep("minting");
     setMintProgress({ done: 0, total: toMint.length });
     setMintedAssets([]);
@@ -206,24 +315,62 @@ export function NFTImportTool() {
       for (let i = 0; i < toMint.length; i++) {
         if (abortRef.current) break;
         const nft = toMint[i];
-        
-        let finalFormat = arcFormat;
-        // If they chose ARC19/ARC3 but the metadata is not IPFS, force fallback to ARC69
-        if (finalFormat !== "ARC69" && !nft.metadataIpfsCid && !nft.decodedUri.startsWith("ipfs://")) {
-          toast.warn(`Non-IPFS metadata detected for ${nft.name}. Enforcing ARC69 format.`, { autoClose: 3500 });
-          finalFormat = "ARC69";
-        }
 
+        // If the NFT came from XRPL, use the existing formatters
+        // For Cardano & Ethereum we use a generic approach since
+        // the metadata is already resolved into a common shape.
         let mintData: any;
-        if (finalFormat === "ARC69") {
-          mintData = formatAsARC69(nft, collectionName);
-        } else if (finalFormat === "ARC3") {
-          mintData = formatAsARC3(nft, collectionName);
+
+        if (nft._xrpl) {
+          const xrplNft = nft._xrpl;
+          let finalFormat = arcFormat;
+          if (finalFormat !== "ARC69" && !xrplNft.metadataIpfsCid && !xrplNft.decodedUri.startsWith("ipfs://")) {
+            toast.warn(`Non-IPFS metadata detected for ${xrplNft.name}. Enforcing ARC69 format.`, { autoClose: 3500 });
+            finalFormat = "ARC69";
+          }
+          if (finalFormat === "ARC69") mintData = formatAsARC69(xrplNft, collectionName);
+          else if (finalFormat === "ARC3") mintData = formatAsARC3(xrplNft, collectionName);
+          else mintData = formatAsARC19(xrplNft, collectionName);
         } else {
-          mintData = formatAsARC19(nft, collectionName);
+          // Generic formatting for Cardano / Ethereum imports
+          let finalFormat = arcFormat;
+          const hasIpfs = nft.image?.includes("ipfs") || nft.decodedUri?.startsWith("ipfs://");
+          if (finalFormat !== "ARC69" && !hasIpfs) {
+            toast.warn(`Non-IPFS metadata detected for ${nft.name}. Enforcing ARC69 format.`, { autoClose: 3500 });
+            finalFormat = "ARC69";
+          }
+
+          const unitName = collectionName
+            ? collectionName.slice(0, 8).toUpperCase()
+            : (nft._cardano?.policy_id?.slice(0, 8) || nft._eth?.contractSymbol?.slice(0, 8) || "IMPORT").toUpperCase();
+
+          const assetUrl = nft.image || nft.decodedUri || "";
+
+          mintData = {
+            asset_name: nft.name.slice(0, 32),
+            unit_name: unitName,
+            total_supply: 1,
+            decimals: 0,
+            asset_url: assetUrl.slice(0, 96),  // Algorand 96-char URL limit
+            reserve_address: activeAddress,
+            has_freeze: "N",
+            has_clawback: "N",
+            default_frozen: "N",
+            asset_note: finalFormat === "ARC69" ? {
+              standard: "arc69",
+              description: nft.description.slice(0, 1024),
+              external_url: nft.image,
+              mime_type: "image/png",
+              properties: {
+                source_chain: sourceChain,
+                original_standard: nft.metadataStandard || "unknown",
+                ...(nft._cardano ? { cardano_fingerprint: nft._cardano.fingerprint } : {}),
+                ...(nft._eth ? { eth_contract: nft._eth.contract_address, eth_token_id: nft._eth.token_id } : {}),
+              },
+            } : undefined,
+          };
         }
 
-        // Build native asset create txn
         const asset_create_tx = algosdk.makeAssetCreateTxnWithSuggestedParamsFromObject({
           from: activeAddress,
           manager: activeAddress,
@@ -231,7 +378,7 @@ export function NFTImportTool() {
           unitName: mintData.unit_name,
           total: BigInt(mintData.total_supply) * 10n ** BigInt(mintData.decimals),
           decimals: parseInt(mintData.decimals as any),
-          reserve: mintData.reserve_address || activeAddress, // Default to activeAddress for non-ARC19
+          reserve: mintData.reserve_address || activeAddress,
           freeze: mintData.has_freeze === "Y" ? activeAddress : undefined,
           assetURL: mintData.asset_url,
           suggestedParams: { ...suggestedParams, fee: 2000 },
@@ -240,7 +387,6 @@ export function NFTImportTool() {
           note: mintData.asset_note ? new TextEncoder().encode(JSON.stringify(mintData.asset_note)) : undefined,
         });
 
-        // Appending 0 ALGO tracking fee
         const fee_tx = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
           from: activeAddress,
           to: MINT_FEE_WALLET,
@@ -249,29 +395,19 @@ export function NFTImportTool() {
           note: new TextEncoder().encode("via wen.tools cross-chain importer | " + Math.random().toString(36).substring(2)),
         });
 
-        // Group the two transactions together natively
         const group = algosdk.assignGroupID([asset_create_tx, fee_tx]);
         allTxns.push(...group);
-
         totalPrepared++;
         setMintProgress({ done: totalPrepared, total: toMint.length });
-        
-        toast.info(`Prepared ${totalPrepared}/${toMint.length}: ${nft.name}`, {
-          autoClose: 500,
-        });
+        toast.info(`Prepared ${totalPrepared}/${toMint.length}: ${nft.name}`, { autoClose: 500 });
       }
 
-      if (abortRef.current) {
-        setStep("preview");
-        return;
-      }
+      if (abortRef.current) { setStep("preview"); return; }
 
-      // We have an array of transactions in groups of 2.
-      // Sign all transactions at once in a single wallet prompt
       toast.info(`Signing all ${allTxns.length} transactions...`);
       const signedTxns = await walletSign(allTxns, transactionSigner);
       const signedGroups = sliceIntoChunks(Array.from(signedTxns), 2);
-      // Submit all groups in parallel to avoid waiting sequentially for each confirmation
+
       toast.info(`Submitting ${signedGroups.length} NFTs in parallel...`);
       setMintProgress({ done: 0, total: signedGroups.length });
 
@@ -283,16 +419,13 @@ export function NFTImportTool() {
             setMintProgress((prev) => ({ ...prev, done: prev.done + 1 }));
             return confirmed["asset-index"];
           }
-        } catch (e) {
-          console.warn(`NFT ${idx + 1} submission error:`, e);
-        }
+        } catch (e) { console.warn(`NFT ${idx + 1} submission error:`, e); }
         setMintProgress((prev) => ({ ...prev, done: prev.done + 1 }));
         return null;
       });
 
       const results = await Promise.all(submissionPromises);
       const allCreatedIds = results.filter((id): id is number => id !== null);
-
       setMintedAssets(allCreatedIds);
       setStep("done");
       toast.success(`Successfully imported ${allCreatedIds.length} NFTs to Algorand!`);
@@ -301,36 +434,26 @@ export function NFTImportTool() {
       toast.error(err.message || "Minting failed");
       setStep("preview");
     }
-  }, [
-    activeAddress,
-    algodClient,
-    transactionSigner,
-    selectedNFTs,
-    resolvedNFTs,
-    arcFormat,
-    collectionName,
-  ]);
+  }, [activeAddress, algodClient, transactionSigner, selectedNFTs, unifiedNFTs, arcFormat, collectionName, sourceChain]);
 
-  // ─── Filtering ─────────────────────────────────────────────────────────────
+  // ─── Filtering ────────────────────────────────────────────────────────────
 
-  const filteredNFTs = resolvedNFTs.filter((nft) => {
+  const filteredNFTs = unifiedNFTs.filter((nft) => {
     if (!searchFilter) return true;
     const q = searchFilter.toLowerCase();
-    return (
-      nft.name.toLowerCase().includes(q) ||
-      nft.nft_id.toLowerCase().includes(q) ||
-      nft.description.toLowerCase().includes(q)
-    );
+    return nft.name.toLowerCase().includes(q) || nft.id.toLowerCase().includes(q) || nft.description.toLowerCase().includes(q);
   });
 
-  // ─── Render ────────────────────────────────────────────────────────────────
+  // ─── Chain label helpers ──────────────────────────────────────────────────
+
+  const chainLabel = sourceChain === "xrpl" ? "XRPL" : sourceChain === "cardano" ? "Cardano" : "Ethereum";
+  const chainEmoji = sourceChain === "xrpl" ? "💧" : sourceChain === "cardano" ? "🔷" : "⟠";
+
+  // ─── Render ───────────────────────────────────────────────────────────────
 
   return (
     <div className="pb-20 pt-2 text-white flex flex-col items-center min-h-screen w-full">
-      <Meta
-        title={TOOL_META.label}
-        description={TOOL_META.description}
-      />
+      <Meta title={TOOL_META.label} description={TOOL_META.description} />
 
       <div className="w-full max-w-6xl px-4">
         {/* Header */}
@@ -346,8 +469,8 @@ export function NFTImportTool() {
             </h1>
           </div>
           <p className="text-gray-400 max-w-xl mx-auto text-sm leading-relaxed">
-            Import your NFTs from other blockchains (XRP Ledger) and re-mint them on Algorand.
-            Scans metadata & IPFS images, then formats to your chosen ARC standard.
+            Import your NFTs from other blockchains (XRP Ledger, Cardano, Ethereum) and re-mint them on Algorand.
+            Scans metadata &amp; IPFS images, then formats to your chosen ARC standard.
           </p>
         </div>
 
@@ -367,15 +490,11 @@ export function NFTImportTool() {
               (step === "resolving" && i < 1);
             return (
               <div key={s.key} className="flex items-center gap-2">
-                <div
-                  className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300 ${
-                    isActive
-                      ? "bg-orange-500 text-white shadow-lg shadow-orange-500/30"
-                      : isPast
-                        ? "bg-orange-500/30 text-orange-300 border border-orange-500/40"
-                        : "bg-white/5 text-gray-500 border border-white/10"
-                  }`}
-                >
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300 ${
+                  isActive ? "bg-orange-500 text-white shadow-lg shadow-orange-500/30"
+                  : isPast ? "bg-orange-500/30 text-orange-300 border border-orange-500/40"
+                  : "bg-white/5 text-gray-500 border border-white/10"
+                }`}>
                   {isPast ? "✓" : i + 1}
                 </div>
                 <span className={`text-xs font-medium ${isActive ? "text-orange-400" : isPast ? "text-orange-300/60" : "text-gray-500"}`}>
@@ -390,11 +509,13 @@ export function NFTImportTool() {
         {/* ── Step: Input ── */}
         {step === "input" && (
           <div className="max-w-2xl mx-auto space-y-6 animate-fadeIn">
-            {/* Source Chain */}
+
+            {/* Source Chain Selector */}
             <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-6">
               <label className="block text-sm font-semibold text-gray-300 mb-3">Source Chain</label>
               <div className="flex flex-wrap gap-3">
                 <button
+                  onClick={() => setSourceChain("xrpl")}
                   className={`flex items-center gap-2 px-5 py-3 rounded-xl text-sm font-semibold transition-all ${
                     sourceChain === "xrpl"
                       ? "bg-orange-500/20 border-2 border-orange-500 text-orange-400"
@@ -404,12 +525,24 @@ export function NFTImportTool() {
                   <span className="text-lg">💧</span> XRP Ledger
                 </button>
                 <button
-                  disabled
-                  className="flex items-center gap-2 px-5 py-3 rounded-xl text-sm font-semibold bg-white/5 border border-white/10 text-gray-600 cursor-not-allowed opacity-50"
-                  title="Coming soon"
+                  onClick={() => setSourceChain("cardano")}
+                  className={`flex items-center gap-2 px-5 py-3 rounded-xl text-sm font-semibold transition-all ${
+                    sourceChain === "cardano"
+                      ? "bg-blue-500/20 border-2 border-blue-500 text-blue-400"
+                      : "bg-white/5 border border-white/10 text-gray-400 hover:border-white/20"
+                  }`}
                 >
-                  <span className="text-lg">⟠</span> Ethereum
-                  <span className="text-xxs bg-white/10 px-2 py-0.5 rounded-full">Soon</span>
+                  <span className="text-lg">🔷</span> Cardano (ADA)
+                </button>
+                <button
+                  onClick={() => setSourceChain("ethereum")}
+                  className={`flex items-center gap-2 px-5 py-3 rounded-xl text-sm font-semibold transition-all ${
+                    sourceChain === "ethereum"
+                      ? "bg-purple-500/20 border-2 border-purple-500 text-purple-400"
+                      : "bg-white/5 border border-white/10 text-gray-400 hover:border-white/20"
+                  }`}
+                >
+                  <span className="text-lg">⟠</span> Ethereum (ETH)
                 </button>
               </div>
             </div>
@@ -418,116 +551,106 @@ export function NFTImportTool() {
             <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-6 animate-fadeIn">
               <label className="block text-sm font-semibold text-gray-300 mb-3">Source Network</label>
               <div className="flex flex-wrap gap-3">
-                <button
-                  onClick={() => setXrplNetwork("mainnet")}
-                  className={`px-5 py-3 rounded-xl text-sm font-semibold transition-all ${
-                    xrplNetwork === "mainnet"
-                      ? "bg-orange-500/20 border-2 border-orange-500 text-orange-400"
-                      : "bg-white/5 border border-white/10 text-gray-400 hover:border-white/20"
-                  }`}
-                >
-                  Mainnet
-                </button>
-                <button
-                  onClick={() => setXrplNetwork("testnet")}
-                  className={`px-5 py-3 rounded-xl text-sm font-semibold transition-all ${
-                    xrplNetwork === "testnet"
-                      ? "bg-orange-500/20 border-2 border-orange-500 text-orange-400"
-                      : "bg-white/5 border border-white/10 text-gray-400 hover:border-white/20"
-                  }`}
-                >
-                  Testnet
-                </button>
+                {sourceChain === "xrpl" && (
+                  <>
+                    <button onClick={() => setXrplNetwork("mainnet")} className={`px-5 py-3 rounded-xl text-sm font-semibold transition-all ${xrplNetwork === "mainnet" ? "bg-orange-500/20 border-2 border-orange-500 text-orange-400" : "bg-white/5 border border-white/10 text-gray-400 hover:border-white/20"}`}>Mainnet</button>
+                    <button onClick={() => setXrplNetwork("testnet")} className={`px-5 py-3 rounded-xl text-sm font-semibold transition-all ${xrplNetwork === "testnet" ? "bg-orange-500/20 border-2 border-orange-500 text-orange-400" : "bg-white/5 border border-white/10 text-gray-400 hover:border-white/20"}`}>Testnet</button>
+                  </>
+                )}
+                {sourceChain === "cardano" && (
+                  <>
+                    <button onClick={() => setCardanoNetwork("mainnet")} className={`px-5 py-3 rounded-xl text-sm font-semibold transition-all ${cardanoNetwork === "mainnet" ? "bg-blue-500/20 border-2 border-blue-500 text-blue-400" : "bg-white/5 border border-white/10 text-gray-400 hover:border-white/20"}`}>Mainnet</button>
+                    <button onClick={() => setCardanoNetwork("preprod")} className={`px-5 py-3 rounded-xl text-sm font-semibold transition-all ${cardanoNetwork === "preprod" ? "bg-blue-500/20 border-2 border-blue-500 text-blue-400" : "bg-white/5 border border-white/10 text-gray-400 hover:border-white/20"}`}>Preprod</button>
+                    <button onClick={() => setCardanoNetwork("preview")} className={`px-5 py-3 rounded-xl text-sm font-semibold transition-all ${cardanoNetwork === "preview" ? "bg-blue-500/20 border-2 border-blue-500 text-blue-400" : "bg-white/5 border border-white/10 text-gray-400 hover:border-white/20"}`}>Preview</button>
+                  </>
+                )}
+                {sourceChain === "ethereum" && (
+                  <>
+                    <button onClick={() => setEthNetwork("mainnet")} className={`px-5 py-3 rounded-xl text-sm font-semibold transition-all ${ethNetwork === "mainnet" ? "bg-purple-500/20 border-2 border-purple-500 text-purple-400" : "bg-white/5 border border-white/10 text-gray-400 hover:border-white/20"}`}>Mainnet</button>
+                    <button onClick={() => setEthNetwork("sepolia")} className={`px-5 py-3 rounded-xl text-sm font-semibold transition-all ${ethNetwork === "sepolia" ? "bg-purple-500/20 border-2 border-purple-500 text-purple-400" : "bg-white/5 border border-white/10 text-gray-400 hover:border-white/20"}`}>Sepolia</button>
+                  </>
+                )}
               </div>
             </div>
 
-            {/* XRP Address */}
-            <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-6">
-              <label className="block text-sm font-semibold text-gray-300 mb-2">
-                XRP Creator / Owner Wallet Address
-              </label>
-              <p className="text-xs text-gray-500 mb-3">
-                Enter the XRPL address that issued or holds the NFTs you want to import.
-              </p>
-              <input
-                type="text"
-                value={xrpAddress}
-                onChange={(e) => setXrpAddress(e.target.value)}
-                placeholder="rXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
-                className="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-orange-500/50 transition font-mono text-sm"
-              />
-            </div>
+            {/* ── XRPL-specific inputs ── */}
+            {sourceChain === "xrpl" && (
+              <>
+                <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-6">
+                  <label className="block text-sm font-semibold text-gray-300 mb-2">XRP Creator / Owner Wallet Address</label>
+                  <p className="text-xs text-gray-500 mb-3">Enter the XRPL address that issued or holds the NFTs you want to import.</p>
+                  <input type="text" value={xrpAddress} onChange={(e) => setXrpAddress(e.target.value)} placeholder="rXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+                    className="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-orange-500/50 transition font-mono text-sm" />
+                </div>
+                <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-6">
+                  <label className="block text-sm font-semibold text-gray-300 mb-2">Taxon ID <span className="text-gray-500 font-normal">(optional collection filter)</span></label>
+                  <p className="text-xs text-gray-500 mb-3">XRPL uses Taxon IDs to group NFTs into collections under an issuer. Enter a taxon ID to only import that collection.</p>
+                  <input type="text" value={taxonId} onChange={(e) => setTaxonId(e.target.value.replace(/[^0-9]/g, ""))} placeholder="e.g. 0"
+                    className="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-orange-500/50 transition text-sm" />
+                </div>
+              </>
+            )}
 
-            {/* Taxon ID Filter */}
-            <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-6">
-              <label className="block text-sm font-semibold text-gray-300 mb-2">
-                Taxon ID <span className="text-gray-500 font-normal">(optional collection filter)</span>
-              </label>
-              <p className="text-xs text-gray-500 mb-3">
-                XRPL uses Taxon IDs to group NFTs into collections under an issuer. Enter a taxon ID to only import that collection.
-              </p>
-              <input
-                type="text"
-                value={taxonId}
-                onChange={(e) => setTaxonId(e.target.value.replace(/[^0-9]/g, ""))}
-                placeholder="e.g. 0"
-                className="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-orange-500/50 transition text-sm"
-              />
-            </div>
+            {/* ── Cardano-specific inputs ── */}
+            {sourceChain === "cardano" && (
+              <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-6">
+                <label className="block text-sm font-semibold text-gray-300 mb-2">Policy ID</label>
+                <p className="text-xs text-gray-500 mb-3">
+                  Cardano groups NFTs by Policy ID (56 hex chars). All tokens minted under the same policy belong to one collection.
+                  This is similar to XRPL's Taxon ID. Supports both <span className="text-blue-400 font-medium">CIP-25</span> (immutable) and <span className="text-blue-400 font-medium">CIP-68</span> (mutable) standards.
+                </p>
+                <input type="text" value={cardanoPolicyId} onChange={(e) => setCardanoPolicyId(e.target.value.replace(/[^0-9a-fA-F]/g, ""))} placeholder="e.g. 477cec772adb1466b301fb8161f505aa66ed1ee8d69d3e7984256a43"
+                  className="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-blue-500/50 transition font-mono text-sm" />
+                <p className="text-xxs text-gray-600 mt-2">
+                  Powered by <a href="https://koios.rest" target="_blank" rel="noreferrer" className="text-blue-400 hover:underline">Koios API</a> — free tier, no API key required (5,000 req/day)
+                </p>
+              </div>
+            )}
 
-            {/* Range Index Filter */}
+            {/* ── Ethereum-specific inputs ── */}
+            {sourceChain === "ethereum" && (
+              <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-6">
+                <label className="block text-sm font-semibold text-gray-300 mb-2">NFT Contract Address</label>
+                <p className="text-xs text-gray-500 mb-3">
+                  Ethereum groups NFTs by contract address (the deployed ERC-721 or ERC-1155 smart contract).
+                  Supports both <span className="text-purple-400 font-medium">ERC-721</span> (unique 1/1 tokens) and <span className="text-purple-400 font-medium">ERC-1155</span> (multi-token, can be NFT when supply=1).
+                  ERC-721 metadata can be immutable (IPFS) or mutable (HTTP tokenURI).
+                </p>
+                <input type="text" value={ethContractAddress} onChange={(e) => setEthContractAddress(e.target.value)} placeholder="0x..."
+                  className="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-purple-500/50 transition font-mono text-sm" />
+              </div>
+            )}
+
+            {/* Range Index Filter (shared) */}
             <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-6">
-              <label className="block text-sm font-semibold text-gray-300 mb-2">
-                Import Range (Indices)
-              </label>
-              <p className="text-xs text-gray-500 mb-3">
-                Specify a range of NFTs to load from the filtered list. Pera Wallet has a maximum signing limit of around 500 transactions.
-              </p>
+              <label className="block text-sm font-semibold text-gray-300 mb-2">Import Range (Indices)</label>
+              <p className="text-xs text-gray-500 mb-3">Specify a range of NFTs to load from the filtered list. Pera Wallet has a maximum signing limit of around 500 transactions.</p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xxs text-gray-500 uppercase font-bold mb-1">Start Index</label>
-                  <input
-                    type="number"
-                    min="0"
-                    value={startIndex}
-                    onChange={(e) => setStartIndex(e.target.value.replace(/[^0-9]/g, ""))}
-                    placeholder="e.g. 0"
-                    className="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-orange-500/50 transition text-sm font-mono"
-                  />
+                  <input type="number" min="0" value={startIndex} onChange={(e) => setStartIndex(e.target.value.replace(/[^0-9]/g, ""))} placeholder="e.g. 0"
+                    className="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-orange-500/50 transition text-sm font-mono" />
                 </div>
                 <div>
                   <label className="block text-xxs text-gray-500 uppercase font-bold mb-1">End Index (Exclusive)</label>
-                  <input
-                    type="number"
-                    min="0"
-                    value={endIndex}
-                    onChange={(e) => setEndIndex(e.target.value.replace(/[^0-9]/g, ""))}
-                    placeholder="e.g. 500"
-                    className="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-orange-500/50 transition text-sm font-mono"
-                  />
+                  <input type="number" min="0" value={endIndex} onChange={(e) => setEndIndex(e.target.value.replace(/[^0-9]/g, ""))} placeholder="e.g. 500"
+                    className="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-orange-500/50 transition text-sm font-mono" />
                 </div>
               </div>
             </div>
 
             {/* ARC Format */}
             <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-6">
-              <label className="block text-sm font-semibold text-gray-300 mb-2">
-                Algorand ARC Standard
-              </label>
-              <p className="text-xs text-gray-500 mb-3">
-                Choose how your NFTs will be formatted on Algorand.
-              </p>
+              <label className="block text-sm font-semibold text-gray-300 mb-2">Algorand ARC Standard</label>
+              <p className="text-xs text-gray-500 mb-3">Choose how your NFTs will be formatted on Algorand.</p>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 {(["ARC19", "ARC3", "ARC69"] as AlgorandARC[]).map((arc) => (
-                  <button
-                    key={arc}
-                    onClick={() => setArcFormat(arc)}
+                  <button key={arc} onClick={() => setArcFormat(arc)}
                     className={`p-4 rounded-xl text-left transition-all ${
                       arcFormat === arc
                         ? "bg-orange-500/15 border-2 border-orange-500 shadow-lg shadow-orange-500/10"
                         : "bg-white/5 border border-white/10 hover:border-white/20"
-                    }`}
-                  >
+                    }`}>
                     <div className="font-bold text-sm mb-1">{arc}</div>
                     <div className="text-xxs text-gray-400 leading-relaxed">
                       {arc === "ARC3" && "Immutable. Metadata on IPFS. Best for permanent art."}
@@ -541,32 +664,18 @@ export function NFTImportTool() {
 
             {/* Collection Name */}
             <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-6">
-              <label className="block text-sm font-semibold text-gray-300 mb-2">
-                Collection Name <span className="text-gray-500 font-normal">(optional)</span>
-              </label>
-              <p className="text-xs text-gray-500 mb-3">
-                Used as the unit name prefix for all imported NFTs.
-              </p>
-              <input
-                type="text"
-                value={collectionName}
-                onChange={(e) => setCollectionName(e.target.value)}
-                placeholder="e.g. MYXRPNFT"
-                maxLength={8}
-                className="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-orange-500/50 transition text-sm"
-              />
+              <label className="block text-sm font-semibold text-gray-300 mb-2">Collection Name <span className="text-gray-500 font-normal">(optional)</span></label>
+              <p className="text-xs text-gray-500 mb-3">Used as the unit name prefix for all imported NFTs.</p>
+              <input type="text" value={collectionName} onChange={(e) => setCollectionName(e.target.value)} placeholder="e.g. MYXRPNFT" maxLength={8}
+                className="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-orange-500/50 transition text-sm" />
               <p className="text-xxs text-gray-600 mt-1">Max 8 characters, alphanumeric</p>
             </div>
 
-
-
             {/* Scan Button */}
             <div className="flex justify-center pt-2">
-              <button
-                onClick={handleScan}
-                className="px-8 py-3.5 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-bold rounded-xl transition-all shadow-lg shadow-orange-500/25 hover:shadow-orange-500/40 text-sm"
-              >
-                🔍 Scan XRPL for NFTs
+              <button onClick={handleScan}
+                className="px-8 py-3.5 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-bold rounded-xl transition-all shadow-lg shadow-orange-500/25 hover:shadow-orange-500/40 text-sm">
+                🔍 Scan {chainLabel} for NFTs
               </button>
             </div>
           </div>
@@ -581,31 +690,20 @@ export function NFTImportTool() {
                 <div className="absolute inset-0 border-4 border-orange-500 border-t-transparent rounded-full animate-spin" />
                 <div className="absolute inset-3 border-4 border-amber-400/30 border-b-transparent rounded-full animate-spin" style={{ animationDirection: "reverse", animationDuration: "1.5s" }} />
               </div>
-
               {step === "scanning" ? (
                 <>
-                  <h3 className="text-lg font-bold mb-2">Scanning XRPL...</h3>
+                  <h3 className="text-lg font-bold mb-2">Scanning {chainLabel}...</h3>
                   <p className="text-gray-400 text-sm">Found {scanProgress} NFTs so far</p>
                 </>
               ) : (
                 <>
                   <h3 className="text-lg font-bold mb-2">Resolving Metadata...</h3>
-                  <p className="text-gray-400 text-sm mb-4">
-                    Fetching IPFS metadata for each NFT
-                  </p>
+                  <p className="text-gray-400 text-sm mb-4">Fetching metadata for each NFT</p>
                   <div className="w-full bg-white/10 rounded-full h-2 overflow-hidden">
-                    <div
-                      className="h-full bg-gradient-to-r from-orange-500 to-amber-500 transition-all duration-300 rounded-full"
-                      style={{
-                        width: resolveProgress.total
-                          ? `${(resolveProgress.done / resolveProgress.total) * 100}%`
-                          : "0%",
-                      }}
-                    />
+                    <div className="h-full bg-gradient-to-r from-orange-500 to-amber-500 transition-all duration-300 rounded-full"
+                      style={{ width: resolveProgress.total ? `${(resolveProgress.done / resolveProgress.total) * 100}%` : "0%" }} />
                   </div>
-                  <p className="text-xs text-gray-500 mt-2">
-                    {resolveProgress.done} / {resolveProgress.total}
-                  </p>
+                  <p className="text-xs text-gray-500 mt-2">{resolveProgress.done} / {resolveProgress.total}</p>
                 </>
               )}
             </div>
@@ -618,157 +716,98 @@ export function NFTImportTool() {
             {/* Collection Summary Panel */}
             <div className="bg-white/5 border border-white/10 rounded-2xl p-6 backdrop-blur-md grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4 text-left">
               <div className="space-y-1">
-                <span className="text-[10px] text-gray-500 uppercase font-bold tracking-wider">XRP Address</span>
-                <p className="text-sm font-mono text-gray-300 truncate" title={xrpAddress}>{xrpAddress}</p>
+                <span className="text-[10px] text-gray-500 uppercase font-bold tracking-wider">Source</span>
+                <p className="text-sm font-bold text-orange-400">{chainEmoji} {chainLabel}</p>
               </div>
               <div className="space-y-1">
-                <span className="text-[10px] text-gray-500 uppercase font-bold tracking-wider">Collection / Taxon Filter</span>
-                <p className="text-sm font-bold text-orange-400 truncate">
-                  {taxonId.trim() !== "" ? `Taxon: ${taxonId} (${xrplNetwork})` : `Show All (${xrplNetwork})`}
+                <span className="text-[10px] text-gray-500 uppercase font-bold tracking-wider">
+                  {sourceChain === "xrpl" ? "Address / Taxon" : sourceChain === "cardano" ? "Policy ID" : "Contract"}
+                </span>
+                <p className="text-sm font-mono text-gray-300 truncate" title={sourceChain === "xrpl" ? xrpAddress : sourceChain === "cardano" ? cardanoPolicyId : ethContractAddress}>
+                  {sourceChain === "xrpl" && (taxonId.trim() !== "" ? `Taxon: ${taxonId}` : xrpAddress.slice(0, 16) + "…")}
+                  {sourceChain === "cardano" && (cardanoPolicyId.slice(0, 16) + "…")}
+                  {sourceChain === "ethereum" && (ethContractAddress.slice(0, 16) + "…")}
                 </p>
               </div>
               <div className="space-y-1">
                 <span className="text-[10px] text-gray-500 uppercase font-bold tracking-wider">Total Scanned</span>
-                <p className="text-sm font-bold text-gray-300">
-                  {totalScanned} NFTs
-                </p>
+                <p className="text-sm font-bold text-gray-300">{totalScanned} NFTs</p>
               </div>
               <div className="space-y-1">
                 <span className="text-[10px] text-gray-500 uppercase font-bold tracking-wider">Loaded Range</span>
-                <p className="text-sm font-bold text-blue-400 font-mono">
-                  Index {startIndex} to {parseInt(startIndex, 10) + resolvedNFTs.length}
-                </p>
+                <p className="text-sm font-bold text-blue-400 font-mono">Index {startIndex} to {parseInt(startIndex, 10) + unifiedNFTs.length}</p>
               </div>
               <div className="space-y-1">
                 <span className="text-[10px] text-gray-500 uppercase font-bold tracking-wider">Selected / Loaded</span>
-                <p className="text-sm font-bold text-amber-300">
-                  {selectedNFTs.size} of {resolvedNFTs.filter(n => n.metadataResolved || n.imageResolved).length} Ok
-                </p>
+                <p className="text-sm font-bold text-amber-300">{selectedNFTs.size} of {unifiedNFTs.filter(n => n.metadataResolved || n.imageResolved).length} Ok</p>
               </div>
             </div>
 
             {/* Controls */}
             <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
               <div className="flex items-center gap-3">
-                <span className="text-sm text-gray-400">
-                  {selectedNFTs.size} selected
-                </span>
-                <button onClick={handleSelectAll} className="text-xs text-orange-400 hover:text-orange-300 underline">
-                  Select All
-                </button>
-                <button onClick={handleDeselectAll} className="text-xs text-gray-400 hover:text-gray-300 underline">
-                  Deselect All
-                </button>
+                <span className="text-sm text-gray-400">{selectedNFTs.size} selected</span>
+                <button onClick={handleSelectAll} className="text-xs text-orange-400 hover:text-orange-300 underline">Select All</button>
+                <button onClick={handleDeselectAll} className="text-xs text-gray-400 hover:text-gray-300 underline">Deselect All</button>
               </div>
               <div className="flex items-center gap-3">
-                <input
-                  type="text"
-                  value={searchFilter}
-                  onChange={(e) => setSearchFilter(e.target.value)}
-                  placeholder="Filter by name..."
-                  className="bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-orange-500/50 w-48"
-                />
-                <button
-                  onClick={() => setStep("input")}
-                  className="px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-gray-400 hover:border-white/20 transition"
-                >
-                  ← Back
-                </button>
+                <input type="text" value={searchFilter} onChange={(e) => setSearchFilter(e.target.value)} placeholder="Filter by name..."
+                  className="bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-orange-500/50 w-48" />
+                <button onClick={() => setStep("input")} className="px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-gray-400 hover:border-white/20 transition">← Back</button>
               </div>
             </div>
 
             {/* NFT Grid */}
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 mb-8">
               {filteredNFTs.map((nft) => {
-                const isSelected = selectedNFTs.has(nft.nft_id);
+                const isSelected = selectedNFTs.has(nft.id);
                 const isValid = nft.metadataResolved || nft.imageResolved;
                 return (
-                  <div
-                    key={nft.nft_id}
-                    onClick={() => isValid && handleToggleNFT(nft.nft_id)}
+                  <div key={nft.id} onClick={() => isValid && handleToggleNFT(nft.id)}
                     className={`relative rounded-xl overflow-hidden transition-all cursor-pointer group ${
-                      !isValid
-                        ? "opacity-40 cursor-not-allowed bg-red-950/10 border border-red-900/20"
-                        : isSelected
-                          ? "ring-2 ring-orange-500 shadow-lg shadow-orange-500/20"
-                          : "ring-1 ring-white/10 hover:ring-white/20"
-                    }`}
-                  >
-                    {/* Selection indicator */}
+                      !isValid ? "opacity-40 cursor-not-allowed bg-red-950/10 border border-red-900/20"
+                      : isSelected ? "ring-2 ring-orange-500 shadow-lg shadow-orange-500/20"
+                      : "ring-1 ring-white/10 hover:ring-white/20"
+                    }`}>
                     {isValid && (
-                      <div
-                        className={`absolute top-2 right-2 z-10 w-6 h-6 rounded-full flex items-center justify-center transition-all ${
-                          isSelected
-                            ? "bg-orange-500 text-white"
-                            : "bg-black/50 border border-white/20 text-transparent group-hover:border-white/40"
-                        }`}
-                      >
-                        ✓
-                      </div>
+                      <div className={`absolute top-2 right-2 z-10 w-6 h-6 rounded-full flex items-center justify-center transition-all ${
+                        isSelected ? "bg-orange-500 text-white" : "bg-black/50 border border-white/20 text-transparent group-hover:border-white/40"
+                      }`}>✓</div>
                     )}
-
-                    {/* Image */}
                     <div className="aspect-square bg-white/5 overflow-hidden">
                       {nft.imageResolved ? (
-                        <img
-                          src={nft.image}
-                          alt={nft.name}
-                          className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                          loading="lazy"
-                          onError={(e) => {
-                            (e.target as HTMLImageElement).src =
-                              "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Crect fill='%23222' width='200' height='200'/%3E%3Ctext x='50%25' y='50%25' fill='%23666' text-anchor='middle' dy='.3em' font-size='14'%3ENo Image%3C/text%3E%3C/svg%3E";
-                          }}
-                        />
+                        <img src={nft.image} alt={nft.name} className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" loading="lazy"
+                          onError={(e) => { (e.target as HTMLImageElement).src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Crect fill='%23222' width='200' height='200'/%3E%3Ctext x='50%25' y='50%25' fill='%23666' text-anchor='middle' dy='.3em' font-size='14'%3ENo Image%3C/text%3E%3C/svg%3E"; }} />
                       ) : (
-                        <div className="w-full h-full flex items-center justify-center text-gray-600 text-xs">
-                          No Image
-                        </div>
+                        <div className="w-full h-full flex items-center justify-center text-gray-600 text-xs">No Image</div>
                       )}
                     </div>
-
-                    {/* Info */}
                     <div className="p-3 bg-black/40">
                       <div className="text-xs font-semibold truncate">{nft.name}</div>
                       <div className="text-xxs text-gray-500 mt-0.5 truncate flex items-center justify-between">
-                        <span>#{nft.nft_serial}</span>
-                        <span className="bg-white/5 px-1 py-0.2 rounded">T: {nft.nft_taxon}</span>
+                        <span>{nft.serialOrId}</span>
+                        <span className="bg-white/5 px-1 py-0.2 rounded">{nft.collectionTag}</span>
                       </div>
-                      {nft.error && (
-                        <div className="text-xxs text-red-400 mt-1 truncate" title={nft.error}>
-                          ⚠ {nft.error}
-                        </div>
-                      )}
                     </div>
                   </div>
                 );
               })}
             </div>
 
-            {filteredNFTs.length === 0 && (
-              <div className="text-center py-12 text-gray-500">
-                No NFTs match your filter.
-              </div>
-            )}
+            {filteredNFTs.length === 0 && <div className="text-center py-12 text-gray-500">No NFTs match your filter.</div>}
 
             {/* ARC format reminder & Mint button */}
             <div className="flex flex-col items-center gap-4 mt-6">
               <div className="flex items-center gap-2 text-sm text-gray-400">
                 <span>Minting as</span>
-                <span className="px-3 py-1 bg-orange-500/15 border border-orange-500/30 rounded-lg font-bold text-orange-400">
-                  {arcFormat}
-                </span>
+                <span className="px-3 py-1 bg-orange-500/15 border border-orange-500/30 rounded-lg font-bold text-orange-400">{arcFormat}</span>
                 <span>on Algorand</span>
               </div>
-
               {!activeAddress ? (
                 <ConnectButton />
               ) : (
-                <button
-                  onClick={handleMint}
-                  disabled={selectedNFTs.size === 0}
-                  className="px-10 py-3.5 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold rounded-xl transition-all shadow-lg shadow-orange-500/25 hover:shadow-orange-500/40 text-sm"
-                >
+                <button onClick={handleMint} disabled={selectedNFTs.size === 0}
+                  className="px-10 py-3.5 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold rounded-xl transition-all shadow-lg shadow-orange-500/25 hover:shadow-orange-500/40 text-sm">
                   🚀 Import {selectedNFTs.size} NFT{selectedNFTs.size !== 1 ? "s" : ""} to Algorand
                 </button>
               )}
@@ -785,25 +824,13 @@ export function NFTImportTool() {
                 <div className="absolute inset-0 border-4 border-orange-500 border-t-transparent rounded-full animate-spin" />
               </div>
               <h3 className="text-lg font-bold mb-2">Importing to Algorand...</h3>
-              <p className="text-gray-400 text-sm mb-4">
-                Preparing import transactions
-              </p>
+              <p className="text-gray-400 text-sm mb-4">Preparing import transactions</p>
               <div className="w-full bg-white/10 rounded-full h-2 overflow-hidden">
-                <div
-                  className="h-full bg-gradient-to-r from-orange-500 to-amber-500 transition-all duration-500 rounded-full"
-                  style={{
-                    width: mintProgress.total
-                      ? `${(mintProgress.done / mintProgress.total) * 100}%`
-                      : "0%",
-                  }}
-                />
+                <div className="h-full bg-gradient-to-r from-orange-500 to-amber-500 transition-all duration-500 rounded-full"
+                  style={{ width: mintProgress.total ? `${(mintProgress.done / mintProgress.total) * 100}%` : "0%" }} />
               </div>
-              <p className="text-xs text-gray-500 mt-2">
-                {mintProgress.done} / {mintProgress.total} prepared
-              </p>
-              <p className="text-xxs text-gray-600 mt-4">
-                Please approve transactions in your wallet when prompted
-              </p>
+              <p className="text-xs text-gray-500 mt-2">{mintProgress.done} / {mintProgress.total} prepared</p>
+              <p className="text-xxs text-gray-600 mt-4">Please approve transactions in your wallet when prompted</p>
             </div>
           </div>
         )}
@@ -818,27 +845,16 @@ export function NFTImportTool() {
                 </svg>
               </div>
               <h3 className="text-xl font-bold text-white mb-2">Import Complete!</h3>
-              <p className="text-gray-400 text-sm mb-6">
-                Successfully imported {mintedAssets.length} NFTs to Algorand!
-              </p>
-
+              <p className="text-gray-400 text-sm mb-6">Successfully imported {mintedAssets.length} NFTs to Algorand!</p>
               {mintedAssets.length > 0 && (
                 <div className="bg-black/30 border border-white/10 rounded-xl p-4 mb-6 text-left max-h-60 overflow-y-auto">
                   <span className="text-xs text-gray-500 block mb-2 font-semibold">Created Asset IDs:</span>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs font-mono">
                     {mintedAssets.map((assetId) => {
                       const isTestnet = activeNetwork === "testnet";
-                      const explorerBase = isTestnet
-                        ? "https://testnet.explorer.perawallet.app/asset/"
-                        : "https://explorer.perawallet.app/asset/";
+                      const explorerBase = isTestnet ? "https://testnet.explorer.perawallet.app/asset/" : "https://explorer.perawallet.app/asset/";
                       return (
-                        <a
-                          key={assetId}
-                          href={`${explorerBase}${assetId}`}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="text-orange-400 hover:text-orange-300 underline flex items-center gap-1"
-                        >
+                        <a key={assetId} href={`${explorerBase}${assetId}`} target="_blank" rel="noreferrer" className="text-orange-400 hover:text-orange-300 underline flex items-center gap-1">
                           <span>{assetId}</span>
                           <svg xmlns="http://www.w3.org/2000/svg" className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                             <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
@@ -849,40 +865,29 @@ export function NFTImportTool() {
                   </div>
                 </div>
               )}
-
               <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                <button
-                  onClick={() => {
-                    setStep("input");
-                    setResolvedNFTs([]);
-                    setSelectedNFTs(new Set());
-                    setMintedAssets([]);
-                    setTotalScanned(0);
-                    // Automatically shift range indices forward by the loaded batch size
-                    const size = resolvedNFTs.length || 500;
-                    const nextStart = parseInt(startIndex, 10) + size;
-                    setStartIndex(String(nextStart));
-                    setEndIndex(String(nextStart + size));
-                  }}
+                <button onClick={() => {
+                  setStep("input");
+                  setUnifiedNFTs([]);
+                  setSelectedNFTs(new Set());
+                  setMintedAssets([]);
+                  setTotalScanned(0);
+                  const size = unifiedNFTs.length || 500;
+                  const nextStart = parseInt(startIndex, 10) + size;
+                  setStartIndex(String(nextStart));
+                  setEndIndex(String(nextStart + size));
+                }}
                   className="px-6 py-2.5 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-bold rounded-xl transition text-sm shadow-md"
-                  title="Move to the next range batch for this collection"
-                >
+                  title="Move to the next range batch for this collection">
                   Next Batch Range
                 </button>
-                <button
-                  onClick={() => {
-                    setStep("input");
-                    setXrpAddress("");
-                    setTaxonId("");
-                    setStartIndex("0");
-                    setEndIndex("500");
-                    setResolvedNFTs([]);
-                    setSelectedNFTs(new Set());
-                    setMintedAssets([]);
-                    setTotalScanned(0);
-                  }}
-                  className="px-6 py-2.5 bg-white/5 border border-white/10 hover:border-white/20 text-gray-300 hover:text-white font-bold rounded-xl transition text-sm shadow-md"
-                >
+                <button onClick={() => {
+                  setStep("input");
+                  setXrpAddress(""); setTaxonId(""); setCardanoPolicyId(""); setEthContractAddress(""); setAlchemyApiKey((import.meta.env.VITE_ALCHEMY_API_KEY as string) || "");
+                  setStartIndex("0"); setEndIndex("500");
+                  setUnifiedNFTs([]); setSelectedNFTs(new Set()); setMintedAssets([]); setTotalScanned(0);
+                }}
+                  className="px-6 py-2.5 bg-white/5 border border-white/10 hover:border-white/20 text-gray-300 hover:text-white font-bold rounded-xl transition text-sm shadow-md">
                   Start New Import
                 </button>
               </div>
@@ -895,17 +900,37 @@ export function NFTImportTool() {
             {
               question: "How does the NFT Import Tool work?",
               answer:
-                "The tool scans an issuer address on the XRP Ledger, resolves metadata from IPFS or HTTP URLs, and allows you to re-mint them directly on Algorand following ARC-3, ARC-19, or ARC-69 standards.",
+                "The tool scans an issuer/policy/contract on the source chain, resolves metadata from IPFS or HTTP URLs, and allows you to re-mint them directly on Algorand following ARC-3, ARC-19, or ARC-69 standards.",
             },
             {
-              question: "What is a Taxon ID?",
+              question: "What chains and standards are supported?",
+              answer:
+                "XRPL: Uses Taxon IDs as the collection filter. Cardano (ADA): Uses Policy IDs as the collection identifier, supports both CIP-25 (immutable metadata in minting tx) and CIP-68 (mutable datum metadata with reference NFTs). Ethereum (ETH): Uses Contract Addresses, supports ERC-721 (unique tokens) and ERC-1155 (multi-tokens).",
+            },
+            {
+              question: "What is a Taxon ID (XRPL)?",
               answer:
                 "On the XRP Ledger, a Taxon is a 32-bit unsigned integer that issuers use to categorize different collections under a single account. Entering a Taxon ID lets you import a specific collection instead of all assets under that issuer address.",
             },
             {
-              question: "Why do I need to re-pin images?",
+              question: "What is a Policy ID (Cardano)?",
               answer:
-                "To ensure that your newly minted Algorand assets are self-contained and stable, the tool downloads the original media files and re-pins them to your chosen IPFS provider (Crust or Pinata) so they don't depend on the original XRPL host.",
+                "On Cardano, a Policy ID is a 56-character hex string (blake2b-224 hash) of the minting policy script. All tokens minted under the same policy belong to the same collection. CIP-25 NFTs have immutable metadata stored in the minting transaction. CIP-68 NFTs can have mutable metadata stored in UTXO datums.",
+            },
+            {
+              question: "What is a Contract Address (Ethereum)?",
+              answer:
+                "On Ethereum, NFT collections are deployed as smart contracts (ERC-721 or ERC-1155). The contract address uniquely identifies the collection. ERC-721 tokens are unique 1-of-1 assets. ERC-1155 allows both fungible and non-fungible tokens in the same contract. Metadata mutability depends on whether the tokenURI points to IPFS (immutable) or an HTTP server (mutable).",
+            },
+            {
+              question: "Do I need API keys?",
+              answer:
+                "XRPL and Cardano scanning require no API keys. Cardano uses the free Koios API (5,000 requests/day). Ethereum requires a free Alchemy API key (sign up at dashboard.alchemy.com – 30M compute units/month). Your key stays in your browser and is never stored on our servers.",
+            },
+            {
+              question: "What are ARC-3, ARC-19, and ARC-69?",
+              answer:
+                "These are Algorand's NFT standards. ARC-3 stores immutable metadata on IPFS. ARC-19 uses the reserve address field to point to IPFS metadata (mutable by updating the reserve). ARC-69 stores metadata on-chain in the transaction note field with the media URL in the asset URL.",
             },
           ]}
         />

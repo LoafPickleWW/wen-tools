@@ -120,6 +120,24 @@ export default defineConfig({
         secure: false,
         rewrite: (path) => path.replace(/^\/api\/xrpl-testnet/, '')
       },
+      '/api/koios-mainnet': {
+        target: 'https://api.koios.rest/api/v1',
+        changeOrigin: true,
+        secure: false,
+        rewrite: (path) => path.replace(/^\/api\/koios-mainnet/, '')
+      },
+      '/api/koios-preprod': {
+        target: 'https://preprod.koios.rest/api/v1',
+        changeOrigin: true,
+        secure: false,
+        rewrite: (path) => path.replace(/^\/api\/koios-preprod/, '')
+      },
+      '/api/koios-preview': {
+        target: 'https://preview.koios.rest/api/v1',
+        changeOrigin: true,
+        secure: false,
+        rewrite: (path) => path.replace(/^\/api\/koios-preview/, '')
+      },
       '/socket.io': {
         target: 'https://wen-liquid-auth.onrender.com',
         changeOrigin: true,
