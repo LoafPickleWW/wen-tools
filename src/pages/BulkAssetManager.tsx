@@ -51,7 +51,7 @@ export function BulkAssetManager({ defaultTab = "optin" }: BulkAssetManagerProps
   const [mnemonic, setMnemonic] = useState("");
   const [assetIds, setAssetIds] = useState("");
   const [copiedLink, setCopiedLink] = useState(false);
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { activeAddress, algodClient, transactionSigner, activeNetwork } = useWallet();
 
   // Burn Configuration State
@@ -169,6 +169,11 @@ export function BulkAssetManager({ defaultTab = "optin" }: BulkAssetManagerProps
     setTxSendingInProgress(false);
     setIsBurnConfiguring(false);
     setBurnAssetsInfo([]);
+    
+    // Dynamically update URL tab parameter
+    const newParams = new URLSearchParams(searchParams);
+    newParams.set("tab", tab);
+    setSearchParams(newParams);
   };
 
   const handleCopyLink = () => {
