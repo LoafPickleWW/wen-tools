@@ -34,6 +34,8 @@ import {
   buildAssetMintAtomicTransactionComposer,
   mnemonicSignerCreator,
 } from "./crust";
+import { pinJSONToFilebase } from "./filebase";
+import { IpfsProvider } from "./types";
 import * as digest from "multiformats/hashes/digest";
 import { NetworkId } from "@txnlab/use-wallet-react";
 import * as algokit from "@algorandfoundation/algokit-utils";
@@ -289,6 +291,8 @@ export async function createARC3AssetMintArrayV2(
   address: string,
   algodClient: algosdk.Algodv2,
   transactionSigner: algosdk.TransactionSigner,
+  provider: IpfsProvider = "crust",
+  token?: string,
   extraPinCids?: any[],
   mnemonic?: string,
   extraFee?: number,
@@ -320,10 +324,18 @@ export async function createARC3AssetMintArrayV2(
     try {
       const jsonString = JSON.stringify(data_for_txns[i].ipfs_data);
 
-      const authBasic = localStorage.getItem("authBasic");
-      // upload to Crust
-      const cid = await pinJSONToCrust(authBasic, jsonString);
-      allPinCids.push(cid);
+      let cid: string;
+      if (provider === "crust") {
+        const authBasic = localStorage.getItem("authBasic");
+        cid = await pinJSONToCrust(authBasic, jsonString);
+        allPinCids.push(cid);
+      } else if (provider === "filebase") {
+        if (!token) throw Error("Filebase API Token is missing");
+        cid = await pinJSONToFilebase(token, jsonString);
+      } else {
+        if (!token) throw Error("Pinata JWT Token is missing");
+        cid = await pinJSONToPinata(token, jsonString);
+      }
 
       const suggestedParams = await algodClient.getTransactionParams().do();
       suggestedParams.flatFee = true;
@@ -360,7 +372,7 @@ export async function createARC3AssetMintArrayV2(
   }
 
   // Add extra image pin CIDs
-  if (extraPinCids) {
+  if (provider === "crust" && extraPinCids) {
     allPinCids.push(...extraPinCids);
   }
 
@@ -378,6 +390,8 @@ export async function createARC3AssetMintArrayV2Batch(
   address: string,
   algodClient: algosdk.Algodv2,
   transactionSigner: algosdk.TransactionSigner,
+  provider: IpfsProvider = "crust",
+  token?: string,
   mnemonic?: string
 ) {
   if (!address) {
@@ -405,10 +419,18 @@ export async function createARC3AssetMintArrayV2Batch(
     try {
       const jsonString = JSON.stringify(data_for_txns[i].ipfs_data);
 
-      const authBasic = localStorage.getItem("authBasic");
-      // upload to Crust
-      const cid = await pinJSONToCrust(authBasic, jsonString);
-      pinCids.push(cid);
+      let cid: string;
+      if (provider === "crust") {
+        const authBasic = localStorage.getItem("authBasic");
+        cid = await pinJSONToCrust(authBasic, jsonString);
+        pinCids.push(cid);
+      } else if (provider === "filebase") {
+        if (!token) throw Error("Filebase API Token is missing");
+        cid = await pinJSONToFilebase(token, jsonString);
+      } else {
+        if (!token) throw Error("Pinata JWT Token is missing");
+        cid = await pinJSONToPinata(token, jsonString);
+      }
 
       const suggestedParams = await algodClient.getTransactionParams().do();
       suggestedParams.flatFee = true;
@@ -426,9 +448,11 @@ export async function createARC3AssetMintArrayV2Batch(
       );
 
       // Bundle the Crust pin transaction into the same group
-      atc.addMethodCall(
-        await makeCrustPinTx(cid, txSigner, address, algodClient)
-      );
+      if (provider === "crust") {
+        atc.addMethodCall(
+          await makeCrustPinTx(cid, txSigner, address, algodClient)
+        );
+      }
 
       txnsArray.push(getTxnGroupFromATC(atc));
       toast.info(`Asset ${i + 1} of ${data_for_txns.length} uploaded to IPFS`, {
@@ -446,19 +470,20 @@ export async function createARC3AssetMintArray(
   data_for_txns: any[],
   address: string,
   algodClient: algosdk.Algodv2,
-  token: string,
-  TransactionSigner: algosdk.TransactionSigner,
-  mnemonic?: string
+  token?: string,
+  TransactionSigner?: algosdk.TransactionSigner,
+  mnemonic?: string,
+  provider: IpfsProvider = "pinata"
 ) {
   if (!address) {
     throw Error("Wallet not found");
   }
 
-  let txSigner = null;
+  let txSigner: algosdk.TransactionSigner | null = null;
   if (mnemonic) {
     // create a mnemonic signer
     txSigner = mnemonicSignerCreator(mnemonic);
-  } else {
+  } else if (TransactionSigner) {
     txSigner = TransactionSigner;
   }
 
@@ -471,7 +496,14 @@ export async function createARC3AssetMintArray(
   for (let i = 0; i < data_for_txns.length; i++) {
     try {
       const jsonString = JSON.stringify(data_for_txns[i].ipfs_data);
-      const cid = await pinJSONToPinata(token, jsonString);
+      let cid: string;
+      if (provider === "filebase") {
+        if (!token) throw Error("Filebase API Token is missing");
+        cid = await pinJSONToFilebase(token, jsonString);
+      } else {
+        if (!token) throw Error("Pinata JWT Token is missing");
+        cid = await pinJSONToPinata(token, jsonString);
+      }
 
       data_for_txns[i].asset_url_section = "ipfs://" + cid;
       const asset_create_tx = makeAssetCreateTxnWithSuggestedParamsFromObject({
@@ -502,8 +534,8 @@ export async function createARC3AssetMintArray(
         ),
       });
       const atc = new algosdk.AtomicTransactionComposer();
-      atc.addTransaction({ txn: asset_create_tx, signer: txSigner });
-      atc.addTransaction({ txn: fee_tx, signer: txSigner });
+      atc.addTransaction({ txn: asset_create_tx, signer: txSigner! });
+      atc.addTransaction({ txn: fee_tx, signer: txSigner! });
       txnsArray.push(getTxnGroupFromATC(atc));
       toast.info(`Asset ${i + 1} of ${data_for_txns.length} uploaded to IPFS`, {
         autoClose: 200,
@@ -520,6 +552,8 @@ export async function createARC19AssetMintArrayV2(
   address: string,
   algodClient: algosdk.Algodv2,
   transactionSigner: algosdk.TransactionSigner,
+  provider: IpfsProvider = "crust",
+  token?: string,
   extraPinCids?: any[],
   mnemonic?: string,
   extraFee?: number,
@@ -551,10 +585,18 @@ export async function createARC19AssetMintArrayV2(
     try {
       const jsonString = JSON.stringify(data_for_txns[i].ipfs_data);
 
-      const authBasic = localStorage.getItem("authBasic");
-      // upload to Crust
-      const cid = await pinJSONToCrust(authBasic, jsonString);
-      allPinCids.push(cid);
+      let cid: string;
+      if (provider === "crust") {
+        const authBasic = localStorage.getItem("authBasic");
+        cid = await pinJSONToCrust(authBasic, jsonString);
+        allPinCids.push(cid);
+      } else if (provider === "filebase") {
+        if (!token) throw Error("Filebase API Token is missing");
+        cid = await pinJSONToFilebase(token, jsonString);
+      } else {
+        if (!token) throw Error("Pinata JWT Token is missing");
+        cid = await pinJSONToPinata(token, jsonString);
+      }
 
       const suggestedParams = await algodClient.getTransactionParams().do();
       suggestedParams.flatFee = true;
@@ -591,7 +633,7 @@ export async function createARC19AssetMintArrayV2(
   }
 
   // Add extra image pin CIDs
-  if (extraPinCids) {
+  if (provider === "crust" && extraPinCids) {
     allPinCids.push(...extraPinCids);
   }
 
@@ -604,6 +646,8 @@ export async function createARC19AssetMintArrayV2Batch(
   address: string,
   algodClient: algosdk.Algodv2,
   transactionSigner: algosdk.TransactionSigner,
+  provider: IpfsProvider = "crust",
+  token?: string,
   mnemonic?: string
 ) {
   if (!address) {
@@ -630,10 +674,18 @@ export async function createARC19AssetMintArrayV2Batch(
     try {
       const jsonString = JSON.stringify(data_for_txns[i].ipfs_data);
 
-      const authBasic = localStorage.getItem("authBasic");
-      // upload to Crust
-      const cid = await pinJSONToCrust(authBasic, jsonString);
-      pinCids.push(cid);
+      let cid: string;
+      if (provider === "crust") {
+        const authBasic = localStorage.getItem("authBasic");
+        cid = await pinJSONToCrust(authBasic, jsonString);
+        pinCids.push(cid);
+      } else if (provider === "filebase") {
+        if (!token) throw Error("Filebase API Token is missing");
+        cid = await pinJSONToFilebase(token, jsonString);
+      } else {
+        if (!token) throw Error("Pinata JWT Token is missing");
+        cid = await pinJSONToPinata(token, jsonString);
+      }
 
       const suggestedParams = await algodClient.getTransactionParams().do();
       suggestedParams.flatFee = true;
@@ -651,9 +703,11 @@ export async function createARC19AssetMintArrayV2Batch(
       );
 
       // Bundle the Crust pin transaction into the same group
-      atc.addMethodCall(
-        await makeCrustPinTx(cid, txSigner, address, algodClient)
-      );
+      if (provider === "crust") {
+        atc.addMethodCall(
+          await makeCrustPinTx(cid, txSigner, address, algodClient)
+        );
+      }
 
       txnsArray.push(getTxnGroupFromATC(atc));
       toast.info(`Asset ${i + 1} of ${data_for_txns.length} uploaded to IPFS`, {
@@ -671,7 +725,9 @@ export async function createARC19AssetMintArray(
   data_for_txns: any[],
   address: string,
   algodClient: algosdk.Algodv2,
-  token?: string
+  token?: string,
+  _mnemonic?: string,
+  provider: IpfsProvider = "pinata"
 ) {
   if (!address) {
     throw Error("Wallet not found");
@@ -684,7 +740,12 @@ export async function createARC19AssetMintArray(
   for (let i = 0; i < data_for_txns.length; i++) {
     try {
       const jsonString = JSON.stringify(data_for_txns[i].ipfs_data);
-      const cid = await pinJSONToPinata(token, jsonString);
+      let cid: string;
+      if (provider === "filebase") {
+        cid = await pinJSONToFilebase(token, jsonString);
+      } else {
+        cid = await pinJSONToPinata(token, jsonString);
+      }
       const { assetURL, reserveAddress } = createReserveAddressFromIpfsCid(cid);
       const asset_create_tx = makeAssetCreateTxnWithSuggestedParamsFromObject({
         from: address,
@@ -737,6 +798,8 @@ export async function updateARC19AssetMintArrayV2(
   address: string,
   algodClient: algosdk.Algodv2,
   transactionSigner: algosdk.TransactionSigner,
+  provider: IpfsProvider = "crust",
+  token?: string,
   extraPinCids?: any[],
   mnemonic?: string
 ) {
@@ -776,15 +839,23 @@ export async function updateARC19AssetMintArrayV2(
       const cidCodec = chunks[1].split(":")[2];
       const jsonString = JSON.stringify(data_for_txns[i].ipfs_data);
 
-      const authBasic = localStorage.getItem("authBasic");
-      // upload to Crust
-      const cid = await pinJSONToCrust(
-        authBasic,
-        jsonString,
-        cidVersion,
-        cidCodec
-      );
-      allPinCids.push(cid);
+      let cid: string;
+      if (provider === "crust") {
+        const authBasic = localStorage.getItem("authBasic");
+        cid = await pinJSONToCrust(
+          authBasic,
+          jsonString,
+          cidVersion,
+          cidCodec
+        );
+        allPinCids.push(cid);
+      } else if (provider === "filebase") {
+        if (!token) throw Error("Filebase API Token is missing");
+        cid = await pinJSONToFilebase(token, jsonString, cidVersion, cidCodec);
+      } else {
+        if (!token) throw Error("Pinata JWT Token is missing");
+        cid = await pinJSONToPinata(token, jsonString, cidVersion, cidCodec);
+      }
 
       const { reserveAddress } = createReserveAddressFromIpfsCid(cid);
 
@@ -826,7 +897,7 @@ export async function updateARC19AssetMintArrayV2(
   }
 
   // Add extra image pin CIDs
-  if (extraPinCids) {
+  if (provider === "crust" && extraPinCids) {
     allPinCids.push(...extraPinCids);
   }
 
@@ -838,7 +909,8 @@ export async function updateARC19AssetMintArray(
   data_for_txns: any[],
   address: string,
   algodClient: algosdk.Algodv2,
-  token?: string
+  token?: string,
+  provider: IpfsProvider = "pinata"
 ) {
   if (!address) {
     throw Error("Wallet not found");
@@ -859,12 +931,12 @@ export async function updateARC19AssetMintArray(
       const cidVersion = chunks[1].split(":")[1];
       const cidCodec = chunks[1].split(":")[2];
       const jsonString = JSON.stringify(data_for_txns[i].ipfs_data);
-      const cid = await pinJSONToPinata(
-        token,
-        jsonString,
-        cidVersion,
-        cidCodec
-      );
+      let cid: string;
+      if (provider === "filebase") {
+        cid = await pinJSONToFilebase(token, jsonString, cidVersion, cidCodec);
+      } else {
+        cid = await pinJSONToPinata(token, jsonString, cidVersion, cidCodec);
+      }
       const { reserveAddress } = createReserveAddressFromIpfsCid(cid);
       const update_tx = makeAssetConfigTxnWithSuggestedParamsFromObject({
         from: address,

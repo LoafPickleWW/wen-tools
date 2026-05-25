@@ -114,7 +114,7 @@ export function MintingSuite({ defaultPath = null }: MintingSuiteProps) {
                 <img src="/icons/smint.png" alt="Mint 1 Asset" className="w-10 h-10 mb-3 object-contain invert" />
                 <h3 className="text-xl font-bold group-hover:text-orange-400 transition">Mint 1 Asset</h3>
                 <p className="text-gray-300 text-sm mt-2 leading-relaxed">
-                  Mint a single asset (NFT or Token) with custom properties. Supports Crust and Pinata.
+                  Mint a single asset (NFT or Token) with custom properties. Supports Crust, Pinata, and Filebase.
                 </p>
               </div>
               <span className="text-orange-400 text-xs font-semibold mt-4 block">Launch Simple Minter →</span>

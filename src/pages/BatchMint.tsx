@@ -14,6 +14,8 @@ import {
   createARC19AssetMintArray,
   walletSign,
 } from "../utils";
+import IpfsProviderSelect from "../components/IpfsProviderSelect";
+import { IpfsProvider } from "../types";
 import { IPFS_ENDPOINT, MINT_FEE_PER_ASA } from "../constants";
 import InfinityModeComponent from "../components/InfinityModeComponent";
 import FaqSectionComponent from "../components/FaqSectionComponent";
@@ -56,6 +58,7 @@ export function BatchMint() {
 
     // Pinning Creds
     pinataToken: "",
+    filebaseToken: "",
   } as any);
 
   const [csvData, setCsvData] = useState(null as null | any);
@@ -91,6 +94,9 @@ export function BatchMint() {
     if (effectiveProvider === "pinata") {
       return "Free (Uses your custom Pinata JWT)";
     }
+    if (effectiveProvider === "filebase") {
+      return "Free (Requires your custom Filebase API token)";
+    }
     // Crust Network fees
     if (formData.collectionFormat === "ARC69") {
       return "1.4 ALGO per Asset (Crust Pinning)";
@@ -112,6 +118,11 @@ export function BatchMint() {
 
       if (effectiveProvider === "pinata" && !formData.pinataToken) {
         toast.error("Please enter your Pinata JWT Token.");
+        return;
+      }
+
+      if (effectiveProvider === "filebase" && !formData.filebaseToken) {
+        toast.error("Please enter your Filebase API Token.");
         return;
       }
 
@@ -303,19 +314,35 @@ export function BatchMint() {
             activeAddress,
             algodClient,
             transactionSigner,
+            "crust",
+            undefined,
+            mnemonic
+          );
+          unsignedAssetTransaction = txnsArray;
+        } else if (effectiveProvider === "filebase") {
+          toast.info("Generating Filebase-based ARC3 Transactions...");
+          const { txnsArray } = await createARC3AssetMintArrayV2Batch(
+            data_for_txns,
+            activeAddress,
+            algodClient,
+            transactionSigner,
+            "filebase",
+            formData.filebaseToken,
             mnemonic
           );
           unsignedAssetTransaction = txnsArray;
         } else if (effectiveProvider === "pinata") {
           toast.info("Generating Pinata-based ARC3 Transactions...");
-          unsignedAssetTransaction = await createARC3AssetMintArray(
+          const { txnsArray } = await createARC3AssetMintArrayV2Batch(
             data_for_txns,
             activeAddress,
             algodClient,
-            formData.pinataToken,
             transactionSigner,
+            "pinata",
+            formData.pinataToken,
             mnemonic
           );
+          unsignedAssetTransaction = txnsArray;
         } else {
           // None (no pinning, use direct URL/CID)
           toast.info("Generating ARC3 Transactions without IPFS pinning...");
@@ -323,11 +350,10 @@ export function BatchMint() {
             data_for_txns,
             activeAddress,
             algodClient,
-            "mock-token", // won't pin JSON since it's already generated, or skip pinning? 
-            // Wait, createARC3AssetMintArray always pins. For no-pinning ARC3, we can mock it, or just use createAssetMintArray
-            // with asset_url = item.ipfs_data.image. Let's handle it manually below to avoid pinning.
+            "mock-token",
             transactionSigner,
-            mnemonic
+            mnemonic,
+            "none"
           );
         }
       } else if (formData.collectionFormat === "ARC19") {
@@ -338,24 +364,44 @@ export function BatchMint() {
             activeAddress,
             algodClient,
             transactionSigner,
+            "crust",
+            undefined,
+            mnemonic
+          );
+          unsignedAssetTransaction = txnsArray;
+        } else if (effectiveProvider === "filebase") {
+          toast.info("Generating Filebase-based ARC19 Transactions...");
+          const { txnsArray } = await createARC19AssetMintArrayV2Batch(
+            data_for_txns,
+            activeAddress,
+            algodClient,
+            transactionSigner,
+            "filebase",
+            formData.filebaseToken,
             mnemonic
           );
           unsignedAssetTransaction = txnsArray;
         } else if (effectiveProvider === "pinata") {
           toast.info("Generating Pinata-based ARC19 Transactions...");
-          unsignedAssetTransaction = await createARC19AssetMintArray(
+          const { txnsArray } = await createARC19AssetMintArrayV2Batch(
             data_for_txns,
             activeAddress,
             algodClient,
-            formData.pinataToken
+            transactionSigner,
+            "pinata",
+            formData.pinataToken,
+            mnemonic
           );
+          unsignedAssetTransaction = txnsArray;
         } else {
           toast.info("Generating ARC19 Transactions...");
           unsignedAssetTransaction = await createARC19AssetMintArray(
             data_for_txns,
             activeAddress,
             algodClient,
-            "mock-token"
+            "mock-token",
+            undefined,
+            "none"
           );
         }
       } else {
@@ -503,80 +549,18 @@ export function BatchMint() {
               </div>
 
               <div>
-                <label className="block mb-2 text-xs font-semibold text-gray-300 uppercase tracking-wider">
-                  IPFS Pinning Provider
-                </label>
-                <div className="flex bg-slate-900/80 p-1.5 rounded-xl border border-slate-700 w-full">
-                  {!isTestnet && (
-                    <button
-                      type="button"
-                      className={`flex-1 py-2 text-xs md:text-sm font-bold rounded-lg transition-all duration-300 ${
-                        effectiveProvider === "crust"
-                          ? "bg-gradient-to-r from-orange-500 to-amber-500 text-black shadow-md font-extrabold"
-                          : "text-slate-400 hover:text-white"
-                      }`}
-                      onClick={() => setFormData({ ...formData, pinningProvider: "crust" })}
-                    >
-                      Crust Network
-                    </button>
-                  )}
-                  <button
-                    type="button"
-                    className={`flex-1 py-2 text-xs md:text-sm font-bold rounded-lg transition-all duration-300 ${
-                      effectiveProvider === "pinata"
-                        ? "bg-gradient-to-r from-orange-500 to-amber-500 text-black shadow-md font-extrabold"
-                        : "text-slate-400 hover:text-white"
-                    }`}
-                    onClick={() => setFormData({ ...formData, pinningProvider: "pinata" })}
-                  >
-                    Pinata (JWT)
-                  </button>
-                  <button
-                    type="button"
-                    className={`flex-1 py-2 text-xs md:text-sm font-bold rounded-lg transition-all duration-300 ${
-                      effectiveProvider === "none"
-                        ? "bg-gradient-to-r from-orange-500 to-amber-500 text-black shadow-md font-extrabold"
-                        : "text-slate-400 hover:text-white"
-                    }`}
-                    onClick={() => setFormData({ ...formData, pinningProvider: "none" })}
-                  >
-                    None
-                  </button>
-                </div>
-                {isTestnet && (
-                  <p className="mt-2 text-xs text-amber-500 font-medium">
-                    ⚠️ Crust pinning is disabled on Testnet. Pinata (JWT) or None are the only options.
-                  </p>
-                )}
+                <IpfsProviderSelect
+                  provider={formData.pinningProvider as IpfsProvider}
+                  setProvider={(p) => setFormData({ ...formData, pinningProvider: p })}
+                  isTestnet={isTestnet}
+                  showNone={true}
+                  pinataToken={formData.pinataToken}
+                  setPinataToken={(t) => setFormData({ ...formData, pinataToken: t })}
+                  filebaseToken={formData.filebaseToken}
+                  setFilebaseToken={(t) => setFormData({ ...formData, filebaseToken: t })}
+                />
               </div>
             </div>
-
-            {/* Pinata JWT Field */}
-            {effectiveProvider === "pinata" && (
-              <div className="bg-slate-900/40 p-4 rounded-xl border border-slate-800 animate-fadeIn">
-                <label className="block mb-2 text-xs font-semibold text-gray-300 uppercase tracking-wider">
-                  Pinata JWT Token
-                </label>
-                <input
-                  type="password"
-                  placeholder="Paste Pinata JWT Token"
-                  className="w-full bg-slate-900/60 border border-slate-700 text-sm font-medium text-white placeholder:text-slate-500 px-4 py-3 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary-orange focus:border-primary-orange transition-all"
-                  value={formData.pinataToken}
-                  onChange={(e) => setFormData({ ...formData, pinataToken: e.target.value })}
-                />
-                <span className="text-xs text-gray-400 mt-2 block">
-                  Need a token? Create one in your{" "}
-                  <a
-                    href="https://knowledge.pinata.cloud/en/articles/6191471-how-to-create-an-pinata-api-key"
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-orange-400 hover:underline"
-                  >
-                    Pinata account
-                  </a>.
-                </span>
-              </div>
-            )}
 
             {/* Source Mode Selectors */}
             <div>

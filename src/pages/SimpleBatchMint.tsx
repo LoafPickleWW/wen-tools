@@ -11,6 +11,8 @@ import {
   createARC19AssetMintArrayV2Batch,
   walletSign,
 } from "../utils";
+import IpfsProviderSelect from "../components/IpfsProviderSelect";
+import { IpfsProvider } from "../types";
 import { IPFS_ENDPOINT, MINT_FEE_PER_ASA, TOOLS } from "../constants";
 
 import Papa from "papaparse";
@@ -45,6 +47,9 @@ export function SimpleBatchMint() {
     creatorName: "",
     tokenId: "",
     royalty: "",
+    pinningProvider: "crust",
+    pinataToken: "",
+    filebaseToken: "",
   } as any);
 
   const [csvData, setCsvData] = useState(null as null | any);
@@ -57,7 +62,11 @@ export function SimpleBatchMint() {
   );
 
   const [previewAsset, setPreviewAsset] = useState(null as any);
-  const { activeAddress, algodClient, transactionSigner, activeWallet } = useWallet();
+  const { activeAddress, activeNetwork, algodClient, transactionSigner, activeWallet } = useWallet();
+  const isTestnet = activeNetwork === "testnet";
+  const effectiveProvider = isTestnet
+    ? (formData.pinningProvider === "crust" ? "pinata" : formData.pinningProvider)
+    : formData.pinningProvider;
 
   const TraitMetadataInputField = (key: string) => {
     return (
@@ -88,8 +97,20 @@ export function SimpleBatchMint() {
 
   async function createTransactions() {
     try {
-      if (!activeAddress || !isCrustAuth()) {
+      if (!activeAddress) {
         toast.error("Please connect your wallet");
+        return;
+      }
+      if (effectiveProvider === "crust" && !isCrustAuth()) {
+        toast.error("Crust authentication is not complete. Please sign in via the wallet connect button.");
+        return;
+      }
+      if (effectiveProvider === "pinata" && !formData.pinataToken) {
+        toast.error("Please enter a Pinata JWT Token.");
+        return;
+      }
+      if (effectiveProvider === "filebase" && !formData.filebaseToken) {
+        toast.error("Please enter a Filebase API Token.");
         return;
       }
       // if (formData.collectionFormat !== "ARC69" && !token) {
@@ -306,6 +327,8 @@ export function SimpleBatchMint() {
           activeAddress,
           algodClient,
           transactionSigner,
+          effectiveProvider as any,
+          effectiveProvider === "filebase" ? formData.filebaseToken : formData.pinataToken,
           mnemonic
         );
         unsignedAssetTransaction = txnsArray;
@@ -318,6 +341,8 @@ export function SimpleBatchMint() {
           activeAddress,
           algodClient,
           transactionSigner,
+          effectiveProvider as any,
+          effectiveProvider === "filebase" ? formData.filebaseToken : formData.pinataToken,
           mnemonic
         );
         unsignedAssetTransaction = txnsArray;
@@ -383,8 +408,9 @@ export function SimpleBatchMint() {
         // 2 txs per asset, for ARC69
         signedAssetTransactions = sliceIntoChunks(signedAssetTransactions, 2);
       } else {
-        // 4 txs per asset, for ARC3 & ARC19
-        signedAssetTransactions = sliceIntoChunks(signedAssetTransactions, 4);
+        // 4 txs per asset for Crust, 2 for Pinata & Filebase
+        const chunkSize = (effectiveProvider === "crust") ? 4 : 2;
+        signedAssetTransactions = sliceIntoChunks(signedAssetTransactions, chunkSize);
       }
 
       for (let i = 0; i < signedAssetTransactions.length; i++) {
@@ -477,6 +503,20 @@ export function SimpleBatchMint() {
             </select>
           </div>
         </div>
+
+        {formData.collectionFormat !== "ARC69" && (
+          <div className="flex flex-col md:mt-0 mt-2 w-72">
+            <IpfsProviderSelect
+              provider={formData.pinningProvider as IpfsProvider}
+              setProvider={(p) => setFormData({ ...formData, pinningProvider: p })}
+              isTestnet={isTestnet}
+              pinataToken={formData.pinataToken}
+              setPinataToken={(t) => setFormData({ ...formData, pinataToken: t })}
+              filebaseToken={formData.filebaseToken}
+              setFilebaseToken={(t) => setFormData({ ...formData, filebaseToken: t })}
+            />
+          </div>
+        )}
       </div>
       <div className="w-min px-10">
         <div className="mt-2 md:flex items-center text-start gap-x-4">

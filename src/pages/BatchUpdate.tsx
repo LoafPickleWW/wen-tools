@@ -3,7 +3,6 @@ import algosdk from "algosdk";
 import Papa from "papaparse";
 import { toast } from "react-toastify";
 import { useWallet } from "@txnlab/use-wallet-react";
-
 import {
   createAssetConfigArray,
   updateARC19AssetMintArray,
@@ -11,6 +10,8 @@ import {
   sliceIntoChunks,
   walletSign,
 } from "../utils";
+import IpfsProviderSelect from "../components/IpfsProviderSelect";
+import { IpfsProvider } from "../types";
 
 import InfinityModeComponent from "../components/InfinityModeComponent";
 import ConnectButton from "../components/ConnectButton";
@@ -21,13 +22,14 @@ export function BatchUpdate() {
   const [csvData, setCsvData] = useState(null as null | any);
   const [effectiveProvider, setPinningProvider] = useState("pinata");
   const [token, setToken] = useState("");
+  const [filebaseToken, setFilebaseToken] = useState("");
   const [assetTransactions, setAssetTransactions] = useState([] as algosdk.Transaction[][]);
   const [mnemonic, setMnemonic] = useState("");
   const [isTransactionsFinished, setIsTransactionsFinished] = useState(false);
   const [txSendingInProgress, setTxSendingInProgress] = useState(false);
   const [isLedger, setIsLedger] = useState(false);
 
-  const { activeAddress, algodClient, transactionSigner, activeWallet } = useWallet();
+  const { activeAddress, activeNetwork, algodClient, transactionSigner, activeWallet } = useWallet();
 
   const handleReset = () => {
     setCsvData(null);
@@ -63,6 +65,10 @@ export function BatchUpdate() {
     }
     if (updateFormat === "ARC19" && effectiveProvider === "pinata" && !token) {
       toast.error("Please enter a Pinata JWT token for ARC-19 updates!");
+      return;
+    }
+    if (updateFormat === "ARC19" && effectiveProvider === "filebase" && !filebaseToken) {
+      toast.error("Please enter a Filebase API token for ARC-19 updates!");
       return;
     }
 
@@ -207,9 +213,10 @@ export function BatchUpdate() {
           });
         });
 
-        if (effectiveProvider === "pinata") {
-          toast.info("Uploading metadata CIDs to Pinata IPFS & generating reserve address configs...");
-          txns = await updateARC19AssetMintArray(data_for_txns, activeAddress, algodClient, token);
+        const currentToken = effectiveProvider === "filebase" ? filebaseToken : token;
+        if (effectiveProvider === "pinata" || effectiveProvider === "filebase") {
+          toast.info(`Uploading metadata CIDs to ${effectiveProvider === "filebase" ? "Filebase" : "Pinata"} IPFS & generating reserve address configs...`);
+          txns = await updateARC19AssetMintArray(data_for_txns, activeAddress, algodClient, currentToken, effectiveProvider as any);
         } else {
           toast.info("Uploading metadata CIDs to Crust IPFS & generating reserve address configs...");
           let params = await algodClient.getTransactionParams().do();
@@ -422,64 +429,18 @@ export function BatchUpdate() {
             </a>
           </div>
 
-          {/* Pinata JWT Field for ARC-19 */}
+          {/* IPFS Pinning Provider Select for ARC-19 */}
           {updateFormat === "ARC19" && (
             <div className="bg-slate-900/40 p-4 rounded-xl border border-slate-800 animate-fadeIn space-y-4">
-              <div>
-                <label className="block mb-2 text-xs font-semibold text-gray-300 uppercase tracking-wider">
-                  IPFS Pinning Provider*
-                </label>
-                <div className="flex bg-slate-900/80 p-1.5 rounded-xl border border-slate-700 w-full">
-                  <button
-                    type="button"
-                    className={`flex-1 py-2 text-xs md:text-sm font-bold rounded-lg transition-all duration-300 ${
-                      effectiveProvider === "crust"
-                        ? "bg-gradient-to-r from-orange-500 to-amber-500 text-black shadow-md font-extrabold"
-                        : "text-slate-400 hover:text-white"
-                    }`}
-                    onClick={() => setPinningProvider("crust")}
-                  >
-                    Crust Network
-                  </button>
-                  <button
-                    type="button"
-                    className={`flex-1 py-2 text-xs md:text-sm font-bold rounded-lg transition-all duration-300 ${
-                      effectiveProvider === "pinata"
-                        ? "bg-gradient-to-r from-orange-500 to-amber-500 text-black shadow-md font-extrabold"
-                        : "text-slate-400 hover:text-white"
-                    }`}
-                    onClick={() => setPinningProvider("pinata")}
-                  >
-                    Pinata (JWT)
-                  </button>
-                </div>
-              </div>
-              
-              {effectiveProvider === "pinata" && (
-                <div className="space-y-2 animate-fadeIn">
-                  <label className="block text-xs font-semibold text-gray-300 uppercase tracking-wider">
-                    Pinata JWT Token
-                  </label>
-                  <input
-                    type="password"
-                    placeholder="Paste Pinata JWT Token"
-                    className="w-full bg-slate-900/60 border border-slate-700 text-sm font-medium text-white placeholder:text-slate-500 px-4 py-3 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary-orange focus:border-primary-orange transition-all"
-                    value={token}
-                    onChange={(e) => setToken(e.target.value)}
-                  />
-                  <span className="text-xs text-gray-400 block">
-                    Need a token? Create one in your{" "}
-                    <a
-                      href="https://knowledge.pinata.cloud/en/articles/6191471-how-to-create-an-pinata-api-key"
-                      target="_blank"
-                      rel="noreferrer"
-                      className="text-orange-400 hover:underline"
-                    >
-                      Pinata account
-                    </a>.
-                  </span>
-                </div>
-              )}
+              <IpfsProviderSelect
+                provider={effectiveProvider as IpfsProvider}
+                setProvider={(p) => setPinningProvider(p)}
+                isTestnet={activeNetwork === "testnet"}
+                pinataToken={token}
+                setPinataToken={setToken}
+                filebaseToken={filebaseToken}
+                setFilebaseToken={setFilebaseToken}
+              />
               <span className="block text-xs text-red-400 font-medium">
                 ⚠️ This tool is not compatible with NFTs minted from algonfts.art ⚠️
               </span>

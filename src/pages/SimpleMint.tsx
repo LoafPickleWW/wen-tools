@@ -11,11 +11,13 @@ import {
   createAssetMintArrayV2,
   walletSign,
   pinImageToPinata,
-  pinJSONToPinata,
 } from "../utils";
+import { pinImageToFilebase } from "../filebase";
+import IpfsProviderSelect from "../components/IpfsProviderSelect";
+import { IpfsProvider } from "../types";
 import { ASSET_PREVIEW, TOOLS } from "../constants";
 import FaqSectionComponent from "../components/FaqSectionComponent";
-import { pinImageToCrust, makeCrustPinTx, buildAssetMintAtomicTransactionComposer } from "../crust";
+import { pinImageToCrust, makeCrustPinTx } from "../crust";
 import { useWallet } from "@txnlab/use-wallet-react";
 import "react-json-view-lite/dist/index.css";
 import { PreviewAssetComponent } from "../components/PreviewAssetComponent";
@@ -59,6 +61,7 @@ const simpleMintAtom = atomWithStorage("simpleMint", {
 } as any);
 
 const smTokenAtom = atomWithStorage("smToken", "");
+const filebaseTokenAtom = atomWithStorage("filebaseToken", "");
 const simpleMintProviderAtom = atomWithStorage("simpleMintProvider", "crust");
 
 export function SimpleMint() {
@@ -66,8 +69,9 @@ export function SimpleMint() {
   const [pinningProvider, setPinningProvider] = useAtom(simpleMintProviderAtom);
   const { activeAddress, algodClient, transactionSigner, activeNetwork } = useWallet();
   const isTestnet = activeNetwork === "testnet";
-  const effectiveProvider = isTestnet ? "pinata" : pinningProvider;
+  const effectiveProvider = isTestnet && pinningProvider === "crust" ? "pinata" : pinningProvider;
   const [token, setToken] = useAtom(smTokenAtom);
+  const [filebaseToken, setFilebaseToken] = useAtom(filebaseTokenAtom);
   const [isCustomMode, setIsCustomMode] = useState(false);
   const [processStep, setProcessStep] = useState(0);
 
@@ -447,6 +451,14 @@ wen.contentWindow.postMessage({
           }
           imageCID = await pinImageToCrust(authBasic, formData.image);
           imageURL = "ipfs://" + imageCID;
+        } else if (effectiveProvider === "filebase") {
+          if (!filebaseToken) {
+            toast.error("Please enter a Filebase API Token");
+            return;
+          }
+          toast.info("Uploading the image to IPFS via Filebase...");
+          imageCID = await pinImageToFilebase(filebaseToken, formData.image);
+          imageURL = "ipfs://" + imageCID;
         } else {
           if (!token) {
             toast.error("Please enter a Pinata JWT token");
@@ -500,135 +512,63 @@ wen.contentWindow.postMessage({
         image: imageURLForPreview,
       };
 
-      if (effectiveProvider === "crust") {
+      const currentToken = effectiveProvider === "filebase" ? filebaseToken : token;
+
+      if (finalFormat === "ARC3" || finalFormat === "ARC19") {
+        let result;
         if (finalFormat === "ARC3") {
-          const { atc, pinCids: cids } = await createARC3AssetMintArrayV2(
+          result = await createARC3AssetMintArrayV2(
             [metadataForIPFS],
             activeAddress,
             algodClient,
             transactionSigner,
+            effectiveProvider as any,
+            currentToken,
             [imageCID],
             undefined,
             extraFee || undefined,
             extraFeeAddress || undefined
           );
-
-          setPinCids(cids);
-          setBatchATC(atc);
-        } else if (finalFormat === "ARC19") {
-          const { atc, pinCids: cids } = await createARC19AssetMintArrayV2(
-            [metadataForIPFS],
-            activeAddress,
-            algodClient,
-            transactionSigner,
-            [imageCID],
-            undefined,
-            extraFee || undefined,
-            extraFeeAddress || undefined
-          );
-
-          setPinCids(cids);
-          setBatchATC(atc);
-        } else if (finalFormat === "ARC69" || finalFormat === "Token") {
-          metadata.properties = isCustomMode ? (metadata.properties.traits || {}) : {};
-          metadataForIPFS = {
-            ...metadataForIPFS,
-            asset_note: metadata,
-            asset_url: imageURL,
-          };
-
-          if (finalFormat === "ARC69") {
-            const { atc, pinCids: cids } = await createAssetMintArrayV2(
-              [metadataForIPFS],
-              activeAddress,
-              algodClient,
-              transactionSigner,
-              [imageCID],
-              extraFee || undefined,
-              extraFeeAddress || undefined
-            );
-
-            setPinCids(cids);
-            setBatchATC(atc);
-          } else {
-            const { atc, pinCids: cids } = await createAssetMintArrayV2(
-              [metadataForIPFS],
-              activeAddress,
-              algodClient,
-              transactionSigner,
-              undefined,
-              extraFee || undefined,
-              extraFeeAddress || undefined
-            );
-
-            setPinCids(cids);
-            setBatchATC(atc);
-          }
         } else {
-          toast.error("Invalid ARC format");
-          return;
+          result = await createARC19AssetMintArrayV2(
+            [metadataForIPFS],
+            activeAddress,
+            algodClient,
+            transactionSigner,
+            effectiveProvider as any,
+            currentToken,
+            [imageCID],
+            undefined,
+            extraFee || undefined,
+            extraFeeAddress || undefined
+          );
         }
+
+        setPinCids(result.pinCids);
+        setBatchATC(result.atc);
+      } else if (finalFormat === "ARC69" || finalFormat === "Token") {
+        metadata.properties = isCustomMode ? (metadata.properties.traits || {}) : {};
+        metadataForIPFS = {
+          ...metadataForIPFS,
+          asset_note: metadata,
+          asset_url: imageURL,
+        };
+
+        const { atc, pinCids: cids } = await createAssetMintArrayV2(
+          [metadataForIPFS],
+          activeAddress,
+          algodClient,
+          transactionSigner,
+          effectiveProvider === "crust" ? [imageCID] : undefined,
+          extraFee || undefined,
+          extraFeeAddress || undefined
+        );
+
+        setPinCids(cids);
+        setBatchATC(atc);
       } else {
-        // Pinata path
-        if (finalFormat === "ARC3" || finalFormat === "ARC19") {
-          const jsonString = JSON.stringify(metadata);
-          toast.info("Uploading metadata to IPFS via Pinata...");
-          const metadataCID = await pinJSONToPinata(token, jsonString);
-
-          const atc = new algosdk.AtomicTransactionComposer();
-          const suggestedParams = await algodClient.getTransactionParams().do();
-          suggestedParams.flatFee = true;
-          suggestedParams.fee = 2000 * 4; // set fee
-
-          metadataForIPFS.asset_url_section = "ipfs://" + metadataCID;
-
-          await buildAssetMintAtomicTransactionComposer(
-            atc,
-            activeAddress,
-            finalFormat,
-            transactionSigner,
-            metadataForIPFS,
-            suggestedParams,
-            metadataCID
-          );
-
-          if (extraFee && extraFeeAddress) {
-            const extra_fee_tx = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
-              from: activeAddress,
-              to: extraFeeAddress,
-              amount: BigInt(extraFee),
-              suggestedParams: suggestedParams,
-              note: new TextEncoder().encode("Extra fee via wen.tools integration"),
-            });
-            atc.addTransaction({ txn: extra_fee_tx, signer: transactionSigner });
-          }
-
-          setPinCids([]);
-          setBatchATC(atc);
-        } else if (finalFormat === "ARC69" || finalFormat === "Token") {
-          metadata.properties = isCustomMode ? (metadata.properties.traits || {}) : {};
-          metadataForIPFS = {
-            ...metadataForIPFS,
-            asset_note: metadata,
-            asset_url: imageURL,
-          };
-
-          const { atc } = await createAssetMintArrayV2(
-            [metadataForIPFS],
-            activeAddress,
-            algodClient,
-            transactionSigner,
-            undefined, // No Crust pinning CID needed
-            extraFee || undefined,
-            extraFeeAddress || undefined
-          );
-
-          setPinCids([]);
-          setBatchATC(atc);
-        } else {
-          toast.error("Invalid ARC format");
-          return;
-        }
+        toast.error("Invalid ARC format");
+        return;
       }
       setPreviewAsset(metadataForIPFS);
       toast.info("Please sign the transaction");
@@ -931,58 +871,15 @@ wen.contentWindow.postMessage({
         </div>
 
         {finalFormat !== "Token" && (
-          <div className="space-y-4">
-            <div className="flex flex-col">
-              <label className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-400">
-                IPFS Pinning Provider*
-              </label>
-              {isTestnet ? (
-                <div className="bg-slate-900/60 p-4 border border-slate-800 rounded-xl text-xs text-amber-500 font-medium">
-                  Crust is disabled on Testnet. Pinata is used as the only IPFS pinning provider.
-                </div>
-              ) : (
-                <div className="flex bg-slate-900/80 p-1.5 rounded-xl border border-slate-700 w-full">
-                  <button
-                    type="button"
-                    className={`flex-1 py-2 text-xs md:text-sm font-bold rounded-lg transition-all duration-300 ${
-                      effectiveProvider === "crust"
-                        ? "bg-gradient-to-r from-orange-500 to-amber-500 text-black shadow-md font-extrabold"
-                        : "text-slate-400 hover:text-white"
-                    }`}
-                    onClick={() => setPinningProvider("crust")}
-                  >
-                    Crust Network
-                  </button>
-                  <button
-                    type="button"
-                    className={`flex-1 py-2 text-xs md:text-sm font-bold rounded-lg transition-all duration-300 ${
-                      effectiveProvider === "pinata"
-                        ? "bg-gradient-to-r from-orange-500 to-amber-500 text-black shadow-md font-extrabold"
-                        : "text-slate-400 hover:text-white"
-                    }`}
-                    onClick={() => setPinningProvider("pinata")}
-                  >
-                    Pinata (JWT)
-                  </button>
-                </div>
-              )}
-            </div>
-            {effectiveProvider === "pinata" && (
-              <div className="flex flex-col animate-fadeIn">
-                <label className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-400">
-                  Pinata JWT Token*
-                </label>
-                <input
-                  type="password"
-                  placeholder="Paste Pinata JWT Token"
-                  className="w-full bg-slate-900/60 border border-slate-700 text-sm font-medium text-white placeholder:text-slate-500 px-4 py-3 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary-orange focus:border-primary-orange transition-all"
-                  required
-                  value={token}
-                  onChange={(e) => setToken(e.target.value)}
-                />
-              </div>
-            )}
-          </div>
+          <IpfsProviderSelect
+            provider={pinningProvider as IpfsProvider}
+            setProvider={setPinningProvider as any}
+            isTestnet={isTestnet}
+            pinataToken={token}
+            setPinataToken={setToken}
+            filebaseToken={filebaseToken}
+            setFilebaseToken={setFilebaseToken}
+          />
         )}
 
         {/* Advanced configuration options only in Custom Mode */}
@@ -1253,6 +1150,8 @@ wen.contentWindow.postMessage({
         <p className="text-xs font-semibold text-slate-400 text-center mt-2">
           {effectiveProvider === "crust" ? (
             <span>Pin Fee (Crust): {finalFormat === "ARC69" ? "1.4 ALGO" : finalFormat === "Token" ? "Free" : "2.8 ALGO"}</span>
+          ) : effectiveProvider === "filebase" ? (
+            <span>Pin Fee (Filebase): Free (requires Filebase API key)</span>
           ) : (
             <span>Pin Fee (Pinata): Free (requires custom Pinata JWT)</span>
           )}

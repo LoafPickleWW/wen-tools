@@ -10,11 +10,13 @@ import {
   sliceIntoChunks,
   Arc69,
   getARC19AssetMetadataData,
-  updateARC19AssetMintArray,
   updateARC19AssetMintArrayV2,
   walletSign,
   pinImageToPinata,
 } from "../utils";
+import { pinImageToFilebase } from "../filebase";
+import IpfsProviderSelect from "../components/IpfsProviderSelect";
+import { IpfsProvider } from "../types";
 import { TOOLS, IPFS_ENDPOINT, ASSET_PREVIEW } from "../constants";
 import { isCrustAuth } from "../crust-auth";
 import { pinImageToCrust, makeCrustPinTx } from "../crust";
@@ -43,12 +45,14 @@ const simpleUpdateAtom = atomWithStorage("simpleUpdate", {
 } as any);
 const suAssetIdAtom = atomWithStorage("suAssetId", "");
 const suTokenAtom = atomWithStorage("suToken", "");
+const suFilebaseTokenAtom = atomWithStorage("suFilebaseToken", "");
 const simpleUpdateProviderAtom = atomWithStorage("simpleUpdateProvider", "crust");
 
 export function SimpleUpdate() {
   const [formData, setFormData] = useAtom(simpleUpdateAtom);
   const [pinningProvider, setPinningProvider] = useAtom(simpleUpdateProviderAtom);
   const [token, setToken] = useAtom(suTokenAtom);
+  const [filebaseToken, setFilebaseToken] = useAtom(suFilebaseTokenAtom);
 
   const [processStep, setProcessStep] = useState(0);
   const [transaction, setTransaction] = useState(null as any);
@@ -63,7 +67,7 @@ export function SimpleUpdate() {
   const { activeAddress, activeNetwork, algodClient, transactionSigner } =
     useWallet();
   const isTestnet = activeNetwork === "testnet";
-  const effectiveProvider = isTestnet ? "pinata" : pinningProvider;
+  const effectiveProvider = isTestnet && pinningProvider === "crust" ? "pinata" : pinningProvider;
 
   const TraitMetadataInputField = (id: any, type: string) => {
     const item = formData[type]?.find((m: any) => m.id === id);
@@ -354,6 +358,26 @@ export function SimpleUpdate() {
             metadata.image = imageURL;
             metadata.image_mime_type = formData.image ? formData.image.type : "";
           }
+        } else if (effectiveProvider === "filebase") {
+          if (!filebaseToken) {
+            toast.error("Please enter a Filebase API Token");
+            return;
+          }
+          imageCid = await pinImageToFilebase(filebaseToken, formData.image);
+          const imageURL = "ipfs://" + imageCid;
+          if (
+            formData.image &&
+            formData.image instanceof File &&
+            formData.image.type.includes("video")
+          ) {
+            metadata.animation_url = imageURL;
+            metadata.animation_mime_type = formData.image
+              ? formData.image.type
+              : "";
+          } else {
+            metadata.image = imageURL;
+            metadata.image_mime_type = formData.image ? formData.image.type : "";
+          }
         } else {
           if (!token) {
             toast.error("Please enter a Pinata JWT token");
@@ -407,41 +431,28 @@ export function SimpleUpdate() {
 
         ipfs_data = metadata;
 
-        if (effectiveProvider === "crust") {
-          const { atc, pinCids: cids } = await updateARC19AssetMintArrayV2(
-            [transaction_data],
-            activeAddress,
-            algodClient,
-            transactionSigner,
-            imageCid ? [imageCid] : []
-          );
+        const currentToken = effectiveProvider === "filebase" ? filebaseToken : token;
+        const { atc, pinCids: cids } = await updateARC19AssetMintArrayV2(
+          [transaction_data],
+          activeAddress,
+          algodClient,
+          transactionSigner,
+          effectiveProvider as any,
+          currentToken,
+          imageCid ? [imageCid] : []
+        );
 
+        if (effectiveProvider === "crust") {
           // Bundle pins into the same group
           for (const cid of cids) {
             atc.addMethodCall(
               await makeCrustPinTx(cid, transactionSigner, activeAddress, algodClient)
             );
           }
-          setBatchATC(atc);
-          setTransaction(null);
-        } else {
-          if (!token) {
-            toast.error("Please enter a Pinata JWT token");
-            return;
-          }
-          const unsignedAssetTransactions = await updateARC19AssetMintArray(
-            [transaction_data],
-            activeAddress,
-            algodClient,
-            token
-          );
-          if (unsignedAssetTransactions.length === 0) {
-            toast.error("Something went wrong while creating transactions");
-            return;
-          }
-          setTransaction(unsignedAssetTransactions);
-          setBatchATC(null);
         }
+
+        setBatchATC(atc);
+        setTransaction(null);
       } else if (formData.format === "ARC69") {
         metadata.properties = metadata.properties.traits;
         const transaction_data = {
@@ -688,57 +699,16 @@ export function SimpleUpdate() {
 
             {/* If ARC19, show Pinning Provider settings */}
             {formData.format === "ARC19" && (
-              <div className="space-y-4 pt-2">
-                <div className="flex flex-col">
-                  <label className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-400">
-                    IPFS Pinning Provider*
-                  </label>
-                  {isTestnet ? (
-                    <div className="bg-slate-900/60 p-4 border border-slate-800 rounded-xl text-xs text-amber-500 font-medium">
-                      Crust is disabled on Testnet. Pinata is used as the only IPFS pinning provider.
-                    </div>
-                  ) : (
-                    <div className="flex bg-slate-900/80 p-1.5 rounded-xl border border-slate-700 w-full">
-                      <button
-                        type="button"
-                        className={`flex-1 py-2 text-xs md:text-sm font-bold rounded-lg transition-all duration-300 ${
-                          effectiveProvider === "crust"
-                            ? "bg-gradient-to-r from-orange-500 to-amber-500 text-black shadow-md font-extrabold"
-                            : "text-slate-400 hover:text-white"
-                        }`}
-                        onClick={() => setPinningProvider("crust")}
-                      >
-                        Crust Network
-                      </button>
-                      <button
-                        type="button"
-                        className={`flex-1 py-2 text-xs md:text-sm font-bold rounded-lg transition-all duration-300 ${
-                          effectiveProvider === "pinata"
-                            ? "bg-gradient-to-r from-orange-500 to-amber-500 text-black shadow-md font-extrabold"
-                            : "text-slate-400 hover:text-white"
-                        }`}
-                        onClick={() => setPinningProvider("pinata")}
-                      >
-                        Pinata (JWT)
-                      </button>
-                    </div>
-                  )}
-                </div>
-                {effectiveProvider === "pinata" && (
-                  <div className="flex flex-col animate-fadeIn">
-                    <label className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-400">
-                      Pinata JWT Token*
-                    </label>
-                    <input
-                      type="password"
-                      placeholder="Paste Pinata JWT Token"
-                      className="w-full bg-slate-900/60 border border-slate-700 text-sm font-medium text-white placeholder:text-slate-500 px-4 py-3 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary-orange focus:border-primary-orange transition-all"
-                      required
-                      value={token}
-                      onChange={(e) => setToken(e.target.value)}
-                    />
-                  </div>
-                )}
+              <div className="pt-2">
+                <IpfsProviderSelect
+                  provider={pinningProvider as IpfsProvider}
+                  setProvider={setPinningProvider as any}
+                  isTestnet={isTestnet}
+                  pinataToken={token}
+                  setPinataToken={setToken}
+                  filebaseToken={filebaseToken}
+                  setFilebaseToken={setFilebaseToken}
+                />
               </div>
             )}
 
@@ -1084,6 +1054,8 @@ export function SimpleUpdate() {
         {formData.format === "ARC19" ? (
           effectiveProvider === "crust" ? (
             <span>Pin Fee (Crust): ARC19 with new image - 2.8 ALGO, without new image - 1.4 ALGO</span>
+          ) : effectiveProvider === "filebase" ? (
+            <span>Pin Fee (Filebase): Free (requires Filebase API key)</span>
           ) : (
             <span>Pin Fee (Pinata): Free (requires custom Pinata JWT)</span>
           )

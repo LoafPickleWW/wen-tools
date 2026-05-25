@@ -34,3 +34,6 @@ export interface HeadCell {
   label: string;
   numeric: boolean;
 }
+
+export type IpfsProvider = "crust" | "pinata" | "filebase" | "none";
+

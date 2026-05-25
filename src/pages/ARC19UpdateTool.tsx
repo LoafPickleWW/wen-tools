@@ -9,6 +9,8 @@ import {
   SignWithSk,
   walletSign,
 } from "../utils";
+import IpfsProviderSelect from "../components/IpfsProviderSelect";
+import { IpfsProvider } from "../types";
 
 import InfinityModeComponent from "../components/InfinityModeComponent";
 import { useWallet } from "@txnlab/use-wallet-react";
@@ -20,6 +22,8 @@ export function ARC19UpdateTool() {
   const [isTransactionsFinished, setIsTransactionsFinished] = useState(false);
   const [txSendingInProgress, setTxSendingInProgress] = useState(false);
   const [token, setToken] = useState("");
+  const [filebaseToken, setFilebaseToken] = useState("");
+  const [provider, setProvider] = useState("pinata" as IpfsProvider);
   const [assetTransactions, setAssetTransactions] = useState(
     [] as algosdk.Transaction[][]
   );
@@ -32,8 +36,12 @@ export function ARC19UpdateTool() {
       toast.error("Please connect your wallet first!");
       return;
     }
-    if (token === "") {
-      toast.error("Please enter a token!");
+    if (provider === "pinata" && token === "") {
+      toast.error("Please enter a Pinata JWT token!");
+      return;
+    }
+    if (provider === "filebase" && filebaseToken === "") {
+      toast.error("Please enter a Filebase API token!");
       return;
     }
     let headers;
@@ -121,7 +129,8 @@ export function ARC19UpdateTool() {
         data_for_txns,
         activeAddress,
         algodClient,
-        token
+        provider === "filebase" ? filebaseToken : token,
+        provider
       );
       if (unsignedAssetTransactions.length === 0) {
         toast.error("Something went wrong while creating transactions");
@@ -229,26 +238,20 @@ export function ARC19UpdateTool() {
           CSV Template
         </a>
       </button>
-      <p>Enter Pinata JWT</p>
-      <input
-        type="text"
-        id="ipfs-token"
-        placeholder="token"
-        className="text-center bg-gray-800 text-white border-2 border-gray-700 rounded-lg p-2 mb-2 w-48 mx-auto placeholder:text-center placeholder:text-sm"
-        value={token}
-        onChange={(e) => setToken(e.target.value)}
-      />
-      <p className="text-xs text-slate-400 font-roboto -mt-2 mb-2">
-        you can get your token{" "}
-        <a
-          href="https://knowledge.pinata.cloud/en/articles/6191471-how-to-create-an-pinata-api-key"
-          target="_blank"
-          className="text-primary-orange/70 hover:text-secondary-orange/80 transition"
-          rel="noreferrer"
-        >
-          here
-        </a>
-      </p>
+
+      <div className="w-72 mx-auto text-left mb-4">
+        <IpfsProviderSelect
+          provider={provider}
+          setProvider={setProvider}
+          isTestnet={false}
+          hideCrust={true}
+          pinataToken={token}
+          setPinataToken={setToken}
+          filebaseToken={filebaseToken}
+          setFilebaseToken={setFilebaseToken}
+        />
+      </div>
+
       <p className="text-xl text-red font-roboto -mt-2 mb-2">
         ⚠️This tool is not compatible with NFTs minted from algonfts.art⚠️
       </p>
