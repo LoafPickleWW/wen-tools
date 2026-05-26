@@ -372,7 +372,18 @@ export function NFTImportTool() {
 
           if (finalFormat === "ARC19") {
             // ── ARC19: encode the IPFS CID into the reserve address ──
-            const cidForReserve = bestMetadataCid || bestImageCid || "";
+            let cidForReserve = bestMetadataCid || bestImageCid || "";
+            
+            // Handle ERC1155 {id} template replacement
+            if (cidForReserve.includes("{id}") && nft._eth) {
+              try {
+                const hexId = BigInt(nft._eth.token_id).toString(16).padStart(64, '0');
+                cidForReserve = cidForReserve.replace("{id}", hexId);
+              } catch {
+                // Ignore BigInt conversion errors just in case
+              }
+            }
+
             let assetURL = "";
             let reserveAddress = activeAddress || "";
             if (cidForReserve) {
@@ -398,8 +409,23 @@ export function NFTImportTool() {
             };
           } else if (finalFormat === "ARC3") {
             // ── ARC3: asset_url = ipfs://CID#arc3 ──
-            const cidForUrl = bestMetadataCid || bestImageCid || "";
-            const arc3Url = cidForUrl ? `ipfs://${cidForUrl}#arc3` : (nft.image || nft.decodedUri || "");
+            let cidForUrl = bestMetadataCid || bestImageCid || "";
+            if (cidForUrl.includes("{id}") && nft._eth) {
+              try {
+                const hexId = BigInt(nft._eth.token_id).toString(16).padStart(64, '0');
+                cidForUrl = cidForUrl.replace("{id}", hexId);
+              } catch {
+                // Ignore BigInt conversion errors
+              }
+            }
+            let fallbackUrl = nft.image || nft.decodedUri || "";
+            if (fallbackUrl.includes("{id}") && nft._eth) {
+              try {
+                const hexId = BigInt(nft._eth.token_id).toString(16).padStart(64, '0');
+                fallbackUrl = fallbackUrl.replace("{id}", hexId);
+              } catch {}
+            }
+            const arc3Url = cidForUrl ? `ipfs://${cidForUrl}#arc3` : fallbackUrl;
             mintData = {
               asset_name: nft.name.slice(0, 32),
               unit_name: unitName,
@@ -413,7 +439,13 @@ export function NFTImportTool() {
             };
           } else {
             // ── ARC69: media URL in asset_url, metadata in note ──
-            const assetUrl = nft.image || nft.decodedUri || "";
+            let assetUrl = nft.image || nft.decodedUri || "";
+            if (assetUrl.includes("{id}") && nft._eth) {
+              try {
+                const hexId = BigInt(nft._eth.token_id).toString(16).padStart(64, '0');
+                assetUrl = assetUrl.replace("{id}", hexId);
+              } catch {}
+            }
             mintData = {
               asset_name: nft.name.slice(0, 32),
               unit_name: unitName,

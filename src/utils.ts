@@ -1983,7 +1983,7 @@ export async function isAccountOptedIn(
   try {
     await algodClient.accountAssetInformation(address, assetId).do();
     return true;
-  } catch (e) {
+  } catch {
     return false;
   }
 }
