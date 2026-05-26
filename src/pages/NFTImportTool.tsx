@@ -11,6 +11,7 @@ import {
   formatAsARC3,
   formatAsARC19,
   formatAsARC69,
+  extractIpfsCid,
   XRPL_MAINNET_ENDPOINT,
   XRPL_TESTNET_ENDPOINT,
   type ResolvedNFTMetadata,
@@ -33,6 +34,7 @@ import {
 import {
   sliceIntoChunks,
   walletSign,
+  createReserveAddressFromIpfsCid,
 } from "../utils";
 import { TOOLS, MINT_FEE_WALLET } from "../constants";
 import FaqSectionComponent from "../components/FaqSectionComponent";
@@ -334,7 +336,24 @@ export function NFTImportTool() {
         } else {
           // Generic formatting for Cardano / Ethereum imports
           let finalFormat = arcFormat;
-          const hasIpfs = nft.image?.includes("ipfs") || nft.decodedUri?.startsWith("ipfs://");
+
+          // ── Robust IPFS detection ──
+          // Check all possible locations for an IPFS CID: the resolved image,
+          // the raw token/metadata URI, and the raw metadata image field.
+          const imageCid = extractIpfsCid(nft.image || "");
+          const uriCid = extractIpfsCid(nft.decodedUri || "");
+          const rawImageCid = nft._eth
+            ? extractIpfsCid(nft._eth.raw_metadata?.image || "")
+            : null;
+          const rawTokenUriCid = nft._eth
+            ? extractIpfsCid(nft._eth.tokenUri || "")
+            : null;
+
+          // Pick the best CID available — prefer metadata-level CIDs for ARC19/ARC3
+          const bestMetadataCid = uriCid || rawTokenUriCid;
+          const bestImageCid = imageCid || rawImageCid;
+          const hasIpfs = !!(bestMetadataCid || bestImageCid);
+
           if (finalFormat !== "ARC69" && !hasIpfs) {
             toast.warn(`Non-IPFS metadata detected for ${nft.name}. Enforcing ARC69 format.`, { autoClose: 3500 });
             finalFormat = "ARC69";
@@ -344,31 +363,76 @@ export function NFTImportTool() {
             ? collectionName.slice(0, 8).toUpperCase()
             : (nft._cardano?.policy_id?.slice(0, 8) || nft._eth?.contractSymbol?.slice(0, 8) || "IMPORT").toUpperCase();
 
-          const assetUrl = nft.image || nft.decodedUri || "";
-
-          mintData = {
-            asset_name: nft.name.slice(0, 32),
-            unit_name: unitName,
-            total_supply: 1,
-            decimals: 0,
-            asset_url: assetUrl.slice(0, 96),  // Algorand 96-char URL limit
-            reserve_address: activeAddress,
-            has_freeze: "N",
-            has_clawback: "N",
-            default_frozen: "N",
-            asset_note: finalFormat === "ARC69" ? {
-              standard: "arc69",
-              description: nft.description.slice(0, 1024),
-              external_url: nft.image,
-              mime_type: "image/png",
-              properties: {
-                source_chain: sourceChain,
-                original_standard: nft.metadataStandard || "unknown",
-                ...(nft._cardano ? { cardano_fingerprint: nft._cardano.fingerprint } : {}),
-                ...(nft._eth ? { eth_contract: nft._eth.contract_address, eth_token_id: nft._eth.token_id } : {}),
-              },
-            } : undefined,
+          const sourceProps: Record<string, string> = {
+            source_chain: sourceChain,
+            original_standard: nft.metadataStandard || "unknown",
+            ...(nft._cardano ? { cardano_fingerprint: nft._cardano.fingerprint } : {}),
+            ...(nft._eth ? { eth_contract: nft._eth.contract_address, eth_token_id: nft._eth.token_id } : {}),
           };
+
+          if (finalFormat === "ARC19") {
+            // ── ARC19: encode the IPFS CID into the reserve address ──
+            const cidForReserve = bestMetadataCid || bestImageCid || "";
+            let assetURL = "";
+            let reserveAddress = activeAddress || "";
+            if (cidForReserve) {
+              const ret = createReserveAddressFromIpfsCid(cidForReserve);
+              assetURL = ret.assetURL;
+              reserveAddress = ret.reserveAddress;
+            }
+            mintData = {
+              asset_name: nft.name.slice(0, 32),
+              unit_name: unitName,
+              total_supply: 1,
+              decimals: 0,
+              asset_url: assetURL,
+              reserve_address: reserveAddress,
+              has_freeze: "N",
+              has_clawback: "N",
+              default_frozen: "N",
+              asset_note: {
+                standard: "arc19",
+                description: nft.description.slice(0, 1024),
+                properties: sourceProps,
+              },
+            };
+          } else if (finalFormat === "ARC3") {
+            // ── ARC3: asset_url = ipfs://CID#arc3 ──
+            const cidForUrl = bestMetadataCid || bestImageCid || "";
+            const arc3Url = cidForUrl ? `ipfs://${cidForUrl}#arc3` : (nft.image || nft.decodedUri || "");
+            mintData = {
+              asset_name: nft.name.slice(0, 32),
+              unit_name: unitName,
+              total_supply: 1,
+              decimals: 0,
+              asset_url: arc3Url.slice(0, 96),
+              reserve_address: activeAddress,
+              has_freeze: "N",
+              has_clawback: "N",
+              default_frozen: "N",
+            };
+          } else {
+            // ── ARC69: media URL in asset_url, metadata in note ──
+            const assetUrl = nft.image || nft.decodedUri || "";
+            mintData = {
+              asset_name: nft.name.slice(0, 32),
+              unit_name: unitName,
+              total_supply: 1,
+              decimals: 0,
+              asset_url: assetUrl.slice(0, 96),
+              reserve_address: activeAddress,
+              has_freeze: "N",
+              has_clawback: "N",
+              default_frozen: "N",
+              asset_note: {
+                standard: "arc69",
+                description: nft.description.slice(0, 1024),
+                external_url: nft.image,
+                mime_type: "image/png",
+                properties: sourceProps,
+              },
+            };
+          }
         }
 
         const asset_create_tx = algosdk.makeAssetCreateTxnWithSuggestedParamsFromObject({
