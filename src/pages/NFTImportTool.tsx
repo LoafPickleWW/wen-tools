@@ -441,9 +441,9 @@ export function NFTImportTool() {
                 (window as any)._warnedGateways = (window as any)._warnedGateways || new Set();
                 (window as any)._warnedGateways.add(gatewayHost);
               }
-            } catch {
-              // Ignore invalid URLs
-              }
+            } catch (err) {
+              console.debug("Invalid URL format:", rawImageStr, err);
+            }
           }
 
           const unitName = collectionName

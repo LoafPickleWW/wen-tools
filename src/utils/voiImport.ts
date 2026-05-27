@@ -167,7 +167,7 @@ export function resolveVoiMetadata(
     const description = meta.description || "";
 
     // Resolve image — check image, image_url, animation_url fields
-    let rawImage = meta.image || meta.image_url || meta.animation_url || "";
+    const rawImage = meta.image || meta.image_url || meta.animation_url || "";
     const imageResolved = !!rawImage;
     const image = resolveIpfsUri(rawImage);
 
