@@ -62,6 +62,19 @@ interface UnifiedNFT {
   _eth?: ResolvedEthNFT;
 }
 
+function generalizeIpfsCid(cidOrPath: string, tokenId: string): string {
+  if (!cidOrPath) return "";
+  const parts = cidOrPath.split("/");
+  const cidString = parts[0];
+  let pathStr = parts.slice(1).join("/");
+  
+  if (pathStr && pathStr.includes("{id}")) {
+    pathStr = pathStr.replace(/{id}/gi, tokenId);
+  }
+  
+  return pathStr ? `${cidString}/${pathStr}` : cidString;
+}
+
 const TOOL_META = TOOLS.find((t) => t.id === "nft_import") || {
   label: "NFT Import Tool",
   description: "Import NFTs from other chains (XRP Ledger, Cardano, Ethereum) and mint them on Algorand.",
@@ -359,6 +372,23 @@ export function NFTImportTool() {
             finalFormat = "ARC69";
           }
 
+          // Warn if they are using ARC19/ARC3 but the original JSON hardcodes an HTTP image
+          const rawImageStr = nft._eth?.raw_metadata?.image || nft._eth?.raw_metadata?.image_url || "";
+          if (finalFormat !== "ARC69" && hasIpfs && typeof rawImageStr === "string" && rawImageStr.startsWith("http")) {
+            try {
+              const gatewayHost = new URL(rawImageStr).hostname;
+              // Use a ref or simple global variable to avoid spamming the toast in a loop
+              if (!(window as any)._warnedGateways?.has(gatewayHost)) {
+                toast.warn(
+                  `Warning: Original metadata uses a hardcoded HTTP gateway (${gatewayHost}). If the gateway is offline, the image won't load for ARC19/ARC3. Consider using ARC69 to fix this.`,
+                  { autoClose: 10000 }
+                );
+                (window as any)._warnedGateways = (window as any)._warnedGateways || new Set();
+                (window as any)._warnedGateways.add(gatewayHost);
+              }
+            } catch(e) {}
+          }
+
           const unitName = collectionName
             ? collectionName.slice(0, 8).toUpperCase()
             : (nft._cardano?.policy_id?.slice(0, 8) || nft._eth?.contractSymbol?.slice(0, 8) || "IMPORT").toUpperCase();
@@ -374,14 +404,10 @@ export function NFTImportTool() {
             // ── ARC19: encode the IPFS CID into the reserve address ──
             let cidForReserve = bestMetadataCid || bestImageCid || "";
             
-            // Handle ERC1155 {id} template replacement
-            if (cidForReserve.includes("{id}") && nft._eth) {
-              try {
-                const hexId = BigInt(nft._eth.token_id).toString(16).padStart(64, '0');
-                cidForReserve = cidForReserve.replace("{id}", hexId);
-              } catch {
-                // Ignore BigInt conversion errors just in case
-              }
+            // For ARC19 template URLs, substitute {id} with the actual token ID.
+            // This encodes the base folder CID into the reserve address and puts the exact file in the URL.
+            if (cidForReserve && nft._eth) {
+              cidForReserve = generalizeIpfsCid(cidForReserve, nft._eth.token_id);
             }
 
             let assetURL = "";
@@ -410,22 +436,10 @@ export function NFTImportTool() {
           } else if (finalFormat === "ARC3") {
             // ── ARC3: asset_url = ipfs://CID#arc3 ──
             let cidForUrl = bestMetadataCid || bestImageCid || "";
-            if (cidForUrl.includes("{id}") && nft._eth) {
-              try {
-                const hexId = BigInt(nft._eth.token_id).toString(16).padStart(64, '0');
-                cidForUrl = cidForUrl.replace("{id}", hexId);
-              } catch {
-                // Ignore BigInt conversion errors
-              }
+            if (cidForUrl && nft._eth) {
+              cidForUrl = generalizeIpfsCid(cidForUrl, nft._eth.token_id);
             }
-            let fallbackUrl = nft.image || nft.decodedUri || "";
-            if (fallbackUrl.includes("{id}") && nft._eth) {
-              try {
-                const hexId = BigInt(nft._eth.token_id).toString(16).padStart(64, '0');
-                fallbackUrl = fallbackUrl.replace("{id}", hexId);
-              } catch {}
-            }
-            const arc3Url = cidForUrl ? `ipfs://${cidForUrl}#arc3` : fallbackUrl;
+            const arc3Url = cidForUrl ? `ipfs://${cidForUrl}#arc3` : (nft.image || nft.decodedUri || "");
             mintData = {
               asset_name: nft.name.slice(0, 32),
               unit_name: unitName,
@@ -441,10 +455,7 @@ export function NFTImportTool() {
             // ── ARC69: media URL in asset_url, metadata in note ──
             let assetUrl = nft.image || nft.decodedUri || "";
             if (assetUrl.includes("{id}") && nft._eth) {
-              try {
-                const hexId = BigInt(nft._eth.token_id).toString(16).padStart(64, '0');
-                assetUrl = assetUrl.replace("{id}", hexId);
-              } catch {}
+              assetUrl = assetUrl.replace("{id}", nft._eth.token_id.toString());
             }
             mintData = {
               asset_name: nft.name.slice(0, 32),
