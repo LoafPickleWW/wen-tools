@@ -32,6 +32,12 @@ import {
   type EthNetwork,
 } from "../utils/ethereumImport";
 import {
+  isValidContractId,
+  fetchNFTsByContractId,
+  resolveVoiMetadata,
+  type ResolvedVoiNFT,
+} from "../utils/voiImport";
+import {
   sliceIntoChunks,
   walletSign,
   createReserveAddressFromIpfsCid,
@@ -40,7 +46,7 @@ import { TOOLS, MINT_FEE_WALLET } from "../constants";
 import FaqSectionComponent from "../components/FaqSectionComponent";
 
 type ImportStep = "input" | "scanning" | "resolving" | "preview" | "minting" | "done";
-type SourceChain = "xrpl" | "cardano" | "ethereum";
+type SourceChain = "xrpl" | "cardano" | "ethereum" | "voi";
 
 /** Unified shape so the preview grid + minting pipeline can be chain-agnostic. */
 interface UnifiedNFT {
@@ -60,6 +66,7 @@ interface UnifiedNFT {
   _xrpl?: ResolvedNFTMetadata;
   _cardano?: ResolvedCardanoNFT;
   _eth?: ResolvedEthNFT;
+  _voi?: ResolvedVoiNFT;
 }
 
 function generalizeIpfsCid(cidOrPath: string, tokenId: string): string {
@@ -102,6 +109,9 @@ export function NFTImportTool() {
   const [ethContractAddress, setEthContractAddress] = useState("");
   const [ethNetwork, setEthNetwork] = useState<EthNetwork>("mainnet");
   const [alchemyApiKey, setAlchemyApiKey] = useState((import.meta.env.VITE_ALCHEMY_API_KEY as string) || "");
+
+  // Voi-specific
+  const [voiContractId, setVoiContractId] = useState("");
 
   // Shared
   const [startIndex, setStartIndex] = useState("0");
@@ -179,6 +189,22 @@ export function NFTImportTool() {
       metadataStandard: n.tokenType,
       decodedUri: n.tokenUri,
       _eth: n,
+    }));
+  }
+
+  function unifyVoi(nfts: ResolvedVoiNFT[]): UnifiedNFT[] {
+    return nfts.map((n) => ({
+      id: `voi-${n.contractId}-${n.tokenId}`,
+      name: n.name,
+      description: n.description,
+      image: n.image,
+      imageResolved: n.imageResolved,
+      metadataResolved: n.metadataResolved,
+      serialOrId: `#${n.tokenId}`,
+      collectionTag: `ARC-72`,
+      metadataStandard: "ARC-72",
+      decodedUri: n.metadataURI,
+      _voi: n,
     }));
   }
 
@@ -276,6 +302,30 @@ export function NFTImportTool() {
         unified = unifyEth(resolved);
       }
 
+      // ── VOI ──
+      if (sourceChain === "voi") {
+        if (!voiContractId.trim()) { toast.error("Please enter a Voi Contract ID"); setStep("input"); return; }
+        if (!isValidContractId(voiContractId.trim())) { toast.error("Invalid Contract ID. Must be a positive number."); setStep("input"); return; }
+
+        toast.info("Scanning Voi Network for NFTs via Mimir API...");
+        const rawNfts = await fetchNFTsByContractId(voiContractId.trim(), (count) => setScanProgress(count));
+
+        if (rawNfts.length === 0) { toast.warning("No NFTs found for this contract"); setStep("input"); return; }
+        setTotalScanned(rawNfts.length);
+
+        const start = Math.max(0, parseInt(startIndex, 10) || 0);
+        const end = endIndex.trim() !== "" ? Math.max(start, parseInt(endIndex, 10)) : rawNfts.length;
+        const slicedNfts = rawNfts.slice(start, end);
+        if (slicedNfts.length === 0) { toast.warning(`No NFTs found within range ${start} to ${end}`); setStep("input"); return; }
+
+        toast.info(`Found ${rawNfts.length} NFTs. Resolving metadata for range ${start} to ${start + slicedNfts.length}...`);
+        setStep("resolving");
+        setResolveProgress({ done: 0, total: slicedNfts.length });
+
+        const resolved = resolveVoiMetadata(slicedNfts, (done, total) => setResolveProgress({ done, total }));
+        unified = unifyVoi(resolved);
+      }
+
       // ── Set preview state ──
       setUnifiedNFTs(unified);
       setSelectedNFTs(new Set(unified.filter((n) => n.metadataResolved || n.imageResolved).map((n) => n.id)));
@@ -292,7 +342,7 @@ export function NFTImportTool() {
       toast.error(errMsg);
       setStep("input");
     }
-  }, [sourceChain, xrpAddress, taxonId, startIndex, endIndex, xrplNetwork, cardanoPolicyId, cardanoNetwork, ethContractAddress, ethNetwork, alchemyApiKey]);
+  }, [sourceChain, xrpAddress, taxonId, startIndex, endIndex, xrplNetwork, cardanoPolicyId, cardanoNetwork, ethContractAddress, ethNetwork, alchemyApiKey, voiContractId]);
 
   const handleToggleNFT = useCallback((nftId: string) => {
     setSelectedNFTs((prev) => {
@@ -357,23 +407,28 @@ export function NFTImportTool() {
           const uriCid = extractIpfsCid(nft.decodedUri || "");
           const rawImageCid = nft._eth
             ? extractIpfsCid(nft._eth.raw_metadata?.image || "")
+            : nft._voi
+            ? extractIpfsCid(nft._voi.raw_metadata?.image || nft._voi.raw_metadata?.image_url || nft._voi.raw_metadata?.animation_url || "")
             : null;
           const rawTokenUriCid = nft._eth
             ? extractIpfsCid(nft._eth.tokenUri || "")
+            : nft._voi
+            ? extractIpfsCid(nft._voi.metadataURI || "")
             : null;
 
           // Pick the best CID available — prefer metadata-level CIDs for ARC19/ARC3
           const bestMetadataCid = uriCid || rawTokenUriCid;
           const bestImageCid = imageCid || rawImageCid;
           const hasIpfs = !!(bestMetadataCid || bestImageCid);
+          const hasIpfsForArc19 = !!bestMetadataCid;
 
-          if (finalFormat !== "ARC69" && !hasIpfs) {
-            toast.warn(`Non-IPFS metadata detected for ${nft.name}. Enforcing ARC69 format.`, { autoClose: 3500 });
+          if (finalFormat === "ARC19" && !hasIpfsForArc19) {
+            toast.warn(`Non-IPFS metadata JSON detected for ${nft.name}. ARC19 requires the metadata JSON to be on IPFS. Enforcing ARC69 format.`, { autoClose: 3500 });
             finalFormat = "ARC69";
           }
 
           // Warn if they are using ARC19/ARC3 but the original JSON hardcodes an HTTP image
-          const rawImageStr = nft._eth?.raw_metadata?.image || nft._eth?.raw_metadata?.image_url || "";
+          const rawImageStr = nft._eth?.raw_metadata?.image || nft._eth?.raw_metadata?.image_url || nft._voi?.raw_metadata?.image || nft._voi?.raw_metadata?.image_url || "";
           if (finalFormat !== "ARC69" && hasIpfs && typeof rawImageStr === "string" && rawImageStr.startsWith("http")) {
             try {
               const gatewayHost = new URL(rawImageStr).hostname;
@@ -386,28 +441,32 @@ export function NFTImportTool() {
                 (window as any)._warnedGateways = (window as any)._warnedGateways || new Set();
                 (window as any)._warnedGateways.add(gatewayHost);
               }
-            } catch(e) {}
+            } catch {
+              // Ignore invalid URLs
+              }
           }
 
           const unitName = collectionName
             ? collectionName.slice(0, 8).toUpperCase()
-            : (nft._cardano?.policy_id?.slice(0, 8) || nft._eth?.contractSymbol?.slice(0, 8) || "IMPORT").toUpperCase();
+            : (nft._cardano?.policy_id?.slice(0, 8) || nft._eth?.contractSymbol?.slice(0, 8) || nft._voi?.contractId.toString() || "IMPORT").toUpperCase();
 
           const sourceProps: Record<string, string> = {
             source_chain: sourceChain,
             original_standard: nft.metadataStandard || "unknown",
             ...(nft._cardano ? { cardano_fingerprint: nft._cardano.fingerprint } : {}),
             ...(nft._eth ? { eth_contract: nft._eth.contract_address, eth_token_id: nft._eth.token_id } : {}),
+            ...(nft._voi ? { voi_contract_id: nft._voi.contractId.toString(), voi_token_id: nft._voi.tokenId.toString() } : {}),
           };
 
           if (finalFormat === "ARC19") {
             // ── ARC19: encode the IPFS CID into the reserve address ──
-            let cidForReserve = bestMetadataCid || bestImageCid || "";
+            let cidForReserve = bestMetadataCid || "";
             
             // For ARC19 template URLs, substitute {id} with the actual token ID.
             // This encodes the base folder CID into the reserve address and puts the exact file in the URL.
-            if (cidForReserve && nft._eth) {
-              cidForReserve = generalizeIpfsCid(cidForReserve, nft._eth.token_id);
+            if (cidForReserve && (nft._eth || nft._voi)) {
+              const tId = nft._eth ? nft._eth.token_id.toString() : nft._voi!.tokenId.toString();
+              cidForReserve = generalizeIpfsCid(cidForReserve, tId);
             }
 
             let assetURL = "";
@@ -436,10 +495,12 @@ export function NFTImportTool() {
           } else if (finalFormat === "ARC3") {
             // ── ARC3: asset_url = ipfs://CID#arc3 ──
             let cidForUrl = bestMetadataCid || bestImageCid || "";
-            if (cidForUrl && nft._eth) {
-              cidForUrl = generalizeIpfsCid(cidForUrl, nft._eth.token_id);
+            if (cidForUrl && (nft._eth || nft._voi)) {
+              const tId = nft._eth ? nft._eth.token_id.toString() : nft._voi!.tokenId.toString();
+              cidForUrl = generalizeIpfsCid(cidForUrl, tId);
             }
-            const arc3Url = cidForUrl ? `ipfs://${cidForUrl}#arc3` : (nft.image || nft.decodedUri || "");
+            const fallbackUrl = nft.decodedUri || nft.image || "";
+            const arc3Url = cidForUrl ? `ipfs://${cidForUrl}#arc3` : (fallbackUrl.endsWith("#arc3") ? fallbackUrl : `${fallbackUrl}#arc3`);
             mintData = {
               asset_name: nft.name.slice(0, 32),
               unit_name: unitName,
@@ -454,8 +515,9 @@ export function NFTImportTool() {
           } else {
             // ── ARC69: media URL in asset_url, metadata in note ──
             let assetUrl = nft.image || nft.decodedUri || "";
-            if (assetUrl.includes("{id}") && nft._eth) {
-              assetUrl = assetUrl.replace("{id}", nft._eth.token_id.toString());
+            if (assetUrl.includes("{id}") && (nft._eth || nft._voi)) {
+              const tId = nft._eth ? nft._eth.token_id.toString() : nft._voi!.tokenId.toString();
+              assetUrl = assetUrl.replace("{id}", tId);
             }
             mintData = {
               asset_name: nft.name.slice(0, 32),
@@ -553,8 +615,8 @@ export function NFTImportTool() {
 
   // ─── Chain label helpers ──────────────────────────────────────────────────
 
-  const chainLabel = sourceChain === "xrpl" ? "XRPL" : sourceChain === "cardano" ? "Cardano" : "Ethereum";
-  const chainEmoji = sourceChain === "xrpl" ? "💧" : sourceChain === "cardano" ? "🔷" : "⟠";
+  const chainLabel = sourceChain === "xrpl" ? "XRPL" : sourceChain === "cardano" ? "Cardano" : sourceChain === "voi" ? "Voi" : "Ethereum";
+  const chainEmoji = sourceChain === "xrpl" ? "💧" : sourceChain === "cardano" ? "🔷" : sourceChain === "voi" ? "⚡" : "⟠";
 
   // ─── Render ───────────────────────────────────────────────────────────────
 
@@ -629,7 +691,7 @@ export function NFTImportTool() {
                       : "bg-white/5 border border-white/10 text-gray-400 hover:border-white/20"
                   }`}
                 >
-                  <span className="text-lg">💧</span> XRP Ledger
+                  <img src="https://cryptologos.cc/logos/xrp-xrp-logo.svg?v=035" alt="XRP" className="w-5 h-5" /> XRP Ledger
                 </button>
                 <button
                   onClick={() => setSourceChain("cardano")}
@@ -639,7 +701,7 @@ export function NFTImportTool() {
                       : "bg-white/5 border border-white/10 text-gray-400 hover:border-white/20"
                   }`}
                 >
-                  <span className="text-lg">🔷</span> Cardano (ADA)
+                  <img src="https://cryptologos.cc/logos/cardano-ada-logo.svg?v=035" alt="ADA" className="w-5 h-5" /> Cardano (ADA)
                 </button>
                 <button
                   onClick={() => setSourceChain("ethereum")}
@@ -649,7 +711,17 @@ export function NFTImportTool() {
                       : "bg-white/5 border border-white/10 text-gray-400 hover:border-white/20"
                   }`}
                 >
-                  <span className="text-lg">⟠</span> Ethereum (ETH)
+                  <img src="https://cryptologos.cc/logos/ethereum-eth-logo.svg?v=035" alt="ETH" className="w-5 h-5" /> Ethereum (ETH)
+                </button>
+                <button
+                  onClick={() => setSourceChain("voi")}
+                  className={`flex items-center gap-2 px-5 py-3 rounded-xl text-sm font-semibold transition-all ${
+                    sourceChain === "voi"
+                      ? "bg-green-500/20 border-2 border-green-500 text-green-400"
+                      : "bg-white/5 border border-white/10 text-gray-400 hover:border-white/20"
+                  }`}
+                >
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className="w-5 h-5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 4l7 15 7-15" /></svg> Voi (ARC-72)
                 </button>
               </div>
             </div>
@@ -676,6 +748,9 @@ export function NFTImportTool() {
                     <button onClick={() => setEthNetwork("mainnet")} className={`px-5 py-3 rounded-xl text-sm font-semibold transition-all ${ethNetwork === "mainnet" ? "bg-purple-500/20 border-2 border-purple-500 text-purple-400" : "bg-white/5 border border-white/10 text-gray-400 hover:border-white/20"}`}>Mainnet</button>
                     <button onClick={() => setEthNetwork("sepolia")} className={`px-5 py-3 rounded-xl text-sm font-semibold transition-all ${ethNetwork === "sepolia" ? "bg-purple-500/20 border-2 border-purple-500 text-purple-400" : "bg-white/5 border border-white/10 text-gray-400 hover:border-white/20"}`}>Sepolia</button>
                   </>
+                )}
+                {sourceChain === "voi" && (
+                  <button className="px-5 py-3 rounded-xl text-sm font-semibold transition-all bg-green-500/20 border-2 border-green-500 text-green-400">Mainnet</button>
                 )}
               </div>
             </div>
@@ -725,6 +800,23 @@ export function NFTImportTool() {
                 </p>
                 <input type="text" value={ethContractAddress} onChange={(e) => setEthContractAddress(e.target.value)} placeholder="0x..."
                   className="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-purple-500/50 transition font-mono text-sm" />
+              </div>
+            )}
+
+            {/* ── Voi-specific inputs ── */}
+            {sourceChain === "voi" && (
+              <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-6">
+                <label className="block text-sm font-semibold text-gray-300 mb-2">Contract ID (Application ID)</label>
+                <p className="text-xs text-gray-500 mb-3">
+                  Voi uses <span className="text-green-400 font-medium">ARC-72</span> smart contract NFTs (similar to ERC-721).
+                  Each collection is an application deployed on the Voi network. Enter the Application ID to scan all NFTs in that collection.
+                  Metadata is stored on-chain via tokenURI, typically pointing to IPFS.
+                </p>
+                <input type="text" value={voiContractId} onChange={(e) => setVoiContractId(e.target.value.replace(/[^0-9]/g, ""))} placeholder="e.g. 29105999"
+                  className="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-green-500/50 transition font-mono text-sm" />
+                <p className="text-xxs text-gray-600 mt-2">
+                  Powered by <a href="https://voi-mainnet-mimirapi.nftnavigator.xyz" target="_blank" rel="noreferrer" className="text-green-400 hover:underline">Mimir API</a> — free, no API key required
+                </p>
               </div>
             )}
 
@@ -828,12 +920,13 @@ export function NFTImportTool() {
               </div>
               <div className="space-y-1">
                 <span className="text-[10px] text-gray-500 uppercase font-bold tracking-wider">
-                  {sourceChain === "xrpl" ? "Address / Taxon" : sourceChain === "cardano" ? "Policy ID" : "Contract"}
+                  {sourceChain === "xrpl" ? "Address / Taxon" : sourceChain === "cardano" ? "Policy ID" : sourceChain === "voi" ? "Contract ID" : "Contract"}
                 </span>
-                <p className="text-sm font-mono text-gray-300 truncate" title={sourceChain === "xrpl" ? xrpAddress : sourceChain === "cardano" ? cardanoPolicyId : ethContractAddress}>
+                <p className="text-sm font-mono text-gray-300 truncate" title={sourceChain === "xrpl" ? xrpAddress : sourceChain === "cardano" ? cardanoPolicyId : sourceChain === "voi" ? voiContractId : ethContractAddress}>
                   {sourceChain === "xrpl" && (taxonId.trim() !== "" ? `Taxon: ${taxonId}` : xrpAddress.slice(0, 16) + "…")}
                   {sourceChain === "cardano" && (cardanoPolicyId.slice(0, 16) + "…")}
                   {sourceChain === "ethereum" && (ethContractAddress.slice(0, 16) + "…")}
+                  {sourceChain === "voi" && `App ID: ${voiContractId}`}
                 </p>
               </div>
               <div className="space-y-1">
@@ -990,7 +1083,7 @@ export function NFTImportTool() {
                 </button>
                 <button onClick={() => {
                   setStep("input");
-                  setXrpAddress(""); setTaxonId(""); setCardanoPolicyId(""); setEthContractAddress(""); setAlchemyApiKey((import.meta.env.VITE_ALCHEMY_API_KEY as string) || "");
+                  setXrpAddress(""); setTaxonId(""); setCardanoPolicyId(""); setEthContractAddress(""); setAlchemyApiKey((import.meta.env.VITE_ALCHEMY_API_KEY as string) || ""); setVoiContractId("");
                   setStartIndex("0"); setEndIndex("500");
                   setUnifiedNFTs([]); setSelectedNFTs(new Set()); setMintedAssets([]); setTotalScanned(0);
                 }}
@@ -1012,7 +1105,7 @@ export function NFTImportTool() {
             {
               question: "What chains and standards are supported?",
               answer:
-                "XRPL: Uses Taxon IDs as the collection filter. Cardano (ADA): Uses Policy IDs as the collection identifier, supports both CIP-25 (immutable metadata in minting tx) and CIP-68 (mutable datum metadata with reference NFTs). Ethereum (ETH): Uses Contract Addresses, supports ERC-721 (unique tokens) and ERC-1155 (multi-tokens).",
+                "XRPL: Uses Taxon IDs as the collection filter. Cardano (ADA): Uses Policy IDs as the collection identifier, supports both CIP-25 (immutable metadata in minting tx) and CIP-68 (mutable datum metadata with reference NFTs). Ethereum (ETH): Uses Contract Addresses, supports ERC-721 (unique tokens) and ERC-1155 (multi-tokens). Voi: Uses Contract IDs (Application IDs), supports ARC-72 smart contract NFTs (similar to ERC-721 but on AVM).",
             },
             {
               question: "What is a Taxon ID (XRPL)?",
@@ -1030,9 +1123,14 @@ export function NFTImportTool() {
                 "On Ethereum, NFT collections are deployed as smart contracts (ERC-721 or ERC-1155). The contract address uniquely identifies the collection. ERC-721 tokens are unique 1-of-1 assets. ERC-1155 allows both fungible and non-fungible tokens in the same contract. Metadata mutability depends on whether the tokenURI points to IPFS (immutable) or an HTTP server (mutable).",
             },
             {
+              question: "What is a Contract ID (Voi)?",
+              answer:
+                "Voi is an AVM-based blockchain (Algorand fork) that uses ARC-72 for NFTs — a smart contract standard similar to Ethereum's ERC-721 but running on the AVM. Each collection is deployed as an application (smart contract), and the Application ID serves as the collection identifier. ARC-72 NFTs don't require opt-in to receive, and metadata is stored on-chain via tokenURI, typically pointing to IPFS. Note: ARC-200 is Voi's fungible token standard (like ERC-20), not for NFTs.",
+            },
+            {
               question: "Do I need API keys?",
               answer:
-                "XRPL and Cardano scanning require no API keys. Cardano uses the free Koios API (5,000 requests/day). Ethereum requires a free Alchemy API key (sign up at dashboard.alchemy.com – 30M compute units/month). Your key stays in your browser and is never stored on our servers.",
+                "XRPL, Cardano, and Voi scanning require no API keys. Cardano uses the free Koios API (5,000 requests/day). Voi uses the free Mimir API with no documented rate limit. Ethereum requires a free Alchemy API key (sign up at dashboard.alchemy.com – 30M compute units/month). Your key stays in your browser and is never stored on our servers.",
             },
             {
               question: "What are ARC-3, ARC-19, and ARC-69?",
