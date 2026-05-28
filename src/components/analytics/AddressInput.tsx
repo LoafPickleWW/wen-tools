@@ -19,8 +19,12 @@ export function AddressInput({ onAddressesChange }: AddressInputProps) {
   };
 
   const addAddressOrNfd = async (rawInput: string) => {
-    const trimmed = rawInput.trim();
+    let trimmed = rawInput.trim();
     if (!trimmed) return;
+
+    if (trimmed.toLowerCase().endsWith(".algo")) {
+      trimmed = trimmed.toLowerCase();
+    }
 
     if (chips.includes(trimmed)) {
       toast.warn("Address/NFD already added.");
