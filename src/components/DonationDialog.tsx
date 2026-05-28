@@ -21,17 +21,25 @@ const DonationDialog = () => {
   const [open, setOpen] = useState(false);
   const { activeAddress, algodClient, transactionSigner, activeNetwork } = useWallet();
 
-  const [donateAmount, setDonateAmount] = useState<string>("5");
+  const [donateAmount, setDonateAmount] = useState<string>("10");
   const [assetType, setAssetType] = useState<"ALGO" | "USDC">("ALGO");
   const [isOptedInUSDC, setIsOptedInUSDC] = useState(false);
   const [donatingInProgress, setDonatingInProgress] = useState(false);
 
-  // Check if connected user is opted into USDC
+  // Check if connected user is opted into USDC and check balance
   useEffect(() => {
     if (activeAddress && algodClient) {
       const usdcId = activeNetwork === "mainnet" ? 315608 : 10458941;
       algodClient.accountAssetInformation(activeAddress, usdcId).do()
-        .then(() => setIsOptedInUSDC(true))
+        .then((res: any) => {
+          setIsOptedInUSDC(true);
+          const usdcBalance = res["asset-holding"]?.["amount"] || 0;
+          if (usdcBalance >= 1_000_000) {
+            setAssetType("USDC");
+          } else {
+            setAssetType("ALGO");
+          }
+        })
         .catch(() => {
           setIsOptedInUSDC(false);
           setAssetType("ALGO");
@@ -47,7 +55,7 @@ const DonationDialog = () => {
     if (assetType === "USDC") {
       setDonateAmount("1");
     } else {
-      setDonateAmount("5");
+      setDonateAmount("10");
     }
   }, [assetType]);
 
@@ -113,7 +121,7 @@ const DonationDialog = () => {
     }
   };
 
-  const presets = assetType === "ALGO" ? ["2", "5", "10"] : ["1", "3", "5"];
+  const presets = assetType === "ALGO" ? ["10", "50", "250"] : ["1", "5", "25"];
 
   return (
     <>
