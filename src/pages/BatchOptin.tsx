@@ -1,3 +1,4 @@
+import { showDonationToast } from "../utils";
 import { useState, useEffect } from "react";
 import { toast } from "react-toastify";
 import {
@@ -90,7 +91,7 @@ export function BatchOptin() {
         setIsTransactionsFinished(true);
         setTxSendingInProgress(false);
         toast.success("All transactions confirmed!");
-        toast.info("You can support by donating :)");
+        showDonationToast();
       } catch (err) {
         console.error(err);
         setTxSendingInProgress(false);

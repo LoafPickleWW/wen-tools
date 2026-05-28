@@ -1,3 +1,4 @@
+import { showDonationToast } from "../utils";
 import { useState } from "react";
 import Papa from "papaparse";
 import { toast } from "react-toastify";
@@ -157,7 +158,7 @@ export function AirdropTool() {
           }
           setProcessStep("TXNS_FINISHED");
           toast.success("All transactions confirmed!");
-          toast.info("You can support by donating :)");
+          showDonationToast();
         }
       } catch (error) {
         setProcessStep("INITIAL");
@@ -209,7 +210,7 @@ export function AirdropTool() {
       assetInboxInfo.csv = await convertToCSV(assetInboxInfo.logDataArray);
       setProcessStep("ASSET_INBOX_TXNS_FINISHED");
       toast.success("All transactions confirmed!");
-      toast.info("You can support by donating :)");
+      showDonationToast();
     } catch (err: any) {
       console.error(err);
       toast.error(err.message);

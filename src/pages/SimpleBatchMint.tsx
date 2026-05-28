@@ -1,3 +1,4 @@
+import { showDonationToast } from "../utils";
 // Simple Batch Mint Tool
 import { useState } from "react";
 
@@ -440,7 +441,7 @@ export function SimpleBatchMint() {
       setProcessStep(COMPLETED);
       toast.success("All transactions confirmed!");
       
-      toast.info("You can support by donating :)");
+      showDonationToast();
     } catch (err) {
       console.error(err);
       toast.error("Something went wrong!");

@@ -1,3 +1,4 @@
+import { showDonationToast } from "../utils";
 import { useState, useEffect } from "react";
 import { toast } from "react-toastify";
 import axios from "axios";
@@ -205,7 +206,7 @@ export function HoldingsAuditor({ defaultTab = "wallet" }: HoldingsAuditorProps)
         `${userWallet}-holding-${activeNetwork}.csv`
       );
       toast.success("Wallet data downloaded successfully!");
-      toast.info("You can support by donating :)");
+      showDonationToast();
     } else {
       toast.error("Failed to fetch asset details.");
     }
@@ -488,7 +489,7 @@ export function HoldingsAuditor({ defaultTab = "wallet" }: HoldingsAuditorProps)
       }
       exportAssetCSVFile(assetHeaders, allFilteredData, "asset_holders.csv");
       toast.success("Downloaded successfully!");
-      toast.info("You can support by donating :)");
+      showDonationToast();
     } else {
       toast.info("Please get collection data first!");
     }

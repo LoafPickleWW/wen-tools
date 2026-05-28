@@ -1,3 +1,4 @@
+import { showDonationToast } from "../utils";
 import { useState, useEffect, useRef } from "react";
 import { toast } from "react-toastify";
 import { useSearchParams } from "react-router-dom";
@@ -463,7 +464,7 @@ export function BulkAssetManager({ defaultTab = "optin" }: BulkAssetManagerProps
       setIsTransactionsFinished(true);
       setTxSendingInProgress(false);
       toast.success("All transactions processed!");
-      toast.info("You can support by donating :)");
+      showDonationToast();
       trackEvent("bulk_asset_success", "bulk_manager", activeTab);
     } catch (err: any) {
       console.error(err);

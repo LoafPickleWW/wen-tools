@@ -1,3 +1,4 @@
+import { showDonationToast } from "../utils";
 import algosdk from "algosdk";
 import Papa from "papaparse";
 import { useState } from "react";
@@ -209,7 +210,7 @@ export function ARC3MintTool() {
       setIsTransactionsFinished(true);
       setTxSendingInProgress(false);
       toast.success("All transactions confirmed!");
-      toast.info("You can support by donating :)");
+      showDonationToast();
     } catch (err: any) {
       console.error(err);
       toast.error(err.message);

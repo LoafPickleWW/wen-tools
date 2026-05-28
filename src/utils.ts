@@ -2094,3 +2094,22 @@ export async function createAssetBurnTransactions(
 
   return groups;
 }
+
+export function showDonationToast() {
+  const messages = [
+    "Buy us a coffee! Or a tea. Or just send Algos so we can pay our indexer landlord.",
+    "Algos received go directly towards feeding the developers (and their pets).",
+    "Did this save you 10 minutes? Throwing us 1 ALGO will keep the developers caffeinated!",
+    "Our coffee machine runs on Algorand. Please insert Algos to keep developers caffeinated!",
+    "Rumor has it, donating 5 ALGO makes your next transaction 10% faster (not scientifically proven).",
+    "We accept tips in ALGO. We also accept high fives, but they don't buy the coffee.",
+    "Help us stay focused and coffee-rich! Donate today.",
+    "Transaction successful! Celebrate by throwing a few Algos in our tip jar.",
+    "Your transaction was beautiful. Our tip jar is empty. Coincidence? We think not!",
+    "Buy us a coffee, or we might have to start selling wen.tools bathwater. Please don't make us do that.",
+    "Support a developer, buy a coffee. Warning: may cause more awesome tools to be built.",
+  ];
+  const randomIndex = Math.floor(Math.random() * messages.length);
+  toast.info(messages[randomIndex]);
+}
+

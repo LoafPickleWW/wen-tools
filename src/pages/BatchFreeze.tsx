@@ -1,3 +1,4 @@
+import { showDonationToast } from "../utils";
 import { useState } from "react";
 import Papa from "papaparse";
 import { toast } from "react-toastify";
@@ -83,7 +84,7 @@ export function BatchFreeze() {
         setIsTransactionsFinished(true);
         setTxSendingInProgress(false);
         toast.success("All transactions confirmed!");
-        toast.info("You can support by donating :)");
+        showDonationToast();
       } catch (err) {
         console.error(err);
         setTxSendingInProgress(false);

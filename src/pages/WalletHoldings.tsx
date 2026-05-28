@@ -1,3 +1,4 @@
+import { showDonationToast } from "../utils";
 import { useState } from "react";
 import { toast } from "react-toastify";
 import axios from "axios";
@@ -151,7 +152,7 @@ export function WalletHoldings() {
       setLoading(false);
       setCounter(0);
       toast.success("Wallet data downloaded successfully!");
-      toast.info("You can support by donating :)");
+      showDonationToast();
     } else {
       toast.info("Please get wallet data first!");
     }

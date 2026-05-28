@@ -1,3 +1,4 @@
+import { showDonationToast } from "../utils";
 import { useState } from "react";
 import { toast } from "react-toastify";
 import axios from "axios";
@@ -279,7 +280,7 @@ export function MultimintAssetHolders() {
       }
       exportCSVFile(headers, allFilteredData, "asset_holders.csv");
       toast.success("Downloaded successfully!");
-      toast.info("You can support by donating :)");
+      showDonationToast();
     } else {
       toast.info("Please get collection data first!");
     }

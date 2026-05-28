@@ -1,3 +1,4 @@
+import { showDonationToast } from "../utils";
 import { NetworkId, useWallet } from "@txnlab/use-wallet-react";
 import algosdk, { Transaction } from "algosdk";
 import axios from "axios";
@@ -215,7 +216,7 @@ export const BlukClaimTool = () => {
       );
 
       toast.success("All transactions confirmed");
-      toast.info("You can support by donating :)");
+      showDonationToast();
       setProcessStep(COMPLETED);
     } catch (error: any) {
       console.error("Claim error:", error);

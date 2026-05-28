@@ -1,3 +1,4 @@
+import { showDonationToast } from "../utils";
 import { useState } from "react";
 import algosdk, { Transaction } from "algosdk";
 import { toast } from "react-toastify";
@@ -266,7 +267,7 @@ export function VaultSendTool() {
       }
       setProcessStep(TRANSACTIONS_COMPLETED_PROCESS);
       toast.success("All transactions confirmed!");
-      toast.info("You can support by donating :)");
+      showDonationToast();
     } catch (err: any) {
       console.error(err);
       toast.error(err.message);

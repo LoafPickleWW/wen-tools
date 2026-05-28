@@ -1,3 +1,4 @@
+import { showDonationToast } from "../utils";
 import { useState } from "react";
 import { toast } from "react-toastify";
 import axios from "axios";
@@ -147,7 +148,7 @@ export function Download19CollectionData() {
       setLoading(false);
       setCounter(0);
       toast.success("Collection data downloaded successfully!");
-      toast.info("You can support by donating :)");
+      showDonationToast();
     } else {
       toast.info("Please get collection data first!");
     }

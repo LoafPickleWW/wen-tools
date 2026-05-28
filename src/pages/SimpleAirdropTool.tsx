@@ -1,3 +1,4 @@
+import { showDonationToast } from "../utils";
 import { useState } from "react";
 import { toast } from "react-toastify";
 import {
@@ -286,7 +287,7 @@ export function SimpleAirdropTool() {
       }
       setProcessStep(4);
       toast.success("All transactions confirmed!");
-      toast.info("You can support by donating :)");
+      showDonationToast();
     } catch (err: any) {
       console.error(err);
       toast.error(err.message);
@@ -389,7 +390,7 @@ export function SimpleAirdropTool() {
       assetInboxInfo.csv = await convertToCSV(assetInboxInfo.logDataArray);
       setProcessStep(7);
       toast.success("All transactions confirmed!");
-      toast.info("You can support by donating :)");
+      showDonationToast();
     } catch (err: any) {
       console.error(err);
       toast.error(err.message);
