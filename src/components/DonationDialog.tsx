@@ -7,7 +7,7 @@ import {
   TextField,
 } from "@mui/material";
 import { useState } from "react";
-import { FaCopy } from "react-icons/fa";
+import { FaCopy, FaHeart } from "react-icons/fa";
 import { toast } from "react-toastify";
 
 const DonationDialog = () => {
@@ -37,24 +37,49 @@ const DonationDialog = () => {
           color: "#010010",
           border: "0",
           background: "linear-gradient(to right, #EAE004, #FF931E)",
-          transition: "color 0.3s ease, opacity 0.3s ease",
+          transition: "all 0.3s ease",
           borderRadius: "9999px",
-          padding: ".4rem .5rem",
+          padding: {
+            xs: ".4rem .6rem",
+            sm: ".4rem 1.2rem",
+          },
+          minWidth: {
+            xs: "auto",
+            sm: "64px",
+          },
           textTransform: "none",
           fontSize: {
-            xs: ".8rem",
-            md: "1.2rem",
+            xs: ".9rem",
+            md: "1.1rem",
           },
           fontFamily: "Poppins, sans-serif",
           opacity: 1,
+          boxShadow: "0 0 8px rgba(234, 224, 4, 0.5)",
+          animation: "donatePulse 2.5s infinite ease-in-out",
+          "@keyframes donatePulse": {
+            "0%": {
+              boxShadow: "0 0 0 0 rgba(234, 224, 4, 0.7)",
+            },
+            "70%": {
+              boxShadow: "0 0 0 8px rgba(255, 147, 30, 0)",
+            },
+            "100%": {
+              boxShadow: "0 0 0 0 rgba(255, 147, 30, 0)",
+            },
+          },
           "&:hover": {
-            opacity: 0.8,
+            opacity: 0.9,
+            transform: "scale(1.05)",
+            boxShadow: "0 0 12px rgba(255, 147, 30, 0.8)",
           },
         }}
         onClick={handleOpen}
-        className="font-semibold font-sans text-[#010010] text-xl w-[75%] md:w-auto"
+        className="font-semibold font-sans text-[#010010] text-xl w-auto flex items-center justify-center"
       >
-        Donate
+        <span className="hidden sm:inline">Donate</span>
+        <span className="inline sm:hidden flex items-center">
+          <FaHeart className="text-sm" />
+        </span>
       </Button>
       <Dialog open={open} onClose={handleClose}>
         <DialogTitle sx={{ textAlign: "center" }}>Donate</DialogTitle>

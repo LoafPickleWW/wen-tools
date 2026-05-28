@@ -32,9 +32,9 @@ export function Header() {
             display: { xs: "none", sm: "block" },
           }}
         ></Typography>
-      <ConnectButton />
-      <SelectNetworkComponent />
-      <div className="hidden lg:flex">
+      <div className="flex flex-row items-center gap-1 sm:gap-3">
+        <ConnectButton />
+        <SelectNetworkComponent />
         <DonationDialog />
       </div>
       </Toolbar>
