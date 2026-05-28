@@ -114,9 +114,9 @@ export function ClusterGraph({ nodes: initialNodes, edges: initialEdges, onNodeC
           if (i === j) continue;
           const v = nodes[j];
 
-          let dx = u.x! - v.x!;
-          let dy = u.y! - v.y!;
-          let distSq = dx * dx + dy * dy;
+          const dx = u.x! - v.x!;
+          const dy = u.y! - v.y!;
+          const distSq = dx * dx + dy * dy;
 
           // If overlapping, apply random offset to break symmetry
           if (distSq < 1.0) {

@@ -29,7 +29,7 @@ export function Header() {
               cursor: "pointer",
             },
             ml: { xs: 2, sm: 0 },
-            visibility: { xs: "hidden", sm: "visible" },
+            display: { xs: "none", sm: "block" },
           }}
         ></Typography>
       <ConnectButton />
