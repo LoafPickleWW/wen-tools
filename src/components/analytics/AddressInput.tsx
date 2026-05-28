@@ -48,7 +48,7 @@ export function AddressInput({ onAddressesChange }: AddressInputProps) {
         } else {
           toast.error(`Could not resolve NFD: ${trimmed}`);
         }
-      } catch (err) {
+      } catch {
         toast.error(`Error resolving NFD: ${trimmed}`);
       } finally {
         setResolving(false);
@@ -108,7 +108,7 @@ export function AddressInput({ onAddressesChange }: AddressInputProps) {
       )}
 
       {/* Input row */}
-      <div className="flex gap-2">
+      <div className="flex flex-col sm:flex-row gap-2">
         <input
           type="text"
           value={inputValue}
@@ -122,7 +122,7 @@ export function AddressInput({ onAddressesChange }: AddressInputProps) {
           type="button"
           onClick={() => addAddressOrNfd(inputValue)}
           disabled={resolving || !inputValue.trim()}
-          className="bg-amber-400 hover:bg-amber-500 disabled:bg-amber-400/40 text-black font-semibold px-4 rounded-xl flex items-center gap-1.5 transition-all text-sm shadow-md"
+          className="bg-amber-400 hover:bg-amber-500 disabled:bg-amber-400/40 text-black font-semibold px-4 py-2.5 rounded-xl flex items-center justify-center gap-1.5 transition-all text-sm shadow-md w-full sm:w-auto"
         >
           {resolving ? "Resolving..." : <><MdAdd className="w-4 h-4" /> Add</>}
         </button>

@@ -377,6 +377,94 @@ export function ClusterGraph({ nodes: initialNodes, edges: initialEdges, onNodeC
     stateRef.current.isPanning = false;
   };
 
+  // Touch handlers mapping
+  const getTouchCoords = (touch: React.Touch) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return { x: 0, y: 0 };
+    const rect = canvas.getBoundingClientRect();
+    const { offsetX, offsetY, zoom } = stateRef.current;
+    return {
+      x: (touch.clientX - rect.left - offsetX) / zoom,
+      y: (touch.clientY - rect.top - offsetY) / zoom,
+    };
+  };
+
+  const handleTouchStart = (e: React.TouchEvent<HTMLCanvasElement>) => {
+    if (e.touches.length === 1) {
+      const touch = e.touches[0];
+      const { x, y } = getTouchCoords(touch);
+      const { nodes } = stateRef.current;
+
+      const clickedNode = nodes.find(node => {
+        const radius = Math.min(18 + Math.sqrt(node.sentCount) * 2, 48);
+        const dx = node.x! - x;
+        const dy = node.y! - y;
+        return dx * dx + dy * dy < radius * radius;
+      });
+
+      if (clickedNode) {
+        stateRef.current.dragNode = clickedNode;
+        clickedNode.fx = clickedNode.x;
+        clickedNode.fy = clickedNode.y;
+        stateRef.current.selectedNodeId = clickedNode.id;
+        onNodeClick(clickedNode);
+      } else {
+        stateRef.current.isPanning = true;
+        stateRef.current.startX = touch.clientX - stateRef.current.offsetX;
+        stateRef.current.startY = touch.clientY - stateRef.current.offsetY;
+      }
+    } else if (e.touches.length === 2) {
+      // Pinch to zoom initialization
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      (stateRef.current as any).lastTouchDist = Math.sqrt(dx * dx + dy * dy);
+    }
+  };
+
+  const handleTouchMove = (e: React.TouchEvent<HTMLCanvasElement>) => {
+    const { dragNode, isPanning, startX, startY } = stateRef.current;
+
+    if (e.touches.length === 1) {
+      const touch = e.touches[0];
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+      const rect = canvas.getBoundingClientRect();
+
+      setTooltipPos({
+        x: touch.clientX - rect.left,
+        y: touch.clientY - rect.top,
+      });
+
+      if (dragNode) {
+        const { x, y } = getTouchCoords(touch);
+        dragNode.fx = x;
+        dragNode.fy = y;
+      } else if (isPanning) {
+        stateRef.current.offsetX = touch.clientX - startX;
+        stateRef.current.offsetY = touch.clientY - startY;
+      }
+    } else if (e.touches.length === 2 && (stateRef.current as any).lastTouchDist) {
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      const zoomFactor = dist / (stateRef.current as any).lastTouchDist;
+      const newZoom = stateRef.current.zoom * (1 + (zoomFactor - 1) * 0.3); // dampen scale speed
+      stateRef.current.zoom = Math.max(0.2, Math.min(newZoom, 4.0));
+      (stateRef.current as any).lastTouchDist = dist;
+    }
+  };
+
+  const handleTouchEnd = () => {
+    const { dragNode } = stateRef.current;
+    if (dragNode) {
+      dragNode.fx = null;
+      dragNode.fy = null;
+      stateRef.current.dragNode = null;
+    }
+    stateRef.current.isPanning = false;
+    (stateRef.current as any).lastTouchDist = null;
+  };
+
   return (
     <div className="relative w-full rounded-2xl border border-secondary-gray bg-secondary-black/80 overflow-hidden shadow-inner select-none">
       <canvas
@@ -385,6 +473,9 @@ export function ClusterGraph({ nodes: initialNodes, edges: initialEdges, onNodeC
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseUp}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
         className="block cursor-grab active:cursor-grabbing w-full"
       />
 

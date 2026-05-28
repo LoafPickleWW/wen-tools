@@ -77,7 +77,7 @@ export function ClusterMap() {
       link.click();
       document.body.removeChild(link);
       toast.success("PNG exported successfully!");
-    } catch (e) {
+    } catch {
       toast.error("Failed to export image due to canvas security constraints.");
     }
   };

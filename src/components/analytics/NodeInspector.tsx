@@ -31,7 +31,7 @@ export function NodeInspector({ node, onExpand, onClose, loading }: NodeInspecto
     try {
       await onExpand(node.id);
       toast.success(`Expanded connections for ${node.label}`);
-    } catch (e) {
+    } catch {
       toast.error("Failed to expand connections.");
     } finally {
       setExpanding(false);
