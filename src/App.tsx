@@ -42,6 +42,7 @@ import { BulkAssetManager } from "./pages/BulkAssetManager";
 import { MintingSuite } from "./pages/MintingSuite";
 import { WenWallet } from "./pages/WenWallet";
 import WalletAssetDetail from "./pages/WalletAssetDetail";
+import { ClusterMap } from "./pages/ClusterMap";
 
 
 
@@ -169,6 +170,7 @@ function App() {
             <Route path="/wallet" element={<WenWallet />} />
             <Route path="/wallet/account/:account" element={<WenWallet />} />
             <Route path="/wallet/asset/:assetId" element={<WalletAssetDetail />} />
+            <Route path="/cluster-map" element={<ClusterMap />} />
             <Route path="*" element={<Home />} />
           </Routes>
           <Footer />

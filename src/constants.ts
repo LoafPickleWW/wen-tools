@@ -374,6 +374,14 @@ export const TOOLS = [
     category: "analytics",
     icon: "/icons/devtools.png"
   },
+  {
+    id: "cluster_map",
+    label: "Cluster Map",
+    description: "Visual explorer to investigate connected Algorand wallets, identify bot networks, and trace transaction flows in real-time.",
+    path: "/cluster-map",
+    category: "analytics",
+    icon: "/icons/devtools.png"
+  },
   // Sub-routes under Wallets & Analytics (hidden on landing page)
   {
     id: "download_arc69_collection_data",
