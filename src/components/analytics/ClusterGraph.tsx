@@ -114,14 +114,23 @@ export function ClusterGraph({ nodes: initialNodes, edges: initialEdges, onNodeC
           if (i === j) continue;
           const v = nodes[j];
 
-          const dx = u.x! - v.x!;
-          const dy = u.y! - v.y!;
-          const distSq = dx * dx + dy * dy + 0.1;
+          let dx = u.x! - v.x!;
+          let dy = u.y! - v.y!;
+          let distSq = dx * dx + dy * dy;
+
+          // If overlapping, apply random offset to break symmetry
+          if (distSq < 1.0) {
+            const angle = Math.random() * 2 * Math.PI;
+            u.x! += Math.cos(angle) * 2;
+            u.y! += Math.sin(angle) * 2;
+            continue;
+          }
+
           const dist = Math.sqrt(distSq);
 
           if (dist < 300) {
-            // Repulsion strength
-            const force = 1200 / distSq;
+            // Clamp minimum distance to prevent force explosion
+            const force = 1200 / Math.max(distSq, 100);
             u.vx! += (dx / dist) * force;
             u.vy! += (dy / dist) * force;
           }
@@ -137,7 +146,11 @@ export function ClusterGraph({ nodes: initialNodes, edges: initialEdges, onNodeC
 
         const dx = targetNode.x! - sourceNode.x!;
         const dy = targetNode.y! - sourceNode.y!;
-        const dist = Math.sqrt(dx * dx + dy * dy) || 0.1;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        
+        // Skip attraction if overlapping
+        if (dist < 1.0) return;
+
         const desiredDist = 120;
         const k = 0.04; // spring constant
 
@@ -174,6 +187,14 @@ export function ClusterGraph({ nodes: initialNodes, edges: initialEdges, onNodeC
         // Apply velocities & friction
         node.vx! *= 0.85; // friction
         node.vy! *= 0.85;
+
+        // Clamp maximum velocity to prevent infinity/NaN explosions
+        const speed = Math.sqrt(node.vx! * node.vx! + node.vy! * node.vy!);
+        if (speed > 25) {
+          node.vx = (node.vx! / speed) * 25;
+          node.vy = (node.vy! / speed) * 25;
+        }
+
         node.x! += node.vx!;
         node.y! += node.vy!;
       });
