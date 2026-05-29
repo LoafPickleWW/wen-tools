@@ -30,17 +30,25 @@ const DonationDialog = () => {
   useEffect(() => {
     if (activeAddress && algodClient) {
       const usdcId = activeNetwork === "mainnet" ? 315608 : 10458941;
-      algodClient.accountAssetInformation(activeAddress, usdcId).do()
+      algodClient.accountInformation(activeAddress).do()
         .then((res: any) => {
-          setIsOptedInUSDC(true);
-          const usdcBalance = res["asset-holding"]?.["amount"] || 0;
-          if (usdcBalance >= 1_000_000) {
-            setAssetType("USDC");
+          const assets = res["assets"] || [];
+          const usdcAsset = assets.find((a: any) => a["asset-id"] === usdcId);
+          if (usdcAsset) {
+            setIsOptedInUSDC(true);
+            const usdcBalance = usdcAsset["amount"] || 0;
+            if (usdcBalance >= 1_000_000) {
+              setAssetType("USDC");
+            } else {
+              setAssetType("ALGO");
+            }
           } else {
+            setIsOptedInUSDC(false);
             setAssetType("ALGO");
           }
         })
-        .catch(() => {
+        .catch((err) => {
+          console.error("Error checking USDC balance:", err);
           setIsOptedInUSDC(false);
           setAssetType("ALGO");
         });
