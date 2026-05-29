@@ -26,11 +26,14 @@ const DonationDialog = () => {
   const [isOptedInUSDC, setIsOptedInUSDC] = useState(false);
   const [donatingInProgress, setDonatingInProgress] = useState(false);
 
-  // Check if connected user is opted into USDC and check balance
+  // Check if connected user is opted into USDC and check balance (Mainnet only)
   useEffect(() => {
-    if (activeAddress && algodClient) {
-      const usdcId = activeNetwork === "mainnet" ? 315608 : 10458941;
-      algodClient.accountInformation(activeAddress).do()
+    if (activeAddress && activeNetwork === "mainnet") {
+      const usdcId = 31566704;
+      const nodeUrl = "https://mainnet-api.4160.nodely.dev";
+      const queryClient = new algosdk.Algodv2("", nodeUrl, "");
+
+      queryClient.accountInformation(activeAddress).do()
         .then((res: any) => {
           const assets = res["assets"] || [];
           const usdcAsset = assets.find((a: any) => a["asset-id"] === usdcId);
@@ -56,7 +59,7 @@ const DonationDialog = () => {
       setIsOptedInUSDC(false);
       setAssetType("ALGO");
     }
-  }, [activeAddress, algodClient, activeNetwork]);
+  }, [activeAddress, activeNetwork]);
 
   // Set default amount when switching asset type
   useEffect(() => {
@@ -105,7 +108,7 @@ const DonationDialog = () => {
           suggestedParams: params,
         });
       } else {
-        const usdcId = activeNetwork === "mainnet" ? 315608 : 10458941;
+        const usdcId = 31566704;
         txn = algosdk.makeAssetTransferTxnWithSuggestedParamsFromObject({
           from: activeAddress,
           to: donationAddress,
@@ -222,12 +225,21 @@ const DonationDialog = () => {
                 fullWidth
                 size="small"
                 sx={{
+                  borderRadius: "10px",
                   "& .MuiToggleButton-root": {
                     color: "white",
                     borderColor: "rgba(255, 147, 30, 0.3)",
                     textTransform: "none",
                     fontFamily: "Poppins, sans-serif",
                     py: 0.5,
+                    "&:first-of-type": {
+                      borderTopLeftRadius: "10px",
+                      borderBottomLeftRadius: "10px",
+                    },
+                    "&:last-of-type": {
+                      borderTopRightRadius: "10px",
+                      borderBottomRightRadius: "10px",
+                    },
                     "&.Mui-selected": {
                       backgroundColor: "#FF931E",
                       color: "#010010",
