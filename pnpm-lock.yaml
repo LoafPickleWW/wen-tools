@@ -32,6 +32,9 @@ importers:
       '@perawallet/connect':
         specifier: ^1.3.5
         version: 1.3.5(algosdk@2.9.0)
+      '@perawallet/swap':
+        specifier: 1.0.0-beta.4
+        version: 1.0.0-beta.4
       '@txnlab/use-wallet-react':
         specifier: ^3.10.0
         version: 3.12.0(@blockshake/defly-connect@1.1.6(algosdk@2.9.0))(@perawallet/connect@1.3.5(algosdk@2.9.0))(algosdk@2.9.0)(lute-connect@1.4.1)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
@@ -937,6 +940,9 @@ packages:
     resolution: {integrity: sha512-JBaaS0tjipo3DcS2v5Q1lcQXqxYkVpKB3YiqV7okBnd1KQ54zcATvPwRXvpsbxttec1OpdHmkWymuTpxpx+2Ng==}
     peerDependencies:
       algosdk: ^2.1.0
+
+  '@perawallet/swap@1.0.0-beta.4':
+    resolution: {integrity: sha512-2JMH6L98+bOCx/kns1/4Z7DcGTev0W1wI2PQh2JBasGwqiIR1pM93QB+ZRYw1B+O6YJRQmj9k4jCZBCdHHFiJQ==}
 
   '@pkgjs/parseargs@0.11.0':
     resolution: {integrity: sha512-+1VkjdD0QBLPodGrJUeqarH8VAIvQODIbwh9XpP5Syisf7YoQgsJKPNFoqqLQlu+VQ/tVSshMR6loPMn8U+dPg==}
@@ -4076,6 +4082,10 @@ snapshots:
     transitivePeerDependencies:
       - bufferutil
       - utf-8-validate
+
+  '@perawallet/swap@1.0.0-beta.4':
+    dependencies:
+      algosdk: 3.5.2
 
   '@pkgjs/parseargs@0.11.0':
     optional: true

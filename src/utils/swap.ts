@@ -27,11 +27,25 @@ export interface DecodedSwapTx {
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────
-export async function getAssetInfo(id: number) {
-  const r = await fetch(`${INDEXER}/v2/assets/${id}?include-all=true`);
-  if (!r.ok) throw new Error("Invalid Asset ID");
-  const d = await r.json();
-  return d.asset as { index: number; params: { name: string; decimals: number; "unit-name": string; url?: string; reserve?: string } };
+export async function getAssetInfo(id: number, retries = 2) {
+  for (let i = 0; i <= retries; i++) {
+    try {
+      const r = await fetch(`${INDEXER}/v2/assets/${id}?include-all=true`);
+      if (r.status === 429 || r.status >= 500) {
+        if (i < retries) {
+          await new Promise(resolve => setTimeout(resolve, 300 * (i + 1)));
+          continue;
+        }
+      }
+      if (!r.ok) throw new Error("Invalid Asset ID");
+      const d = await r.json();
+      return d.asset as { index: number; params: { name: string; decimals: number; "unit-name": string; url?: string; reserve?: string; total?: number } };
+    } catch (err) {
+      if (i === retries) throw err;
+      await new Promise(resolve => setTimeout(resolve, 300 * (i + 1)));
+    }
+  }
+  throw new Error("Failed to fetch asset info after retries");
 }
 
 export async function resolveNfd(domain: string): Promise<string> {
@@ -68,6 +82,7 @@ export interface WalletAsset {
   unitName: string;
   amount: number;
   decimals: number;
+  total?: number;
 }
 
 export async function getAccountAssetsWithInfo(
@@ -84,43 +99,88 @@ export async function getAccountAssetsWithInfo(
     let url: string | null = `${INDEXER}/v2/accounts/${resolved}/assets?include-all=false`;
     const assetIds: { id: number; amount: number }[] = [];
     while (url) {
-      const ar: Response = await fetch(url);
-      const ad = await ar.json();
+      let success = false;
+      let ad: any = null;
+      for (let retries = 0; retries < 3; retries++) {
+        try {
+          const ar: Response = await fetch(url);
+          if (ar.status === 429 || ar.status >= 500) {
+            await new Promise(resolve => setTimeout(resolve, 300 * (retries + 1)));
+            continue;
+          }
+          if (!ar.ok) {
+            break;
+          }
+          ad = await ar.json();
+          success = true;
+          break;
+        } catch (err) {
+          await new Promise(resolve => setTimeout(resolve, 300 * (retries + 1)));
+        }
+      }
+      
+      if (!success || !ad) {
+        console.warn(`Indexer page fetch failed permanently for: ${url}`);
+        break;
+      }
+      
       for (const a of ad.assets || []) assetIds.push({ id: a["asset-id"], amount: a.amount });
-      url = ad["next-token"] ? `${INDEXER}/v2/accounts/${addr}/assets?include-all=false&next=${ad["next-token"]}` : null;
+      url = ad["next-token"] ? `${INDEXER}/v2/accounts/${resolved}/assets?include-all=false&next=${ad["next-token"]}` : null;
     }
 
     // 2. Pre-populate name cache from created assets (single call, has name data)
-    const nameCache: Record<number, { name: string; unitName: string; decimals: number }> = {};
-    let createdUrl: string | null = `${INDEXER}/v2/accounts/${resolved}/created-assets?include-all=false`;
-    while (createdUrl) {
-      const cr: Response = await fetch(createdUrl);
-      const cd = await cr.json();
-      for (const a of cd.assets || []) {
-        nameCache[a.index] = { name: a.params?.name || "", unitName: a.params?.["unit-name"] || "", decimals: a.params?.decimals || 0 };
+    const nameCache: Record<number, { name: string; unitName: string; decimals: number; total: number }> = {};
+    try {
+      let createdUrl: string | null = `${INDEXER}/v2/accounts/${resolved}/created-assets?include-all=false`;
+      while (createdUrl) {
+        let success = false;
+        let cd: any = null;
+        for (let retries = 0; retries < 3; retries++) {
+          try {
+            const cr: Response = await fetch(createdUrl);
+            if (cr.status === 429 || cr.status >= 500) {
+              await new Promise(resolve => setTimeout(resolve, 300 * (retries + 1)));
+              continue;
+            }
+            if (!cr.ok) break;
+            cd = await cr.json();
+            success = true;
+            break;
+          } catch {
+            await new Promise(resolve => setTimeout(resolve, 300 * (retries + 1)));
+          }
+        }
+        if (!success || !cd) break;
+        for (const a of cd.assets || []) {
+          nameCache[a.index] = { name: a.params?.name || "", unitName: a.params?.["unit-name"] || "", decimals: a.params?.decimals || 0, total: a.params?.total || 0 };
+        }
+        createdUrl = cd["next-token"] ? `${INDEXER}/v2/accounts/${resolved}/created-assets?include-all=false&next=${cd["next-token"]}` : null;
       }
-      createdUrl = cd["next-token"] ? `${INDEXER}/v2/accounts/${addr}/created-assets?include-all=false&next=${cd["next-token"]}` : null;
+    } catch (err) {
+      console.warn("Failed to fetch created assets for name cache:", err);
     }
 
     // 3. Resolve names in parallel batches of 10, streaming results
     const BATCH_SIZE = 10;
     for (let i = 0; i < assetIds.length; i += BATCH_SIZE) {
       const batch = assetIds.slice(i, i + BATCH_SIZE);
-      const resolved = await Promise.all(batch.map(async ({ id, amount }) => {
+      const resolvedBatch = await Promise.all(batch.map(async ({ id, amount }) => {
         if (nameCache[id]) {
-          return { id, name: nameCache[id].name, unitName: nameCache[id].unitName, amount, decimals: nameCache[id].decimals };
+          return { id, name: nameCache[id].name, unitName: nameCache[id].unitName, amount, decimals: nameCache[id].decimals, total: nameCache[id].total };
         }
         try {
           const info = await getAssetInfo(id);
-          return { id, name: info.params.name, unitName: info.params["unit-name"], amount, decimals: info.params.decimals };
+          return { id, name: info.params.name, unitName: info.params["unit-name"], amount, decimals: info.params.decimals, total: info.params.total };
         } catch {
-          return { id, name: `ASA #${id}`, unitName: "", amount, decimals: 0 };
+          return { id, name: `ASA #${id}`, unitName: "", amount, decimals: 0, total: 0 };
         }
       }));
-      results.push(...resolved);
+      results.push(...resolvedBatch);
       onBatch?.([...results]);
     }
-  } catch { /* ignore */ }
+  } catch (err) {
+    console.error("Error in getAccountAssetsWithInfo:", err);
+  }
   return results;
 }
 

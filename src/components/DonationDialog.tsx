@@ -226,19 +226,20 @@ const DonationDialog = () => {
                 size="small"
                 sx={{
                   borderRadius: "10px",
-                  "& .MuiToggleButton-root": {
+                  "& .MuiToggleButtonGroup-grouped": {
                     color: "white",
                     borderColor: "rgba(255, 147, 30, 0.3)",
                     textTransform: "none",
                     fontFamily: "Poppins, sans-serif",
                     py: 0.5,
                     "&:first-of-type": {
-                      borderTopLeftRadius: "10px",
-                      borderBottomLeftRadius: "10px",
+                      borderTopLeftRadius: "10px !important",
+                      borderBottomLeftRadius: "10px !important",
+                      borderLeft: "1px solid rgba(255, 147, 30, 0.3) !important",
                     },
                     "&:last-of-type": {
-                      borderTopRightRadius: "10px",
-                      borderBottomRightRadius: "10px",
+                      borderTopRightRadius: "10px !important",
+                      borderBottomRightRadius: "10px !important",
                     },
                     "&.Mui-selected": {
                       backgroundColor: "#FF931E",

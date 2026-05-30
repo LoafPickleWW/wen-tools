@@ -6,6 +6,13 @@ export const TESTNET_ALGONODE_INDEXER = "https://testnet-idx.algonode.cloud";
 export const MAINNET_NFD_API_BASE_URL = "https://api.nf.domains";
 export const TESTNET_NFD_API_BASE_URL = "https://api.testnet.nf.domains";
 
+// HAYSTACK SWAP ROUTER
+export const USDC_ASA_ID = 31566704;
+export const HAY_API_KEY = import.meta.env.VITE_HAY_API_KEY || "PLACEHOLDER_API_KEY";
+export const HAY_QUOTE_API = "https://hayrouter.txnlab.dev/api/fetchQuote";
+export const HAY_SWAP_API = "https://hayrouter.txnlab.dev/api/fetchExecuteSwapTxns";
+export const HAY_REFERRER = "RBZ4GUE7FFDZWCN532FFR5AIYJ6K4V2GKJS5B42JPSWOAVWUT4OHWG57YQ";
+
 // ASSET PREVIEW
 export const ASSET_PREVIEW = "/wallet/asset/";
 
