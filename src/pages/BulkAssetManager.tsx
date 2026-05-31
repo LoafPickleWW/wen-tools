@@ -278,10 +278,16 @@ export function BulkAssetManager({ defaultTab = "optin" }: BulkAssetManagerProps
 
   // Dust Tool State
   const [dustThreshold, setDustThreshold] = useState<number>(0.50);
+  const [dustThresholdInput, setDustThresholdInput] = useState<string>("0.50");
   const [dustTargetToken, setDustTargetToken] = useState<number>(0); // 0 = ALGO, USDC_ASA_ID = USDC
   const [dustCandidates, setDustCandidates] = useState<any[]>([]);
   const [optOutAfterSwap, setOptOutAfterSwap] = useState<boolean>(true);
   const [dustSwapResults, setDustSwapResults] = useState<Record<number, { status: "pending" | "success" | "fail" | "idle"; message?: string }>>({});
+  const [dustPreppedData, setDustPreppedData] = useState<{
+    allTxnsToSign: algosdk.Transaction[];
+    indexesToSign: number[];
+    signTasks: any[];
+  } | null>(null);
   const [scanProgress, setScanProgress] = useState<{
     phase: 'idle' | 'fetching' | 'pricing' | 'liquidity' | 'sweeping' | 'done';
     current: number;
@@ -500,7 +506,7 @@ export function BulkAssetManager({ defaultTab = "optin" }: BulkAssetManagerProps
     }
   };
 
-  const handleExecuteDustSwaps = async () => {
+  const handlePrepareDustSwaps = async () => {
     const selectedCandidates = dustCandidates.filter(c => c.checked);
     if (selectedCandidates.length === 0) {
       toast.error("No candidates selected to swap!");
@@ -520,16 +526,10 @@ export function BulkAssetManager({ defaultTab = "optin" }: BulkAssetManagerProps
     });
     setDustSwapResults(newResults);
 
-    const signTasks: any[] = [];
-    const allTxnsToSign: algosdk.Transaction[] = [];
-    const indexesToSign: number[] = [];
+    toast.info("Preparing swap quotes and transactions in parallel...");
 
-    toast.info("Preparing swap quotes and transactions...");
-
-    for (let i = 0; i < selectedCandidates.length; i++) {
-      const asset = selectedCandidates[i];
+    const prepResults = await Promise.all(selectedCandidates.map(async (asset) => {
       try {
-        // Fetch Hay quote and txnPayload dynamically (JIT)
         const quoteData = await fetchHayQuote({
           fromASAID: asset.id,
           toASAID: dustTargetToken,
@@ -538,17 +538,18 @@ export function BulkAssetManager({ defaultTab = "optin" }: BulkAssetManagerProps
         });
 
         if (!quoteData.txnPayload || !quoteData.txnPayload.data) {
-          throw new Error("No swap route or liquidity found on Haystack Router for this amount");
+          throw new Error("No swap route or liquidity found on Haystack Router");
         }
 
-        // Prepare transactions from Hay Router
         const swapTxns = await fetchExecuteSwapTxns({
           address: activeAddress,
           txnPayloadJSON: quoteData.txnPayload,
-          slippage: 1.0, // 1%
+          slippage: 1.0,
         });
 
-        // Add to signTasks
+        const txns: algosdk.Transaction[] = [];
+        const tasks: any[] = [];
+
         for (let j = 0; j < swapTxns.txns.length; j++) {
           const t = swapTxns.txns[j];
           let bytes: Uint8Array;
@@ -563,7 +564,8 @@ export function BulkAssetManager({ defaultTab = "optin" }: BulkAssetManagerProps
           } else {
             throw new Error("Invalid transaction data format");
           }
-          allTxnsToSign.push(algosdk.decodeUnsignedTransaction(bytes));
+          const decoded = algosdk.decodeUnsignedTransaction(bytes);
+          txns.push(decoded);
 
           if (t.logicSigBlob !== false) {
             let blob: Uint8Array;
@@ -578,7 +580,7 @@ export function BulkAssetManager({ defaultTab = "optin" }: BulkAssetManagerProps
             } else {
               throw new Error("Invalid logicSigBlob format");
             }
-            signTasks.push({
+            tasks.push({
               assetId: asset.id,
               type: "swap",
               txnIndexInSwap: j,
@@ -586,48 +588,80 @@ export function BulkAssetManager({ defaultTab = "optin" }: BulkAssetManagerProps
               logicSigBlob: blob
             });
           } else {
-            signTasks.push({
+            tasks.push({
               assetId: asset.id,
               type: "swap",
               txnIndexInSwap: j,
               isLogicSig: false
             });
-            indexesToSign.push(allTxnsToSign.length - 1);
           }
         }
 
-        // Prepare opt-out if selected
         if (optOutAfterSwap) {
           const rawOptout = await createAssetOptoutTransactions(
             [asset.id],
             activeAddress,
             algodClient
           );
-          const optoutTxn = rawOptout[0][0]; // single transaction in single group
-          allTxnsToSign.push(optoutTxn);
-          signTasks.push({
+          const optoutTxn = rawOptout[0][0];
+          txns.push(optoutTxn);
+          tasks.push({
             assetId: asset.id,
             type: "optout",
             isLogicSig: false
           });
-          indexesToSign.push(allTxnsToSign.length - 1);
         }
+
+        return { success: true, assetId: asset.id, txns, tasks };
       } catch (err: any) {
         console.error(`Failed to prepare swap/optout for ${asset.name}:`, err);
+        return { success: false, assetId: asset.id, error: err.message || "Failed to prepare transactions" };
+      }
+    }));
+
+    const allTxnsToSign: algosdk.Transaction[] = [];
+    const indexesToSign: number[] = [];
+    const signTasks: any[] = [];
+
+    prepResults.forEach(res => {
+      if (res.success && res.txns && res.tasks) {
+        res.txns.forEach((txn, i) => {
+          allTxnsToSign.push(txn);
+          const task = res.tasks[i];
+          if (task.isLogicSig) {
+            signTasks.push(task);
+          } else {
+            signTasks.push(task);
+            indexesToSign.push(allTxnsToSign.length - 1);
+          }
+        });
+      } else {
         setDustSwapResults(prev => ({
           ...prev,
-          [asset.id]: { status: "fail", message: err.message || "Failed to prepare transactions" }
+          [res.assetId]: { status: "fail", message: res.error }
         }));
       }
-    }
+    });
 
     if (indexesToSign.length === 0) {
       toast.error("No valid transactions could be prepared!");
       setTxSendingInProgress(false);
+      setScanProgress(null);
       return;
     }
 
-    // Now sign everything in a single prompt!
+    setDustPreppedData({ allTxnsToSign, indexesToSign, signTasks });
+    setTxSendingInProgress(false);
+    setScanProgress(null);
+    toast.success("Swaps prepared! Ready to sign in wallet.");
+  };
+
+  const handleSignAndSubmitDustSwaps = async () => {
+    if (!dustPreppedData || !activeAddress) return;
+    setTxSendingInProgress(true);
+
+    const { allTxnsToSign, indexesToSign, signTasks } = dustPreppedData;
+
     let signedResults: Uint8Array[];
     try {
       toast.info("Please sign the transaction batch in your wallet...");
@@ -663,28 +697,27 @@ export function BulkAssetManager({ defaultTab = "optin" }: BulkAssetManagerProps
       }
     }
 
-    // Now broadcast sequentially and track progress!
-    let swappedCount = 0;
-    let optedOutCount = 0;
-    let mbrReclaimed = 0;
+    const assetsToBroadcast = dustCandidates.filter(c => c.checked && signedBlobsMap[c.id] && signedBlobsMap[c.id].swapBlobs.length > 0);
+    setScanProgress({ phase: 'sweeping', current: 0, total: assetsToBroadcast.length });
 
-    const assetsToBroadcast = selectedCandidates.filter(c => signedBlobsMap[c.id] && signedBlobsMap[c.id].swapBlobs.length > 0);
+    let completedCount = 0;
 
-    for (let i = 0; i < assetsToBroadcast.length; i++) {
-      const asset = assetsToBroadcast[i];
-      setScanProgress({ phase: 'sweeping', current: i + 1, total: assetsToBroadcast.length });
+    const results = await Promise.all(assetsToBroadcast.map(async (asset) => {
       setDustSwapResults(prev => ({
         ...prev,
         [asset.id]: { status: "pending" }
       }));
 
+      let swapped = 0;
+      let optedOut = 0;
+      let reclaimed = 0;
+
       try {
         const blobs = signedBlobsMap[asset.id];
-        
         // 1. Send raw swap transaction
         const { txId } = await algodClient.sendRawTransaction(blobs.swapBlobs).do();
         await algosdk.waitForConfirmation(algodClient, txId, 4);
-        swappedCount++;
+        swapped = 1;
 
         setDustSwapResults(prev => ({
           ...prev,
@@ -694,9 +727,10 @@ export function BulkAssetManager({ defaultTab = "optin" }: BulkAssetManagerProps
         // 2. Send opt-out transaction
         if (blobs.optoutBlob) {
           try {
-            await algodClient.sendRawTransaction(blobs.optoutBlob).do();
-            optedOutCount++;
-            mbrReclaimed += 0.1;
+            const { txId: optoutTxId } = await algodClient.sendRawTransaction(blobs.optoutBlob).do();
+            await algosdk.waitForConfirmation(algodClient, optoutTxId, 4);
+            optedOut = 1;
+            reclaimed = 0.1;
             setDustSwapResults(prev => ({
               ...prev,
               [asset.id]: { status: "success", message: `Swapped & Opted out successfully` }
@@ -710,18 +744,26 @@ export function BulkAssetManager({ defaultTab = "optin" }: BulkAssetManagerProps
           }
         }
       } catch (err: any) {
-        console.error(`Broadcast failed for ${asset.name}:`, err);
+        console.error(`Sweep failed for ${asset.name}:`, err);
         setDustSwapResults(prev => ({
           ...prev,
-          [asset.id]: { status: "fail", message: err.message || "Swap failed" }
+          [asset.id]: { status: "fail", message: err.message || "Execution failed" }
         }));
+      } finally {
+        completedCount++;
+        setScanProgress({ phase: 'sweeping', current: completedCount, total: assetsToBroadcast.length });
       }
 
-      await new Promise(resolve => setTimeout(resolve, 300));
-    }
+      return { swapped, optedOut, reclaimed };
+    }));
+
+    const swappedCount = results.reduce((sum, r) => sum + r.swapped, 0);
+    const optedOutCount = results.reduce((sum, r) => sum + r.optedOut, 0);
+    const mbrReclaimed = results.reduce((sum, r) => sum + r.reclaimed, 0);
 
     setScanProgress(null);
     setTxSendingInProgress(false);
+    setDustPreppedData(null);
     setIsTransactionsFinished(true);
     toast.success(`Dust sweep completed! Swapped ${swappedCount} assets, opted out of ${optedOutCount} assets (${mbrReclaimed.toFixed(2)} ALGO reclaimed)`);
     showDonationToast();
@@ -758,6 +800,7 @@ export function BulkAssetManager({ defaultTab = "optin" }: BulkAssetManagerProps
     setTxSendingInProgress(false);
     setIsBurnConfiguring(false);
     setBurnAssetsInfo([]);
+    setDustPreppedData(null);
     
     // Dynamically update URL tab parameter
     const newParams = new URLSearchParams(searchParams);
@@ -1373,8 +1416,24 @@ export function BulkAssetManager({ defaultTab = "optin" }: BulkAssetManagerProps
                         step="0.01"
                         min="0"
                         className="w-full bg-[#0f0f11] border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:border-orange-500/50 outline-none transition-all font-mono"
-                        value={dustThreshold}
-                        onChange={(e) => setDustThreshold(parseFloat(e.target.value) || 0)}
+                        value={dustThresholdInput}
+                        onChange={(e) => {
+                          const rawVal = e.target.value;
+                          setDustThresholdInput(rawVal);
+                          const parsedVal = parseFloat(rawVal);
+                          setDustThreshold(isNaN(parsedVal) ? 0 : parsedVal);
+                          setDustPreppedData(null);
+                        }}
+                        onBlur={() => {
+                          // Format it cleanly to 2 decimal places if valid number, or fallback to state
+                          const parsed = parseFloat(dustThresholdInput);
+                          if (!isNaN(parsed)) {
+                            setDustThresholdInput(parsed.toFixed(2));
+                          } else {
+                            setDustThresholdInput("0.00");
+                            setDustThreshold(0);
+                          }
+                        }}
                       />
                     </div>
                     <div className="flex-1">
@@ -1384,7 +1443,10 @@ export function BulkAssetManager({ defaultTab = "optin" }: BulkAssetManagerProps
                       <select
                         className="w-full bg-[#0f0f11] border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:border-orange-500/50 outline-none transition-all"
                         value={dustTargetToken}
-                        onChange={(e) => setDustTargetToken(parseInt(e.target.value))}
+                        onChange={(e) => {
+                          setDustTargetToken(parseInt(e.target.value));
+                          setDustPreppedData(null);
+                        }}
                       >
                         <option value="0">ALGO</option>
                         {walletAssets.some(a => a.id === USDC_ASA_ID) && (
@@ -1399,7 +1461,10 @@ export function BulkAssetManager({ defaultTab = "optin" }: BulkAssetManagerProps
                       type="checkbox"
                       id="optout_checkbox"
                       checked={optOutAfterSwap}
-                      onChange={(e) => setOptOutAfterSwap(e.target.checked)}
+                      onChange={(e) => {
+                        setOptOutAfterSwap(e.target.checked);
+                        setDustPreppedData(null);
+                      }}
                       className="accent-orange-500"
                     />
                     <label htmlFor="optout_checkbox" className="text-xs font-semibold text-slate-300 select-none cursor-pointer">
@@ -1443,6 +1508,7 @@ export function BulkAssetManager({ defaultTab = "optin" }: BulkAssetManagerProps
                           onClick={() => {
                             const allChecked = dustCandidates.every(c => c.checked);
                             setDustCandidates(dustCandidates.map(c => ({ ...c, checked: !allChecked })));
+                            setDustPreppedData(null);
                           }}
                         >
                           {dustCandidates.every(c => c.checked) ? "Deselect All" : "Select All"}
@@ -1462,6 +1528,7 @@ export function BulkAssetManager({ defaultTab = "optin" }: BulkAssetManagerProps
                                 const next = [...dustCandidates];
                                 next[idx].checked = !next[idx].checked;
                                 setDustCandidates(next);
+                                setDustPreppedData(null);
                               }}
                             >
                               <div className="flex items-center justify-between gap-3">
@@ -1502,17 +1569,37 @@ export function BulkAssetManager({ defaultTab = "optin" }: BulkAssetManagerProps
                       </div>
 
                       {!txSendingInProgress ? (
-                        <button
-                          className="w-full bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-400 hover:to-amber-400 text-black font-black uppercase text-sm rounded-xl py-3.5 px-8 transition-all duration-300 shadow-lg shadow-orange-500/20 hover:scale-[0.98] mt-4"
-                          onClick={handleExecuteDustSwaps}
-                        >
-                          Sweep Selected Dust
-                        </button>
+                        !dustPreppedData ? (
+                          <button
+                            className="w-full bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-400 hover:to-amber-400 text-black font-black uppercase text-sm rounded-xl py-3.5 px-8 transition-all duration-300 shadow-lg shadow-orange-500/20 hover:scale-[0.98] mt-4"
+                            onClick={handlePrepareDustSwaps}
+                          >
+                            Prepare Swaps
+                          </button>
+                        ) : (
+                          <div className="flex flex-col gap-2.5 mt-4 w-full">
+                            <button
+                              className="w-full bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-400 hover:to-emerald-400 text-black font-black uppercase text-sm rounded-xl py-3.5 px-8 transition-all duration-300 shadow-lg shadow-green-500/20 hover:scale-[0.98]"
+                              onClick={handleSignAndSubmitDustSwaps}
+                            >
+                              Sign & Submit Swaps
+                            </button>
+                            <button
+                              className="w-full bg-white/5 hover:bg-white/10 text-white font-extrabold text-xs rounded-xl py-2 transition duration-300"
+                              onClick={() => setDustPreppedData(null)}
+                            >
+                              Cancel & Re-select
+                            </button>
+                          </div>
+                        )
                       ) : (
                         <div className="flex flex-col items-center gap-2.5 py-4">
                           <div className="w-6 h-6 border-3 border-orange-500/20 border-t-orange-500 rounded-full animate-spin" />
                           <p className="text-xs text-slate-400 font-bold uppercase tracking-wider">
-                            Sweeping asset {scanProgress ? scanProgress.current : 0} of {scanProgress ? scanProgress.total : dustCandidates.filter(c => c.checked).length}...
+                            {scanProgress?.phase === 'sweeping'
+                              ? `Broadcasting swaps ${scanProgress.current} of ${scanProgress.total}...`
+                              : "Preparing transactions..."
+                            }
                           </p>
                           {scanProgress && scanProgress.total > 0 && (
                             <div className="w-full max-w-xs bg-white/5 rounded-full h-1.5 overflow-hidden">

@@ -114,7 +114,7 @@ export async function getAccountAssetsWithInfo(
           ad = await ar.json();
           success = true;
           break;
-        } catch (err) {
+        } catch {
           await new Promise(resolve => setTimeout(resolve, 300 * (retries + 1)));
         }
       }
