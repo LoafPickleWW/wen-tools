@@ -112,7 +112,7 @@ export async function fetchNFTsByContractId(
       contractId: contractId.trim(),
       limit: String(limit),
     });
-    if (nextToken) params.set("next", nextToken);
+    if (nextToken) params.set("next-token", nextToken);
 
     const url = `${MIMIR_BASE_URL}/nft-indexer/v1/tokens?${params.toString()}`;
     const response = await fetch(url);
