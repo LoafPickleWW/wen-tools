@@ -231,7 +231,14 @@ export function BatchMint() {
         if (item.image_ipfs_cid) {
           image_url = item.image_ipfs_cid.startsWith("ipfs://") ? item.image_ipfs_cid : "ipfs://" + item.image_ipfs_cid;
         } else if (item.url) {
-          image_url = item.url;
+          const urlStr = String(item.url).trim();
+          if (urlStr.startsWith("ipfs://") || urlStr.startsWith("http")) {
+            image_url = urlStr;
+          } else if (formData.mediaIPFSCID && !urlStr.startsWith("Qm") && !urlStr.startsWith("bafy")) {
+            image_url = `ipfs://${formData.mediaIPFSCID}/${urlStr.startsWith("/") ? urlStr.substring(1) : urlStr}`;
+          } else {
+            image_url = "ipfs://" + urlStr;
+          }
         } else if (formData.mediaIPFSCID && item.index !== undefined) {
           image_url = `ipfs://${formData.mediaIPFSCID}/${item.index}${formData.mediaExtension || ".png"}`;
         }

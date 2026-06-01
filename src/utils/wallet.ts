@@ -25,7 +25,7 @@ import {
   SingleAssetDataResponse,
 } from "../types/wallet";
 
-export const IPFS_ENDPOINT = "https://ipfs.algonode.dev/ipfs";
+export const IPFS_ENDPOINT = "https://ipfs.io/ipfs";
 export const PAGE_SIZE = 64;
 export const MAX_SELECT_COUNT = 64;
 export const TX_NOTE = "via wen.tools | wen wallet";

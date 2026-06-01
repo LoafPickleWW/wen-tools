@@ -40,6 +40,16 @@ export const PreviewAssetComponent = ({
             )}
           </div>
         )}
+        {imageUrl !== "" && (
+          <a
+            href={imageUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-xs text-orange-400 hover:text-orange-300 hover:underline font-semibold mt-2.5 flex items-center gap-1"
+          >
+            View Media Link ↗
+          </a>
+        )}
         <p className="text-base text-gray-200 mt-2">
           {previewAsset.asset_name} | {previewAsset.unit_name}
         </p>
