@@ -311,12 +311,12 @@ export function WenWallet() {
             onChange={handlePageChange}
           />
 
-          <div className="flex flex-row justify-between gap-x-2 sm:gap-x-0 mb-4 px-2 items-center">
+          <div className="flex flex-col sm:flex-row justify-between gap-3 mb-6 px-2 items-stretch sm:items-center">
             <InputBase
               placeholder="search within assets..."
               inputProps={{ "aria-label": "search by asset id" }}
               onChange={(e) => handleSearch(e.target.value)}
-              className="bg-zinc-800 text-white rounded pl-3 py-1 my-2 border border-zinc-700 text-sm w-44 md:w-60 focus-within:border-amber-400"
+              className="bg-zinc-800 text-white rounded-xl pl-3 py-1.5 border border-zinc-700 text-sm w-full sm:w-60 focus-within:border-amber-400"
               sx={{
                 color: "white",
                 "& input::placeholder": {
@@ -325,15 +325,19 @@ export function WenWallet() {
                 },
               }}
             />
-            <div className="flex flex-row gap-x-2">
+            <div className="flex flex-row gap-2 justify-between sm:justify-end">
               <Button
                 variant="contained"
                 color="warning"
                 size="medium"
                 sx={{
-                  height: "2rem",
+                  height: "2.25rem",
                   fontWeight: "bold",
-                  fontSize: "0.8rem",
+                  fontSize: "0.85rem",
+                  borderRadius: "10px",
+                  textTransform: "none",
+                  whiteSpace: "nowrap",
+                  flex: { xs: 1, sm: "initial" },
                 }}
                 onClick={() => {
                   filteredAssets
@@ -351,19 +355,54 @@ export function WenWallet() {
                 displayEmpty
                 value={orderBy}
                 onChange={handleOrderBy}
-                input={<OutlinedInput />}
+                input={<OutlinedInput sx={{ borderRadius: "10px" }} />}
                 sx={{
-                  height: "2rem",
+                  height: "2.25rem",
                   color: "white",
                   backgroundColor: "#262626",
                   fontWeight: "bold",
-                  fontSize: "0.9rem",
-                  maxWidth: {
-                    xs: "8rem",
-                    sm: "100%",
-                  },
+                  fontSize: "0.85rem",
+                  minWidth: { xs: "120px", sm: "160px" },
+                  flex: { xs: 1, sm: "initial" },
                 }}
                 inputProps={{ "aria-label": "Without label" }}
+                MenuProps={{
+                  PaperProps: {
+                    sx: {
+                      bgcolor: "#1e1e1e",
+                      color: "white",
+                      border: "1px solid #3f3f46",
+                      borderRadius: "12px",
+                      marginTop: "4px",
+                      boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -2px rgba(0, 0, 0, 0.5)",
+                      "& .MuiMenuItem-root": {
+                        fontSize: "13px",
+                        color: "#e4e4e7",
+                        paddingY: "8px",
+                        "&:hover": {
+                          bgcolor: "#2d2d30",
+                        },
+                        "&.Mui-selected": {
+                          bgcolor: "#3f3f46",
+                          color: "#fbbf24",
+                          fontWeight: "bold",
+                          "&:hover": {
+                            bgcolor: "#52525b",
+                          },
+                        },
+                      },
+                      "& .MuiListSubheader-root": {
+                        bgcolor: "#1e1e1e",
+                        color: "#a1a1aa",
+                        fontWeight: "bold",
+                        fontSize: "11px",
+                        textTransform: "uppercase",
+                        letterSpacing: "0.05em",
+                        lineHeight: "26px",
+                      },
+                    },
+                  },
+                }}
               >
                 <SelectSubHeader>Sort</SelectSubHeader>
                 {orderByOptions.map((option: any) => (
@@ -371,7 +410,6 @@ export function WenWallet() {
                     value={option.value}
                     key={option.value}
                     id={option.value}
-                    sx={{ fontSize: "14px", color: "white" }}
                   >
                     {option.label}
                   </MenuItem>
@@ -382,7 +420,6 @@ export function WenWallet() {
                     value={option.value}
                     key={option.value}
                     id={option.value}
-                    sx={{ fontSize: "14px", color: "white" }}
                   >
                     {option.label}
                   </MenuItem>

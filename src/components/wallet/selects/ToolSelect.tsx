@@ -3,6 +3,7 @@ import Button from "@mui/material/Button";
 import FormControl from "@mui/material/FormControl";
 import OutlinedInput from "@mui/material/OutlinedInput";
 import Select from "@mui/material/Select";
+import MenuItem from "@mui/material/MenuItem";
 import { Fragment, useState } from "react";
 import { toast } from "react-toastify";
 import { useWallet } from "@txnlab/use-wallet-react";
@@ -133,24 +134,23 @@ export default function ToolSelect({
           <strong>loss</strong> of asset.
         </Alert>
       )}
-      <div className="flex flex-col sm:flex-row justify-start items-center">
-        <FormControl sx={{ m: 1, minWidth: 120 }}>
+      <div className="flex flex-col sm:flex-row justify-start items-center gap-2">
+        <FormControl sx={{ m: 1, minWidth: 160 }}>
           <Select
-            native
+            displayEmpty
             value={toolState.tool?.id || ""}
-            input={<OutlinedInput />}
+            input={<OutlinedInput sx={{ borderRadius: "10px" }} />}
             sx={{
-              height: "2rem",
+              height: "2.25rem",
               color: "white",
-              fontWeight: "bold",
-              fontSize: "1rem",
               backgroundColor: "#262626",
+              fontWeight: "bold",
+              fontSize: "0.85rem",
             }}
             inputProps={{ "aria-label": "Without label" }}
             id="tool-select-input"
-            label="Select Tool"
             onChange={(e) => {
-              const toolId = e.target.value;
+              const toolId = e.target.value as string;
               if (!toolId) {
                 toolState.setTool(null);
                 return;
@@ -160,14 +160,42 @@ export default function ToolSelect({
                 toolState.setTool(result);
               }
             }}
+            MenuProps={{
+              PaperProps: {
+                sx: {
+                  bgcolor: "#1e1e1e",
+                  color: "white",
+                  border: "1px solid #3f3f46",
+                  borderRadius: "12px",
+                  marginTop: "4px",
+                  boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -2px rgba(0, 0, 0, 0.5)",
+                  "& .MuiMenuItem-root": {
+                    fontSize: "13px",
+                    color: "#e4e4e7",
+                    paddingY: "8px",
+                    "&:hover": {
+                      bgcolor: "#2d2d30",
+                    },
+                    "&.Mui-selected": {
+                      bgcolor: "#3f3f46",
+                      color: "#fbbf24",
+                      fontWeight: "bold",
+                      "&:hover": {
+                        bgcolor: "#52525b",
+                      },
+                    },
+                  },
+                },
+              },
+            }}
           >
-            <option aria-label="None" value="" style={{ color: "black" }}>
+            <MenuItem value="" sx={{ color: "#a1a1aa" }}>
               Select Tool
-            </option>
+            </MenuItem>
             {tools.map((tool) => (
-              <option key={tool.id} value={tool.id} style={{ color: "black" }}>
+              <MenuItem key={tool.id} value={tool.id}>
                 {tool.name}
-              </option>
+              </MenuItem>
             ))}
           </Select>
         </FormControl>
@@ -183,6 +211,14 @@ export default function ToolSelect({
                 color="warning"
                 onClick={handleOnClick}
                 disabled={isLoading}
+                sx={{
+                  height: "2.25rem",
+                  fontWeight: "bold",
+                  fontSize: "0.85rem",
+                  borderRadius: "10px",
+                  textTransform: "none",
+                  whiteSpace: "nowrap",
+                }}
               >
                 {isLoading ? "Sending..." : toolState.tool.name.split(" ")[1]}
               </Button>
@@ -190,7 +226,15 @@ export default function ToolSelect({
               <Button
                 variant="contained"
                 color="inherit"
-                sx={{ color: "black" }}
+                sx={{
+                  color: "black",
+                  height: "2.25rem",
+                  fontWeight: "bold",
+                  fontSize: "0.85rem",
+                  borderRadius: "10px",
+                  textTransform: "none",
+                  whiteSpace: "nowrap",
+                }}
                 onClick={toolState.clearSelectedAssets}
               >
                 Clear
@@ -199,7 +243,7 @@ export default function ToolSelect({
           </div>
         )}
         {toolState.selectedAssets.length === 0 && toolState.tool && (
-          <p className="text-slate-400 text-sm">
+          <p className="text-slate-400 text-sm ml-2">
             Please select assets to use {toolState.tool.name}.
           </p>
         )}
