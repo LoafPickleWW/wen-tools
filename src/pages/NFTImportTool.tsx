@@ -458,6 +458,56 @@ export function NFTImportTool() {
             ...(nft._voi ? { voi_contract_id: nft._voi.contractId.toString(), voi_token_id: nft._voi.tokenId.toString() } : {}),
           };
 
+          // Merge actual traits from Voi, Cardano, or Ethereum
+          if (nft._voi?.properties) {
+            Object.entries(nft._voi.properties).forEach(([key, val]) => {
+              if (val !== undefined && val !== null) {
+                sourceProps[key] = String(val);
+              }
+            });
+          }
+
+          if (nft._eth?.raw_metadata) {
+            const meta = nft._eth.raw_metadata;
+            if (meta.properties && typeof meta.properties === "object") {
+              Object.entries(meta.properties).forEach(([key, val]) => {
+                if (val !== undefined && val !== null && typeof val !== "object") {
+                  sourceProps[key] = String(val);
+                }
+              });
+            } else if (Array.isArray(meta.attributes)) {
+              for (const attr of meta.attributes) {
+                if (attr && typeof attr === "object" && attr.trait_type) {
+                  sourceProps[attr.trait_type] = String(attr.value);
+                }
+              }
+            }
+          }
+
+          if (nft._cardano?.raw_metadata) {
+            const meta = nft._cardano.raw_metadata;
+            const policyBlock = meta[nft._cardano.policy_id];
+            if (policyBlock) {
+              const assetBlock = policyBlock[nft._cardano.asset_name_hex] || policyBlock[nft.name];
+              if (assetBlock && typeof assetBlock === "object") {
+                Object.entries(assetBlock).forEach(([key, val]) => {
+                  if (["name", "image", "description", "mediaType", "files"].includes(key)) return;
+                  if (val !== undefined && val !== null && typeof val !== "object" && !Array.isArray(val)) {
+                    sourceProps[key] = String(val);
+                  }
+                });
+              }
+            }
+            if (meta.fields && typeof meta.fields === "object") {
+              Object.entries(meta.fields).forEach(([key, val]) => {
+                if (["name", "image", "description"].includes(key)) return;
+                if (val !== undefined && val !== null && typeof val !== "object" && !Array.isArray(val)) {
+                  sourceProps[key] = String(val);
+                }
+              });
+            }
+          }
+
           if (finalFormat === "ARC19") {
             // ── ARC19: encode the IPFS CID into the reserve address ──
             let cidForReserve = bestMetadataCid || "";
