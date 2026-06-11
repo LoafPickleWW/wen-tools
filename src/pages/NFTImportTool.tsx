@@ -326,6 +326,9 @@ export function NFTImportTool() {
         unified = unifyVoi(resolved);
       }
 
+      // ── Sort by name naturally (lowest to highest) ──
+      unified.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }));
+
       // ── Set preview state ──
       setUnifiedNFTs(unified);
       setSelectedNFTs(new Set(unified.filter((n) => n.metadataResolved || n.imageResolved).map((n) => n.id)));
