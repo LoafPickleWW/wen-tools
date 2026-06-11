@@ -382,7 +382,7 @@ export function NFTImportTool() {
       }
 
       toast.info(`Scanning Voi collections...`);
-      let allResolvedNFTs: ResolvedVoiNFT[] = [];
+      const allResolvedNFTs: ResolvedVoiNFT[] = [];
 
       for (const contractId of contractIds) {
         const rawTokens = await fetchNFTsByContractId(String(contractId));
