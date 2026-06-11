@@ -93,6 +93,25 @@ function resolveIpfsUri(uri: string): string {
   return uri;
 }
 
+// ─── Fetch Voi collections by creator ────────────────────────────────────────
+
+/**
+ * Fetches all collection contract IDs for a given creator address on Voi.
+ */
+export async function fetchCollectionsByCreator(
+  creatorAddress: string
+): Promise<number[]> {
+  const url = `${MIMIR_BASE_URL}/nft-indexer/v1/collections?creator=${creatorAddress.trim()}`;
+  const response = await fetch(url);
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(`Failed to fetch Voi collections: ${text}`);
+  }
+  const data = await response.json();
+  const collections = data.collections || [];
+  return collections.map((c: any) => c.contractId);
+}
+
 // ─── Fetch all ARC-72 tokens by contract ID ──────────────────────────────────
 
 /**

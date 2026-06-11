@@ -36,6 +36,7 @@ import {
   fetchNFTsByContractId,
   resolveVoiMetadata,
   type ResolvedVoiNFT,
+  fetchCollectionsByCreator,
 } from "../utils/voiImport";
 import {
   sliceIntoChunks,
@@ -112,6 +113,8 @@ export function NFTImportTool() {
 
   // Voi-specific
   const [voiContractId, setVoiContractId] = useState("");
+  const [voiTraitInput, setVoiTraitInput] = useState("");
+  const [isGeneratingCsv, setIsGeneratingCsv] = useState(false);
 
   // Shared
   const [startIndex, setStartIndex] = useState("0");
@@ -346,6 +349,129 @@ export function NFTImportTool() {
       setStep("input");
     }
   }, [sourceChain, xrpAddress, taxonId, startIndex, endIndex, xrplNetwork, cardanoPolicyId, cardanoNetwork, ethContractAddress, ethNetwork, alchemyApiKey, voiContractId]);
+
+  const handleDownloadVoiTraitsCsv = useCallback(async () => {
+    const input = voiTraitInput.trim();
+    if (!input) {
+      toast.error("Please enter a Voi Creator Address or Contract ID");
+      return;
+    }
+
+    setIsGeneratingCsv(true);
+    try {
+      let contractIds: number[] = [];
+
+      // Determine if the input is a Creator Wallet Address (typically a standard Algorand/Voi 58-char address) or Contract ID (numeric)
+      const isAddress = /^[A-Z2-7]{58}$/.test(input.toUpperCase());
+      const isNumeric = /^\d+$/.test(input);
+
+      if (isAddress) {
+        toast.info("Fetching collections for creator...");
+        contractIds = await fetchCollectionsByCreator(input);
+        if (contractIds.length === 0) {
+          toast.warning("No collections found for this creator address.");
+          setIsGeneratingCsv(false);
+          return;
+        }
+      } else if (isNumeric) {
+        contractIds = [parseInt(input, 10)];
+      } else {
+        toast.error("Invalid input. Enter a 58-character Voi Creator Wallet Address or a numeric Application ID.");
+        setIsGeneratingCsv(false);
+        return;
+      }
+
+      toast.info(`Scanning Voi collections...`);
+      let allResolvedNFTs: ResolvedVoiNFT[] = [];
+
+      for (const contractId of contractIds) {
+        const rawTokens = await fetchNFTsByContractId(String(contractId));
+        if (rawTokens.length > 0) {
+          const resolved = resolveVoiMetadata(rawTokens);
+          allResolvedNFTs.push(...resolved);
+        }
+      }
+
+      if (allResolvedNFTs.length === 0) {
+        toast.warning("No NFTs with metadata found.");
+        setIsGeneratingCsv(false);
+        return;
+      }
+
+      // Sort NFTs naturally by name so CSV rows match sequential order
+      allResolvedNFTs.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }));
+
+      // Generate CSV
+      // 1. Gather all unique property/trait keys
+      const traitKeys = new Set<string>();
+      allResolvedNFTs.forEach((nft) => {
+        if (nft.properties) {
+          Object.keys(nft.properties).forEach((k) => {
+            traitKeys.add(k);
+          });
+        }
+      });
+      const sortedTraitKeys = Array.from(traitKeys).sort();
+
+      // 2. Build CSV Headers
+      const headers = [
+        "name",
+        "unit_name",
+        "has_clawback",
+        "has_freeze",
+        "decimals",
+        "total_supply",
+        "url",
+        "description",
+        "external_url",
+        "mime_type",
+        ...sortedTraitKeys.map((k) => `property_${k}`),
+      ];
+
+      const rows = [headers.join(",")];
+
+      // 3. Build CSV Rows
+      const defaultUnit = collectionName ? collectionName.slice(0, 8).toUpperCase() : "VOINFT";
+      allResolvedNFTs.forEach((nft) => {
+        const rowValues = [
+          `"${nft.name.replace(/"/g, '""')}"`,
+          `"${defaultUnit}"`,
+          "N",
+          "N",
+          "0",
+          "1",
+          `"${nft.image || ""}"`,
+          `"${(nft.description || "").replace(/"/g, '""')}"`,
+          `"${(nft.metadataURI || "").replace(/"/g, '""')}"`,
+          "image/png",
+          ...sortedTraitKeys.map((k) => {
+            const val = nft.properties?.[k];
+            return val !== undefined && val !== null ? `"${String(val).replace(/"/g, '""')}"` : "";
+          }),
+        ];
+        rows.push(rowValues.join(","));
+      });
+
+      // 4. Download file
+      const csvContent = rows.join("\n");
+      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.setAttribute("href", url);
+      const filename = isAddress ? `voi_creator_${input.slice(0, 8)}_arc69.csv` : `voi_contract_${input}_arc69.csv`;
+      link.setAttribute("download", filename);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      toast.success(`Successfully downloaded CSV for ${allResolvedNFTs.length} NFTs!`);
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err.message || "Failed to generate CSV");
+    } finally {
+      setIsGeneratingCsv(false);
+    }
+  }, [voiTraitInput, collectionName]);
 
   const handleToggleNFT = useCallback((nftId: string) => {
     setSelectedNFTs((prev) => {
@@ -858,19 +984,48 @@ export function NFTImportTool() {
 
             {/* ── Voi-specific inputs ── */}
             {sourceChain === "voi" && (
-              <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-6">
-                <label className="block text-sm font-semibold text-gray-300 mb-2">Contract ID (Application ID)</label>
-                <p className="text-xs text-gray-500 mb-3">
-                  Voi uses <span className="text-green-400 font-medium">ARC-72</span> smart contract NFTs (similar to ERC-721).
-                  Each collection is an application deployed on the Voi network. Enter the Application ID to scan all NFTs in that collection.
-                  Metadata is stored on-chain via tokenURI, typically pointing to IPFS.
-                </p>
-                <input type="text" value={voiContractId} onChange={(e) => setVoiContractId(e.target.value.replace(/[^0-9]/g, ""))} placeholder="e.g. 29105999"
-                  className="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-green-500/50 transition font-mono text-sm" />
-                <p className="text-xxs text-gray-600 mt-2">
-                  Powered by <a href="https://voi-mainnet-mimirapi.nftnavigator.xyz" target="_blank" rel="noreferrer" className="text-green-400 hover:underline">Mimir API</a> — free, no API key required
-                </p>
-              </div>
+              <>
+                <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-6">
+                  <label className="block text-sm font-semibold text-gray-300 mb-2">Contract ID (Application ID)</label>
+                  <p className="text-xs text-gray-500 mb-3">
+                    Voi uses <span className="text-green-400 font-medium">ARC-72</span> smart contract NFTs (similar to ERC-721).
+                    Each collection is an application deployed on the Voi network. Enter the Application ID to scan all NFTs in that collection.
+                    Metadata is stored on-chain via tokenURI, typically pointing to IPFS.
+                  </p>
+                  <input type="text" value={voiContractId} onChange={(e) => setVoiContractId(e.target.value.replace(/[^0-9]/g, ""))} placeholder="e.g. 29105999"
+                    className="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-green-500/50 transition font-mono text-sm" />
+                  <p className="text-xxs text-gray-600 mt-2">
+                    Powered by <a href="https://voi-mainnet-mimirapi.nftnavigator.xyz" target="_blank" rel="noreferrer" className="text-green-400 hover:underline">Mimir API</a> — free, no API key required
+                  </p>
+                </div>
+
+                <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-6">
+                  <label className="block text-sm font-semibold text-gray-300 mb-2">Download ARC-69 Traits CSV</label>
+                  <p className="text-xs text-gray-500 mb-3">
+                    Enter a Creator Address or Contract ID to fetch metadata traits and download a CSV formatted for the <span className="text-orange-400 font-semibold">ARC-69 Collection Mint</span>.
+                  </p>
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    <input type="text" value={voiTraitInput} onChange={(e) => setVoiTraitInput(e.target.value)} placeholder="Creator Address or Application ID"
+                      className="flex-1 bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-green-500/50 transition text-sm font-mono" />
+                    <button onClick={handleDownloadVoiTraitsCsv} disabled={isGeneratingCsv}
+                      className="px-5 py-3 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 text-white font-semibold rounded-xl text-sm transition-all shadow-md disabled:opacity-50 flex items-center justify-center gap-2">
+                      {isGeneratingCsv ? (
+                        <>
+                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                          Processing...
+                        </>
+                      ) : (
+                        <>
+                          <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                          </svg>
+                          Download CSV
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              </>
             )}
 
             {/* Range Index Filter (shared) */}
