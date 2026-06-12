@@ -431,11 +431,17 @@ export function NFTImportTool() {
       const rows = [headers.join(",")];
 
       // 3. Build CSV Rows
-      const defaultUnit = collectionName ? collectionName.slice(0, 8).toUpperCase() : "VOINFT";
-      allResolvedNFTs.forEach((nft) => {
+      allResolvedNFTs.forEach((nft, idx) => {
+        const absoluteIndex = idx + 1;
+        const indexStr = String(absoluteIndex);
+        const maxPrefixLen = Math.max(0, 8 - indexStr.length);
+        const finalUnitName = collectionName
+          ? `${collectionName.slice(0, maxPrefixLen)}${indexStr}`.toUpperCase()
+          : "VOINFT";
+
         const rowValues = [
           `"${nft.name.replace(/"/g, '""')}"`,
-          `"${defaultUnit}"`,
+          `"${finalUnitName}"`,
           "N",
           "N",
           "0",
@@ -503,6 +509,7 @@ export function NFTImportTool() {
       suggestedParams.flatFee = true;
       suggestedParams.fee = 2000;
 
+      const start = Math.max(0, parseInt(startIndex, 10) || 0);
       const allTxns: algosdk.Transaction[] = [];
       let totalPrepared = 0;
 
@@ -719,6 +726,17 @@ export function NFTImportTool() {
           }
         }
 
+        // Compute the dynamic sequential unit name for the collection
+        const indexInUnified = unifiedNFTs.findIndex((n) => n.id === nft.id);
+        const absoluteIndex = start + (indexInUnified >= 0 ? indexInUnified : i) + 1;
+        const indexStr = String(absoluteIndex);
+        const maxPrefixLen = Math.max(0, 8 - indexStr.length);
+        const finalUnitName = collectionName
+          ? `${collectionName.slice(0, maxPrefixLen)}${indexStr}`.toUpperCase()
+          : mintData.unit_name;
+
+        mintData.unit_name = finalUnitName;
+
         const asset_create_tx = algosdk.makeAssetCreateTxnWithSuggestedParamsFromObject({
           from: activeAddress,
           manager: activeAddress,
@@ -782,7 +800,7 @@ export function NFTImportTool() {
       toast.error(err.message || "Minting failed");
       setStep("preview");
     }
-  }, [activeAddress, algodClient, transactionSigner, selectedNFTs, unifiedNFTs, arcFormat, collectionName, sourceChain]);
+  }, [activeAddress, algodClient, transactionSigner, selectedNFTs, unifiedNFTs, arcFormat, collectionName, sourceChain, startIndex]);
 
   // ─── Filtering ────────────────────────────────────────────────────────────
 
@@ -1069,11 +1087,11 @@ export function NFTImportTool() {
               </div>
             </div>
 
-            {/* Collection Name */}
+            {/* Collection Unit Name */}
             <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-6">
-              <label className="block text-sm font-semibold text-gray-300 mb-2">Collection Name <span className="text-gray-500 font-normal">(optional)</span></label>
-              <p className="text-xs text-gray-500 mb-3">Used as the unit name prefix for all imported NFTs.</p>
-              <input type="text" value={collectionName} onChange={(e) => setCollectionName(e.target.value)} placeholder="e.g. MYXRPNFT" maxLength={8}
+              <label className="block text-sm font-semibold text-gray-300 mb-2">Collection Unit Name Prefix <span className="text-gray-500 font-normal">(optional)</span></label>
+              <p className="text-xs text-gray-500 mb-3">Specify the base Unit Name. We will append the sequential number based on the range (e.g. DORK1, DORK2).</p>
+              <input type="text" value={collectionName} onChange={(e) => setCollectionName(e.target.value)} placeholder="e.g. DORK" maxLength={8}
                 className="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-orange-500/50 transition text-sm" />
               <p className="text-xxs text-gray-600 mt-1">Max 8 characters, alphanumeric</p>
             </div>

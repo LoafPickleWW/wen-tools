@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import algosdk from "algosdk";
 import Papa from "papaparse";
 import { toast } from "react-toastify";
@@ -72,6 +72,16 @@ export function BatchMint() {
   const effectiveProvider = isTestnet
     ? (formData.pinningProvider === "crust" ? "pinata" : formData.pinningProvider)
     : formData.pinningProvider;
+
+  // Automatically switch away from "none" if standard is changed to ARC3 or ARC19
+  useEffect(() => {
+    if (formData.collectionFormat !== "ARC69" && formData.pinningProvider === "none") {
+      setFormData((prev: any) => ({
+        ...prev,
+        pinningProvider: isTestnet ? "pinata" : "crust"
+      }));
+    }
+  }, [formData.collectionFormat, isTestnet, formData.pinningProvider]);
 
   const handleCsvUpload = (file: File) => {
     Papa.parse(file, {
@@ -560,7 +570,7 @@ export function BatchMint() {
                   provider={formData.pinningProvider as IpfsProvider}
                   setProvider={(p) => setFormData({ ...formData, pinningProvider: p })}
                   isTestnet={isTestnet}
-                  showNone={true}
+                  showNone={formData.collectionFormat === "ARC69"}
                   pinataToken={formData.pinataToken}
                   setPinataToken={(t) => setFormData({ ...formData, pinataToken: t })}
                   filebaseToken={formData.filebaseToken}
