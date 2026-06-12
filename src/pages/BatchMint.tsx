@@ -313,7 +313,7 @@ export function BatchMint() {
 
         if (formData.collectionFormat === "ARC69") {
           txn_item.asset_note = ipfs_data;
-          txn_item.asset_url = image_url;
+          txn_item.asset_url = image_url.slice(0, 96);
         }
 
         data_for_txns.push(txn_item);
