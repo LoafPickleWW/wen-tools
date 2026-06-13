@@ -810,43 +810,23 @@ export function NFTImportTool() {
       const allCreatedIds: number[] = [];
 
       if (preserveMintOrder) {
-        toast.info(`Submitting ${signedGroups.length} NFTs with 50ms delay to preserve mint order...`);
+        toast.info(`Submitting ${signedGroups.length} NFTs sequentially (strict order)...`);
         setMintProgress({ done: 0, total: signedGroups.length });
 
-        const txIds: string[] = [];
         for (let idx = 0; idx < signedGroups.length; idx++) {
           if (abortRef.current) break;
           try {
             const { txId } = await algodClient.sendRawTransaction(signedGroups[idx]).do();
-            txIds.push(txId);
+            const confirmed = await algosdk.waitForConfirmation(algodClient, txId, 4);
+            if (confirmed["asset-index"]) {
+              const assetId = Number(confirmed["asset-index"]);
+              allCreatedIds.push(assetId);
+              setMintedAssets([...allCreatedIds]);
+            }
           } catch (e) {
-            console.warn(`NFT ${idx + 1} submission error:`, e);
-            txIds.push("");
+            console.warn(`NFT ${idx + 1} submission/confirmation error:`, e);
           }
           setMintProgress((prev) => ({ ...prev, done: prev.done + 1 }));
-          await new Promise((resolve) => setTimeout(resolve, 50));
-        }
-
-        // Wait for confirmations in parallel batches to extract created asset IDs
-        toast.info("Waiting for network confirmations...");
-        const confirmationChunks = sliceIntoChunks(txIds, 16);
-        for (let i = 0; i < confirmationChunks.length; i++) {
-          const chunk = confirmationChunks[i];
-          await Promise.all(
-            chunk.map(async (txId) => {
-              if (!txId) return;
-              try {
-                const confirmed = await algosdk.waitForConfirmation(algodClient, txId, 4);
-                if (confirmed["asset-index"]) {
-                  const assetId = Number(confirmed["asset-index"]);
-                  allCreatedIds.push(assetId);
-                  setMintedAssets((prev) => [...prev, assetId]);
-                }
-              } catch (e) {
-                console.warn(`Confirmation error for tx ${txId}:`, e);
-              }
-            })
-          );
         }
       } else {
         toast.info(`Submitting ${signedGroups.length} NFTs in parallel for maximum speed...`);
@@ -1314,15 +1294,19 @@ export function NFTImportTool() {
                 <span className="px-3 py-1 bg-orange-500/15 border border-orange-500/30 rounded-lg font-bold text-orange-400">{arcFormat}</span>
                 <span>on Algorand</span>
               </div>
-              <label className="flex items-center gap-2 text-sm text-gray-300 cursor-pointer bg-white/5 border border-white/10 rounded-xl px-4 py-2 hover:border-white/20 transition-all select-none">
-                <input
-                  type="checkbox"
-                  checked={preserveMintOrder}
-                  onChange={(e) => setPreserveMintOrder(e.target.checked)}
-                  className="rounded border-white/10 bg-black/30 text-orange-500 focus:ring-orange-500/50 cursor-pointer h-4 w-4"
-                />
-                <span className="font-semibold">Preserve Mint Order</span>
-                <span className="text-xxs text-gray-500">(slower sequential confirmation, guarantees ID order)</span>
+              <label className="flex flex-col sm:flex-row items-center gap-2 text-sm text-gray-300 cursor-pointer bg-white/5 border border-white/10 rounded-xl px-4 py-2 hover:border-white/20 transition-all select-none">
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={preserveMintOrder}
+                    onChange={(e) => setPreserveMintOrder(e.target.checked)}
+                    className="rounded border-white/10 bg-black/30 text-orange-500 focus:ring-orange-500/50 cursor-pointer h-4 w-4"
+                  />
+                  <span className="font-semibold text-orange-400">Preserve Mint Order (Strict Confirmation)</span>
+                </div>
+                <span className="text-xxs text-gray-400">
+                  ⚠️ Slow: Waits for each block confirmation (~3s per NFT) to guarantee ID order. Uncheck for fast parallel import.
+                </span>
               </label>
               {!activeAddress ? (
                 <ConnectButton />
