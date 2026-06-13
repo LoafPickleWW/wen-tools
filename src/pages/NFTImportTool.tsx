@@ -59,6 +59,7 @@ interface UnifiedNFT {
   metadataResolved: boolean;
   // Source-chain specifics shown in the grid
   serialOrId: string;       // Token serial (XRPL), asset_name_hex (ADA), tokenId (ETH)
+  sortKey: number;          // Numeric mint-order key (serial / tokenId) used for sorting
   collectionTag: string;    // Taxon (XRPL), Policy ID prefix (ADA), Contract symbol (ETH)
   metadataStandard?: string; // CIP-25/CIP-68 (ADA), ERC-721/ERC-1155 (ETH)
   metadataIpfsCid?: string;
@@ -68,6 +69,16 @@ interface UnifiedNFT {
   _cardano?: ResolvedCardanoNFT;
   _eth?: ResolvedEthNFT;
   _voi?: ResolvedVoiNFT;
+}
+
+/**
+ * Extracts a trailing number from an NFT name, e.g. "Dork City #123" -> 123.
+ * Returns Number.MAX_SAFE_INTEGER when no number is found so un-numbered
+ * items sort to the end.
+ */
+function extractTrailingNumber(name: string): number {
+  const m = (name || "").match(/(\d+)\s*$/);
+  return m ? parseInt(m[1], 10) : Number.MAX_SAFE_INTEGER;
 }
 
 function generalizeIpfsCid(cidOrPath: string, tokenId: string): string {
@@ -144,6 +155,7 @@ export function NFTImportTool() {
   // ── Mint state ──
   const [mintProgress, setMintProgress] = useState({ done: 0, total: 0 });
   const [mintedAssets, setMintedAssets] = useState<number[]>([]);
+  const [preserveMintOrder, setPreserveMintOrder] = useState(true);
   const abortRef = useRef(false);
 
   // ─── Convert source-chain results into UnifiedNFT[] ───────────────────────
@@ -157,6 +169,7 @@ export function NFTImportTool() {
       imageResolved: n.imageResolved,
       metadataResolved: n.metadataResolved,
       serialOrId: String(n.nft_serial),
+      sortKey: Number(n.nft_serial) || extractTrailingNumber(n.name),
       collectionTag: `T: ${n.nft_taxon}`,
       metadataIpfsCid: n.metadataIpfsCid,
       decodedUri: n.decodedUri,
@@ -173,6 +186,7 @@ export function NFTImportTool() {
       imageResolved: n.imageResolved,
       metadataResolved: n.metadataResolved,
       serialOrId: n.fingerprint.slice(0, 12) + "…",
+      sortKey: extractTrailingNumber(n.name),
       collectionTag: n.metadataStandard,
       metadataStandard: n.metadataStandard,
       _cardano: n,
@@ -188,6 +202,7 @@ export function NFTImportTool() {
       imageResolved: n.imageResolved,
       metadataResolved: n.metadataResolved,
       serialOrId: `#${n.token_id}`,
+      sortKey: Number(n.token_id) >= 0 && Number.isFinite(Number(n.token_id)) ? Number(n.token_id) : extractTrailingNumber(n.name),
       collectionTag: n.tokenType,
       metadataStandard: n.tokenType,
       decodedUri: n.tokenUri,
@@ -204,6 +219,7 @@ export function NFTImportTool() {
       imageResolved: n.imageResolved,
       metadataResolved: n.metadataResolved,
       serialOrId: `#${n.tokenId}`,
+      sortKey: n.tokenId,
       collectionTag: `ARC-72`,
       metadataStandard: "ARC-72",
       decodedUri: n.metadataURI,
@@ -329,8 +345,14 @@ export function NFTImportTool() {
         unified = unifyVoi(resolved);
       }
 
-      // ── Sort by name naturally (lowest to highest) ──
-      unified.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }));
+      // ── Sort by true mint order (serial / token ID), lowest to highest ──
+      // Name sorting broke sequential minting (e.g. "Dork 10" sorted before "Dork 2"
+      // on collections without zero-padded names, and metadata names don't always
+      // match mint order). sortKey is the on-chain serial/tokenId.
+      unified.sort((a, b) => {
+        if (a.sortKey !== b.sortKey) return a.sortKey - b.sortKey;
+        return a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' });
+      });
 
       // ── Set preview state ──
       setUnifiedNFTs(unified);
@@ -398,8 +420,12 @@ export function NFTImportTool() {
         return;
       }
 
-      // Sort NFTs naturally by name so CSV rows match sequential order
-      allResolvedNFTs.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }));
+      // Sort NFTs by true mint order (contract, then token ID) so CSV rows
+      // and the sequential unit-name numbering match the on-chain order 1, 2, 3...
+      allResolvedNFTs.sort((a, b) => {
+        if (a.contractId !== b.contractId) return a.contractId - b.contractId;
+        return a.tokenId - b.tokenId;
+      });
 
       // Generate CSV
       // 1. Gather all unique property/trait keys
@@ -435,9 +461,8 @@ export function NFTImportTool() {
         const absoluteIndex = idx + 1;
         const indexStr = String(absoluteIndex);
         const maxPrefixLen = Math.max(0, 8 - indexStr.length);
-        const finalUnitName = collectionName
-          ? `${collectionName.slice(0, maxPrefixLen)}${indexStr}`.toUpperCase()
-          : "VOINFT";
+        const baseUnitPrefix = (collectionName || "VOI").replace(/\d+\s*$/, "").trim() || "VOI";
+        const finalUnitName = `${baseUnitPrefix.slice(0, maxPrefixLen)}${indexStr}`.toUpperCase();
 
         const rowValues = [
           `"${nft.name.replace(/"/g, '""')}"`,
@@ -731,9 +756,17 @@ export function NFTImportTool() {
         const absoluteIndex = start + (indexInUnified >= 0 ? indexInUnified : i) + 1;
         const indexStr = String(absoluteIndex);
         const maxPrefixLen = Math.max(0, 8 - indexStr.length);
-        const finalUnitName = collectionName
-          ? `${collectionName.slice(0, maxPrefixLen)}${indexStr}`.toUpperCase()
-          : mintData.unit_name;
+
+        // ── Asset name: ensure a space between the base name and its number ──
+        // e.g. "DorkCity123" -> "DorkCity 123", "DorkCity#123" -> "DorkCity #123".
+        // Names that already have the space ("Dork City 123") are left untouched.
+        const rawAssetName = String(mintData.asset_name || nft.name || "");
+        mintData.asset_name = rawAssetName.replace(/([^\s#\d])(#?\d+)\s*$/, "$1 $2").slice(0, 32);
+
+        // ── Unit name: always append the sequential number (no space — 8 char max) ──
+        // Strip any trailing digits from the base prefix so we never get "DORK12" + "3".
+        const baseUnitPrefix = (collectionName || String(mintData.unit_name || "NFT")).replace(/\d+\s*$/, "").trim() || "NFT";
+        const finalUnitName = `${baseUnitPrefix.slice(0, maxPrefixLen)}${indexStr}`.toUpperCase();
 
         mintData.unit_name = finalUnitName;
 
@@ -774,24 +807,76 @@ export function NFTImportTool() {
       const signedTxns = await walletSign(allTxns, transactionSigner);
       const signedGroups = sliceIntoChunks(Array.from(signedTxns), 2);
 
-      toast.info(`Submitting ${signedGroups.length} NFTs in parallel...`);
-      setMintProgress({ done: 0, total: signedGroups.length });
+      const allCreatedIds: number[] = [];
 
-      const submissionPromises = signedGroups.map(async (signedGroup, idx) => {
-        try {
-          const { txId } = await algodClient.sendRawTransaction(signedGroup).do();
-          const confirmed = await algosdk.waitForConfirmation(algodClient, txId, 4);
-          if (confirmed["asset-index"]) {
-            setMintProgress((prev) => ({ ...prev, done: prev.done + 1 }));
-            return confirmed["asset-index"];
+      if (preserveMintOrder) {
+        toast.info(`Submitting ${signedGroups.length} NFTs with 50ms delay to preserve mint order...`);
+        setMintProgress({ done: 0, total: signedGroups.length });
+
+        const txIds: string[] = [];
+        for (let idx = 0; idx < signedGroups.length; idx++) {
+          if (abortRef.current) break;
+          try {
+            const { txId } = await algodClient.sendRawTransaction(signedGroups[idx]).do();
+            txIds.push(txId);
+          } catch (e) {
+            console.warn(`NFT ${idx + 1} submission error:`, e);
+            txIds.push("");
           }
-        } catch (e) { console.warn(`NFT ${idx + 1} submission error:`, e); }
-        setMintProgress((prev) => ({ ...prev, done: prev.done + 1 }));
-        return null;
-      });
+          setMintProgress((prev) => ({ ...prev, done: prev.done + 1 }));
+          await new Promise((resolve) => setTimeout(resolve, 50));
+        }
 
-      const results = await Promise.all(submissionPromises);
-      const allCreatedIds = results.filter((id): id is number => id !== null);
+        // Wait for confirmations in parallel batches to extract created asset IDs
+        toast.info("Waiting for network confirmations...");
+        const confirmationChunks = sliceIntoChunks(txIds, 16);
+        for (let i = 0; i < confirmationChunks.length; i++) {
+          const chunk = confirmationChunks[i];
+          await Promise.all(
+            chunk.map(async (txId) => {
+              if (!txId) return;
+              try {
+                const confirmed = await algosdk.waitForConfirmation(algodClient, txId, 4);
+                if (confirmed["asset-index"]) {
+                  const assetId = Number(confirmed["asset-index"]);
+                  allCreatedIds.push(assetId);
+                  setMintedAssets((prev) => [...prev, assetId]);
+                }
+              } catch (e) {
+                console.warn(`Confirmation error for tx ${txId}:`, e);
+              }
+            })
+          );
+        }
+      } else {
+        toast.info(`Submitting ${signedGroups.length} NFTs in parallel for maximum speed...`);
+        setMintProgress({ done: 0, total: signedGroups.length });
+
+        // Submit in parallel batches to avoid overloading the node/wallet
+        const chunkSize = 16;
+        for (let i = 0; i < signedGroups.length; i += chunkSize) {
+          if (abortRef.current) break;
+          const chunk = signedGroups.slice(i, i + chunkSize);
+          await Promise.all(
+            chunk.map(async (group, groupOffset) => {
+              const idx = i + groupOffset;
+              try {
+                const { txId } = await algodClient.sendRawTransaction(group).do();
+                const confirmed = await algosdk.waitForConfirmation(algodClient, txId, 4);
+                if (confirmed["asset-index"]) {
+                  const assetId = Number(confirmed["asset-index"]);
+                  allCreatedIds.push(assetId);
+                  setMintedAssets((prev) => [...prev, assetId]);
+                }
+              } catch (e) {
+                console.warn(`NFT ${idx + 1} submission error:`, e);
+              }
+              setMintProgress((prev) => ({ ...prev, done: prev.done + 1 }));
+            })
+          );
+        }
+      }
+
       setMintedAssets(allCreatedIds);
       setStep("done");
       toast.success(`Successfully imported ${allCreatedIds.length} NFTs to Algorand!`);
@@ -800,7 +885,7 @@ export function NFTImportTool() {
       toast.error(err.message || "Minting failed");
       setStep("preview");
     }
-  }, [activeAddress, algodClient, transactionSigner, selectedNFTs, unifiedNFTs, arcFormat, collectionName, sourceChain, startIndex]);
+  }, [activeAddress, algodClient, transactionSigner, selectedNFTs, unifiedNFTs, arcFormat, collectionName, sourceChain, startIndex, preserveMintOrder]);
 
   // ─── Filtering ────────────────────────────────────────────────────────────
 
@@ -1229,6 +1314,16 @@ export function NFTImportTool() {
                 <span className="px-3 py-1 bg-orange-500/15 border border-orange-500/30 rounded-lg font-bold text-orange-400">{arcFormat}</span>
                 <span>on Algorand</span>
               </div>
+              <label className="flex items-center gap-2 text-sm text-gray-300 cursor-pointer bg-white/5 border border-white/10 rounded-xl px-4 py-2 hover:border-white/20 transition-all select-none">
+                <input
+                  type="checkbox"
+                  checked={preserveMintOrder}
+                  onChange={(e) => setPreserveMintOrder(e.target.checked)}
+                  className="rounded border-white/10 bg-black/30 text-orange-500 focus:ring-orange-500/50 cursor-pointer h-4 w-4"
+                />
+                <span className="font-semibold">Preserve Mint Order</span>
+                <span className="text-xxs text-gray-500">(slower sequential confirmation, guarantees ID order)</span>
+              </label>
               {!activeAddress ? (
                 <ConnectButton />
               ) : (
