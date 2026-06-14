@@ -86,11 +86,11 @@ function generalizeIpfsCid(cidOrPath: string, tokenId: string): string {
   const parts = cidOrPath.split("/");
   const cidString = parts[0];
   let pathStr = parts.slice(1).join("/");
-  
+
   if (pathStr && pathStr.includes("{id}")) {
     pathStr = pathStr.replace(/{id}/gi, tokenId);
   }
-  
+
   return pathStr ? `${cidString}/${pathStr}` : cidString;
 }
 
@@ -460,9 +460,14 @@ export function NFTImportTool() {
       allResolvedNFTs.forEach((nft, idx) => {
         const absoluteIndex = idx + 1;
         const indexStr = String(absoluteIndex);
-        const maxPrefixLen = Math.max(0, 8 - indexStr.length);
-        const baseUnitPrefix = (collectionName || "VOI").replace(/\d+\s*$/, "").trim() || "VOI";
-        const finalUnitName = `${baseUnitPrefix.slice(0, maxPrefixLen)}${indexStr}`.toUpperCase();
+        let finalUnitName = "";
+        if (collectionName.trim() !== "") {
+          const maxPrefixLen = Math.max(0, 8 - indexStr.length);
+          const baseUnitPrefix = collectionName.replace(/\d+\s*$/, "").trim() || "VOI";
+          finalUnitName = `${baseUnitPrefix.slice(0, maxPrefixLen)}${indexStr}`.toUpperCase();
+        } else {
+          finalUnitName = "VOI";
+        }
 
         const rowValues = [
           `"${nft.name.replace(/"/g, '""')}"`,
@@ -569,13 +574,13 @@ export function NFTImportTool() {
           const rawImageCid = nft._eth
             ? extractIpfsCid(nft._eth.raw_metadata?.image || "")
             : nft._voi
-            ? extractIpfsCid(nft._voi.raw_metadata?.image || nft._voi.raw_metadata?.image_url || nft._voi.raw_metadata?.animation_url || "")
-            : null;
+              ? extractIpfsCid(nft._voi.raw_metadata?.image || nft._voi.raw_metadata?.image_url || nft._voi.raw_metadata?.animation_url || "")
+              : null;
           const rawTokenUriCid = nft._eth
             ? extractIpfsCid(nft._eth.tokenUri || "")
             : nft._voi
-            ? extractIpfsCid(nft._voi.metadataURI || "")
-            : null;
+              ? extractIpfsCid(nft._voi.metadataURI || "")
+              : null;
 
           // Pick the best CID available — prefer metadata-level CIDs for ARC19/ARC3
           const bestMetadataCid = uriCid || rawTokenUriCid;
@@ -672,7 +677,7 @@ export function NFTImportTool() {
           if (finalFormat === "ARC19") {
             // ── ARC19: encode the IPFS CID into the reserve address ──
             let cidForReserve = bestMetadataCid || "";
-            
+
             // For ARC19 template URLs, substitute {id} with the actual token ID.
             // This encodes the base folder CID into the reserve address and puts the exact file in the URL.
             if (cidForReserve && (nft._eth || nft._voi)) {
@@ -763,12 +768,16 @@ export function NFTImportTool() {
         const rawAssetName = String(mintData.asset_name || nft.name || "");
         mintData.asset_name = rawAssetName.replace(/([^\s#\d])(#?\d+)\s*$/, "$1 $2").slice(0, 32);
 
-        // ── Unit name: always append the sequential number (no space — 8 char max) ──
-        // Strip any trailing digits from the base prefix so we never get "DORK12" + "3".
-        const baseUnitPrefix = (collectionName || String(mintData.unit_name || "NFT")).replace(/\d+\s*$/, "").trim() || "NFT";
-        const finalUnitName = `${baseUnitPrefix.slice(0, maxPrefixLen)}${indexStr}`.toUpperCase();
-
-        mintData.unit_name = finalUnitName;
+        // ── Unit name: only append sequential number if Collection Unit Name Prefix is specified ──
+        if (collectionName.trim() !== "") {
+          const baseUnitPrefix = collectionName.replace(/\d+\s*$/, "").trim() || "NFT";
+          const finalUnitName = `${baseUnitPrefix.slice(0, maxPrefixLen)}${indexStr}`.toUpperCase();
+          mintData.unit_name = finalUnitName;
+        } else {
+          // If no prefix is specified, use the original/default unit name sanitized to 8 chars
+          const baseUnit = String(mintData.unit_name || "NFT").trim();
+          mintData.unit_name = baseUnit.slice(0, 8).toUpperCase();
+        }
 
         const asset_create_tx = algosdk.makeAssetCreateTxnWithSuggestedParamsFromObject({
           from: activeAddress,
@@ -921,11 +930,10 @@ export function NFTImportTool() {
               (step === "resolving" && i < 1);
             return (
               <div key={s.key} className="flex items-center gap-2">
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300 ${
-                  isActive ? "bg-orange-500 text-white shadow-lg shadow-orange-500/30"
-                  : isPast ? "bg-orange-500/30 text-orange-300 border border-orange-500/40"
-                  : "bg-white/5 text-gray-500 border border-white/10"
-                }`}>
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300 ${isActive ? "bg-orange-500 text-white shadow-lg shadow-orange-500/30"
+                    : isPast ? "bg-orange-500/30 text-orange-300 border border-orange-500/40"
+                      : "bg-white/5 text-gray-500 border border-white/10"
+                  }`}>
                   {isPast ? "✓" : i + 1}
                 </div>
                 <span className={`text-xs font-medium ${isActive ? "text-orange-400" : isPast ? "text-orange-300/60" : "text-gray-500"}`}>
@@ -947,41 +955,37 @@ export function NFTImportTool() {
               <div className="flex flex-wrap gap-3">
                 <button
                   onClick={() => setSourceChain("xrpl")}
-                  className={`flex items-center gap-2 px-5 py-3 rounded-xl text-sm font-semibold transition-all ${
-                    sourceChain === "xrpl"
+                  className={`flex items-center gap-2 px-5 py-3 rounded-xl text-sm font-semibold transition-all ${sourceChain === "xrpl"
                       ? "bg-orange-500/20 border-2 border-orange-500 text-orange-400"
                       : "bg-white/5 border border-white/10 text-gray-400 hover:border-white/20"
-                  }`}
+                    }`}
                 >
                   <img src="https://cryptologos.cc/logos/xrp-xrp-logo.svg?v=035" alt="XRP" className="w-5 h-5" /> XRP Ledger
                 </button>
                 <button
                   onClick={() => setSourceChain("cardano")}
-                  className={`flex items-center gap-2 px-5 py-3 rounded-xl text-sm font-semibold transition-all ${
-                    sourceChain === "cardano"
+                  className={`flex items-center gap-2 px-5 py-3 rounded-xl text-sm font-semibold transition-all ${sourceChain === "cardano"
                       ? "bg-blue-500/20 border-2 border-blue-500 text-blue-400"
                       : "bg-white/5 border border-white/10 text-gray-400 hover:border-white/20"
-                  }`}
+                    }`}
                 >
                   <img src="https://cryptologos.cc/logos/cardano-ada-logo.svg?v=035" alt="ADA" className="w-5 h-5" /> Cardano (ADA)
                 </button>
                 <button
                   onClick={() => setSourceChain("ethereum")}
-                  className={`flex items-center gap-2 px-5 py-3 rounded-xl text-sm font-semibold transition-all ${
-                    sourceChain === "ethereum"
+                  className={`flex items-center gap-2 px-5 py-3 rounded-xl text-sm font-semibold transition-all ${sourceChain === "ethereum"
                       ? "bg-purple-500/20 border-2 border-purple-500 text-purple-400"
                       : "bg-white/5 border border-white/10 text-gray-400 hover:border-white/20"
-                  }`}
+                    }`}
                 >
                   <img src="https://cryptologos.cc/logos/ethereum-eth-logo.svg?v=035" alt="ETH" className="w-5 h-5" /> Ethereum (ETH)
                 </button>
                 <button
                   onClick={() => setSourceChain("voi")}
-                  className={`flex items-center gap-2 px-5 py-3 rounded-xl text-sm font-semibold transition-all ${
-                    sourceChain === "voi"
+                  className={`flex items-center gap-2 px-5 py-3 rounded-xl text-sm font-semibold transition-all ${sourceChain === "voi"
                       ? "bg-green-500/20 border-2 border-green-500 text-green-400"
                       : "bg-white/5 border border-white/10 text-gray-400 hover:border-white/20"
-                  }`}
+                    }`}
                 >
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className="w-5 h-5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 4l7 15 7-15" /></svg> Voi (ARC-72)
                 </button>
@@ -1136,11 +1140,10 @@ export function NFTImportTool() {
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 {(["ARC19", "ARC3", "ARC69"] as AlgorandARC[]).map((arc) => (
                   <button key={arc} onClick={() => setArcFormat(arc)}
-                    className={`p-4 rounded-xl text-left transition-all ${
-                      arcFormat === arc
+                    className={`p-4 rounded-xl text-left transition-all ${arcFormat === arc
                         ? "bg-orange-500/15 border-2 border-orange-500 shadow-lg shadow-orange-500/10"
                         : "bg-white/5 border border-white/10 hover:border-white/20"
-                    }`}>
+                      }`}>
                     <div className="font-bold text-sm mb-1">{arc}</div>
                     <div className="text-xxs text-gray-400 leading-relaxed">
                       {arc === "ARC3" && "Immutable. Metadata on IPFS. Best for permanent art."}
@@ -1255,15 +1258,13 @@ export function NFTImportTool() {
                 const isValid = nft.metadataResolved || nft.imageResolved;
                 return (
                   <div key={nft.id} onClick={() => isValid && handleToggleNFT(nft.id)}
-                    className={`relative rounded-xl overflow-hidden transition-all cursor-pointer group ${
-                      !isValid ? "opacity-40 cursor-not-allowed bg-red-950/10 border border-red-900/20"
-                      : isSelected ? "ring-2 ring-orange-500 shadow-lg shadow-orange-500/20"
-                      : "ring-1 ring-white/10 hover:ring-white/20"
-                    }`}>
+                    className={`relative rounded-xl overflow-hidden transition-all cursor-pointer group ${!isValid ? "opacity-40 cursor-not-allowed bg-red-950/10 border border-red-900/20"
+                        : isSelected ? "ring-2 ring-orange-500 shadow-lg shadow-orange-500/20"
+                          : "ring-1 ring-white/10 hover:ring-white/20"
+                      }`}>
                     {isValid && (
-                      <div className={`absolute top-2 right-2 z-10 w-6 h-6 rounded-full flex items-center justify-center transition-all ${
-                        isSelected ? "bg-orange-500 text-white" : "bg-black/50 border border-white/20 text-transparent group-hover:border-white/40"
-                      }`}>✓</div>
+                      <div className={`absolute top-2 right-2 z-10 w-6 h-6 rounded-full flex items-center justify-center transition-all ${isSelected ? "bg-orange-500 text-white" : "bg-black/50 border border-white/20 text-transparent group-hover:border-white/40"
+                        }`}>✓</div>
                     )}
                     <div className="aspect-square bg-white/5 overflow-hidden">
                       {nft.imageResolved ? (
