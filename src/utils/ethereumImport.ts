@@ -123,13 +123,24 @@ function resolveIpfsUri(uri: string): string {
 /** Pick the best available image URL from Alchemy's response. */
 function pickBestImage(nft: EthNFTRaw): string {
   const img = nft.image;
+  const meta = nft.raw?.metadata;
+
+  // Prefer original IPFS or Arweave links if they exist
+  if (img.originalUrl && (img.originalUrl.startsWith("ipfs://") || img.originalUrl.includes("ipfs") || img.originalUrl.startsWith("ar://"))) {
+    return img.originalUrl;
+  }
+  if (meta?.image && (typeof meta.image === "string") && (meta.image.startsWith("ipfs://") || meta.image.includes("ipfs") || meta.image.startsWith("ar://"))) {
+    return meta.image;
+  }
+  if (meta?.image_url && (typeof meta.image_url === "string") && (meta.image_url.startsWith("ipfs://") || meta.image_url.includes("ipfs") || meta.image_url.startsWith("ar://"))) {
+    return meta.image_url;
+  }
+
+  // Fallbacks:
   if (img.cachedUrl) return img.cachedUrl;
   if (img.pngUrl) return img.pngUrl;
   if (img.thumbnailUrl) return img.thumbnailUrl;
   if (img.originalUrl) return resolveIpfsUri(img.originalUrl);
-
-  // Fallback: try raw metadata
-  const meta = nft.raw?.metadata;
   if (meta?.image) return resolveIpfsUri(meta.image);
   if (meta?.image_url) return resolveIpfsUri(meta.image_url);
   if (meta?.animation_url) return resolveIpfsUri(meta.animation_url);
