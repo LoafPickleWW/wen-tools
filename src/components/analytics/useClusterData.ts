@@ -47,6 +47,19 @@ export function useClusterData() {
 
   const fetchFirstBonded = async (address: string, indexerUrl: string): Promise<string | null> => {
     try {
+      // 1. Try to find the first payment transaction where the account received ALGO (which funded/created it)
+      const payResponse = await axios.get(
+        `${indexerUrl}/v2/transactions?tx-type=pay&address=${address}&address-role=receiver&limit=1&order=asc`
+      );
+      const payTxns = payResponse.data.transactions;
+      if (payTxns && payTxns.length > 0) {
+        const firstPayTx = payTxns[0];
+        if (firstPayTx.sender && firstPayTx.sender !== address) {
+          return firstPayTx.sender;
+        }
+      }
+
+      // 2. Fallback to the absolute first transaction of any type if no pay transaction is found
       const response = await axios.get(
         `${indexerUrl}/v2/accounts/${address}/transactions?limit=1&order=asc`
       );
