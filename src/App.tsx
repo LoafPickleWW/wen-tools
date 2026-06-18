@@ -5,6 +5,7 @@ import {
   WalletProvider,
 } from "@txnlab/use-wallet-react";
 import { Route, Routes, BrowserRouter as Router } from "react-router-dom";
+import axios from "axios";
 import Home from "./views/home";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.min.css";
@@ -57,6 +58,27 @@ const walletManager = new WalletManager({
   ],
   network: NetworkId.MAINNET,
 });
+
+axios.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    const config = error.config;
+    if (
+      config &&
+      config.url &&
+      config.url.includes("https://ipfs.algonode.xyz/ipfs/") &&
+      (!error.response || error.response.status === 504 || error.response.status === 502 || error.code === 'ECONNABORTED' || error.message.includes('timeout') || error.message.includes('Network Error'))
+    ) {
+      if (!config._retry) {
+        config._retry = true;
+        console.warn(`IPFS Gateway timeout/error on Nodely, falling back to ipfs.io for: ${config.url}`);
+        config.url = config.url.replace("https://ipfs.algonode.xyz/ipfs/", "https://ipfs.io/ipfs/");
+        return axios(config);
+      }
+    }
+    return Promise.reject(error);
+  }
+);
 
 function App() {
   return (
