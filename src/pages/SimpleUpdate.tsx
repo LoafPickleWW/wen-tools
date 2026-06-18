@@ -177,16 +177,6 @@ export function SimpleUpdate() {
       } else if (assetFormat === "ARC69") {
         const arc69 = new Arc69();
         assetMetadata = await arc69.fetch(Number(assetID), activeNetwork);
-        if (assetMetadata.attributes && !assetMetadata.properties) {
-          assetMetadata.properties = assetMetadata.attributes;
-          delete assetMetadata.attributes;
-          assetMetadata.properties = assetMetadata.properties.reduce(
-            (obj: any, item: any) => {
-              obj[item.trait_type] = item.value;
-              return obj;
-            }
-          );
-        }
       } else if (assetFormat === "ARC3") {
         if (assetData.params["url"].startsWith("ipfs://")) {
           assetMetadata = await axios
@@ -201,16 +191,39 @@ export function SimpleUpdate() {
         // Token format - no complex metadata parsing
         assetMetadata = {};
       }
+
+      if (assetMetadata && assetMetadata.attributes && !assetMetadata.properties) {
+        assetMetadata.properties = assetMetadata.attributes;
+        delete assetMetadata.attributes;
+      }
+      
+      if (assetMetadata && Array.isArray(assetMetadata.properties)) {
+        assetMetadata.properties = assetMetadata.properties.reduce(
+          (obj: any, item: any) => {
+            if (item.trait_type) {
+              obj[item.trait_type] = item.value;
+            } else if (item.name && item.value) {
+              obj[item.name] = item.value;
+            }
+            return obj;
+          },
+          {}
+        );
+      }
+
       const metadata: any = {
         filters: [],
         traits: [],
         extras: [],
       };
 
-      if (assetMetadata.properties) {
+      if (assetMetadata && assetMetadata.properties) {
         for (const key in assetMetadata.properties) {
-          if (typeof assetMetadata.properties[key] === "object") {
+          if (typeof assetMetadata.properties[key] === "object" && assetMetadata.properties[key] !== null && !Array.isArray(assetMetadata.properties[key])) {
             for (const subKey in assetMetadata.properties[key]) {
+              if (metadata[key] === undefined) {
+                 metadata[key] = [];
+              }
               metadata[key][subKey] = assetMetadata.properties[key][subKey];
             }
           } else {
