@@ -11,8 +11,8 @@ import algosdk from "algosdk";
  */
 
 const FACTORY_APP_IDS: Record<string, number> = {
-  mainnet: Number(process.env.FACTORY_APP_ID_MAINNET || 3562772718),
-  testnet: Number(process.env.FACTORY_APP_ID_TESTNET || 762783309),
+  mainnet: Number(process.env.FACTORY_APP_ID_MAINNET || process.env.VITE_FACTORY_APP_ID_MAINNET || 3565950332),
+  testnet: Number(process.env.FACTORY_APP_ID_TESTNET || process.env.VITE_FACTORY_APP_ID_TESTNET || 762952995),
 };
 
 const INDEXER_URLS: Record<string, string> = {
@@ -118,7 +118,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 console.error(`Failed to encode Algorand address for key "${key}":`, e);
               }
             }
-            return val.toString("utf-8");
+            return Buffer.from(val).toString("utf-8");
           }
           return "";
         };
