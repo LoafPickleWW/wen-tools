@@ -27,6 +27,8 @@ import {
 import {
   isValidEthAddress,
   fetchNFTsByContract,
+  fetchNFTsByOwnerForContract,
+  isSharedContract,
   resolveEthMetadata,
   type ResolvedEthNFT,
   type EthNetwork,
@@ -119,6 +121,7 @@ export function NFTImportTool() {
 
   // Ethereum-specific
   const [ethContractAddress, setEthContractAddress] = useState("");
+  const [ethOwnerAddress, setEthOwnerAddress] = useState("");
   const [ethNetwork, setEthNetwork] = useState<EthNetwork>("mainnet");
   const [alchemyApiKey, setAlchemyApiKey] = useState((import.meta.env.VITE_ALCHEMY_API_KEY as string) || "");
 
@@ -302,10 +305,36 @@ export function NFTImportTool() {
         if (!isValidEthAddress(ethContractAddress.trim())) { toast.error("Invalid Ethereum address. Must start with 0x followed by 40 hex chars."); setStep("input"); return; }
         if (!alchemyApiKey.trim()) { toast.error("Ethereum import is not configured. Please define VITE_ALCHEMY_API_KEY in your env variables."); setStep("input"); return; }
 
-        toast.info("Scanning Ethereum for NFTs via Alchemy...");
-        const rawNfts = await fetchNFTsByContract(ethContractAddress.trim(), alchemyApiKey.trim(), ethNetwork, (count) => setScanProgress(count));
+        // Detect shared / universal contracts (e.g. OpenSea Shared Storefront)
+        const sharedLabel = isSharedContract(ethContractAddress.trim());
+        const hasOwnerFilter = ethOwnerAddress.trim() !== "";
 
-        if (rawNfts.length === 0) { toast.warning("No NFTs found for this contract"); setStep("input"); return; }
+        // If it's a shared contract, require the owner wallet
+        if (sharedLabel && !hasOwnerFilter) {
+          toast.error(`This is a shared contract (${sharedLabel}). Please enter your ETH Wallet Address to filter your NFTs.`);
+          setStep("input");
+          return;
+        }
+
+        // Validate owner address if provided
+        if (hasOwnerFilter && !isValidEthAddress(ethOwnerAddress.trim())) {
+          toast.error("Invalid ETH Wallet Address. Must start with 0x followed by 40 hex chars.");
+          setStep("input");
+          return;
+        }
+
+        let rawNfts;
+        if (hasOwnerFilter) {
+          // Use getNFTsForOwner filtered by contract — works for shared contracts
+          toast.info(`Scanning NFTs owned by ${ethOwnerAddress.trim().slice(0, 10)}… on contract ${ethContractAddress.trim().slice(0, 10)}…`);
+          rawNfts = await fetchNFTsByOwnerForContract(ethOwnerAddress.trim(), ethContractAddress.trim(), alchemyApiKey.trim(), ethNetwork, (count) => setScanProgress(count));
+        } else {
+          // Standard contract scan
+          toast.info("Scanning Ethereum for NFTs via Alchemy...");
+          rawNfts = await fetchNFTsByContract(ethContractAddress.trim(), alchemyApiKey.trim(), ethNetwork, (count) => setScanProgress(count));
+        }
+
+        if (rawNfts.length === 0) { toast.warning(hasOwnerFilter ? "No NFTs found for this wallet on this contract" : "No NFTs found for this contract"); setStep("input"); return; }
         setTotalScanned(rawNfts.length);
 
         const start = Math.max(0, parseInt(startIndex, 10) || 0);
@@ -370,7 +399,7 @@ export function NFTImportTool() {
       toast.error(errMsg);
       setStep("input");
     }
-  }, [sourceChain, xrpAddress, taxonId, startIndex, endIndex, xrplNetwork, cardanoPolicyId, cardanoNetwork, ethContractAddress, ethNetwork, alchemyApiKey, voiContractId]);
+  }, [sourceChain, xrpAddress, taxonId, startIndex, endIndex, xrplNetwork, cardanoPolicyId, cardanoNetwork, ethContractAddress, ethOwnerAddress, ethNetwork, alchemyApiKey, voiContractId]);
 
   const handleDownloadVoiTraitsCsv = useCallback(async () => {
     const input = voiTraitInput.trim();
@@ -1057,16 +1086,62 @@ export function NFTImportTool() {
 
             {/* ── Ethereum-specific inputs ── */}
             {sourceChain === "ethereum" && (
-              <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-6">
-                <label className="block text-sm font-semibold text-gray-300 mb-2">NFT Contract Address</label>
-                <p className="text-xs text-gray-500 mb-3">
-                  Ethereum groups NFTs by contract address (the deployed ERC-721 or ERC-1155 smart contract).
-                  Supports both <span className="text-purple-400 font-medium">ERC-721</span> (unique 1/1 tokens) and <span className="text-purple-400 font-medium">ERC-1155</span> (multi-token, can be NFT when supply=1).
-                  ERC-721 metadata can be immutable (IPFS) or mutable (HTTP tokenURI).
-                </p>
-                <input type="text" value={ethContractAddress} onChange={(e) => setEthContractAddress(e.target.value)} placeholder="0x..."
-                  className="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-purple-500/50 transition font-mono text-sm" />
-              </div>
+              <>
+                <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-6">
+                  <label className="block text-sm font-semibold text-gray-300 mb-2">NFT Contract Address</label>
+                  <p className="text-xs text-gray-500 mb-3">
+                    Ethereum groups NFTs by contract address (the deployed ERC-721 or ERC-1155 smart contract).
+                    Supports both <span className="text-purple-400 font-medium">ERC-721</span> (unique 1/1 tokens) and <span className="text-purple-400 font-medium">ERC-1155</span> (multi-token, can be NFT when supply=1).
+                    ERC-721 metadata can be immutable (IPFS) or mutable (HTTP tokenURI).
+                  </p>
+                  <input type="text" value={ethContractAddress} onChange={(e) => setEthContractAddress(e.target.value)} placeholder="0x..."
+                    className="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-purple-500/50 transition font-mono text-sm" />
+                </div>
+
+                {/* Shared contract warning + Owner wallet filter */}
+                {(() => {
+                  const sharedLabel = ethContractAddress.trim() ? isSharedContract(ethContractAddress.trim()) : null;
+                  return (
+                    <>
+                      {sharedLabel && (
+                        <div className="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-5 animate-fadeIn">
+                          <div className="flex items-start gap-3">
+                            <div className="w-8 h-8 bg-amber-500/20 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
+                              <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                              </svg>
+                            </div>
+                            <div>
+                              <p className="text-sm font-semibold text-amber-400 mb-1">Shared / Universal Contract Detected</p>
+                              <p className="text-xs text-amber-300/70 leading-relaxed">
+                                This is the <span className="font-semibold text-amber-300">{sharedLabel}</span> — a universal contract used by millions of creators.
+                                Scanning the entire contract is not possible. Please enter your <span className="font-semibold text-amber-300">ETH wallet address</span> below
+                                to filter and retrieve only the NFTs you own.
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-6">
+                        <label className="block text-sm font-semibold text-gray-300 mb-2">
+                          ETH Wallet Address {sharedLabel ? <span className="text-amber-400 font-normal">(required for shared contracts)</span> : <span className="text-gray-500 font-normal">(optional — filter by owner)</span>}
+                        </label>
+                        <p className="text-xs text-gray-500 mb-3">
+                          {sharedLabel
+                            ? "Enter the wallet address that owns or minted the NFTs you want to import from this shared contract."
+                            : "Optionally enter a wallet address to only import NFTs owned by that wallet. Useful for large collections or shared contracts."
+                          }
+                        </p>
+                        <input type="text" value={ethOwnerAddress} onChange={(e) => setEthOwnerAddress(e.target.value)} placeholder="0x... (your ETH wallet address)"
+                          className={`w-full bg-black/30 border rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none transition font-mono text-sm ${
+                            sharedLabel ? "border-amber-500/30 focus:border-amber-500/50" : "border-white/10 focus:border-purple-500/50"
+                          }`} />
+                      </div>
+                    </>
+                  );
+                })()}
+              </>
             )}
 
             {/* ── Voi-specific inputs ── */}
@@ -1389,7 +1464,7 @@ export function NFTImportTool() {
                 </button>
                 <button onClick={() => {
                   setStep("input");
-                  setXrpAddress(""); setTaxonId(""); setCardanoPolicyId(""); setEthContractAddress(""); setAlchemyApiKey((import.meta.env.VITE_ALCHEMY_API_KEY as string) || ""); setVoiContractId("");
+                  setXrpAddress(""); setTaxonId(""); setCardanoPolicyId(""); setEthContractAddress(""); setEthOwnerAddress(""); setAlchemyApiKey((import.meta.env.VITE_ALCHEMY_API_KEY as string) || ""); setVoiContractId("");
                   setStartIndex("0"); setEndIndex("500");
                   setUnifiedNFTs([]); setSelectedNFTs(new Set()); setMintedAssets([]); setTotalScanned(0);
                 }}

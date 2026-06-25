@@ -43,6 +43,7 @@
  * Alchemy Endpoints Used
  * ──────────────────────
  * • GET /nft/v3/{key}/getNFTsForContract  → paginated list of NFTs + metadata
+ * • GET /nft/v3/{key}/getNFTsForOwner     → NFTs owned by a wallet (filtered by contract)
  * • GET /nft/v3/{key}/getNFTMetadata      → single-token metadata lookup
  *
  * The free tier includes 30 million compute units/month with 25 req/sec.
@@ -101,11 +102,27 @@ const ALCHEMY_NETWORK_MAP: Record<EthNetwork, string> = {
   goerli: "eth-goerli",
 };
 
+/**
+ * Well-known shared / universal contracts where millions of creators mint
+ * under a single contract address. Querying all NFTs from these contracts
+ * is impractical — users must supply their own wallet address to filter.
+ */
+export const KNOWN_SHARED_CONTRACTS: Record<string, string> = {
+  "0x495f947276749ce646f68ac8c248420045cb7b5e": "OpenSea Shared Storefront (ERC-1155)",
+  "0x2953399124f0cbb46d2cbacd8a89cf0599974963": "OpenSea Shared Storefront (Polygon)",
+  "0xf4910c763ed4e47a585e2d34baa9a4b611ae1e62": "OpenSea Shared Storefront V2",
+};
+
+/** Check if a contract address is a known shared / universal contract. */
+export function isSharedContract(address: string): string | null {
+  return KNOWN_SHARED_CONTRACTS[address.trim().toLowerCase()] || null;
+}
+
 // ── Helpers ────────────────────────────────────────────────────────────────
 
 /** Validate an Ethereum address – 0x followed by 40 hex chars. */
 export function isValidEthAddress(addr: string): boolean {
-  return /^0x[0-9a-fA-F]{40}$/.test(addr.trim());
+  return /^0x[0-9a-fA-F]{40}$/i.test(addr.trim());
 }
 
 /** Resolve an IPFS URI to a public gateway. */
@@ -190,6 +207,75 @@ export async function fetchNFTsByContract(
 
     const data = await res.json();
     const nfts: EthNFTRaw[] = data.nfts || [];
+
+    allNFTs.push(...nfts);
+    onProgress?.(allNFTs.length);
+
+    pageKey = data.pageKey;
+    if (!pageKey || nfts.length === 0) break;
+  }
+
+  return allNFTs;
+}
+
+/**
+ * Fetch NFTs owned by a specific wallet, filtered to a single contract.
+ *
+ * This is the solution for shared / universal contracts (e.g. OpenSea
+ * Shared Storefront `0x495f947276749Ce646f68AC8c248420045cb7b5e`) where
+ * scanning the entire contract is impractical (millions of tokens).
+ * Uses Alchemy's `getNFTsForOwner` with a `contractAddresses` filter
+ * so only the NFTs the user actually owns/minted are returned.
+ *
+ * @param ownerAddress     0x-prefixed wallet address of the creator/owner
+ * @param contractAddress  0x-prefixed shared contract to filter by
+ * @param alchemyApiKey    Free API key from dashboard.alchemy.com
+ * @param network          Ethereum network (defaults to mainnet)
+ * @param onProgress       Optional callback reporting how many NFTs found
+ */
+export async function fetchNFTsByOwnerForContract(
+  ownerAddress: string,
+  contractAddress: string,
+  alchemyApiKey: string,
+  network: EthNetwork = "mainnet",
+  onProgress?: (count: number) => void
+): Promise<EthNFTRaw[]> {
+  const chain = ALCHEMY_NETWORK_MAP[network];
+  const base = `https://${chain}.g.alchemy.com/nft/v3/${alchemyApiKey}`;
+  const allNFTs: EthNFTRaw[] = [];
+  let pageKey: string | undefined;
+
+  while (true) {
+    const params = new URLSearchParams({
+      owner: ownerAddress.trim(),
+      withMetadata: "true",
+      pageSize: "100",
+    });
+    // Filter to only the specific contract
+    params.append("contractAddresses[]", contractAddress.trim());
+    if (pageKey) params.set("pageKey", pageKey);
+
+    const res = await fetch(`${base}/getNFTsForOwner?${params.toString()}`);
+
+    if (!res.ok) {
+      const errText = await res.text();
+      if (res.status === 401 || res.status === 403) {
+        throw new Error("Invalid Alchemy API key. Get a free key at dashboard.alchemy.com");
+      }
+      throw new Error(`Alchemy API error (${res.status}): ${errText}`);
+    }
+
+    const data = await res.json();
+    const nfts: EthNFTRaw[] = (data.ownedNfts || []).map((n: any) => ({
+      tokenId: n.tokenId,
+      tokenType: n.tokenType || n.contract?.tokenType || "ERC721",
+      name: n.name || n.raw?.metadata?.name || "",
+      description: n.description || n.raw?.metadata?.description || "",
+      image: n.image || { cachedUrl: null, thumbnailUrl: null, pngUrl: null, originalUrl: null },
+      raw: n.raw || { metadata: null, tokenUri: null },
+      contract: n.contract || { address: contractAddress, name: null, symbol: null, tokenType: "ERC1155" },
+      balance: n.balance,
+    }));
 
     allNFTs.push(...nfts);
     onProgress?.(allNFTs.length);
