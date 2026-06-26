@@ -28,8 +28,11 @@ import {
   isValidEthAddress,
   fetchNFTsByContract,
   fetchNFTsByOwnerForContract,
+  fetchAllNFTsForOwner,
+  fetchNFTsByCreatorOnSharedContract,
   isSharedContract,
   resolveEthMetadata,
+  fetchNFTsFromOpenSea,
   type ResolvedEthNFT,
   type EthNetwork,
 } from "../utils/ethereumImport";
@@ -83,6 +86,33 @@ function extractTrailingNumber(name: string): number {
   return m ? parseInt(m[1], 10) : Number.MAX_SAFE_INTEGER;
 }
 
+function resolveDisplayUri(uri: string, contractAddress?: string): string {
+  if (!uri) return "";
+
+  // Rewrite dead i.seadn.io /gcs/files/ paths to working raw2.seadn.io contract-nested paths
+  if (uri.includes("i.seadn.io/gcs/files/")) {
+    const match = uri.match(/\/gcs\/files\/([a-f0-9]{32})\.([a-z0-9]+)/i);
+    if (match) {
+      const hash = match[1];
+      const ext = match[2];
+      const contract = contractAddress || "0x495f947276749ce646f68ac8c248420045cb7b5e";
+      return `https://raw2.seadn.io/ethereum/${contract.toLowerCase()}/${hash.substring(2)}/${hash}.${ext}`;
+    }
+  }
+
+  if (uri.startsWith("ipfs://")) {
+    const path = uri.slice(7);
+    if (path.startsWith("ipfs/")) {
+      return `https://ipfs.io/${path}`;
+    }
+    return `https://ipfs.io/ipfs/${path}`;
+  }
+  if (uri.startsWith("ar://")) {
+    return `https://arweave.net/${uri.slice(5)}`;
+  }
+  return uri;
+}
+
 function generalizeIpfsCid(cidOrPath: string, tokenId: string): string {
   if (!cidOrPath) return "";
   const parts = cidOrPath.split("/");
@@ -124,6 +154,8 @@ export function NFTImportTool() {
   const [ethOwnerAddress, setEthOwnerAddress] = useState("");
   const [ethNetwork, setEthNetwork] = useState<EthNetwork>("mainnet");
   const [alchemyApiKey, setAlchemyApiKey] = useState((import.meta.env.VITE_ALCHEMY_API_KEY as string) || "");
+  const [ethScanMode, setEthScanMode] = useState<"blockchain" | "opensea">("blockchain");
+  const [ethCollectionSlug, setEthCollectionSlug] = useState("");
 
   // Voi-specific
   const [voiContractId, setVoiContractId] = useState("");
@@ -301,53 +333,123 @@ export function NFTImportTool() {
 
       // ── ETHEREUM ──
       if (sourceChain === "ethereum") {
-        if (!ethContractAddress.trim()) { toast.error("Please enter an Ethereum contract address"); setStep("input"); return; }
-        if (!isValidEthAddress(ethContractAddress.trim())) { toast.error("Invalid Ethereum address. Must start with 0x followed by 40 hex chars."); setStep("input"); return; }
-        if (!alchemyApiKey.trim()) { toast.error("Ethereum import is not configured. Please define VITE_ALCHEMY_API_KEY in your env variables."); setStep("input"); return; }
+        let resolved: ResolvedEthNFT[] = [];
 
-        // Detect shared / universal contracts (e.g. OpenSea Shared Storefront)
-        const sharedLabel = isSharedContract(ethContractAddress.trim());
-        const hasOwnerFilter = ethOwnerAddress.trim() !== "";
+        if (ethScanMode === "opensea") {
+          if (!ethCollectionSlug.trim()) {
+            toast.error("Please enter an OpenSea Collection Slug");
+            setStep("input");
+            return;
+          }
+          toast.info("Scanning OpenSea Collection for NFTs (including lazy mints)...");
+          const allNfts = await fetchNFTsFromOpenSea(
+            ethCollectionSlug.trim(),
+            (count) => setScanProgress(count)
+          );
 
-        // If it's a shared contract, require the owner wallet
-        if (sharedLabel && !hasOwnerFilter) {
-          toast.error(`This is a shared contract (${sharedLabel}). Please enter your ETH Wallet Address to filter your NFTs.`);
-          setStep("input");
-          return;
-        }
+          if (allNfts.length === 0) {
+            toast.warning("No NFTs found for this collection slug on OpenSea.");
+            setStep("input");
+            return;
+          }
+          setTotalScanned(allNfts.length);
 
-        // Validate owner address if provided
-        if (hasOwnerFilter && !isValidEthAddress(ethOwnerAddress.trim())) {
-          toast.error("Invalid ETH Wallet Address. Must start with 0x followed by 40 hex chars.");
-          setStep("input");
-          return;
-        }
+          const start = Math.max(0, parseInt(startIndex, 10) || 0);
+          const end = endIndex.trim() !== "" ? Math.max(start, parseInt(endIndex, 10)) : allNfts.length;
+          resolved = allNfts.slice(start, end);
+          if (resolved.length === 0) {
+            toast.warning(`No NFTs found within range ${start} to ${end}`);
+            setStep("input");
+            return;
+          }
 
-        let rawNfts;
-        if (hasOwnerFilter) {
-          // Use getNFTsForOwner filtered by contract — works for shared contracts
-          toast.info(`Scanning NFTs owned by ${ethOwnerAddress.trim().slice(0, 10)}… on contract ${ethContractAddress.trim().slice(0, 10)}…`);
-          rawNfts = await fetchNFTsByOwnerForContract(ethOwnerAddress.trim(), ethContractAddress.trim(), alchemyApiKey.trim(), ethNetwork, (count) => setScanProgress(count));
+          // OpenSea already has fully resolved metadata
+          unified = unifyEth(resolved);
         } else {
-          // Standard contract scan
-          toast.info("Scanning Ethereum for NFTs via Alchemy...");
-          rawNfts = await fetchNFTsByContract(ethContractAddress.trim(), alchemyApiKey.trim(), ethNetwork, (count) => setScanProgress(count));
+          if (!ethContractAddress.trim()) { toast.error("Please enter an Ethereum contract address"); setStep("input"); return; }
+          if (!isValidEthAddress(ethContractAddress.trim())) { toast.error("Invalid Ethereum address. Must start with 0x followed by 40 hex chars."); setStep("input"); return; }
+          if (!alchemyApiKey.trim()) { toast.error("Ethereum import is not configured. Please define VITE_ALCHEMY_API_KEY in your env variables."); setStep("input"); return; }
+
+          // Detect shared / universal contracts (e.g. OpenSea Shared Storefront)
+          const sharedLabel = isSharedContract(ethContractAddress.trim());
+          const hasWalletFilter = ethOwnerAddress.trim() !== "";
+
+          // If it's a shared contract, require the wallet address
+          if (sharedLabel && !hasWalletFilter) {
+            toast.error(`This is a shared contract (${sharedLabel}). Please enter the creator's ETH wallet address.`);
+            setStep("input");
+            return;
+          }
+
+          // Validate wallet address if provided
+          if (hasWalletFilter && !isValidEthAddress(ethOwnerAddress.trim())) {
+            toast.error("Invalid ETH Wallet Address. Must start with 0x followed by 40 hex chars.");
+            setStep("input");
+            return;
+          }
+
+          let rawNfts;
+          if (sharedLabel && hasWalletFilter) {
+            // SHARED CONTRACT: Scan by creator address encoded in token IDs
+            // This finds NFTs the creator minted even if they've been sold/transferred
+            toast.info(`Scanning for NFTs created by ${ethOwnerAddress.trim().slice(0, 10)}… on ${sharedLabel}…`);
+            rawNfts = await fetchNFTsByCreatorOnSharedContract(ethOwnerAddress.trim(), ethContractAddress.trim(), alchemyApiKey.trim(), ethNetwork, (count) => setScanProgress(count));
+
+            if (rawNfts.length === 0) {
+              toast.warning("No NFTs found created by this wallet on the shared contract. Verify the creator wallet address is correct.", { autoClose: 8000 });
+              setStep("input");
+              return;
+            }
+          } else if (hasWalletFilter) {
+            // NORMAL CONTRACT: Scan wallet for owned NFTs, filter by contract
+            toast.info(`Scanning wallet ${ethOwnerAddress.trim().slice(0, 10)}… for NFTs…`);
+            rawNfts = await fetchNFTsByOwnerForContract(ethOwnerAddress.trim(), ethContractAddress.trim(), alchemyApiKey.trim(), ethNetwork, (count) => setScanProgress(count));
+
+            if (rawNfts.length === 0) {
+              const allWalletNfts = await fetchAllNFTsForOwner(ethOwnerAddress.trim(), alchemyApiKey.trim(), ethNetwork);
+              if (allWalletNfts.length === 0) {
+                toast.warning("This wallet doesn't hold any NFTs on Ethereum.");
+              } else {
+                const contractMap = new Map<string, { name: string; count: number }>();
+                allWalletNfts.forEach((n) => {
+                  const addr = n.contract.address.toLowerCase();
+                  const existing = contractMap.get(addr);
+                  if (existing) { existing.count++; }
+                  else { contractMap.set(addr, { name: n.contract.name || "Unknown", count: 1 }); }
+                });
+                const topContracts = Array.from(contractMap.entries())
+                  .sort((a, b) => b[1].count - a[1].count)
+                  .slice(0, 5)
+                  .map(([addr, info]) => `${info.name} (${addr.slice(0, 8)}…): ${info.count}`)
+                  .join(", ");
+                toast.warning(
+                  `Wallet has ${allWalletNfts.length} NFTs but none on the specified contract. Found NFTs on: ${topContracts}`,
+                  { autoClose: 12000 }
+                );
+              }
+              setStep("input");
+              return;
+            }
+          } else {
+            // Standard contract scan (no wallet filter)
+            toast.info("Scanning Ethereum for NFTs via Alchemy...");
+            rawNfts = await fetchNFTsByContract(ethContractAddress.trim(), alchemyApiKey.trim(), ethNetwork, (count) => setScanProgress(count));
+            if (rawNfts.length === 0) { toast.warning("No NFTs found for this contract"); setStep("input"); return; }
+          }
+          setTotalScanned(rawNfts.length);
+
+          const start = Math.max(0, parseInt(startIndex, 10) || 0);
+          const end = endIndex.trim() !== "" ? Math.max(start, parseInt(endIndex, 10)) : rawNfts.length;
+          const slicedNfts = rawNfts.slice(start, end);
+          if (slicedNfts.length === 0) { toast.warning(`No NFTs found within range ${start} to ${end}`); setStep("input"); return; }
+
+          toast.info(`Found ${rawNfts.length} NFTs. Resolving metadata for range ${start} to ${start + slicedNfts.length}...`);
+          setStep("resolving");
+          setResolveProgress({ done: 0, total: slicedNfts.length });
+
+          resolved = await resolveEthMetadata(slicedNfts, (done, total) => setResolveProgress({ done, total }));
+          unified = unifyEth(resolved);
         }
-
-        if (rawNfts.length === 0) { toast.warning(hasOwnerFilter ? "No NFTs found for this wallet on this contract" : "No NFTs found for this contract"); setStep("input"); return; }
-        setTotalScanned(rawNfts.length);
-
-        const start = Math.max(0, parseInt(startIndex, 10) || 0);
-        const end = endIndex.trim() !== "" ? Math.max(start, parseInt(endIndex, 10)) : rawNfts.length;
-        const slicedNfts = rawNfts.slice(start, end);
-        if (slicedNfts.length === 0) { toast.warning(`No NFTs found within range ${start} to ${end}`); setStep("input"); return; }
-
-        toast.info(`Found ${rawNfts.length} NFTs. Resolving metadata for range ${start} to ${start + slicedNfts.length}...`);
-        setStep("resolving");
-        setResolveProgress({ done: 0, total: slicedNfts.length });
-
-        const resolved = await resolveEthMetadata(slicedNfts, (done, total) => setResolveProgress({ done, total }));
-        unified = unifyEth(resolved);
       }
 
       // ── VOI ──
@@ -399,7 +501,7 @@ export function NFTImportTool() {
       toast.error(errMsg);
       setStep("input");
     }
-  }, [sourceChain, xrpAddress, taxonId, startIndex, endIndex, xrplNetwork, cardanoPolicyId, cardanoNetwork, ethContractAddress, ethOwnerAddress, ethNetwork, alchemyApiKey, voiContractId]);
+  }, [sourceChain, xrpAddress, taxonId, startIndex, endIndex, xrplNetwork, cardanoPolicyId, cardanoNetwork, ethContractAddress, ethOwnerAddress, ethNetwork, alchemyApiKey, voiContractId, ethScanMode, ethCollectionSlug]);
 
   const handleDownloadVoiTraitsCsv = useCallback(async () => {
     const input = voiTraitInput.trim();
@@ -1087,60 +1189,109 @@ export function NFTImportTool() {
             {/* ── Ethereum-specific inputs ── */}
             {sourceChain === "ethereum" && (
               <>
-                <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-6">
-                  <label className="block text-sm font-semibold text-gray-300 mb-2">NFT Contract Address</label>
-                  <p className="text-xs text-gray-500 mb-3">
-                    Ethereum groups NFTs by contract address (the deployed ERC-721 or ERC-1155 smart contract).
-                    Supports both <span className="text-purple-400 font-medium">ERC-721</span> (unique 1/1 tokens) and <span className="text-purple-400 font-medium">ERC-1155</span> (multi-token, can be NFT when supply=1).
-                    ERC-721 metadata can be immutable (IPFS) or mutable (HTTP tokenURI).
-                  </p>
-                  <input type="text" value={ethContractAddress} onChange={(e) => setEthContractAddress(e.target.value)} placeholder="0x..."
-                    className="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-purple-500/50 transition font-mono text-sm" />
+                {/* Scan Mode Toggle */}
+                <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-6 animate-fadeIn">
+                  <label className="block text-sm font-semibold text-gray-300 mb-3">Scan Mode</label>
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => setEthScanMode("blockchain")}
+                      className={`flex-1 px-4 py-3 rounded-xl text-xs font-bold transition-all ${
+                        ethScanMode === "blockchain"
+                          ? "bg-purple-500/20 border-2 border-purple-500 text-purple-400"
+                          : "bg-white/5 border border-white/10 text-gray-400 hover:border-white/20"
+                      }`}
+                    >
+                      ⛓️ Blockchain Scan (Alchemy)
+                    </button>
+                    <button
+                      onClick={() => setEthScanMode("opensea")}
+                      className={`flex-1 px-4 py-3 rounded-xl text-xs font-bold transition-all ${
+                        ethScanMode === "opensea"
+                          ? "bg-purple-500/20 border-2 border-purple-500 text-purple-400"
+                          : "bg-white/5 border border-white/10 text-gray-400 hover:border-white/20"
+                      }`}
+                    >
+                      ⛵ OpenSea Collection (Lazy Mints)
+                    </button>
+                  </div>
                 </div>
 
-                {/* Shared contract warning + Owner wallet filter */}
-                {(() => {
-                  const sharedLabel = ethContractAddress.trim() ? isSharedContract(ethContractAddress.trim()) : null;
-                  return (
-                    <>
-                      {sharedLabel && (
-                        <div className="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-5 animate-fadeIn">
-                          <div className="flex items-start gap-3">
-                            <div className="w-8 h-8 bg-amber-500/20 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
-                              <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                              </svg>
-                            </div>
-                            <div>
-                              <p className="text-sm font-semibold text-amber-400 mb-1">Shared / Universal Contract Detected</p>
-                              <p className="text-xs text-amber-300/70 leading-relaxed">
-                                This is the <span className="font-semibold text-amber-300">{sharedLabel}</span> — a universal contract used by millions of creators.
-                                Scanning the entire contract is not possible. Please enter your <span className="font-semibold text-amber-300">ETH wallet address</span> below
-                                to filter and retrieve only the NFTs you own.
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-                      )}
+                {ethScanMode === "opensea" ? (
+                  <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-6 animate-fadeIn">
+                    <label className="block text-sm font-semibold text-gray-300 mb-2">OpenSea Collection Slug</label>
+                    <p className="text-xs text-gray-500 mb-3">
+                      Enter the collection slug from the OpenSea URL (e.g. <code>d3ath5t4r-you-are-a-flower</code> from <code>https://opensea.io/collection/d3ath5t4r-you-are-a-flower</code>).
+                      This fetches all 141 NFTs in the collection directly via OpenSea's API (including lazy-minted, off-chain items).
+                    </p>
+                    <input
+                      type="text"
+                      value={ethCollectionSlug}
+                      onChange={(e) => setEthCollectionSlug(e.target.value)}
+                      placeholder="e.g. d3ath5t4r-you-are-a-flower"
+                      className="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-purple-500/50 transition font-mono text-sm"
+                    />
+                  </div>
+                ) : (
+                  <>
+                    <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-6 animate-fadeIn">
+                      <label className="block text-sm font-semibold text-gray-300 mb-2">NFT Contract Address</label>
+                      <p className="text-xs text-gray-500 mb-3">
+                        Ethereum groups NFTs by contract address (the deployed ERC-721 or ERC-1155 smart contract).
+                        Supports both <span className="text-purple-400 font-medium">ERC-721</span> (unique 1/1 tokens) and <span className="text-purple-400 font-medium">ERC-1155</span> (multi-token, can be NFT when supply=1).
+                        ERC-721 metadata can be immutable (IPFS) or mutable (HTTP tokenURI).
+                      </p>
+                      <input type="text" value={ethContractAddress} onChange={(e) => setEthContractAddress(e.target.value)} placeholder="0x..."
+                        className="w-full bg-black/30 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-purple-500/50 transition font-mono text-sm" />
+                    </div>
 
-                      <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-6">
-                        <label className="block text-sm font-semibold text-gray-300 mb-2">
-                          ETH Wallet Address {sharedLabel ? <span className="text-amber-400 font-normal">(required for shared contracts)</span> : <span className="text-gray-500 font-normal">(optional — filter by owner)</span>}
-                        </label>
-                        <p className="text-xs text-gray-500 mb-3">
-                          {sharedLabel
-                            ? "Enter the wallet address that owns or minted the NFTs you want to import from this shared contract."
-                            : "Optionally enter a wallet address to only import NFTs owned by that wallet. Useful for large collections or shared contracts."
-                          }
-                        </p>
-                        <input type="text" value={ethOwnerAddress} onChange={(e) => setEthOwnerAddress(e.target.value)} placeholder="0x... (your ETH wallet address)"
-                          className={`w-full bg-black/30 border rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none transition font-mono text-sm ${
-                            sharedLabel ? "border-amber-500/30 focus:border-amber-500/50" : "border-white/10 focus:border-purple-500/50"
-                          }`} />
-                      </div>
-                    </>
-                  );
-                })()}
+                    {/* Shared contract warning + Owner wallet filter */}
+                    {(() => {
+                      const sharedLabel = ethContractAddress.trim() ? isSharedContract(ethContractAddress.trim()) : null;
+                      return (
+                        <>
+                          {sharedLabel && (
+                            <div className="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-5 animate-fadeIn">
+                              <div className="flex items-start gap-3">
+                                <div className="w-8 h-8 bg-amber-500/20 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
+                                  <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                  </svg>
+                                </div>
+                                <div>
+                                  <p className="text-sm font-semibold text-amber-400 mb-1">Shared / Universal Contract Detected</p>
+                                  <p className="text-xs text-amber-300/70 leading-relaxed">
+                                    This is the <span className="font-semibold text-amber-300">{sharedLabel}</span> — a universal contract used by millions of creators.
+                                    Enter the <span className="font-semibold text-amber-300">creator's wallet address</span> below to find all NFTs they minted on this contract,
+                                    even if they've been sold or transferred to other wallets.
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+
+                          <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-6 animate-fadeIn">
+                            <label className="block text-sm font-semibold text-gray-300 mb-2">
+                              {sharedLabel
+                                ? <>Creator Wallet Address <span className="text-amber-400 font-normal">(required for shared contracts)</span></>
+                                : <>ETH Wallet Address <span className="text-gray-500 font-normal">(optional — filter by owner)</span></>
+                              }
+                            </label>
+                            <p className="text-xs text-gray-500 mb-3">
+                              {sharedLabel
+                                ? "Enter the wallet address that created/minted the NFTs. This scans by creator, so it finds NFTs even after they've been sold or transferred."
+                                : "Optionally enter a wallet address to only import NFTs owned by that wallet. Useful for large collections."
+                              }
+                            </p>
+                            <input type="text" value={ethOwnerAddress} onChange={(e) => setEthOwnerAddress(e.target.value)} placeholder={sharedLabel ? "0x... (creator wallet address)" : "0x... (owner wallet address)"}
+                              className={`w-full bg-black/30 border rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none transition font-mono text-sm ${
+                                sharedLabel ? "border-amber-500/30 focus:border-amber-500/50" : "border-white/10 focus:border-purple-500/50"
+                              }`} />
+                          </div>
+                        </>
+                      );
+                    })()}
+                  </>
+                )}
               </>
             )}
 
@@ -1343,7 +1494,7 @@ export function NFTImportTool() {
                     )}
                     <div className="aspect-square bg-white/5 overflow-hidden">
                       {nft.imageResolved ? (
-                        <img src={nft.image} alt={nft.name} className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" loading="lazy"
+                        <img src={resolveDisplayUri(nft.image, nft._eth?.contract_address)} alt={nft.name} className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" loading="lazy"
                           onError={(e) => { (e.target as HTMLImageElement).src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Crect fill='%23222' width='200' height='200'/%3E%3Ctext x='50%25' y='50%25' fill='%23666' text-anchor='middle' dy='.3em' font-size='14'%3ENo Image%3C/text%3E%3C/svg%3E"; }} />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center text-gray-600 text-xs">No Image</div>

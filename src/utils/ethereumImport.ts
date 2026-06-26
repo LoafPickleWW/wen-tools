@@ -137,32 +137,50 @@ function resolveIpfsUri(uri: string): string {
   return uri;
 }
 
+function rewriteDeadSeadnUrl(url: string, contractAddress: string): string {
+  if (!url) return "";
+  if (url.includes("i.seadn.io/gcs/files/")) {
+    const match = url.match(/\/gcs\/files\/([a-f0-9]{32})\.([a-z0-9]+)/i);
+    if (match) {
+      const hash = match[1];
+      const ext = match[2];
+      return `https://raw2.seadn.io/ethereum/${contractAddress.toLowerCase()}/${hash.substring(2)}/${hash}.${ext}`;
+    }
+  }
+  return url;
+}
+
 /** Pick the best available image URL from Alchemy's response. */
 function pickBestImage(nft: EthNFTRaw): string {
   const img = nft.image;
   const meta = nft.raw?.metadata;
+  const contract = nft.contract.address;
 
-  // Prefer original IPFS or Arweave links if they exist
-  if (img.originalUrl && (img.originalUrl.startsWith("ipfs://") || img.originalUrl.includes("ipfs") || img.originalUrl.startsWith("ar://"))) {
-    return img.originalUrl;
-  }
-  if (meta?.image && (typeof meta.image === "string") && (meta.image.startsWith("ipfs://") || meta.image.includes("ipfs") || meta.image.startsWith("ar://"))) {
-    return meta.image;
-  }
-  if (meta?.image_url && (typeof meta.image_url === "string") && (meta.image_url.startsWith("ipfs://") || meta.image_url.includes("ipfs") || meta.image_url.startsWith("ar://"))) {
-    return meta.image_url;
-  }
+  const getBest = () => {
+    // Prefer original IPFS or Arweave links if they exist
+    if (img.originalUrl && (img.originalUrl.startsWith("ipfs://") || img.originalUrl.includes("ipfs") || img.originalUrl.startsWith("ar://"))) {
+      return img.originalUrl;
+    }
+    if (meta?.image && (typeof meta.image === "string") && (meta.image.startsWith("ipfs://") || meta.image.includes("ipfs") || meta.image.startsWith("ar://"))) {
+      return meta.image;
+    }
+    if (meta?.image_url && (typeof meta.image_url === "string") && (meta.image_url.startsWith("ipfs://") || meta.image_url.includes("ipfs") || meta.image_url.startsWith("ar://"))) {
+      return meta.image_url;
+    }
 
-  // Fallbacks:
-  if (img.cachedUrl) return img.cachedUrl;
-  if (img.pngUrl) return img.pngUrl;
-  if (img.thumbnailUrl) return img.thumbnailUrl;
-  if (img.originalUrl) return resolveIpfsUri(img.originalUrl);
-  if (meta?.image) return resolveIpfsUri(meta.image);
-  if (meta?.image_url) return resolveIpfsUri(meta.image_url);
-  if (meta?.animation_url) return resolveIpfsUri(meta.animation_url);
+    // Fallbacks:
+    if (img.cachedUrl) return img.cachedUrl;
+    if (img.pngUrl) return img.pngUrl;
+    if (img.thumbnailUrl) return img.thumbnailUrl;
+    if (img.originalUrl) return resolveIpfsUri(img.originalUrl);
+    if (meta?.image) return resolveIpfsUri(meta.image);
+    if (meta?.image_url) return resolveIpfsUri(meta.image_url);
+    if (meta?.animation_url) return resolveIpfsUri(meta.animation_url);
 
-  return "";
+    return "";
+  };
+
+  return rewriteDeadSeadnUrl(getBest(), contract);
 }
 
 // ── API Functions ──────────────────────────────────────────────────────────
@@ -219,16 +237,78 @@ export async function fetchNFTsByContract(
 }
 
 /**
+ * Fetch ALL NFTs owned by a wallet (no contract filter).
+ * Used to scan the wallet broadly and then filter client-side.
+ *
+ * @param ownerAddress   0x-prefixed wallet address
+ * @param alchemyApiKey  Free API key from dashboard.alchemy.com
+ * @param network        Ethereum network (defaults to mainnet)
+ * @param onProgress     Optional callback reporting how many NFTs found
+ */
+export async function fetchAllNFTsForOwner(
+  ownerAddress: string,
+  alchemyApiKey: string,
+  network: EthNetwork = "mainnet",
+  onProgress?: (count: number) => void
+): Promise<EthNFTRaw[]> {
+  const chain = ALCHEMY_NETWORK_MAP[network];
+  const base = `https://${chain}.g.alchemy.com/nft/v3/${alchemyApiKey}`;
+  const allNFTs: EthNFTRaw[] = [];
+  let pageKey: string | undefined;
+
+  while (true) {
+    let url = `${base}/getNFTsForOwner?owner=${encodeURIComponent(ownerAddress.trim())}&withMetadata=true&pageSize=100`;
+    if (pageKey) url += `&pageKey=${encodeURIComponent(pageKey)}`;
+
+    console.log("[ETH Import] getNFTsForOwner URL:", url.replace(alchemyApiKey, "***"));
+
+    const res = await fetch(url);
+
+    if (!res.ok) {
+      const errText = await res.text();
+      console.error("[ETH Import] API error:", res.status, errText);
+      if (res.status === 401 || res.status === 403) {
+        throw new Error("Invalid Alchemy API key. Get a free key at dashboard.alchemy.com");
+      }
+      throw new Error(`Alchemy API error (${res.status}): ${errText}`);
+    }
+
+    const data = await res.json();
+    console.log("[ETH Import] Response — ownedNfts count:", data.ownedNfts?.length ?? 0, "totalCount:", data.totalCount ?? "N/A");
+
+    const rawNfts = data.ownedNfts || [];
+    const nfts: EthNFTRaw[] = rawNfts.map((n: any) => ({
+      tokenId: n.tokenId,
+      tokenType: n.tokenType || n.contract?.tokenType || "ERC721",
+      name: n.name || n.raw?.metadata?.name || "",
+      description: n.description || n.raw?.metadata?.description || "",
+      image: n.image || { cachedUrl: null, thumbnailUrl: null, pngUrl: null, originalUrl: null },
+      raw: n.raw || { metadata: null, tokenUri: null },
+      contract: n.contract || { address: "", name: null, symbol: null, tokenType: "ERC721" },
+      balance: n.balance,
+    }));
+
+    allNFTs.push(...nfts);
+    onProgress?.(allNFTs.length);
+
+    pageKey = data.pageKey;
+    if (!pageKey || rawNfts.length === 0) break;
+  }
+
+  console.log("[ETH Import] Total NFTs fetched for owner:", allNFTs.length);
+  return allNFTs;
+}
+
+/**
  * Fetch NFTs owned by a specific wallet, filtered to a single contract.
  *
- * This is the solution for shared / universal contracts (e.g. OpenSea
- * Shared Storefront `0x495f947276749Ce646f68AC8c248420045cb7b5e`) where
- * scanning the entire contract is impractical (millions of tokens).
- * Uses Alchemy's `getNFTsForOwner` with a `contractAddresses` filter
- * so only the NFTs the user actually owns/minted are returned.
+ * Scans the wallet for ALL NFTs first (using getNFTsForOwner without
+ * contract filters to avoid API encoding quirks), then filters client-side
+ * by the target contract address. If 0 results match, logs which contracts
+ * the wallet actually holds NFTs on for debugging.
  *
  * @param ownerAddress     0x-prefixed wallet address of the creator/owner
- * @param contractAddress  0x-prefixed shared contract to filter by
+ * @param contractAddress  0x-prefixed contract to filter by
  * @param alchemyApiKey    Free API key from dashboard.alchemy.com
  * @param network          Ethereum network (defaults to mainnet)
  * @param onProgress       Optional callback reporting how many NFTs found
@@ -240,25 +320,100 @@ export async function fetchNFTsByOwnerForContract(
   network: EthNetwork = "mainnet",
   onProgress?: (count: number) => void
 ): Promise<EthNFTRaw[]> {
+  // Scan the wallet broadly — no server-side contract filter
+  const allNFTs = await fetchAllNFTsForOwner(ownerAddress, alchemyApiKey, network, onProgress);
+
+  // Filter client-side by the target contract
+  const targetAddr = contractAddress.trim().toLowerCase();
+  const matched = allNFTs.filter(
+    (n) => n.contract.address.toLowerCase() === targetAddr
+  );
+
+  console.log(`[ETH Import] Filtered ${allNFTs.length} total NFTs → ${matched.length} on contract ${targetAddr.slice(0, 10)}…`);
+
+  // If 0 matched, log which contracts the wallet actually holds NFTs on
+  if (matched.length === 0 && allNFTs.length > 0) {
+    const contractMap = new Map<string, number>();
+    allNFTs.forEach((n) => {
+      const addr = n.contract.address.toLowerCase();
+      contractMap.set(addr, (contractMap.get(addr) || 0) + 1);
+    });
+    console.log("[ETH Import] Wallet holds NFTs on these contracts:");
+    contractMap.forEach((count, addr) => {
+      const contractName = allNFTs.find((n) => n.contract.address.toLowerCase() === addr)?.contract.name || "Unknown";
+      console.log(`  → ${addr} (${contractName}): ${count} NFTs`);
+    });
+  }
+
+  return matched;
+}
+
+/**
+ * Fetch NFTs **created by** a specific wallet on the OpenSea Shared Storefront.
+ *
+ * On the OpenSea Shared Storefront (ERC-1155), the creator's address is
+ * encoded in the **upper 160 bits** of each token ID:
+ *
+ *   tokenId = (creatorAddress << 96) | tokenIndex
+ *
+ * This means we can calculate the exact token ID range for any creator
+ * and scan only that range via `getNFTsForContract` with `startToken`.
+ * This finds NFTs the creator minted even if they've been sold/transferred.
+ *
+ * @param creatorAddress   0x-prefixed wallet address of the NFT creator
+ * @param contractAddress  0x-prefixed shared contract (e.g. OpenSea Shared Storefront)
+ * @param alchemyApiKey    Free API key from dashboard.alchemy.com
+ * @param network          Ethereum network (defaults to mainnet)
+ * @param onProgress       Optional callback reporting how many NFTs found
+ */
+export async function fetchNFTsByCreatorOnSharedContract(
+  creatorAddress: string,
+  contractAddress: string,
+  alchemyApiKey: string,
+  network: EthNetwork = "mainnet",
+  onProgress?: (count: number) => void
+): Promise<EthNFTRaw[]> {
+  // Calculate the token ID range for this creator.
+  // Upper 160 bits = creator address, lower 96 bits = token index.
+  const creatorBigInt = BigInt(creatorAddress.trim().toLowerCase());
+  const rangeStart = creatorBigInt << 96n;
+  const rangeEnd = rangeStart + (1n << 96n) - 1n;
+
+  console.log(`[ETH Import] Creator token ID range:`);
+  console.log(`  Start: ${rangeStart}`);
+  console.log(`  End:   ${rangeEnd}`);
+  console.log(`  Creator: ${creatorAddress.trim()}`);
+
   const chain = ALCHEMY_NETWORK_MAP[network];
   const base = `https://${chain}.g.alchemy.com/nft/v3/${alchemyApiKey}`;
   const allNFTs: EthNFTRaw[] = [];
   let pageKey: string | undefined;
+  let isFirstRequest = true;
 
   while (true) {
     const params = new URLSearchParams({
-      owner: ownerAddress.trim(),
+      contractAddress: contractAddress.trim(),
       withMetadata: "true",
-      pageSize: "100",
+      limit: "100",
     });
-    // Filter to only the specific contract
-    params.append("contractAddresses[]", contractAddress.trim());
-    if (pageKey) params.set("pageKey", pageKey);
 
-    const res = await fetch(`${base}/getNFTsForOwner?${params.toString()}`);
+    if (isFirstRequest) {
+      // Start scanning from the beginning of this creator's token range
+      params.set("startToken", rangeStart.toString());
+      isFirstRequest = false;
+    } else if (pageKey) {
+      params.set("startToken", pageKey);
+    } else {
+      break;
+    }
+
+    console.log(`[ETH Import] Scanning shared contract from startToken (page ${Math.floor(allNFTs.length / 100) + 1})...`);
+
+    const res = await fetch(`${base}/getNFTsForContract?${params.toString()}`);
 
     if (!res.ok) {
       const errText = await res.text();
+      console.error("[ETH Import] API error:", res.status, errText);
       if (res.status === 401 || res.status === 403) {
         throw new Error("Invalid Alchemy API key. Get a free key at dashboard.alchemy.com");
       }
@@ -266,26 +421,39 @@ export async function fetchNFTsByOwnerForContract(
     }
 
     const data = await res.json();
-    const nfts: EthNFTRaw[] = (data.ownedNfts || []).map((n: any) => ({
-      tokenId: n.tokenId,
-      tokenType: n.tokenType || n.contract?.tokenType || "ERC721",
-      name: n.name || n.raw?.metadata?.name || "",
-      description: n.description || n.raw?.metadata?.description || "",
-      image: n.image || { cachedUrl: null, thumbnailUrl: null, pngUrl: null, originalUrl: null },
-      raw: n.raw || { metadata: null, tokenUri: null },
-      contract: n.contract || { address: contractAddress, name: null, symbol: null, tokenType: "ERC1155" },
-      balance: n.balance,
-    }));
+    const nfts: EthNFTRaw[] = data.nfts || [];
 
-    allNFTs.push(...nfts);
+    console.log(`[ETH Import] Page returned ${nfts.length} NFTs`);
+
+    if (nfts.length === 0) break;
+
+    // Filter to only tokens within the creator's range
+    const inRange = nfts.filter((n) => {
+      try {
+        const tid = BigInt(n.tokenId);
+        return tid >= rangeStart && tid <= rangeEnd;
+      } catch {
+        return false;
+      }
+    });
+
+    allNFTs.push(...inRange);
     onProgress?.(allNFTs.length);
 
+    // If some tokens were outside our range, we've passed the creator's section
+    if (inRange.length < nfts.length) {
+      console.log(`[ETH Import] Reached end of creator's token range (${nfts.length - inRange.length} out-of-range tokens found)`);
+      break;
+    }
+
     pageKey = data.pageKey;
-    if (!pageKey || nfts.length === 0) break;
+    if (!pageKey) break;
   }
 
+  console.log(`[ETH Import] Total NFTs by creator on shared contract: ${allNFTs.length}`);
   return allNFTs;
 }
+
 
 /**
  * Resolve metadata for a batch of Alchemy NFT results into a standardised shape.
@@ -341,4 +509,95 @@ export async function resolveEthMetadata(
   }
 
   return results;
+}
+
+export interface OpenSeaNFTRaw {
+  identifier: string;
+  collection: string;
+  contract: string;
+  token_standard: string;
+  name: string;
+  description: string;
+  image_url?: string;
+  display_image_url?: string;
+  original_image_url?: string;
+  metadata_url?: string;
+  opensea_url?: string;
+  traits?: Array<{
+    trait_type: string;
+    display_type?: string;
+    max_value?: string;
+    value: any;
+  }>;
+}
+
+export interface OpenSeaAPIResponse {
+  nfts: OpenSeaNFTRaw[];
+  next?: string;
+}
+
+/**
+ * Fetch all NFTs in a collection from OpenSea using the collection slug via our secure proxy.
+ *
+ * @param slug        The OpenSea collection slug (e.g. "d3ath5t4r-you-are-a-flower")
+ * @param onProgress  Optional callback reporting how many NFTs found so far
+ */
+export async function fetchNFTsFromOpenSea(
+  slug: string,
+  onProgress?: (count: number) => void
+): Promise<ResolvedEthNFT[]> {
+  const allNFTs: ResolvedEthNFT[] = [];
+  let nextCursor: string | undefined;
+
+  while (true) {
+    const params = new URLSearchParams({ slug: slug.trim() });
+    if (nextCursor) {
+      params.append("next", nextCursor);
+    }
+
+    const res = await fetch(`/api/opensea?${params.toString()}`);
+
+    if (!res.ok) {
+      const errText = await res.text();
+      console.error("[OpenSea Import] Proxy error:", res.status, errText);
+      throw new Error(`OpenSea API proxy error (${res.status}): ${errText}`);
+    }
+
+    const data: OpenSeaAPIResponse = await res.json();
+    const rawNfts = data.nfts || [];
+
+    if (rawNfts.length === 0) break;
+
+    const mapped = rawNfts.map((n) => {
+      const name = n.name || `#${n.identifier}`;
+      const image = n.original_image_url || n.image_url || n.display_image_url || "";
+      return {
+        token_id: n.identifier,
+        contract_address: n.contract,
+        name,
+        description: n.description || "",
+        image,
+        imageResolved: !!image,
+        metadataResolved: !!n.name,
+        tokenType: n.token_standard?.toUpperCase() || "ERC1155",
+        tokenUri: n.metadata_url || "",
+        contractName: "OpenSea Shared Storefront",
+        contractSymbol: "OPENSTORE",
+        raw_metadata: {
+          name: n.name,
+          description: n.description,
+          image,
+          attributes: n.traits?.map(t => ({ trait_type: t.trait_type, value: t.value })) || []
+        }
+      };
+    });
+
+    allNFTs.push(...mapped);
+    onProgress?.(allNFTs.length);
+
+    nextCursor = data.next;
+    if (!nextCursor) break;
+  }
+
+  return allNFTs;
 }
