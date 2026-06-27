@@ -64,6 +64,15 @@ const smTokenAtom = atomWithStorage("smToken", "");
 const filebaseTokenAtom = atomWithStorage("filebaseToken", "");
 const simpleMintProviderAtom = atomWithStorage("simpleMintProvider", "crust");
 
+const formatNumberWithCommas = (val: string | number) => {
+  if (val === undefined || val === null) return "";
+  const str = val.toString().replace(/,/g, "");
+  if (!str) return "";
+  const parts = str.split(".");
+  parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  return parts.join(".");
+};
+
 export function SimpleMint() {
   const [formData, setFormData] = useAtom(simpleMintAtom);
   const [pinningProvider, setPinningProvider] = useAtom(simpleMintProviderAtom);
@@ -85,16 +94,42 @@ export function SimpleMint() {
   const [extraFee, setExtraFee] = useState<number | null>(null);
   const [extraFeeAddress, setExtraFeeAddress] = useState<string | null>(null);
   const [isLedger, setIsLedger] = useState(false);
+  const [activeTab, setActiveTab] = useState<"nft" | "token">("nft");
 
-  const finalFormat = isCustomMode ? formData.format : "ARC69";
-  const finalSupply = isCustomMode ? formData.totalSupply : 1;
-  const finalDecimals = isCustomMode ? formData.decimals : 0;
+  const handleTabChange = (tab: "nft" | "token") => {
+    setActiveTab(tab);
+    if (tab === "token") {
+      setFormData((prev: any) => ({
+        ...prev,
+        format: "Token",
+        totalSupply: "",
+        decimals: "",
+      }));
+    } else {
+      setFormData((prev: any) => ({
+        ...prev,
+        format: prev.format === "Token" ? "ARC69" : prev.format,
+        totalSupply: prev.totalSupply === "" ? 1 : prev.totalSupply,
+        decimals: prev.decimals === "" ? 0 : prev.decimals,
+      }));
+    }
+  };
+
+  const finalFormat = activeTab === "token" ? "Token" : (isCustomMode ? formData.format : "ARC69");
+  const finalSupply = activeTab === "token"
+    ? (formData.totalSupply ? formData.totalSupply.toString().replace(/,/g, "") : "")
+    : (isCustomMode ? (formData.totalSupply ? formData.totalSupply.toString().replace(/,/g, "") : "1") : 1);
+  const finalDecimals = activeTab === "token"
+    ? (formData.decimals !== "" ? parseInt(formData.decimals) : 0)
+    : (isCustomMode ? (formData.decimals !== "" ? parseInt(formData.decimals) : 0) : 0);
   const finalFreeze = isCustomMode ? formData.freeze : false;
   const finalClawback = isCustomMode ? formData.clawback : false;
   const finalDefaultFrozen = isCustomMode ? formData.defaultFrozen : false;
-  const finalUnitName = isCustomMode
+  const finalUnitName = activeTab === "token"
     ? formData.unitName
-    : (formData.unitName || (formData.name ? formData.name.substring(0, 8).toUpperCase().replace(/\s/g, "") : ""));
+    : (isCustomMode
+      ? formData.unitName
+      : (formData.unitName || (formData.name ? formData.name.substring(0, 8).toUpperCase().replace(/\s/g, "") : "")));
 
   useEffect(() => {
     // Handle query parameters
@@ -121,6 +156,10 @@ export function SimpleMint() {
         decimals: decimals ? parseInt(decimals) : prev.decimals,
         format: format || prev.format,
       }));
+
+      if (format === "Token") {
+        setActiveTab("token");
+      }
 
       // Enable custom mode if standard deviates from ARC69, or advanced parameters are present
       if (
@@ -161,6 +200,10 @@ export function SimpleMint() {
           if (data.format) msgFormData.format = data.format;
           else if (!msgFormData.format) msgFormData.format = "ARC69";
           if (data.image) msgFormData.image = data.image; // Should be a File or Blob
+
+          if (data.format === "Token") {
+            setActiveTab("token");
+          }
 
           // Automatically enable custom mode if fields warrant it
           if (
@@ -378,6 +421,20 @@ wen.contentWindow.postMessage({
         toast.error("Please fill the name field");
         return;
       }
+      if (activeTab === "token") {
+        if (!formData.unitName || formData.unitName === "") {
+          toast.error("Please fill the unit name field");
+          return;
+        }
+        if (!formData.totalSupply || formData.totalSupply.toString().replace(/,/g, "") === "") {
+          toast.error("Please fill the total supply field");
+          return;
+        }
+        if (formData.decimals === "" || formData.decimals === undefined || formData.decimals === null) {
+          toast.error("Please fill the decimals field");
+          return;
+        }
+      }
       if (
         finalFormat !== "Token" &&
         (formData.image === null || !(formData.image instanceof File))
@@ -559,7 +616,7 @@ wen.contentWindow.postMessage({
           activeAddress,
           algodClient,
           transactionSigner,
-          effectiveProvider === "crust" ? [imageCID] : undefined,
+          effectiveProvider === "crust" && finalFormat !== "Token" ? [imageCID] : undefined,
           extraFee || undefined,
           extraFeeAddress || undefined
         );
@@ -596,7 +653,8 @@ wen.contentWindow.postMessage({
       const mintTxns = batchATC.buildGroup().map((t: any) => t.txn);
       const pinTxns: algosdk.Transaction[] = [];
       
-      for (const cid of pinCids) {
+      const validPinCids = pinCids.filter(Boolean);
+      for (const cid of validPinCids) {
         const pinAtc = new algosdk.AtomicTransactionComposer();
         pinAtc.addMethodCall(
           await makeCrustPinTx(
@@ -675,11 +733,39 @@ wen.contentWindow.postMessage({
       <ConnectButton inmain={true} />
 
       <div className="w-full max-w-xl bg-white/5 backdrop-blur-md rounded-2xl border border-white/10 p-6 md:p-8 mt-6 shadow-2xl space-y-6 text-left">
+        {/* Mode Selector Tabs */}
+        <div className="flex bg-slate-950/60 p-1.5 rounded-xl border border-slate-800/80 shadow-inner">
+          <button
+            type="button"
+            onClick={() => handleTabChange("nft")}
+            className={`flex-1 py-2.5 text-center text-sm font-extrabold rounded-lg transition-all duration-200 ${
+              activeTab === "nft"
+                ? "bg-gradient-to-r from-orange-500 to-amber-500 text-black shadow-lg shadow-orange-500/10 font-black"
+                : "text-slate-400 hover:text-white hover:bg-white/[0.02]"
+            }`}
+          >
+            NFT
+          </button>
+          <button
+            type="button"
+            onClick={() => handleTabChange("token")}
+            className={`flex-1 py-2.5 text-center text-sm font-extrabold rounded-lg transition-all duration-200 ${
+              activeTab === "token"
+                ? "bg-gradient-to-r from-orange-500 to-amber-500 text-black shadow-lg shadow-orange-500/10 font-black"
+                : "text-slate-400 hover:text-white hover:bg-white/[0.02]"
+            }`}
+          >
+            Token
+          </button>
+        </div>
+
         {/* Custom Settings Toggle */}
         <div className="flex items-center justify-between p-4 bg-slate-900/60 border border-slate-800 rounded-xl">
           <div>
             <h3 className="text-sm font-bold text-white">Custom Settings</h3>
-            <p className="text-xs text-slate-400">Enable advanced parameters & standards</p>
+            <p className="text-xs text-slate-400">
+              {activeTab === "token" ? "Enable advanced parameters (Freeze/Clawback)" : "Enable advanced parameters & standards"}
+            </p>
           </div>
           <label className="relative inline-flex items-center cursor-pointer">
             <input
@@ -692,146 +778,292 @@ wen.contentWindow.postMessage({
           </label>
         </div>
 
-        {/* Inputs */}
-        <div className={`grid grid-cols-1 ${isCustomMode ? 'md:grid-cols-2' : ''} gap-4`}>
-          <div className="flex flex-col">
-            <label className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-400">
-              Name*
-            </label>
-            <input
-              type="text"
-              placeholder="Ex: USAlgo 001"
-              className="w-full bg-slate-900/60 border border-slate-700 text-sm font-medium text-white placeholder:text-slate-500 px-4 py-3 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary-orange focus:border-primary-orange transition-all"
-              maxLength={32}
-              required
-              value={formData.name}
-              onChange={(e) => {
-                setFormData({
-                  ...formData,
-                  name: e.target.value,
-                });
-              }}
-            />
-          </div>
-          {isCustomMode && (
-            <div className="flex flex-col animate-fadeIn">
-              <label className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-400">
-                Unit name*
-              </label>
-              <input
-                type="text"
-                placeholder="Ex: USA001"
-                className="w-full bg-slate-900/60 border border-slate-700 text-sm font-medium text-white placeholder:text-slate-500 px-4 py-3 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary-orange focus:border-primary-orange transition-all"
-                maxLength={8}
-                required
-                value={formData.unitName}
-                onChange={(e) => {
-                  setFormData({
-                    ...formData,
-                    unitName: e.target.value,
-                  });
-                }}
-              />
+        {activeTab === "nft" ? (
+          <>
+            {/* NFT Mode Fields */}
+            <div className={`grid grid-cols-1 ${isCustomMode ? 'md:grid-cols-2' : ''} gap-4`}>
+              <div className="flex flex-col">
+                <label className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-400">
+                  Name*
+                </label>
+                <input
+                  type="text"
+                  placeholder="Ex: USAlgo 001"
+                  className="w-full bg-slate-900/60 border border-slate-700 text-sm font-medium text-white placeholder:text-slate-500 px-4 py-3 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary-orange focus:border-primary-orange transition-all"
+                  maxLength={32}
+                  required
+                  value={formData.name}
+                  onChange={(e) => {
+                    setFormData({
+                      ...formData,
+                      name: e.target.value,
+                    });
+                  }}
+                />
+              </div>
+              {isCustomMode && (
+                <div className="flex flex-col animate-fadeIn">
+                  <label className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-400">
+                    Unit name*
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Ex: USA001"
+                    className="w-full bg-slate-900/60 border border-slate-700 text-sm font-medium text-white placeholder:text-slate-500 px-4 py-3 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary-orange focus:border-primary-orange transition-all"
+                    maxLength={8}
+                    required
+                    value={formData.unitName}
+                    onChange={(e) => {
+                      setFormData({
+                        ...formData,
+                        unitName: e.target.value,
+                      });
+                    }}
+                  />
+                </div>
+              )}
             </div>
-          )}
-        </div>
 
-        {/* Description in Simple Mode */}
-        {!isCustomMode && (
-          <div className="flex flex-col">
-            <label className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-400">
-              Description (optional)
-            </label>
-            <textarea
-              placeholder="Describe your NFT..."
-              className="w-full bg-slate-900/60 border border-slate-700 text-sm font-medium leading-normal text-white placeholder:text-slate-500 px-4 py-3 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary-orange focus:border-primary-orange transition-all min-h-[90px]"
-              maxLength={1000}
-              value={formData.description}
-              onChange={(e) => {
-                setFormData({
-                  ...formData,
-                  description: e.target.value,
-                });
-              }}
-            />
-          </div>
-        )}
+            {/* Description in Simple Mode */}
+            {!isCustomMode && (
+              <div className="flex flex-col">
+                <label className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-400">
+                  Description (optional)
+                </label>
+                <textarea
+                  placeholder="Describe your NFT..."
+                  className="w-full bg-slate-900/60 border border-slate-700 text-sm font-medium leading-normal text-white placeholder:text-slate-500 px-4 py-3 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary-orange focus:border-primary-orange transition-all min-h-[90px]"
+                  maxLength={1000}
+                  value={formData.description}
+                  onChange={(e) => {
+                    setFormData({
+                      ...formData,
+                      description: e.target.value,
+                    });
+                  }}
+                />
+              </div>
+            )}
 
-        {/* Custom Supply and Decimals */}
-        {isCustomMode && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-fadeIn">
-            <div className="flex flex-col">
-              <label className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-400">
-                Total supply*
-              </label>
-              <input
-                className="w-full bg-slate-900/60 border border-slate-700 text-sm font-medium text-white placeholder:text-slate-500 px-4 py-3 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary-orange focus:border-primary-orange transition-all"
-                type="number"
-                max="18446744073709551615"
-                min={1}
-                required
-                onChange={(e) => {
-                  setFormData({
-                    ...formData,
-                    totalSupply: e.target.value,
-                  });
-                }}
-                placeholder="Recommended: 1 for NFTs"
-                value={formData.totalSupply}
-              />
-            </div>
-            <div className="flex flex-col">
-              <label className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-400">
-                Decimals*
-              </label>
-              <input
-                type="number"
-                className="w-full bg-slate-900/60 border border-slate-700 text-sm font-medium text-white placeholder:text-slate-500 px-4 py-3 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary-orange focus:border-primary-orange transition-all"
-                max={19}
-                min={0}
-                required
-                onChange={(e) => {
-                  setFormData({
-                    ...formData,
-                    decimals: e.target.value,
-                  });
-                }}
-                value={formData.decimals}
-                placeholder="Recommended: 0 for NFTs"
-              />
-            </div>
-          </div>
-        )}
+            {/* Custom Supply and Decimals */}
+            {isCustomMode && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-fadeIn">
+                <div className="flex flex-col">
+                  <label className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-400">
+                    Total supply*
+                  </label>
+                  <input
+                    className="w-full bg-slate-900/60 border border-slate-700 text-sm font-medium text-white placeholder:text-slate-500 px-4 py-3 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary-orange focus:border-primary-orange transition-all"
+                    type="number"
+                    max="18446744073709551615"
+                    min={1}
+                    required
+                    onChange={(e) => {
+                      setFormData({
+                        ...formData,
+                        totalSupply: e.target.value,
+                      });
+                    }}
+                    placeholder="Recommended: 1 for NFTs"
+                    value={formData.totalSupply}
+                  />
+                </div>
+                <div className="flex flex-col">
+                  <label className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-400">
+                    Decimals*
+                  </label>
+                  <input
+                    type="number"
+                    className="w-full bg-slate-900/60 border border-slate-700 text-sm font-medium text-white placeholder:text-slate-500 px-4 py-3 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary-orange focus:border-primary-orange transition-all"
+                    max={19}
+                    min={0}
+                    required
+                    onChange={(e) => {
+                      setFormData({
+                        ...formData,
+                        decimals: e.target.value,
+                      });
+                    }}
+                    value={formData.decimals}
+                    placeholder="Recommended: 0 for NFTs"
+                  />
+                </div>
+              </div>
+            )}
 
-        <div className={`grid grid-cols-1 ${isCustomMode ? 'md:grid-cols-2' : ''} gap-4`}>
-          {finalFormat !== "Token" ? (
-            <div className="flex flex-col">
-              <label className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-400">
-                Select Image / Media*
-              </label>
-              <input
-                className="block w-full text-sm border border-slate-700 rounded-xl cursor-pointer bg-slate-900/60 text-slate-300 focus:outline-none focus:ring-1 focus:ring-primary-orange focus:border-primary-orange file:mr-4 file:py-2.5 file:px-4 file:rounded-l-xl file:border-0 file:text-xs file:font-semibold file:bg-slate-800 file:text-white hover:file:bg-slate-700 transition-all"
-                id="select_image"
-                type="file"
-                accept="image/*,video/*,audio/*"
-                multiple={false}
-                required
-                onChange={(e: any) => {
-                  setFormData({
-                    ...formData,
-                    image: e.target.files[0],
-                  });
-                }}
-              />
+            <div className={`grid grid-cols-1 ${isCustomMode ? 'md:grid-cols-2' : ''} gap-4`}>
+              {finalFormat !== "Token" ? (
+                <div className="flex flex-col">
+                  <label className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-400">
+                    Select Image / Media*
+                  </label>
+                  <input
+                    className="block w-full text-sm border border-slate-700 rounded-xl cursor-pointer bg-slate-900/60 text-slate-300 focus:outline-none focus:ring-1 focus:ring-primary-orange focus:border-primary-orange file:mr-4 file:py-2.5 file:px-4 file:rounded-l-xl file:border-0 file:text-xs file:font-semibold file:bg-slate-800 file:text-white hover:file:bg-slate-700 transition-all"
+                    id="select_image"
+                    type="file"
+                    accept="image/*,video/*,audio/*"
+                    multiple={false}
+                    required
+                    onChange={(e: any) => {
+                      setFormData({
+                        ...formData,
+                        image: e.target.files[0],
+                      });
+                    }}
+                  />
+                </div>
+              ) : (
+                <div className="flex flex-col">
+                  <label className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-400">
+                    URL Field
+                  </label>
+                  <input
+                    className="w-full bg-slate-900/60 border border-slate-700 text-sm font-medium text-white placeholder:text-slate-500 px-4 py-3 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary-orange focus:border-primary-orange transition-all"
+                    id="select_image"
+                    type="text"
+                    value={formData.urlField}
+                    onChange={(e) => {
+                      setFormData({
+                        ...formData,
+                        urlField: e.target.value,
+                      });
+                    }}
+                  />
+                </div>
+              )}
+
+              {/* Format selector: only in Custom Mode */}
+              {isCustomMode && (
+                <div className="flex flex-col animate-fadeIn">
+                  <label className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-400">
+                    Asset format*
+                  </label>
+                  <select
+                    className="w-full bg-slate-900/60 border border-slate-700 text-sm font-medium text-white px-4 py-3 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary-orange focus:border-primary-orange transition-all"
+                    required
+                    onChange={(e) => {
+                      setFormData({
+                        ...formData,
+                        format: e.target.value,
+                      });
+                    }}
+                    value={formData.format}
+                  >
+                    <option value="ARC3" className="bg-slate-900 text-white">ARC3 - Unchangeable</option>
+                    <option value="ARC19" className="bg-slate-900 text-white">ARC19 - Changeable Images and Data</option>
+                    <option value="ARC69" className="bg-slate-900 text-white">ARC69 - Changeable Data</option>
+                    <option value="Token" className="bg-slate-900 text-white">Token</option>
+                  </select>
+                </div>
+              )}
             </div>
-          ) : (
+
+            {finalFormat !== "Token" && (
+              <IpfsProviderSelect
+                provider={pinningProvider as IpfsProvider}
+                setProvider={setPinningProvider as any}
+                isTestnet={isTestnet}
+                pinataToken={token}
+                setPinataToken={setToken}
+                filebaseToken={filebaseToken}
+                setFilebaseToken={setFilebaseToken}
+              />
+            )}
+          </>
+        ) : (
+          <>
+            {/* Token Mode Fields - Simplified, no image/IPFS/description */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="flex flex-col">
+                <label className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-400">
+                  Name*
+                </label>
+                <input
+                  type="text"
+                  placeholder="Ex: My Token"
+                  className="w-full bg-slate-900/60 border border-slate-700 text-sm font-medium text-white placeholder:text-slate-500 px-4 py-3 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary-orange focus:border-primary-orange transition-all"
+                  maxLength={32}
+                  required
+                  value={formData.name}
+                  onChange={(e) => {
+                    setFormData({
+                      ...formData,
+                      name: e.target.value,
+                    });
+                  }}
+                />
+              </div>
+              <div className="flex flex-col">
+                <label className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-400">
+                  Unit name*
+                </label>
+                <input
+                  type="text"
+                  placeholder="Ex: TKN"
+                  className="w-full bg-slate-900/60 border border-slate-700 text-sm font-medium text-white placeholder:text-slate-500 px-4 py-3 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary-orange focus:border-primary-orange transition-all"
+                  maxLength={8}
+                  required
+                  value={formData.unitName}
+                  onChange={(e) => {
+                    setFormData({
+                      ...formData,
+                      unitName: e.target.value,
+                    });
+                  }}
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="flex flex-col">
+                <label className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-400">
+                  Total supply*
+                </label>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  placeholder="Ex: 1,000,000"
+                  className="w-full bg-slate-900/60 border border-slate-700 text-sm font-medium text-white placeholder:text-slate-500 px-4 py-3 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary-orange focus:border-primary-orange transition-all"
+                  required
+                  value={formatNumberWithCommas(formData.totalSupply)}
+                  onChange={(e) => {
+                    const clean = e.target.value.replace(/,/g, "").replace(/\D/g, "");
+                    setFormData({
+                      ...formData,
+                      totalSupply: clean,
+                    });
+                  }}
+                />
+              </div>
+              <div className="flex flex-col">
+                <label className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-400">
+                  Decimals*
+                </label>
+                <input
+                  type="number"
+                  placeholder="Ex: 8"
+                  className="w-full bg-slate-900/60 border border-slate-700 text-sm font-medium text-white placeholder:text-slate-500 px-4 py-3 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary-orange focus:border-primary-orange transition-all"
+                  max={19}
+                  min={0}
+                  required
+                  value={formData.decimals}
+                  onChange={(e) => {
+                    setFormData({
+                      ...formData,
+                      decimals: e.target.value,
+                    });
+                  }}
+                />
+              </div>
+            </div>
+
             <div className="flex flex-col">
               <label className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-400">
                 URL Field
               </label>
               <input
                 className="w-full bg-slate-900/60 border border-slate-700 text-sm font-medium text-white placeholder:text-slate-500 px-4 py-3 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary-orange focus:border-primary-orange transition-all"
-                id="select_image"
+                placeholder="Ex: https://mytoken.com (optional)"
                 type="text"
                 value={formData.urlField}
                 onChange={(e) => {
@@ -842,49 +1074,12 @@ wen.contentWindow.postMessage({
                 }}
               />
             </div>
-          )}
-
-          {/* Format selector: only in Custom Mode */}
-          {isCustomMode && (
-            <div className="flex flex-col animate-fadeIn">
-              <label className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-400">
-                Asset format*
-              </label>
-              <select
-                className="w-full bg-slate-900/60 border border-slate-700 text-sm font-medium text-white px-4 py-3 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary-orange focus:border-primary-orange transition-all"
-                required
-                onChange={(e) => {
-                  setFormData({
-                    ...formData,
-                    format: e.target.value,
-                  });
-                }}
-                value={formData.format}
-              >
-                <option value="ARC3" className="bg-slate-900 text-white">ARC3 - Unchangeable</option>
-                <option value="ARC19" className="bg-slate-900 text-white">ARC19 - Changeable Images and Data</option>
-                <option value="ARC69" className="bg-slate-900 text-white">ARC69 - Changeable Data</option>
-                <option value="Token" className="bg-slate-900 text-white">Token</option>
-              </select>
-            </div>
-          )}
-        </div>
-
-        {finalFormat !== "Token" && (
-          <IpfsProviderSelect
-            provider={pinningProvider as IpfsProvider}
-            setProvider={setPinningProvider as any}
-            isTestnet={isTestnet}
-            pinataToken={token}
-            setPinataToken={setToken}
-            filebaseToken={filebaseToken}
-            setFilebaseToken={setFilebaseToken}
-          />
+          </>
         )}
 
         {/* Advanced configuration options only in Custom Mode */}
         {isCustomMode && (
-          <div className="space-y-6 pt-4 border-t border-slate-800">
+          <div className="space-y-6 pt-4 border-t border-slate-800 animate-fadeIn">
             {/* Advanced Flag Toggles */}
             <div className="bg-slate-900/40 border border-slate-800 rounded-xl p-4 space-y-4">
               <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">Asset Management Flags</h4>
@@ -942,127 +1137,132 @@ wen.contentWindow.postMessage({
               </div>
             </div>
 
-            {/* Property Metadata */}
-            <div className="space-y-3">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">Property Metadata</h4>
-              {["external_url", "description"].map((key) => (
-                <div className="flex gap-2" key={key}>
-                  <div className="w-28 bg-slate-850 border border-slate-700 text-xs font-bold uppercase tracking-wider flex items-center justify-center text-slate-300 rounded-xl px-3 py-2 select-none">
-                    {key === "external_url" ? "External URL" : "Description"}
+            {/* Property Metadata & Traits only for NFT mode */}
+            {activeTab === "nft" && (
+              <>
+                {/* Property Metadata */}
+                <div className="space-y-3 animate-fadeIn">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">Property Metadata</h4>
+                  {["external_url", "description"].map((key) => (
+                    <div className="flex gap-2" key={key}>
+                      <div className="w-28 bg-slate-850 border border-slate-700 text-xs font-bold uppercase tracking-wider flex items-center justify-center text-slate-300 rounded-xl px-3 py-2 select-none">
+                        {key === "external_url" ? "External URL" : "Description"}
+                      </div>
+                      <input
+                        id={key}
+                        type="text"
+                        placeholder="(optional)"
+                        className="flex-1 bg-slate-900/60 border border-slate-700 text-sm font-medium text-white placeholder:text-slate-500 px-4 py-2.5 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary-orange focus:border-primary-orange transition-all"
+                        value={formData[key]}
+                        onChange={(e) => {
+                          setFormData({ ...formData, [key]: e.target.value });
+                        }}
+                      />
+                    </div>
+                  ))}
+                </div>
+
+                {/* Rarity Traits */}
+                <div className="space-y-3 animate-fadeIn">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">Rarity Traits</h4>
+                      <p className="text-[10px] text-slate-500">Character attributes (e.g., Background, Eyes)</p>
+                    </div>
+                    <button
+                      type="button"
+                      className="rounded-lg bg-orange-500/10 hover:bg-orange-500/20 text-orange-400 border border-orange-500/20 hover:border-orange-500/40 text-xs font-bold transition px-3 py-1.5"
+                      onClick={() => {
+                        let lastId = 0;
+                        if (formData.traits.length > 0) {
+                          lastId = formData.traits[formData.traits.length - 1].id;
+                        }
+                        setFormData({
+                          ...formData,
+                          traits: [
+                            ...formData.traits,
+                            { id: lastId + 1, category: "", name: "" },
+                          ],
+                        });
+                      }}
+                    >
+                      + Add Trait
+                    </button>
                   </div>
-                  <input
-                    id={key}
-                    type="text"
-                    placeholder="(optional)"
-                    className="flex-1 bg-slate-900/60 border border-slate-700 text-sm font-medium text-white placeholder:text-slate-500 px-4 py-2.5 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary-orange focus:border-primary-orange transition-all"
-                    value={formData[key]}
-                    onChange={(e) => {
-                      setFormData({ ...formData, [key]: e.target.value });
-                    }}
-                  />
+                  <div className="flex flex-col gap-2">
+                    {formData.traits.map((metadata: any) => TraitMetadataInputField(metadata.id, "traits"))}
+                  </div>
                 </div>
-              ))}
-            </div>
 
-            {/* Rarity Traits */}
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">Rarity Traits</h4>
-                  <p className="text-[10px] text-slate-500">Character attributes (e.g., Background, Eyes)</p>
+                <div className="border-t border-slate-800/60 my-4"></div>
+
+                {/* Filters */}
+                <div className="space-y-3 animate-fadeIn">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">Filters</h4>
+                      <p className="text-[10px] text-slate-500">Non-rarity search parameters</p>
+                    </div>
+                    <button
+                      type="button"
+                      className="rounded-lg bg-orange-500/10 hover:bg-orange-500/20 text-orange-400 border border-orange-500/20 hover:border-orange-500/40 text-xs font-bold transition px-3 py-1.5"
+                      onClick={() => {
+                        let lastId = 0;
+                        if (formData.filters.length > 0) {
+                          lastId = formData.filters[formData.filters.length - 1].id;
+                        }
+                        setFormData({
+                          ...formData,
+                          filters: [
+                            ...formData.filters,
+                            { id: lastId + 1, category: "", name: "" },
+                          ],
+                        });
+                      }}
+                    >
+                      + Add Filter
+                    </button>
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    {formData.filters.map((metadata: any) => TraitMetadataInputField(metadata.id, "filters"))}
+                  </div>
                 </div>
-                <button
-                  type="button"
-                  className="rounded-lg bg-orange-500/10 hover:bg-orange-500/20 text-orange-400 border border-orange-500/20 hover:border-orange-500/40 text-xs font-bold transition px-3 py-1.5"
-                  onClick={() => {
-                    let lastId = 0;
-                    if (formData.traits.length > 0) {
-                      lastId = formData.traits[formData.traits.length - 1].id;
-                    }
-                    setFormData({
-                      ...formData,
-                      traits: [
-                        ...formData.traits,
-                        { id: lastId + 1, category: "", name: "" },
-                      ],
-                    });
-                  }}
-                >
-                  + Add Trait
-                </button>
-              </div>
-              <div className="flex flex-col gap-2">
-                {formData.traits.map((metadata: any) => TraitMetadataInputField(metadata.id, "traits"))}
-              </div>
-            </div>
 
-            <div className="border-t border-slate-800/60 my-4"></div>
+                <div className="border-t border-slate-800/60 my-4"></div>
 
-            {/* Filters */}
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">Filters</h4>
-                  <p className="text-[10px] text-slate-500">Non-rarity search parameters</p>
+                {/* Extras */}
+                <div className="space-y-3 animate-fadeIn">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">Extras</h4>
+                      <p className="text-[10px] text-slate-500">Additional metadata properties</p>
+                    </div>
+                    <button
+                      type="button"
+                      className="rounded-lg bg-orange-500/10 hover:bg-orange-500/20 text-orange-400 border border-orange-500/20 hover:border-orange-500/40 text-xs font-bold transition px-3 py-1.5"
+                      onClick={() => {
+                        let lastId = 0;
+                        if (formData.extras.length > 0) {
+                          lastId = formData.extras[formData.extras.length - 1].id;
+                        }
+                        setFormData({
+                          ...formData,
+                          extras: [
+                            ...formData.extras,
+                            { id: lastId + 1, category: "", name: "" },
+                          ],
+                        });
+                      }}
+                    >
+                      + Add Extra
+                    </button>
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    {formData.extras.map((metadata: any) => TraitMetadataInputField(metadata.id, "extras"))}
+                  </div>
                 </div>
-                <button
-                  type="button"
-                  className="rounded-lg bg-orange-500/10 hover:bg-orange-500/20 text-orange-400 border border-orange-500/20 hover:border-orange-500/40 text-xs font-bold transition px-3 py-1.5"
-                  onClick={() => {
-                    let lastId = 0;
-                    if (formData.filters.length > 0) {
-                      lastId = formData.filters[formData.filters.length - 1].id;
-                    }
-                    setFormData({
-                      ...formData,
-                      filters: [
-                        ...formData.filters,
-                        { id: lastId + 1, category: "", name: "" },
-                      ],
-                    });
-                  }}
-                >
-                  + Add Filter
-                </button>
-              </div>
-              <div className="flex flex-col gap-2">
-                {formData.filters.map((metadata: any) => TraitMetadataInputField(metadata.id, "filters"))}
-              </div>
-            </div>
-
-            <div className="border-t border-slate-800/60 my-4"></div>
-
-            {/* Extras */}
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">Extras</h4>
-                  <p className="text-[10px] text-slate-500">Additional metadata properties</p>
-                </div>
-                <button
-                  type="button"
-                  className="rounded-lg bg-orange-500/10 hover:bg-orange-500/20 text-orange-400 border border-orange-500/20 hover:border-orange-500/40 text-xs font-bold transition px-3 py-1.5"
-                  onClick={() => {
-                    let lastId = 0;
-                    if (formData.extras.length > 0) {
-                      lastId = formData.extras[formData.extras.length - 1].id;
-                    }
-                    setFormData({
-                      ...formData,
-                      extras: [
-                        ...formData.extras,
-                        { id: lastId + 1, category: "", name: "" },
-                      ],
-                    });
-                  }}
-                >
-                  + Add Extra
-                </button>
-              </div>
-              <div className="flex flex-col gap-2">
-                {formData.extras.map((metadata: any) => TraitMetadataInputField(metadata.id, "extras"))}
-              </div>
-            </div>
+              </>
+            )}
           </div>
         )}
 
@@ -1148,8 +1348,10 @@ wen.contentWindow.postMessage({
         </div>
 
         <p className="text-xs font-semibold text-slate-400 text-center mt-2">
-          {effectiveProvider === "crust" ? (
-            <span>Pin Fee (Crust): {finalFormat === "ARC69" ? "1.4 ALGO" : finalFormat === "Token" ? "Free" : "2.8 ALGO"}</span>
+          {finalFormat === "Token" ? (
+            <span>Pin Fee: Free (No IPFS pinning required)</span>
+          ) : effectiveProvider === "crust" ? (
+            <span>Pin Fee (Crust): {finalFormat === "ARC69" ? "1.4 ALGO" : "2.8 ALGO"}</span>
           ) : effectiveProvider === "filebase" ? (
             <span>Pin Fee (Filebase): Free (requires Filebase API key)</span>
           ) : (
