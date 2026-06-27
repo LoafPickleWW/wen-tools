@@ -113,6 +113,152 @@ function resolveDisplayUri(uri: string, contractAddress?: string): string {
   return uri;
 }
 
+function truncateStringToBytes(str: string, maxBytes: number): string {
+  const encoder = new TextEncoder();
+  const decoder = new TextDecoder("utf-8");
+  const encoded = encoder.encode(str);
+  if (encoded.length <= maxBytes) return str;
+
+  let sliced = encoded.slice(0, maxBytes);
+  let decoded = decoder.decode(sliced);
+  
+  // Strip trailing replacement characters if truncation happened in the middle of a UTF-8 character
+  while (decoded.endsWith("\uFFFD") && decoded.length > 0) {
+    decoded = decoded.slice(0, -1);
+  }
+  return decoded;
+}
+
+function appendMediaFragment(url: string, mimeType?: string): string {
+  if (!url) return "";
+  if (url.includes("#")) return url;
+  if (mimeType) {
+    if (mimeType.startsWith("video/")) return `${url}#v`;
+    if (mimeType.startsWith("audio/")) return `${url}#a`;
+    if (mimeType.startsWith("application/pdf")) return `${url}#p`;
+    if (mimeType.startsWith("text/html")) return `${url}#h`;
+  }
+  return `${url}#i`;
+}
+
+function tryCompressUrl(url: string): string {
+  if (!url || url.length <= 90) return url;
+
+  const origin = window.location.origin.includes("localhost") || window.location.origin.includes("127.0.0.1")
+    ? "https://wen.tools"
+    : window.location.origin;
+
+  const fragment = url.includes("#") ? url.substring(url.indexOf("#")) : "";
+
+  // Pattern 1: Contract-nested OpenSea URL
+  const nestedMatch = url.match(/https:\/\/(raw2|i2c)\.seadn\.io\/ethereum\/(0x[a-f0-9]{40})\/([a-f0-9]{30,32})\/([a-f0-9]{32})\.([a-z0-9]+)/i);
+  if (nestedMatch) {
+    const subdomain = nestedMatch[1];
+    const contract = nestedMatch[2];
+    const hash2 = nestedMatch[4];
+    const ext = nestedMatch[5];
+
+    try {
+      const contractClean = contract.toLowerCase().replace(/^0x/, "");
+      const contractBytes = new Uint8Array(contractClean.match(/.{1,2}/g)!.map(b => parseInt(b, 16)));
+      const hash2Bytes = new Uint8Array(hash2.match(/.{1,2}/g)!.map(b => parseInt(b, 16)));
+
+      const combined = new Uint8Array(37);
+      combined[0] = subdomain === "raw2" ? 0 : 1;
+      combined.set(contractBytes, 1);
+      combined.set(hash2Bytes, 21);
+
+      let base64 = btoa(String.fromCharCode(...combined))
+        .replace(/\+/g, "-")
+        .replace(/\//g, "_")
+        .replace(/=+$/, "");
+
+      return `${origin}/api/r?d=${base64}&e=${ext}${fragment}`;
+    } catch (e) {
+      console.debug("Failed to compress nested OpenSea URL:", e);
+    }
+  }
+
+  // Pattern 2: Flat OpenSea URL
+  const flatMatch = url.match(/https:\/\/i\.seadn\.io\/gcs\/files\/([a-f0-9]{32})\.([a-z0-9]+)/i);
+  if (flatMatch) {
+    const hash = flatMatch[1];
+    const ext = flatMatch[2];
+
+    try {
+      const hashBytes = new Uint8Array(hash.match(/.{1,2}/g)!.map(b => parseInt(b, 16)));
+      const combined = new Uint8Array(17);
+      combined[0] = 2;
+      combined.set(hashBytes, 1);
+
+      let base64 = btoa(String.fromCharCode(...combined))
+        .replace(/\+/g, "-")
+        .replace(/\//g, "_")
+        .replace(/=+$/, "");
+
+      return `${origin}/api/r?d=${base64}&e=${ext}${fragment}`;
+    } catch (e) {
+      console.debug("Failed to compress flat OpenSea URL:", e);
+    }
+  }
+
+  return url;
+}
+
+function buildAndTruncateNote(noteObj: any): Uint8Array {
+  const encoder = new TextEncoder();
+  let jsonString = JSON.stringify(noteObj);
+  let bytes = encoder.encode(jsonString);
+  if (bytes.length <= 1024) return bytes;
+
+  // Clone note object to avoid mutating input params
+  let tempNote = JSON.parse(JSON.stringify(noteObj));
+
+  // Step 1: Truncate description (if present)
+  let desc = String(tempNote.description || "");
+  if (desc.length > 0) {
+    for (let len = desc.length - 10; len >= 0; len -= 10) {
+      tempNote.description = desc.substring(0, len) + "...";
+      jsonString = JSON.stringify(tempNote);
+      bytes = encoder.encode(jsonString);
+      if (bytes.length <= 1024) return bytes;
+    }
+    tempNote.description = "";
+    jsonString = JSON.stringify(tempNote);
+    bytes = encoder.encode(jsonString);
+    if (bytes.length <= 1024) return bytes;
+  }
+
+  // Step 2: Remove duplicate image field if present
+  if (tempNote.image) {
+    delete tempNote.image;
+    jsonString = JSON.stringify(tempNote);
+    bytes = encoder.encode(jsonString);
+    if (bytes.length <= 1024) return bytes;
+  }
+
+  // Step 3: Remove external_url if present
+  if (tempNote.external_url) {
+    delete tempNote.external_url;
+    jsonString = JSON.stringify(tempNote);
+    bytes = encoder.encode(jsonString);
+    if (bytes.length <= 1024) return bytes;
+  }
+
+  // Step 4: Remove properties one by one
+  if (tempNote.properties) {
+    const keys = Object.keys(tempNote.properties);
+    for (const key of keys) {
+      delete tempNote.properties[key];
+      jsonString = JSON.stringify(tempNote);
+      bytes = encoder.encode(jsonString);
+      if (bytes.length <= 1024) return bytes;
+    }
+  }
+
+  return bytes;
+}
+
 function generalizeIpfsCid(cidOrPath: string, tokenId: string): string {
   if (!cidOrPath) return "";
   const parts = cidOrPath.split("/");
@@ -672,6 +818,7 @@ export function NFTImportTool() {
 
       const start = Math.max(0, parseInt(startIndex, 10) || 0);
       const allTxns: algosdk.Transaction[] = [];
+      const allTxGroups: algosdk.Transaction[][] = [];
       let totalPrepared = 0;
 
       for (let i = 0; i < toMint.length; i++) {
@@ -848,12 +995,13 @@ export function NFTImportTool() {
             }
             const fallbackUrl = nft.decodedUri || nft.image || "";
             const arc3Url = cidForUrl ? `ipfs://${cidForUrl}#arc3` : (fallbackUrl.endsWith("#arc3") ? fallbackUrl : `${fallbackUrl}#arc3`);
+            const compressedArc3Url = tryCompressUrl(arc3Url);
             mintData = {
               asset_name: nft.name.slice(0, 32),
               unit_name: unitName,
               total_supply: 1,
               decimals: 0,
-              asset_url: arc3Url.slice(0, 96),
+              asset_url: compressedArc3Url.slice(0, 96),
               reserve_address: activeAddress,
               has_freeze: "N",
               has_clawback: "N",
@@ -861,26 +1009,43 @@ export function NFTImportTool() {
             };
           } else {
             // ── ARC69: media URL in asset_url, metadata in note ──
+            const mimeType = nft.image?.endsWith(".gif")
+              ? "image/gif"
+              : nft.image?.endsWith(".webp")
+                ? "image/webp"
+                : nft.image?.endsWith(".jpg") || nft.image?.endsWith(".jpeg")
+                  ? "image/jpeg"
+                  : "image/png";
+
             let assetUrl = nft.image || nft.decodedUri || "";
             if (assetUrl.includes("{id}") && (nft._eth || nft._voi)) {
               const tId = nft._eth ? nft._eth.token_id.toString() : nft._voi!.tokenId.toString();
               assetUrl = assetUrl.replace("{id}", tId);
             }
+
+                        // Append standard media fragment (#i for image)
+            const mediaUrl = appendMediaFragment(assetUrl, mimeType);
+            const compressedAssetUrl = tryCompressUrl(mediaUrl);
+            const finalAssetUrl = truncateStringToBytes(compressedAssetUrl, 96);
+            const finalImage = appendMediaFragment(nft.image, mimeType);
+
             mintData = {
-              asset_name: nft.name.slice(0, 32),
+              asset_name: truncateStringToBytes(nft.name, 32),
               unit_name: unitName,
               total_supply: 1,
               decimals: 0,
-              asset_url: assetUrl.slice(0, 96),
+              asset_url: finalAssetUrl,
               reserve_address: activeAddress,
               has_freeze: "N",
               has_clawback: "N",
               default_frozen: "N",
               asset_note: {
                 standard: "arc69",
-                description: nft.description.slice(0, 1024),
-                external_url: nft.image,
-                mime_type: "image/png",
+                description: nft.description.slice(0, 300), // Sensible starting slice
+                external_url: nft._eth?.opensea_url || nft.decodedUri || nft.image || "",
+                media_url: finalImage,
+                image: finalImage,
+                mime_type: mimeType,
                 properties: sourceProps,
               },
             };
@@ -897,17 +1062,18 @@ export function NFTImportTool() {
         // e.g. "DorkCity123" -> "DorkCity 123", "DorkCity#123" -> "DorkCity #123".
         // Names that already have the space ("Dork City 123") are left untouched.
         const rawAssetName = String(mintData.asset_name || nft.name || "");
-        mintData.asset_name = rawAssetName.replace(/([^\s#\d])(#?\d+)\s*$/, "$1 $2").slice(0, 32);
+        const paddedName = rawAssetName.replace(/([^\s#\d])(#?\d+)\s*$/, "$1 $2");
+        mintData.asset_name = truncateStringToBytes(paddedName, 32);
 
         // ── Unit name: only append sequential number if Collection Unit Name Prefix is specified ──
         if (collectionName.trim() !== "") {
           const baseUnitPrefix = collectionName.replace(/\d+\s*$/, "").trim() || "NFT";
           const finalUnitName = `${baseUnitPrefix.slice(0, maxPrefixLen)}${indexStr}`.toUpperCase();
-          mintData.unit_name = finalUnitName;
+          mintData.unit_name = truncateStringToBytes(finalUnitName, 8);
         } else {
           // If no prefix is specified, use the original/default unit name sanitized to 8 chars
           const baseUnit = String(mintData.unit_name || "NFT").trim();
-          mintData.unit_name = baseUnit.slice(0, 8).toUpperCase();
+          mintData.unit_name = truncateStringToBytes(baseUnit, 8).toUpperCase();
         }
 
         const asset_create_tx = algosdk.makeAssetCreateTxnWithSuggestedParamsFromObject({
@@ -923,7 +1089,7 @@ export function NFTImportTool() {
           suggestedParams: { ...suggestedParams, fee: 2000 },
           clawback: mintData.has_clawback === "Y" ? activeAddress : undefined,
           defaultFrozen: mintData.default_frozen === "Y" ? true : false,
-          note: mintData.asset_note ? new TextEncoder().encode(JSON.stringify(mintData.asset_note)) : undefined,
+          note: mintData.asset_note ? buildAndTruncateNote(mintData.asset_note) : undefined,
         });
 
         const fee_tx = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
@@ -936,6 +1102,7 @@ export function NFTImportTool() {
 
         const group = algosdk.assignGroupID([asset_create_tx, fee_tx]);
         allTxns.push(...group);
+        allTxGroups.push(group);
         totalPrepared++;
         setMintProgress({ done: totalPrepared, total: toMint.length });
         toast.info(`Prepared ${totalPrepared}/${toMint.length}: ${nft.name}`, { autoClose: 500 });
@@ -943,8 +1110,19 @@ export function NFTImportTool() {
 
       if (abortRef.current) { setStep("preview"); return; }
 
-      toast.info(`Signing all ${allTxns.length} transactions...`);
-      const signedTxns = await walletSign(allTxns, transactionSigner);
+      toast.info(`Signing all ${toMint.length} NFTs (in batches of 500)...`);
+      const signedTxns: Uint8Array[] = [];
+      const batches = sliceIntoChunks(allTxGroups, 500); // Batch size of 500 groups to prevent wallet size limit errors
+
+      for (let b = 0; b < batches.length; b++) {
+        if (abortRef.current) { setStep("preview"); return; }
+        const batch = batches[b];
+        const batchTxns = batch.flat();
+        toast.info(`Signing batch ${b + 1} of ${batches.length}...`);
+        const signed = await walletSign(batchTxns, transactionSigner);
+        signedTxns.push(...signed);
+      }
+
       const signedGroups = sliceIntoChunks(Array.from(signedTxns), 2);
 
       const allCreatedIds: number[] = [];

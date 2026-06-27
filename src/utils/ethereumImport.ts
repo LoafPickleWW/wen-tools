@@ -89,6 +89,7 @@ export interface ResolvedEthNFT {
   contractName: string;
   contractSymbol: string;
   raw_metadata: Record<string, any>;
+  opensea_url?: string;
   error?: string;
 }
 
@@ -583,6 +584,7 @@ export async function fetchNFTsFromOpenSea(
         tokenUri: n.metadata_url || "",
         contractName: "OpenSea Shared Storefront",
         contractSymbol: "OPENSTORE",
+        opensea_url: n.opensea_url,
         raw_metadata: {
           name: n.name,
           description: n.description,
