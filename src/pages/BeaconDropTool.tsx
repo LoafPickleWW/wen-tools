@@ -346,6 +346,7 @@ export function BeaconDropTool() {
           // If the drop specifies a recipient and it's not us, skip.
           if (drop.recipient && drop.recipient !== activeAddress) continue;
 
+          drop.sender = tx.sender;
           allDrops.push(drop);
         } catch {
           // ignore parsing errors for individual notes
@@ -454,13 +455,24 @@ export function BeaconDropTool() {
           <div className="p-6 rounded-xl bg-white/5 border border-white/10">
             <h3 className="text-sm font-bold text-white mb-4 uppercase tracking-widest">Leave a Drop</h3>
             <div className="space-y-4">
-              <input 
-                type="text" 
-                value={ddRecipient}
-                onChange={(e) => setDdRecipient(e.target.value)}
-                placeholder="Recipient Wallet or .algo name"
-                className="w-full py-3 px-4 bg-[#242424] text-white rounded-xl border border-[#333] outline-none focus:border-primary-orange transition-all"
-              />
+              <div>
+                <input 
+                  type="text" 
+                  value={ddRecipient}
+                  onChange={(e) => setDdRecipient(e.target.value)}
+                  placeholder="Recipient Wallet or .algo name"
+                  className="w-full py-3 px-4 bg-[#242424] text-white rounded-xl border border-[#333] outline-none focus:border-primary-orange transition-all mb-2"
+                />
+                {activeAddress && (
+                  <button 
+                    type="button"
+                    onClick={() => setDdRecipient(activeAddress)} 
+                    className="text-xs text-primary-orange underline hover:text-primary-orange/80 transition-colors text-left"
+                  >
+                    Use my own address (to drop files/messages to yourself)
+                  </button>
+                )}
+              </div>
               <div className="flex items-center gap-2">
                 <textarea 
                   value={ddMessage}
@@ -629,6 +641,12 @@ export function BeaconDropTool() {
                         <span className="text-[9px] text-gray-500">{(drop.fileSize / 1024).toFixed(1)} KB</span>
                       )}
                     </div>
+                    
+                    {drop.sender && (
+                      <p className="text-[10px] text-gray-400 mb-3 font-mono">
+                        From: <span className="text-gray-300">{drop.sender.slice(0, 6)}...{drop.sender.slice(-4)}</span>
+                      </p>
+                    )}
                     
                     {drop.isFile && drop.fileType?.startsWith("image/") && (
                       <div className="mb-3 rounded-lg overflow-hidden border border-white/5">

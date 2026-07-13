@@ -515,6 +515,9 @@ export function P2PChat() {
                 To start a session, you must first verify your wallet identity. 
                 This ensures your peers know exactly who they are connecting with.
               </p>
+              <p className="text-[10px] text-gray-500 mt-2">
+                💡 Tip: You can connect to yourself (e.g., to transfer files between tabs or devices) by opening this page in another browser/tab with the same wallet and joining your own Session ID.
+              </p>
             </div>
             <button onClick={startOfferSession} className="w-full py-4 bg-primary-orange text-white rounded-xl mb-4 font-bold shadow-lg shadow-primary-orange/20 hover:scale-[1.02] active:scale-[0.98] transition-all">
               Verify & Create Session
@@ -553,13 +556,24 @@ export function P2PChat() {
               <div className="p-6 rounded-xl bg-white/5 border border-white/10">
                 <h3 className="text-sm font-bold text-white mb-4 uppercase tracking-widest">Leave a Drop</h3>
                 <div className="space-y-4">
-                  <input 
-                    type="text" 
-                    value={ddRecipient}
-                    onChange={(e) => setDdRecipient(e.target.value)}
-                    placeholder="Recipient Wallet or .algo name"
-                    className="w-full py-3 px-4 bg-[#242424] text-white rounded-xl border border-[#333] outline-none focus:border-primary-orange transition-all"
-                  />
+                  <div>
+                    <input 
+                      type="text" 
+                      value={ddRecipient}
+                      onChange={(e) => setDdRecipient(e.target.value)}
+                      placeholder="Recipient Wallet or .algo name"
+                      className="w-full py-3 px-4 bg-[#242424] text-white rounded-xl border border-[#333] outline-none focus:border-primary-orange transition-all mb-2"
+                    />
+                    {activeAddress && (
+                      <button 
+                        type="button"
+                        onClick={() => setDdRecipient(activeAddress)} 
+                        className="text-xs text-primary-orange underline hover:text-primary-orange/80 transition-colors text-left"
+                      >
+                        Use my own address (to drop files/messages to yourself)
+                      </button>
+                    )}
+                  </div>
                   <div className="flex items-center gap-2">
                     <textarea 
                       value={ddMessage}
@@ -641,19 +655,20 @@ export function P2PChat() {
                           // 4. Push Encrypted Payload to IPFS (Crust)
                           const authBasic = localStorage.getItem("authBasic");
                           const cid = await pinJSONToCrust(authBasic, JSON.stringify(encryptedFile));
-                          
+                           
                           payload = {
                             type: "file",
                             cid,
                             fileName: ddFile.name,
                             fileSize: ddFile.size,
                             fileType: ddFile.type,
-                            recipient: targetAddr
+                            recipient: targetAddr,
+                            sender: activeAddress
                           };
                         } else {
                           // Standard text drop — encrypt with recipient's X25519 key
                           const encrypted = await encryptDeadDrop(ddMessage, targetAddr, recipientPubKey);
-                          payload = { ...encrypted, type: "text", recipient: targetAddr };
+                          payload = { ...encrypted, type: "text", recipient: targetAddr, sender: activeAddress };
                         }
                         
                         // 4. Upload Metadata to Relay
@@ -697,6 +712,12 @@ export function P2PChat() {
                             <span className="text-[9px] text-gray-500">{(drop.fileSize / 1024).toFixed(1)} KB</span>
                           )}
                         </div>
+                        
+                        {drop.sender && (
+                          <p className="text-[10px] text-gray-400 mb-3 font-mono">
+                            From: <span className="text-gray-300">{shortenAddr(drop.sender)}</span>
+                          </p>
+                        )}
                         
                         {drop.isFile && drop.fileType?.startsWith("image/") && (
                           <div className="mb-3 rounded-lg overflow-hidden border border-white/5">

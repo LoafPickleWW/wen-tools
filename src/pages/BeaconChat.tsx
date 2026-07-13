@@ -744,7 +744,7 @@ export function BeaconChat() {
         const payload = decryptBeaconNote(noteStr, keypair.secretKey);
         if (!payload) continue;
 
-        if (payload.type === "bond-request" && tx.sender !== activeAddress) {
+        if (payload.type === "bond-request") {
           if (payload.exp && payload.exp < Date.now()) continue;
           newRequests.push({ fromAddress: tx.sender, wpk: payload.wpk, nfd: payload.nfd, ts: payload.ts, round: tx["confirmed-round"] });
         } else if (payload.type === "bond-accept") {
@@ -755,7 +755,7 @@ export function BeaconChat() {
             setContacts(updated);
             toast.success(`New contact added: ${payload.nfd || shortenAddr(tx.sender)}`);
           }
-        } else if (payload.type === "offer" && tx.sender !== activeAddress && !foundOffer) {
+        } else if (payload.type === "offer" && !foundOffer) {
           if (payload.exp && payload.exp < Date.now()) continue;
           
           if (payload.total && payload.part) {
@@ -809,6 +809,22 @@ export function BeaconChat() {
       const keypair = await getBeaconKeypair();
       const targetInfo = await lookupWpk(addr);
       if (!targetInfo) throw new Error("Recipient hasn't initialized BEACON");
+
+      if (addr === activeAddress) {
+        const current = getContacts(activeAddress);
+        if (!current.some(c => c.address === activeAddress)) {
+          const updated = [...current, { address: activeAddress, wpk: targetInfo.wpk, nfd: targetInfo.nfd, addedAt: Date.now() }];
+          saveContacts(activeAddress, updated);
+          setContacts(updated);
+          toast.success("Added yourself to contacts!");
+          setPhase("home");
+          return;
+        } else {
+          toast.info("You are already in your contacts list.");
+          setPhase("home");
+          return;
+        }
+      }
 
       const payload: BeaconNote = {
         proto: "BEACON/1",
@@ -1008,10 +1024,23 @@ export function BeaconChat() {
           <div className="bg-[#111] rounded-2xl p-8 border border-[#222] shadow-2xl">
             <div className="flex items-center justify-between mb-8"><h2 className="text-xl font-bold text-white">Add Contact</h2><button onClick={() => setPhase("home")} className="text-gray-500 hover:text-white"><MdClose size={24} /></button></div>
             <div className="space-y-4">
-              <div><label className="text-[10px] text-gray-500 font-bold uppercase tracking-widest block mb-2">Wallet Address or .algo Name</label>
-                <input type="text" value={newContactAddr} onChange={e => setNewContactAddr(e.target.value)} placeholder="ALGO... or name.algo" className="w-full py-3 px-4 bg-[#1a1a1a] text-white rounded-xl border border-[#222] outline-none focus:border-primary-orange transition-all" />
+              <div>
+                <label className="text-[10px] text-gray-500 font-bold uppercase tracking-widest block mb-2">Wallet Address or .algo Name</label>
+                <input type="text" value={newContactAddr} onChange={e => setNewContactAddr(e.target.value)} placeholder="ALGO... or name.algo" className="w-full py-3 px-4 bg-[#1a1a1a] text-white rounded-xl border border-[#222] outline-none focus:border-primary-orange transition-all mb-2" />
+                {activeAddress && (
+                  <button 
+                    type="button"
+                    onClick={() => setNewContactAddr(activeAddress)} 
+                    className="text-xs text-primary-orange underline hover:text-primary-orange/80 transition-colors text-left"
+                  >
+                    Use my own address (to chat/send files to yourself)
+                  </button>
+                )}
               </div>
-              <p className="text-gray-500 text-xs">Bond requests cost 0.001 ALGO and establish a permanent encrypted link.</p>
+              <p className="text-gray-500 text-xs">
+                Bond requests cost 0.001 ALGO and establish a permanent encrypted link. 
+                You can add yourself to test connections or transfer notes/files between tabs or devices.
+              </p>
               <button onClick={() => sendBondRequest(newContactAddr)} disabled={sendingBond || !newContactAddr.trim()} className="w-full py-4 bg-primary-orange text-white rounded-xl font-bold transition-all disabled:opacity-30">{sendingBond ? "Sending..." : "Send Bond Request"}</button>
             </div>
           </div>
