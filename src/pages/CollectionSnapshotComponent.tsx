@@ -7,6 +7,7 @@ import {
   getNfdDomain,
   getRandCreatorListings,
   getCreatedAssets,
+  getDownbadListingsMap,
 } from "../utils";
 import { useWallet } from "@txnlab/use-wallet-react";
 import ConnectButton from "../components/ConnectButton";
@@ -19,8 +20,8 @@ export function CollectionSnapshot() {
   const [loading, setLoading] = useState(false);
   const [counter, setCounter] = useState(0);
   const [checkRandSupport, setCheckRandSupport] = useState(false);
+  const [checkDownbadSupport, setCheckDownbadSupport] = useState(false);
   const [checkSeparated, setCheckSeparated] = useState(false);
-  const [randCreatorListings, setRandCreatorListings] = useState([] as any[]);
   const { activeNetwork } = useWallet();
 
   async function getCollectionData() {
@@ -54,25 +55,6 @@ export function CollectionSnapshot() {
         });
       }
       createdAssets = createdAssets.map((asset) => asset.asset_id);
-      if (checkRandSupport) {
-        let randData: any[] = [];
-        for (let i = 0; i < creatorWallets.length; i++) {
-          let creatorListings = await getRandCreatorListings(creatorWallets[i]);
-          creatorListings = creatorListings.filter((listing: any) =>
-            createdAssets.includes(listing.assetId)
-          );
-          randData = randData.concat(creatorListings);
-        }
-        randData = randData.reduce((acc, listing) => {
-          if (acc[listing.sellerAddress]) {
-            acc[listing.sellerAddress].push(listing.assetId);
-          } else {
-            acc[listing.sellerAddress] = [listing.assetId];
-          }
-          return acc;
-        }, {});
-        setRandCreatorListings(randData);
-      }
       setCollectionData(createdAssets);
     } else {
       toast.info("Please enter at least one wallet address!");
@@ -112,21 +94,29 @@ export function CollectionSnapshot() {
         let line = "";
         line += key + ",";
         line += value.nfd + ",";
-        if (checkRandSupport) {
-          if (!value.listed_assets) {
-            value.listed_assets = [];
-          }
-          line += value.assets.length + value.listed_assets.length + ",";
+        if (checkRandSupport || checkDownbadSupport) {
+          const assetsLen = value.assets ? value.assets.length : 0;
+          const randLen = value.listed_assets_rand ? value.listed_assets_rand.length : 0;
+          const downbadLen = value.listed_assets_downbad ? value.listed_assets_downbad.length : 0;
+          line += (assetsLen + randLen + downbadLen) + ",";
         }
         const asset_list =
-          "[" + value.assets.map((asset: any) => asset).join(",");
+          "[" + (value.assets || []).map((asset: any) => asset).join(",");
         line += '"' + asset_list + ']",';
-        line += value.assets.length + ",";
+        line += (value.assets || []).length + ",";
         if (checkRandSupport) {
-          const listed_asset_list =
-            "[" + value.listed_assets.map((asset: any) => asset).join(",");
-          line += '"' + listed_asset_list + ']",';
-          line += value.listed_assets.length + ",";
+          const listed_rand = value.listed_assets_rand || [];
+          const listed_rand_list =
+            "[" + listed_rand.map((asset: any) => asset).join(",");
+          line += '"' + listed_rand_list + ']",';
+          line += listed_rand.length + ",";
+        }
+        if (checkDownbadSupport) {
+          const listed_downbad = value.listed_assets_downbad || [];
+          const listed_downbad_list =
+            "[" + listed_downbad.map((asset: any) => asset).join(",");
+          line += '"' + listed_downbad_list + ']",';
+          line += listed_downbad.length + ",";
         }
         str += line + "\r\n";
       });
@@ -158,45 +148,129 @@ export function CollectionSnapshot() {
   async function downloadCollectionDataAsCSV() {
     if (collectionData.length > 0) {
       setLoading(true);
+      
+      let randListings: any[] = [];
+      let randListingsMap: Record<number, string> = {}; // assetId -> sellerAddress
+      let randCreatorListingsGrouped: Record<string, number[]> = {};
+
+      if (checkRandSupport) {
+        const creatorWallets = creatorWallet
+          .split(",")
+          .map((item) => item.trim())
+          .filter((item) => item !== "");
+        for (let i = 0; i < creatorWallets.length; i++) {
+          let creatorListings = await getRandCreatorListings(creatorWallets[i]);
+          creatorListings = creatorListings.filter((listing: any) =>
+            collectionData.includes(listing.assetId)
+          );
+          randListings = randListings.concat(creatorListings);
+        }
+        randListings.forEach((listing) => {
+          randListingsMap[listing.assetId] = listing.sellerAddress;
+          if (randCreatorListingsGrouped[listing.sellerAddress]) {
+            randCreatorListingsGrouped[listing.sellerAddress].push(listing.assetId);
+          } else {
+            randCreatorListingsGrouped[listing.sellerAddress] = [listing.assetId];
+          }
+        });
+      }
+
+      let downbadListingsMap: Record<number, { sellerAddress: string, escrowAddress: string }> = {};
+      let downbadCreatorListings: Record<string, number[]> = {};
+
+      if (checkDownbadSupport) {
+        toast.info("Fetching Downbad.farm active listings...");
+        const allDownbadListings = await getDownbadListingsMap(activeNetwork);
+        Object.entries(allDownbadListings).forEach(([assetIdStr, listing]) => {
+          const assetId = parseInt(assetIdStr);
+          if (collectionData.includes(assetId)) {
+            downbadListingsMap[assetId] = listing;
+            if (downbadCreatorListings[listing.sellerAddress]) {
+              downbadCreatorListings[listing.sellerAddress].push(assetId);
+            } else {
+              downbadCreatorListings[listing.sellerAddress] = [assetId];
+            }
+          }
+        });
+      }
+
       let data: any = [];
       let count = 0;
       for (const asset_id of collectionData) {
-        const asset_owner = await getAssetOwner(asset_id);
+        let asset_owner = await getAssetOwner(asset_id);
+        let isListed = false;
+        
+        // Reconcile Rand Gallery escrow to seller
+        if (checkRandSupport && randListingsMap[asset_id]) {
+          asset_owner = randListingsMap[asset_id];
+          isListed = true;
+        }
+
+        // Reconcile Downbad escrow to seller
+        if (checkDownbadSupport && downbadListingsMap[asset_id]) {
+          asset_owner = downbadListingsMap[asset_id].sellerAddress;
+          isListed = true;
+        }
+
         count++;
         setCounter(count);
-        if (data[asset_owner]) {
-          data[asset_owner].assets.push(asset_id);
-        } else {
+        if (!data[asset_owner]) {
           data[asset_owner] = {
             nfd: await getNfdDomain(asset_owner),
-            assets: [asset_id],
+            assets: [],
           };
         }
+        if (!isListed) {
+          data[asset_owner].assets.push(asset_id);
+        }
       }
+
       let headers = ["wallet", "nfdomain", "assets", "assets_count"];
-      if (checkRandSupport) {
+      
+      if (checkRandSupport || checkDownbadSupport) {
         headers = [
           "wallet",
           "nfdomain",
           "total_assets_count",
           "assets",
-          "assets_count",
-          "listed_assets",
-          "listed_assets_count",
+          "assets_count"
         ];
-        Object.entries(randCreatorListings).forEach(
-          ([key, value]: [string, any]) => {
-            if (data[key]) {
-              data[key].listed_assets = value;
+        if (checkRandSupport) {
+          headers.push("listed_assets_rand", "listed_assets_rand_count");
+          for (const [key, value] of Object.entries(randCreatorListingsGrouped)) {
+            if (!data[key]) {
+              data[key] = {
+                nfd: await getNfdDomain(key),
+                assets: [],
+              };
             }
+            data[key].listed_assets_rand = value;
           }
-        );
+        }
+        if (checkDownbadSupport) {
+          headers.push("listed_assets_downbad", "listed_assets_downbad_count");
+          for (const [key, value] of Object.entries(downbadCreatorListings)) {
+            if (!data[key]) {
+              data[key] = {
+                nfd: await getNfdDomain(key),
+                assets: [],
+              };
+            }
+            data[key].listed_assets_downbad = value;
+          }
+        }
       }
+
       if (checkSeparated) {
         headers = ["asset_id", "wallet", "nfdomain"];
         const newData: any[] = [];
         Object.entries(data).forEach(([key, value]: [string, any]) => {
-          value.assets.forEach((asset_id: number) => {
+          const allAssets = [
+            ...(value.assets || []),
+            ...(value.listed_assets_rand || []),
+            ...(value.listed_assets_downbad || []),
+          ];
+          allAssets.forEach((asset_id: number) => {
             newData.push({
               asset_id,
               wallet: key,
@@ -279,6 +353,18 @@ export function CollectionSnapshot() {
             />
             <label htmlFor="check_rand" className="text-slate-300 text-sm cursor-pointer select-none">
               Include RandGallery Listings (reconcile escrows to sellers)
+            </label>
+          </div>
+          <div className="flex items-center">
+            <input
+              type="checkbox"
+              id="check_downbad"
+              className="mr-2 rounded border-slate-800 text-primary-orange focus:ring-primary-orange bg-slate-950"
+              checked={checkDownbadSupport}
+              onChange={(e) => setCheckDownbadSupport(e.target.checked)}
+            />
+            <label htmlFor="check_downbad" className="text-slate-300 text-sm cursor-pointer select-none">
+              Include Downbad.farm Listings (reconcile escrows to sellers)
             </label>
           </div>
         </div>

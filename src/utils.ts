@@ -2095,6 +2095,66 @@ export async function createAssetBurnTransactions(
   return groups;
 }
 
+export async function getDownbadListingsMap(activeNetwork: NetworkId) {
+  const indexerBase = getIndexerURL(activeNetwork);
+  const listings: Record<number, { sellerAddress: string; escrowAddress: string; version: "V1" | "V2" }> = {};
+
+  const factoryV1Creator = "3G4R4IIR2G6KJO7TGEICFC75DI5UYSV6SYBRCUT3PX2K34S2VLSCA2XKAU";
+  const factoryV2Creator = "WZ3MOIM47O3BPG65CO4EETAYBCXRISAFVWXVR46NKPH6YVGGCHZTBAHPSQ";
+
+  const fetchCreatorApps = async (creator: string, version: "V1" | "V2") => {
+    let nextToken = "";
+    while (true) {
+      const url = `${indexerBase}/v2/applications?creator=${creator}&limit=1000${
+        nextToken ? `&next=${nextToken}` : ""
+      }`;
+      try {
+        const response = await axios.get(url);
+        const apps = response.data.applications || [];
+        for (const app of apps) {
+          if (app.deleted) continue;
+          const globalState = app.params["global-state"] || [];
+          let assetId = 0;
+          let sellerBytes = "";
+          for (const state of globalState) {
+            const keyStr = Buffer.from(state.key, "base64").toString("utf8");
+            if (keyStr === "asset") {
+              assetId = state.value.uint;
+            } else if (keyStr === "seller") {
+              sellerBytes = state.value.bytes;
+            }
+          }
+          if (assetId && sellerBytes) {
+            try {
+              const sellerAddress = algosdk.encodeAddress(Buffer.from(sellerBytes, "base64"));
+              const escrowAddress = algosdk.getApplicationAddress(app.id);
+              listings[assetId] = {
+                sellerAddress,
+                escrowAddress,
+                version,
+              };
+            } catch (err) {
+              console.error("Failed to encode seller/escrow for app", app.id, err);
+            }
+          }
+        }
+        nextToken = response.data["next-token"];
+        if (!nextToken) break;
+      } catch (err) {
+        console.error("Failed to fetch applications for creator", creator, err);
+        break;
+      }
+    }
+  };
+
+  await Promise.all([
+    fetchCreatorApps(factoryV1Creator, "V1"),
+    fetchCreatorApps(factoryV2Creator, "V2"),
+  ]);
+
+  return listings;
+}
+
 export function showDonationToast() {
   const messages = [
     "Buy us a coffee! Or a tea. Or just send Algos so we can pay our indexer landlord.",
