@@ -168,6 +168,9 @@ export function BatchMint() {
 
       if (formData.sourceMode === "csv") {
         let headers: string[] = [];
+        const startIndex = formData.startIndex ? parseInt(formData.startIndex) : null;
+        const endIndex = formData.endIndex ? parseInt(formData.endIndex) : null;
+
         for (let i = 0; i < csvData.length; i++) {
           if (csvData[i].length <= 1) continue;
           if (i === 0) {
@@ -176,10 +179,37 @@ export function BatchMint() {
             const obj: any = {};
             for (let j = 0; j < headers.length; j++) {
               const header = headers[j];
+              let key = header;
+              const lowerKey = key.toLowerCase().replace(/[\s_-]+/g, "_");
+              if (lowerKey === "index") key = "index";
+              else if (lowerKey === "name") key = "name";
+              else if (lowerKey === "unit_name" || lowerKey === "unitname") key = "unit_name";
+              else if (lowerKey === "image_ipfs_cid" || lowerKey === "imageipfscid") key = "image_ipfs_cid";
+              else if (lowerKey === "url") key = "url";
+              else if (lowerKey === "description") key = "description";
+              else if (lowerKey === "external_url" || lowerKey === "externalurl") key = "external_url";
+              else if (lowerKey === "creator") key = "creator";
+              else if (lowerKey === "token_id" || lowerKey === "tokenid") key = "token_id";
+              else if (lowerKey === "royalty") key = "royalty";
+              else if (lowerKey === "decimals") key = "decimals";
+              else if (lowerKey === "total_supply" || lowerKey === "totalsupply") key = "total_supply";
+              else if (lowerKey === "has_clawback" || lowerKey === "hasclawback") key = "has_clawback";
+              else if (lowerKey === "has_freeze" || lowerKey === "hasfreeze") key = "has_freeze";
+              else if (lowerKey === "default_frozen" || lowerKey === "defaultfrozen") key = "default_frozen";
+
               if (header.startsWith("metadata_")) {
                 obj[header.replace("metadata_", "")] = csvData[i][j];
               } else {
-                obj[header] = csvData[i][j];
+                obj[key] = csvData[i][j];
+              }
+            }
+
+            // Filter by range if specified
+            if (obj.index !== undefined) {
+              const itemIndex = parseInt(obj.index);
+              if (!isNaN(itemIndex)) {
+                if (startIndex !== null && itemIndex < startIndex) continue;
+                if (endIndex !== null && itemIndex > endIndex) continue;
               }
             }
             data.push(obj);
@@ -708,6 +738,56 @@ export function BatchMint() {
               </div>
             ) : (
               <div className="space-y-4">
+                {/* Optional Media CID and Index range for CSV mode */}
+                <div className="bg-slate-900/40 p-4 rounded-xl border border-slate-850 space-y-4 text-left animate-fadeIn">
+                  <span className="block text-xs font-semibold text-gray-300 uppercase tracking-wider">
+                    Optional Image Folder CID & Index Range Configuration
+                  </span>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block mb-1.5 text-xs text-gray-400 uppercase tracking-wider font-bold">Media IPFS CID (Folder CID)</label>
+                      <input
+                        type="text"
+                        placeholder="Qm..."
+                        className="w-full bg-slate-900/60 border border-slate-700 text-sm font-medium text-white placeholder:text-slate-500 px-4 py-2.5 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary-orange focus:border-primary-orange transition-all"
+                        value={formData.mediaIPFSCID}
+                        onChange={(e) => setFormData({ ...formData, mediaIPFSCID: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <label className="block mb-1.5 text-xs text-gray-400 uppercase tracking-wider font-bold">Media Extension</label>
+                      <input
+                        type="text"
+                        placeholder="Ex: .png, .jpg"
+                        className="w-full bg-slate-900/60 border border-slate-700 text-sm font-medium text-white placeholder:text-slate-500 px-4 py-2.5 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary-orange focus:border-primary-orange transition-all"
+                        value={formData.mediaExtension}
+                        onChange={(e) => setFormData({ ...formData, mediaExtension: e.target.value })}
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block mb-1.5 text-xs text-gray-400 uppercase tracking-wider font-bold">Start Index</label>
+                      <input
+                        type="number"
+                        placeholder="1"
+                        className="w-full bg-slate-900/60 border border-slate-700 text-sm font-medium text-white placeholder:text-slate-500 px-4 py-2.5 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary-orange focus:border-primary-orange transition-all"
+                        value={formData.startIndex}
+                        onChange={(e) => setFormData({ ...formData, startIndex: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <label className="block mb-1.5 text-xs text-gray-400 uppercase tracking-wider font-bold">End Index</label>
+                      <input
+                        type="number"
+                        placeholder="100"
+                        className="w-full bg-slate-900/60 border border-slate-700 text-sm font-medium text-white placeholder:text-slate-500 px-4 py-2.5 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary-orange focus:border-primary-orange transition-all"
+                        value={formData.endIndex}
+                        onChange={(e) => setFormData({ ...formData, endIndex: e.target.value })}
+                      />
+                    </div>
+                  </div>
+                </div>
                 {/* Templates and Guides */}
                 <div className="flex flex-wrap gap-3">
                   <a

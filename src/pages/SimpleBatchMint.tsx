@@ -160,22 +160,54 @@ export function SimpleBatchMint() {
         return;
       }
 
-      let headers;
+      let headers: string[] = [];
       const data = [];
       if (hasMetadataFile && csvData.length > 1) {
+        const startIndex = formData.startIndex ? parseInt(formData.startIndex) : null;
+        const endIndex = formData.endIndex ? parseInt(formData.endIndex) : null;
+
         for (let i = 0; i < csvData.length; i++) {
           if (csvData[i].length === 1) continue;
           if (i === 0) {
-            headers = csvData[i];
+            headers = csvData[i].map((h: string) => h.trim());
           } else {
             const obj: any = {};
             for (let j = 0; j < headers.length; j++) {
-              if (headers[j].startsWith("metadata_")) {
-                obj[headers[j].replace("metadata_", "")] = csvData[i][j];
+              const header = headers[j];
+              let key = header;
+              const lowerKey = key.toLowerCase().replace(/[\s_-]+/g, "_");
+              if (lowerKey === "index") key = "index";
+              else if (lowerKey === "name") key = "name";
+              else if (lowerKey === "unit_name" || lowerKey === "unitname") key = "unit_name";
+              else if (lowerKey === "image_ipfs_cid" || lowerKey === "imageipfscid") key = "image_ipfs_cid";
+              else if (lowerKey === "url") key = "url";
+              else if (lowerKey === "description") key = "description";
+              else if (lowerKey === "external_url" || lowerKey === "externalurl") key = "external_url";
+              else if (lowerKey === "creator") key = "creator";
+              else if (lowerKey === "token_id" || lowerKey === "tokenid") key = "token_id";
+              else if (lowerKey === "royalty") key = "royalty";
+              else if (lowerKey === "decimals") key = "decimals";
+              else if (lowerKey === "total_supply" || lowerKey === "totalsupply") key = "total_supply";
+              else if (lowerKey === "has_clawback" || lowerKey === "hasclawback") key = "has_clawback";
+              else if (lowerKey === "has_freeze" || lowerKey === "hasfreeze") key = "has_freeze";
+              else if (lowerKey === "default_frozen" || lowerKey === "defaultfrozen") key = "default_frozen";
+
+              if (header.startsWith("metadata_")) {
+                obj[header.replace("metadata_", "")] = csvData[i][j];
               } else {
-                obj[headers[j]] = csvData[i][j];
+                obj[key] = csvData[i][j];
               }
             }
+
+            // Filter by range if specified
+            if (obj.index !== undefined) {
+              const itemIndex = parseInt(obj.index);
+              if (!isNaN(itemIndex)) {
+                if (startIndex !== null && itemIndex < startIndex) continue;
+                if (endIndex !== null && itemIndex > endIndex) continue;
+              }
+            }
+
             obj[
               "image_ipfs_cid"
             ] = `ipfs://${formData.mediaIPFSCID}/${obj["index"]}${formData.mediaExtension}`;
@@ -606,7 +638,7 @@ export function SimpleBatchMint() {
             Has Metadata File?
           </span>
         </label>
-        {hasMetadataFile ? (
+        {hasMetadataFile && (
           <div>
             <p className="mt-2">Upload Metadata CSV file</p>
             {csvData === null ? (
@@ -646,40 +678,39 @@ export function SimpleBatchMint() {
               </p>
             )}
           </div>
-        ) : (
-          <div className="mt-4 md:flex items-center text-start gap-x-4">
-            <div className="flex flex-col md:mt-0 mt-4">
-              <label className="mb-2 text-sm leading-none text-gray-200">
-                Collection Start Index*
-              </label>
-              <input
-                className="w-64 bg-gray-300 text-sm font-medium text-center leading-none text-black placeholder:text-black/30 px-3 py-2 border rounded border-gray-200"
-                id="start_index"
-                placeholder="Enter start index"
-                type="number"
-                value={formData.startIndex}
-                onChange={(e) => {
-                  setFormData({ ...formData, startIndex: e.target.value });
-                }}
-              />
-            </div>
-            <div className="flex flex-col md:mt-0 mt-4">
-              <label className="mb-2 text-sm leading-none text-gray-200">
-                Collection End Index*
-              </label>
-              <input
-                className="w-64 bg-gray-300 text-sm font-medium text-center leading-none text-black placeholder:text-black/30 px-3 py-2 border rounded border-gray-200"
-                id="end_index"
-                placeholder="Enter end index"
-                type="number"
-                value={formData.endIndex}
-                onChange={(e) => {
-                  setFormData({ ...formData, endIndex: e.target.value });
-                }}
-              />
-            </div>
-          </div>
         )}
+        <div className="mt-4 md:flex items-center text-start gap-x-4">
+          <div className="flex flex-col md:mt-0 mt-4">
+            <label className="mb-2 text-sm leading-none text-gray-200">
+              Collection Start Index{hasMetadataFile ? " (Optional)" : "*"}
+            </label>
+            <input
+              className="w-64 bg-gray-300 text-sm font-medium text-center leading-none text-black placeholder:text-black/30 px-3 py-2 border rounded border-gray-200"
+              id="start_index"
+              placeholder="Enter start index"
+              type="number"
+              value={formData.startIndex}
+              onChange={(e) => {
+                setFormData({ ...formData, startIndex: e.target.value });
+              }}
+            />
+          </div>
+          <div className="flex flex-col md:mt-0 mt-4">
+            <label className="mb-2 text-sm leading-none text-gray-200">
+              Collection End Index{hasMetadataFile ? " (Optional)" : "*"}
+            </label>
+            <input
+              className="w-64 bg-gray-300 text-sm font-medium text-center leading-none text-black placeholder:text-black/30 px-3 py-2 border rounded border-gray-200"
+              id="end_index"
+              placeholder="Enter end index"
+              type="number"
+              value={formData.endIndex}
+              onChange={(e) => {
+                setFormData({ ...formData, endIndex: e.target.value });
+              }}
+            />
+          </div>
+        </div>
         <div className="mt-4 flex flex-row items-center text-start justify-center gap-x-4">
           <label className="relative inline-flex items-center cursor-pointer">
             <input
