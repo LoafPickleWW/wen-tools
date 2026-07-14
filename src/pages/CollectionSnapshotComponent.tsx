@@ -8,6 +8,7 @@ import {
   getRandCreatorListings,
   getCreatedAssets,
   getDownbadListingsMap,
+  getAkitaListingsMap,
 } from "../utils";
 import { useWallet } from "@txnlab/use-wallet-react";
 import ConnectButton from "../components/ConnectButton";
@@ -21,6 +22,7 @@ export function CollectionSnapshot() {
   const [counter, setCounter] = useState(0);
   const [checkRandSupport, setCheckRandSupport] = useState(false);
   const [checkDownbadSupport, setCheckDownbadSupport] = useState(false);
+  const [checkAkitaSupport, setCheckAkitaSupport] = useState(false);
   const [checkSeparated, setCheckSeparated] = useState(false);
   const { activeNetwork } = useWallet();
 
@@ -30,9 +32,10 @@ export function CollectionSnapshot() {
     assets: number[];
     listed_assets_rand?: number[];
     listed_assets_downbad?: number[];
+    listed_assets_akita?: number[];
   }> | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
-  const [sortBy, setSortBy] = useState<"total" | "held" | "rand" | "downbad">("total");
+  const [sortBy, setSortBy] = useState<"total" | "held" | "rand" | "downbad" | "akita">("total");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
@@ -70,11 +73,12 @@ export function CollectionSnapshot() {
         let line = "";
         line += key + ",";
         line += value.nfd + ",";
-        if (checkRandSupport || checkDownbadSupport) {
+        if (checkRandSupport || checkDownbadSupport || checkAkitaSupport) {
           const assetsLen = value.assets ? value.assets.length : 0;
           const randLen = value.listed_assets_rand ? value.listed_assets_rand.length : 0;
           const downbadLen = value.listed_assets_downbad ? value.listed_assets_downbad.length : 0;
-          line += (assetsLen + randLen + downbadLen) + ",";
+          const akitaLen = value.listed_assets_akita ? value.listed_assets_akita.length : 0;
+          line += (assetsLen + randLen + downbadLen + akitaLen) + ",";
         }
         const asset_list =
           "[" + (value.assets || []).map((asset: any) => asset).join(",");
@@ -93,6 +97,13 @@ export function CollectionSnapshot() {
             "[" + listed_downbad.map((asset: any) => asset).join(",");
           line += '"' + listed_downbad_list + ']",';
           line += listed_downbad.length + ",";
+        }
+        if (checkAkitaSupport) {
+          const listed_akita = value.listed_assets_akita || [];
+          const listed_akita_list =
+            "[" + listed_akita.map((asset: any) => asset).join(",");
+          line += '"' + listed_akita_list + ']",';
+          line += listed_akita.length + ",";
         }
         str += line + "\r\n";
       });
@@ -209,8 +220,26 @@ export function CollectionSnapshot() {
         });
       }
 
+      // 3b. Fetch Akita listings
+      let akitaListingsMap: Record<number, { sellerAddress: string }> = {};
+      let akitaCreatorListings: Record<string, number[]> = {};
+      if (checkAkitaSupport) {
+        const allAkitaListings = await getAkitaListingsMap(activeNetwork);
+        Object.entries(allAkitaListings).forEach(([assetIdStr, listing]) => {
+          const assetId = parseInt(assetIdStr);
+          if (assetIds.includes(assetId)) {
+            akitaListingsMap[assetId] = listing;
+            if (akitaCreatorListings[listing.sellerAddress]) {
+              akitaCreatorListings[listing.sellerAddress].push(assetId);
+            } else {
+              akitaCreatorListings[listing.sellerAddress] = [assetId];
+            }
+          }
+        });
+      }
+
       // 4. Audit asset owners
-      let data: Record<string, { nfd: string, assets: number[], listed_assets_rand?: number[], listed_assets_downbad?: number[] }> = {};
+      let data: Record<string, { nfd: string, assets: number[], listed_assets_rand?: number[], listed_assets_downbad?: number[], listed_assets_akita?: number[] }> = {};
       let count = 0;
       for (const asset_id of assetIds) {
         let asset_owner = await getAssetOwner(asset_id);
@@ -223,6 +252,11 @@ export function CollectionSnapshot() {
 
         if (checkDownbadSupport && downbadListingsMap[asset_id]) {
           asset_owner = downbadListingsMap[asset_id].sellerAddress;
+          isListed = true;
+        }
+
+        if (checkAkitaSupport && akitaListingsMap[asset_id]) {
+          asset_owner = akitaListingsMap[asset_id].sellerAddress;
           isListed = true;
         }
 
@@ -266,6 +300,18 @@ export function CollectionSnapshot() {
         }
       }
 
+      if (checkAkitaSupport) {
+        for (const [key, value] of Object.entries(akitaCreatorListings)) {
+          if (!data[key]) {
+            data[key] = {
+              nfd: await getNfdDomain(key),
+              assets: [],
+            };
+          }
+          data[key].listed_assets_akita = value;
+        }
+      }
+
       setSnapshotResult(data);
       toast.success("Snapshot created successfully!");
       showDonationToast();
@@ -285,7 +331,7 @@ export function CollectionSnapshot() {
     }
     
     let headers = ["wallet", "nfdomain", "assets", "assets_count"];
-    if (checkRandSupport || checkDownbadSupport) {
+    if (checkRandSupport || checkDownbadSupport || checkAkitaSupport) {
       headers = [
         "wallet",
         "nfdomain",
@@ -299,6 +345,9 @@ export function CollectionSnapshot() {
       if (checkDownbadSupport) {
         headers.push("listed_assets_downbad", "listed_assets_downbad_count");
       }
+      if (checkAkitaSupport) {
+        headers.push("listed_assets_akita", "listed_assets_akita_count");
+      }
     }
 
     let csvData: any = snapshotResult;
@@ -310,6 +359,7 @@ export function CollectionSnapshot() {
           ...(value.assets || []),
           ...(value.listed_assets_rand || []),
           ...(value.listed_assets_downbad || []),
+          ...(value.listed_assets_akita || []),
         ];
         allAssets.forEach((asset_id: number) => {
           newData.push({
@@ -333,7 +383,8 @@ export function CollectionSnapshot() {
     const totalUnlisted = Object.values(snapshotResult).reduce((sum, item) => sum + item.assets.length, 0);
     const totalRand = Object.values(snapshotResult).reduce((sum, item) => sum + (item.listed_assets_rand?.length || 0), 0);
     const totalDownbad = Object.values(snapshotResult).reduce((sum, item) => sum + (item.listed_assets_downbad?.length || 0), 0);
-    const totalAssets = totalUnlisted + totalRand + totalDownbad;
+    const totalAkita = Object.values(snapshotResult).reduce((sum, item) => sum + (item.listed_assets_akita?.length || 0), 0);
+    const totalAssets = totalUnlisted + totalRand + totalDownbad + totalAkita;
     const uniqueRatio = totalAssets > 0 ? ((totalHolders / totalAssets) * 100).toFixed(1) : "0";
 
     return {
@@ -341,6 +392,7 @@ export function CollectionSnapshot() {
       totalUnlisted,
       totalRand,
       totalDownbad,
+      totalAkita,
       totalAssets,
       uniqueRatio,
     };
@@ -354,7 +406,8 @@ export function CollectionSnapshot() {
       const unlistedCount = data.assets.length;
       const randCount = data.listed_assets_rand?.length || 0;
       const downbadCount = data.listed_assets_downbad?.length || 0;
-      const totalCount = unlistedCount + randCount + downbadCount;
+      const akitaCount = data.listed_assets_akita?.length || 0;
+      const totalCount = unlistedCount + randCount + downbadCount + akitaCount;
 
       return {
         wallet,
@@ -362,6 +415,7 @@ export function CollectionSnapshot() {
         unlistedCount,
         randCount,
         downbadCount,
+        akitaCount,
         totalCount,
       };
     });
@@ -392,6 +446,9 @@ export function CollectionSnapshot() {
       } else if (sortBy === "downbad") {
         valA = a.downbadCount;
         valB = b.downbadCount;
+      } else if (sortBy === "akita") {
+        valA = a.akitaCount;
+        valB = b.akitaCount;
       }
 
       if (valA === valB) {
@@ -431,7 +488,7 @@ export function CollectionSnapshot() {
     copyToClipboard(wallets.join(", "));
   };
 
-  const handleSort = (field: "total" | "held" | "rand" | "downbad") => {
+  const handleSort = (field: "total" | "held" | "rand" | "downbad" | "akita") => {
     if (sortBy === field) {
       setSortOrder(prev => prev === "desc" ? "asc" : "desc");
     } else {
@@ -519,6 +576,18 @@ export function CollectionSnapshot() {
               Include Downbad.farm Listings (reconcile escrows to sellers)
             </label>
           </div>
+          <div className="flex items-center">
+            <input
+              type="checkbox"
+              id="check_akita"
+              className="mr-2 rounded border-slate-800 text-primary-orange focus:ring-primary-orange bg-slate-950"
+              checked={checkAkitaSupport}
+              onChange={(e) => setCheckAkitaSupport(e.target.checked)}
+            />
+            <label htmlFor="check_akita" className="text-slate-300 text-sm cursor-pointer select-none">
+              Include Akita Marketplace Listings (reconcile escrows to sellers)
+            </label>
+          </div>
         </div>
 
         <p className="text-xs text-slate-400 text-left w-full">
@@ -584,7 +653,7 @@ export function CollectionSnapshot() {
                 <p className="text-slate-400 text-xs font-bold uppercase tracking-wider">Listed Ratio</p>
                 <h3 className="text-2xl font-extrabold mt-1 text-white font-mono">
                   {analytics.totalAssets > 0 
-                    ? (((analytics.totalRand + analytics.totalDownbad) / analytics.totalAssets) * 100).toFixed(1)
+                    ? (((analytics.totalRand + analytics.totalDownbad + analytics.totalAkita) / analytics.totalAssets) * 100).toFixed(1)
                     : 0
                   }%
                 </h3>
@@ -619,6 +688,13 @@ export function CollectionSnapshot() {
                   title={`Downbad.farm: ${analytics.totalDownbad}`}
                 />
               )}
+              {checkAkitaSupport && analytics.totalAkita > 0 && (
+                <div 
+                  style={{ width: `${(analytics.totalAkita / analytics.totalAssets) * 100}%` }}
+                  className="bg-gradient-to-r from-blue-500 to-indigo-400 h-full transition-all duration-500 border-l border-slate-950 relative group cursor-pointer"
+                  title={`Akita: ${analytics.totalAkita}`}
+                />
+              )}
             </div>
 
             {/* Distribution Legend */}
@@ -637,6 +713,12 @@ export function CollectionSnapshot() {
                 <div className="flex items-center gap-2">
                   <span className="w-3.5 h-3.5 rounded bg-gradient-to-r from-pink-500 to-rose-400" />
                   <span>Downbad Listings: {analytics.totalDownbad} ({((analytics.totalDownbad / analytics.totalAssets) * 100).toFixed(1)}%)</span>
+                </div>
+              )}
+              {checkAkitaSupport && (
+                <div className="flex items-center gap-2">
+                  <span className="w-3.5 h-3.5 rounded bg-gradient-to-r from-blue-500 to-indigo-400" />
+                  <span>Akita Listings: {analytics.totalAkita} ({((analytics.totalAkita / analytics.totalAssets) * 100).toFixed(1)}%)</span>
                 </div>
               )}
             </div>
@@ -730,6 +812,17 @@ export function CollectionSnapshot() {
                         </div>
                       </th>
                     )}
+                    {checkAkitaSupport && (
+                      <th 
+                        onClick={() => handleSort("akita")}
+                        className="p-4 cursor-pointer hover:bg-slate-950/65 transition select-none text-center"
+                      >
+                        <div className="flex items-center justify-center gap-1">
+                          Akita Listed
+                          {sortBy === "akita" && (sortOrder === "desc" ? "↓" : "↑")}
+                        </div>
+                      </th>
+                    )}
                     <th className="p-4 pr-6 text-right">Actions</th>
                   </tr>
                 </thead>
@@ -753,6 +846,9 @@ export function CollectionSnapshot() {
                       )}
                       {checkDownbadSupport && (
                         <td className="p-4 text-center font-mono text-pink-400">{holder.downbadCount}</td>
+                      )}
+                      {checkAkitaSupport && (
+                        <td className="p-4 text-center font-mono text-blue-400">{holder.akitaCount}</td>
                       )}
                       <td className="p-4 pr-6 text-right">
                         <button

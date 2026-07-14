@@ -2155,6 +2155,68 @@ export async function getDownbadListingsMap(activeNetwork: NetworkId) {
   return listings;
 }
 
+export async function getAkitaListingsMap(activeNetwork: NetworkId) {
+  const listings: Record<number, { sellerAddress: string; escrowAddress: string }> = {};
+  if (activeNetwork !== "mainnet") {
+    return listings;
+  }
+
+  const indexerBase = getIndexerURL(activeNetwork);
+  // Mainnet Akita Marketplace App ID: 3368394180
+  const marketplaceAppId = 3368394180;
+  let creatorAddress = "";
+  try {
+    creatorAddress = algosdk.getApplicationAddress(marketplaceAppId);
+  } catch (err) {
+    console.error("Failed to get Akita application address", err);
+    return listings;
+  }
+
+  let nextToken = "";
+  while (true) {
+    const url = `${indexerBase}/v2/applications?creator=${creatorAddress}&limit=1000${
+      nextToken ? `&next=${nextToken}` : ""
+    }`;
+    try {
+      const response = await axios.get(url);
+      const apps = response.data.applications || [];
+      for (const app of apps) {
+        if (app.deleted) continue;
+        const globalState = app.params["global-state"] || [];
+        let assetId = 0;
+        let sellerBytes = "";
+        for (const state of globalState) {
+          const keyStr = Buffer.from(state.key, "base64").toString("utf8");
+          if (keyStr === "prize") {
+            assetId = Number(state.value.uint);
+          } else if (keyStr === "seller") {
+            sellerBytes = state.value.bytes;
+          }
+        }
+        if (assetId && sellerBytes) {
+          try {
+            const sellerAddress = algosdk.encodeAddress(Buffer.from(sellerBytes, "base64"));
+            const escrowAddress = algosdk.getApplicationAddress(app.id);
+            listings[assetId] = {
+              sellerAddress,
+              escrowAddress,
+            };
+          } catch (err) {
+            console.error("Failed to encode seller/escrow for Akita app", app.id, err);
+          }
+        }
+      }
+      nextToken = response.data["next-token"];
+      if (!nextToken) break;
+    } catch (err) {
+      console.error("Failed to fetch Akita applications for creator", creatorAddress, err);
+      break;
+    }
+  }
+
+  return listings;
+}
+
 export function showDonationToast() {
   const messages = [
     "Buy us a coffee! Or a tea. Or just send Algos so we can pay our indexer landlord.",
