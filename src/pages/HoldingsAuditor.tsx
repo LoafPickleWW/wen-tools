@@ -653,6 +653,15 @@ export function HoldingsAuditor({ defaultTab = "wallet" }: HoldingsAuditorProps)
     }
     setAssetCurrentPage(1);
   };
+
+  const getFontSize = (text: string) => {
+    const len = text.length;
+    if (len <= 10) return "1.25rem"; // text-xl equivalent
+    if (len <= 15) return "1.1rem";  // text-lg equivalent
+    if (len <= 18) return "0.95rem"; // text-base equivalent
+    if (len <= 22) return "0.85rem"; // text-sm equivalent
+    return "0.75rem"; // text-xs equivalent
+  };
   
   async function downloadAssetHoldersDataAsCSV() {
     if (assetHolders.length > 0) {
@@ -939,51 +948,75 @@ export function HoldingsAuditor({ defaultTab = "wallet" }: HoldingsAuditorProps)
                         <>
                           {/* Summary Statistics Cards */}
                           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 w-full">
-                            <div className="bg-slate-900/40 border border-slate-800 rounded-2xl p-6 flex items-center justify-between shadow-xl">
-                              <div>
+                            <div className="bg-slate-900/40 border border-slate-800 rounded-2xl p-5 flex flex-col justify-between shadow-xl min-h-[110px]">
+                              <div className="flex justify-between items-start w-full">
                                 <p className="text-slate-400 text-xs font-bold uppercase tracking-wider">Total Supply</p>
-                                <h3 className="text-2xl font-extrabold mt-1 text-white font-mono">
+                                <div className="bg-indigo-500/10 p-2 rounded-xl border border-indigo-500/20 text-indigo-400 shrink-0">
+                                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+                                </div>
+                              </div>
+                              <div className="mt-2 overflow-hidden">
+                                <h3 
+                                  className="font-extrabold text-white font-mono whitespace-nowrap overflow-hidden text-ellipsis"
+                                  style={{ fontSize: getFontSize(assetAnalytics.totalSupply.toLocaleString(undefined, { maximumFractionDigits: 4 })) }}
+                                  title={assetAnalytics.totalSupply.toLocaleString(undefined, { maximumFractionDigits: 4 })}
+                                >
                                   {assetAnalytics.totalSupply.toLocaleString(undefined, { maximumFractionDigits: 4 })}
                                 </h3>
                               </div>
-                              <div className="bg-indigo-500/10 p-3 rounded-xl border border-indigo-500/20 text-indigo-400">
-                                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
-                              </div>
                             </div>
 
-                            <div className="bg-slate-900/40 border border-slate-800 rounded-2xl p-6 flex items-center justify-between shadow-xl">
-                              <div>
+                            <div className="bg-slate-900/40 border border-slate-800 rounded-2xl p-5 flex flex-col justify-between shadow-xl min-h-[110px]">
+                              <div className="flex justify-between items-start w-full">
                                 <p className="text-slate-400 text-xs font-bold uppercase tracking-wider">Circulating Supply</p>
-                                <h3 className="text-2xl font-extrabold mt-1 text-white font-mono">
+                                <div className="bg-emerald-500/10 p-2 rounded-xl border border-emerald-500/20 text-emerald-400 shrink-0">
+                                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2m0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+                                </div>
+                              </div>
+                              <div className="mt-2 overflow-hidden">
+                                <h3 
+                                  className="font-extrabold text-white font-mono whitespace-nowrap overflow-hidden text-ellipsis"
+                                  style={{ fontSize: getFontSize(assetAnalytics.circulatingSupply.toLocaleString(undefined, { maximumFractionDigits: 4 })) }}
+                                  title={assetAnalytics.circulatingSupply.toLocaleString(undefined, { maximumFractionDigits: 4 })}
+                                >
                                   {assetAnalytics.circulatingSupply.toLocaleString(undefined, { maximumFractionDigits: 4 })}
                                 </h3>
                               </div>
-                              <div className="bg-emerald-500/10 p-3 rounded-xl border border-emerald-500/20 text-emerald-400">
-                                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2m0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
-                              </div>
                             </div>
 
-                            <div className="bg-slate-900/40 border border-slate-800 rounded-2xl p-6 flex items-center justify-between shadow-xl">
-                              <div>
+                            <div className="bg-slate-900/40 border border-slate-800 rounded-2xl p-5 flex flex-col justify-between shadow-xl min-h-[110px]">
+                              <div className="flex justify-between items-start w-full">
                                 <p className="text-slate-400 text-xs font-bold uppercase tracking-wider">Creator & Reserve</p>
-                                <h3 className="text-2xl font-extrabold mt-1 text-white font-mono">
+                                <div className="bg-orange-500/10 p-2 rounded-xl border border-orange-500/20 text-orange-400 shrink-0">
+                                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
+                                </div>
+                              </div>
+                              <div className="mt-2 overflow-hidden">
+                                <h3 
+                                  className="font-extrabold text-white font-mono whitespace-nowrap overflow-hidden text-ellipsis"
+                                  style={{ fontSize: getFontSize(assetAnalytics.creatorReserveBalance.toLocaleString(undefined, { maximumFractionDigits: 4 })) }}
+                                  title={assetAnalytics.creatorReserveBalance.toLocaleString(undefined, { maximumFractionDigits: 4 })}
+                                >
                                   {assetAnalytics.creatorReserveBalance.toLocaleString(undefined, { maximumFractionDigits: 4 })}
                                 </h3>
                               </div>
-                              <div className="bg-orange-500/10 p-3 rounded-xl border border-orange-500/20 text-orange-400">
-                                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
-                              </div>
                             </div>
 
-                            <div className="bg-slate-900/40 border border-slate-800 rounded-2xl p-6 flex items-center justify-between shadow-xl">
-                              <div>
+                            <div className="bg-slate-900/40 border border-slate-800 rounded-2xl p-5 flex flex-col justify-between shadow-xl min-h-[110px]">
+                              <div className="flex justify-between items-start w-full">
                                 <p className="text-slate-400 text-xs font-bold uppercase tracking-wider">Burned (Bonfire)</p>
-                                <h3 className="text-2xl font-extrabold mt-1 text-white font-mono">
+                                <div className="bg-rose-500/10 p-2 rounded-xl border border-rose-500/20 text-rose-400 shrink-0">
+                                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path></svg>
+                                </div>
+                              </div>
+                              <div className="mt-2 overflow-hidden">
+                                <h3 
+                                  className="font-extrabold text-white font-mono whitespace-nowrap overflow-hidden text-ellipsis"
+                                  style={{ fontSize: getFontSize(assetAnalytics.burnedBalance.toLocaleString(undefined, { maximumFractionDigits: 4 })) }}
+                                  title={assetAnalytics.burnedBalance.toLocaleString(undefined, { maximumFractionDigits: 4 })}
+                                >
                                   {assetAnalytics.burnedBalance.toLocaleString(undefined, { maximumFractionDigits: 4 })}
                                 </h3>
-                              </div>
-                              <div className="bg-rose-500/10 p-3 rounded-xl border border-rose-500/20 text-rose-400">
-                                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path></svg>
                               </div>
                             </div>
                           </div>
