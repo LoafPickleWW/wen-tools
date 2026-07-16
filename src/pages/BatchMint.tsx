@@ -62,6 +62,7 @@ export function BatchMint() {
   } as any);
 
   const [csvData, setCsvData] = useState(null as null | any);
+  const [isCsvAccordionOpen, setIsCsvAccordionOpen] = useState(false);
   const [processStep, setProcessStep] = useState(START_PROCESS);
   const [mnemonic, setMnemonic] = useState("");
   const [assetTransactions, setAssetTransactions] = useState([] as algosdk.Transaction[][]);
@@ -88,6 +89,7 @@ export function BatchMint() {
       complete: function (results) {
         const filteredData = results.data.filter((row: any) => row[0] && row[0].length > 0);
         setCsvData(filteredData);
+        setFormData((prev: any) => ({ ...prev, sourceMode: "csv" }));
         toast.success(`CSV file parsed: ${filteredData.length - 1} rows found.`);
       },
       error: function (err) {
@@ -609,246 +611,181 @@ export function BatchMint() {
               </div>
             </div>
 
-            {/* Source Mode Selectors */}
-            <div>
-              <label className="block mb-2 text-xs font-semibold text-gray-300 uppercase tracking-wider">
-                Metadata Source
-              </label>
-              <div className="flex gap-4">
-                <button
-                  type="button"
-                  className={`flex-1 py-3 px-4 rounded-xl border transition text-sm font-medium ${
-                    formData.sourceMode === "folder"
-                      ? "bg-gradient-to-r from-orange-500/20 to-amber-500/20 border-orange-500/50 text-orange-400 font-bold"
-                      : "bg-slate-900/40 border-slate-800 text-gray-400 hover:bg-slate-900/60"
-                  }`}
-                  onClick={() => setFormData({ ...formData, sourceMode: "folder" })}
-                >
-                  📁 Folder CID + Index Range
-                </button>
-                <button
-                  type="button"
-                  className={`flex-1 py-3 px-4 rounded-xl border transition text-sm font-medium ${
-                    formData.sourceMode === "csv"
-                      ? "bg-gradient-to-r from-orange-500/20 to-amber-500/20 border-orange-500/50 text-orange-400 font-bold"
-                      : "bg-slate-900/40 border-slate-800 text-gray-400 hover:bg-slate-900/60"
-                  }`}
-                  onClick={() => setFormData({ ...formData, sourceMode: "csv" })}
-                >
-                  📄 Upload Metadata CSV
-                </button>
-              </div>
-            </div>
+             {/* Folder CID Mode Fields (Core Configuration) */}
+             <div className="space-y-4 bg-slate-900/40 p-4 rounded-xl border border-slate-850 animate-fadeIn text-left">
+               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                 <div>
+                   <label className="block mb-1.5 text-xs text-gray-400 uppercase tracking-wider font-bold">Collection Name</label>
+                   <input
+                     type="text"
+                     placeholder="Ex: USAlgo"
+                     maxLength={32}
+                     className="w-full bg-slate-900/60 border border-slate-700 text-sm font-medium text-white placeholder:text-slate-500 px-4 py-2.5 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary-orange focus:border-primary-orange transition-all"
+                     value={formData.name}
+                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                   />
+                 </div>
+                 <div>
+                   <label className="block mb-1.5 text-xs text-gray-400 uppercase tracking-wider font-bold">Collection Unit Name</label>
+                   <input
+                     type="text"
+                     placeholder="Ex: USA"
+                     maxLength={8}
+                     className="w-full bg-slate-900/60 border border-slate-700 text-sm font-medium text-white placeholder:text-slate-500 px-4 py-2.5 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary-orange focus:border-primary-orange transition-all"
+                     value={formData.unitName}
+                     onChange={(e) => setFormData({ ...formData, unitName: e.target.value })}
+                   />
+                 </div>
+               </div>
 
-            {/* Folder CID Mode Fields */}
-            {formData.sourceMode === "folder" ? (
-              <div className="space-y-4 bg-slate-900/40 p-4 rounded-xl border border-slate-850 animate-fadeIn">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block mb-1.5 text-xs text-gray-400 uppercase tracking-wider font-bold">Collection Name</label>
-                    <input
-                      type="text"
-                      placeholder="Ex: USAlgo"
-                      maxLength={32}
-                      className="w-full bg-slate-900/60 border border-slate-700 text-sm font-medium text-white placeholder:text-slate-500 px-4 py-2.5 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary-orange focus:border-primary-orange transition-all"
-                      value={formData.name}
-                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    />
-                  </div>
-                  <div>
-                    <label className="block mb-1.5 text-xs text-gray-400 uppercase tracking-wider font-bold">Collection Unit Name</label>
-                    <input
-                      type="text"
-                      placeholder="Ex: USA"
-                      maxLength={8}
-                      className="w-full bg-slate-900/60 border border-slate-700 text-sm font-medium text-white placeholder:text-slate-500 px-4 py-2.5 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary-orange focus:border-primary-orange transition-all"
-                      value={formData.unitName}
-                      onChange={(e) => setFormData({ ...formData, unitName: e.target.value })}
-                    />
-                  </div>
-                </div>
+               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                 <div>
+                   <label className="block mb-1.5 text-xs text-gray-400 uppercase tracking-wider font-bold">Media IPFS CID (Folder CID)</label>
+                   <input
+                     type="text"
+                     placeholder="Qm..."
+                     className="w-full bg-slate-900/60 border border-slate-700 text-sm font-medium text-white placeholder:text-slate-500 px-4 py-2.5 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary-orange focus:border-primary-orange transition-all"
+                     value={formData.mediaIPFSCID}
+                     onChange={(e) => setFormData({ ...formData, mediaIPFSCID: e.target.value })}
+                   />
+                 </div>
+                 <div>
+                   <label className="block mb-1.5 text-xs text-gray-400 uppercase tracking-wider font-bold">Media Extension</label>
+                   <input
+                     type="text"
+                     placeholder="Ex: .png, .jpg"
+                     className="w-full bg-slate-900/60 border border-slate-700 text-sm font-medium text-white placeholder:text-slate-500 px-4 py-2.5 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary-orange focus:border-primary-orange transition-all"
+                     value={formData.mediaExtension}
+                     onChange={(e) => setFormData({ ...formData, mediaExtension: e.target.value })}
+                   />
+                 </div>
+               </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block mb-1.5 text-xs text-gray-400 uppercase tracking-wider font-bold">Media IPFS CID (Folder CID)</label>
-                    <input
-                      type="text"
-                      placeholder="Qm..."
-                      className="w-full bg-slate-900/60 border border-slate-700 text-sm font-medium text-white placeholder:text-slate-500 px-4 py-2.5 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary-orange focus:border-primary-orange transition-all"
-                      value={formData.mediaIPFSCID}
-                      onChange={(e) => setFormData({ ...formData, mediaIPFSCID: e.target.value })}
-                    />
-                  </div>
-                  <div>
-                    <label className="block mb-1.5 text-xs text-gray-400 uppercase tracking-wider font-bold">Media Extension</label>
-                    <input
-                      type="text"
-                      placeholder="Ex: .png, .jpg"
-                      className="w-full bg-slate-900/60 border border-slate-700 text-sm font-medium text-white placeholder:text-slate-500 px-4 py-2.5 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary-orange focus:border-primary-orange transition-all"
-                      value={formData.mediaExtension}
-                      onChange={(e) => setFormData({ ...formData, mediaExtension: e.target.value })}
-                    />
-                  </div>
-                </div>
+               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                 <div>
+                   <label className="block mb-1.5 text-xs text-gray-400 uppercase tracking-wider font-bold">Start Index</label>
+                   <input
+                     type="number"
+                     placeholder="1"
+                     className="w-full bg-slate-900/60 border border-slate-700 text-sm font-medium text-white placeholder:text-slate-500 px-4 py-2.5 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary-orange focus:border-primary-orange transition-all"
+                     value={formData.startIndex}
+                     onChange={(e) => setFormData({ ...formData, startIndex: e.target.value })}
+                   />
+                 </div>
+                 <div>
+                   <label className="block mb-1.5 text-xs text-gray-400 uppercase tracking-wider font-bold">End Index</label>
+                   <input
+                     type="number"
+                     placeholder="100"
+                     className="w-full bg-slate-900/60 border border-slate-700 text-sm font-medium text-white placeholder:text-slate-500 px-4 py-2.5 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary-orange focus:border-primary-orange transition-all"
+                     value={formData.endIndex}
+                     onChange={(e) => setFormData({ ...formData, endIndex: e.target.value })}
+                   />
+                 </div>
+               </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block mb-1.5 text-xs text-gray-400 uppercase tracking-wider font-bold">Start Index</label>
-                    <input
-                      type="number"
-                      placeholder="1"
-                      className="w-full bg-slate-900/60 border border-slate-700 text-sm font-medium text-white placeholder:text-slate-500 px-4 py-2.5 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary-orange focus:border-primary-orange transition-all"
-                      value={formData.startIndex}
-                      onChange={(e) => setFormData({ ...formData, startIndex: e.target.value })}
-                    />
-                  </div>
-                  <div>
-                    <label className="block mb-1.5 text-xs text-gray-400 uppercase tracking-wider font-bold">End Index</label>
-                    <input
-                      type="number"
-                      placeholder="100"
-                      className="w-full bg-slate-900/60 border border-slate-700 text-sm font-medium text-white placeholder:text-slate-500 px-4 py-2.5 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary-orange focus:border-primary-orange transition-all"
-                      value={formData.endIndex}
-                      onChange={(e) => setFormData({ ...formData, endIndex: e.target.value })}
-                    />
-                  </div>
-                </div>
+               <div className="pt-2 border-t border-slate-800 mt-2">
+                 <span className="block mb-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                   Optional Metadata Fallbacks
+                 </span>
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                   {["description", "externalUrl", "creatorName", "tokenId", "royalty"].map((field) => (
+                     <div key={field} className="flex items-center gap-2">
+                       <span className="w-24 text-gray-450 uppercase tracking-wider text-[10px] font-bold">
+                         {field.replace(/([A-Z])/g, " $1")}
+                       </span>
+                       <input
+                         type="text"
+                         placeholder="(optional)"
+                         className="flex-1 bg-slate-900/60 border border-slate-700 text-xs font-medium text-white placeholder:text-slate-500 px-3 py-2 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary-orange focus:border-primary-orange transition-all"
+                         value={formData[field]}
+                         onChange={(e) => setFormData({ ...formData, [field]: e.target.value })}
+                       />
+                     </div>
+                   ))}
+                 </div>
+               </div>
+             </div>
 
-                <div className="pt-2 border-t border-slate-800 mt-2">
-                  <span className="block mb-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">
-                    Optional Metadata Fallbacks
-                  </span>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-                    {["description", "externalUrl", "creatorName", "tokenId", "royalty"].map((field) => (
-                      <div key={field} className="flex items-center gap-2">
-                        <span className="w-24 text-gray-450 uppercase tracking-wider text-[10px] font-bold">
-                          {field.replace(/([A-Z])/g, " $1")}
-                        </span>
-                        <input
-                          type="text"
-                          placeholder="(optional)"
-                          className="flex-1 bg-slate-900/60 border border-slate-700 text-xs font-medium text-white placeholder:text-slate-500 px-3 py-2 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary-orange focus:border-primary-orange transition-all"
-                          value={formData[field]}
-                          onChange={(e) => setFormData({ ...formData, [field]: e.target.value })}
-                        />
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {/* Optional Media CID and Index range for CSV mode */}
-                <div className="bg-slate-900/40 p-4 rounded-xl border border-slate-850 space-y-4 text-left animate-fadeIn">
-                  <span className="block text-xs font-semibold text-gray-300 uppercase tracking-wider">
-                    Optional Image Folder CID & Index Range Configuration
-                  </span>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block mb-1.5 text-xs text-gray-400 uppercase tracking-wider font-bold">Media IPFS CID (Folder CID)</label>
-                      <input
-                        type="text"
-                        placeholder="Qm..."
-                        className="w-full bg-slate-900/60 border border-slate-700 text-sm font-medium text-white placeholder:text-slate-500 px-4 py-2.5 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary-orange focus:border-primary-orange transition-all"
-                        value={formData.mediaIPFSCID}
-                        onChange={(e) => setFormData({ ...formData, mediaIPFSCID: e.target.value })}
-                      />
-                    </div>
-                    <div>
-                      <label className="block mb-1.5 text-xs text-gray-400 uppercase tracking-wider font-bold">Media Extension</label>
-                      <input
-                        type="text"
-                        placeholder="Ex: .png, .jpg"
-                        className="w-full bg-slate-900/60 border border-slate-700 text-sm font-medium text-white placeholder:text-slate-500 px-4 py-2.5 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary-orange focus:border-primary-orange transition-all"
-                        value={formData.mediaExtension}
-                        onChange={(e) => setFormData({ ...formData, mediaExtension: e.target.value })}
-                      />
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block mb-1.5 text-xs text-gray-400 uppercase tracking-wider font-bold">Start Index</label>
-                      <input
-                        type="number"
-                        placeholder="1"
-                        className="w-full bg-slate-900/60 border border-slate-700 text-sm font-medium text-white placeholder:text-slate-500 px-4 py-2.5 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary-orange focus:border-primary-orange transition-all"
-                        value={formData.startIndex}
-                        onChange={(e) => setFormData({ ...formData, startIndex: e.target.value })}
-                      />
-                    </div>
-                    <div>
-                      <label className="block mb-1.5 text-xs text-gray-400 uppercase tracking-wider font-bold">End Index</label>
-                      <input
-                        type="number"
-                        placeholder="100"
-                        className="w-full bg-slate-900/60 border border-slate-700 text-sm font-medium text-white placeholder:text-slate-500 px-4 py-2.5 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary-orange focus:border-primary-orange transition-all"
-                        value={formData.endIndex}
-                        onChange={(e) => setFormData({ ...formData, endIndex: e.target.value })}
-                      />
-                    </div>
-                  </div>
-                </div>
-                {/* Templates and Guides */}
-                <div className="flex flex-wrap gap-3">
-                  <a
-                    href="https://docs.google.com/spreadsheets/d/1_hxkAcW2DWgoZ3s0A6jBK3DS7liU5QnA89mbXRttLhw/edit?usp=sharing"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center text-xs text-orange-400 hover:text-orange-300 bg-orange-500/10 border border-orange-500/30 rounded-lg py-1.5 px-3 transition"
-                  >
-                    📊 General CSV Template
-                  </a>
-                  <a
-                    href="https://docs.google.com/spreadsheets/d/19gVmGo-2mq5Adpf8NmD4bQbMxM7-r9INUGu0L4qQO1c/edit?usp=sharing"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center text-xs text-orange-400 hover:text-orange-300 bg-orange-500/10 border border-orange-500/30 rounded-lg py-1.5 px-3 transition"
-                  >
-                    📊 ARC69 CSV Template
-                  </a>
-                </div>
+             {/* CSV Accordion Section */}
+             <div className="border border-slate-800 rounded-xl overflow-hidden bg-slate-900/20 text-left">
+               <button
+                 type="button"
+                 className="w-full flex justify-between items-center p-4 text-sm font-semibold text-gray-300 hover:bg-slate-800/30 transition-colors"
+                 onClick={() => setIsCsvAccordionOpen(!isCsvAccordionOpen)}
+               >
+                 <span className="flex items-center gap-2">
+                   📄 CSV Metadata Upload {csvData ? " (Active)" : " (Optional)"}
+                 </span>
+                 <span className="text-xs text-gray-500 font-mono">{isCsvAccordionOpen ? "▲" : "▼"}</span>
+               </button>
+               {isCsvAccordionOpen && (
+                 <div className="p-4 border-t border-slate-800 space-y-4 animate-fadeIn">
+                   {/* Templates and Guides */}
+                   <div className="flex flex-wrap gap-3">
+                     <a
+                       href="https://docs.google.com/spreadsheets/d/1_hxkAcW2DWgoZ3s0A6jBK3DS7liU5QnA89mbXRttLhw/edit?usp=sharing"
+                       target="_blank"
+                       rel="noopener noreferrer"
+                       className="inline-flex items-center text-xs text-orange-400 hover:text-orange-300 bg-orange-500/10 border border-orange-500/30 rounded-lg py-1.5 px-3 transition font-medium"
+                     >
+                       📊 General CSV Template
+                     </a>
+                     <a
+                       href="https://docs.google.com/spreadsheets/d/19gVmGo-2mq5Adpf8NmD4bQbMxM7-r9INUGu0L4qQO1c/edit?usp=sharing"
+                       target="_blank"
+                       rel="noopener noreferrer"
+                       className="inline-flex items-center text-xs text-orange-400 hover:text-orange-300 bg-orange-500/10 border border-orange-500/30 rounded-lg py-1.5 px-3 transition font-medium"
+                     >
+                       📊 ARC69 CSV Template
+                     </a>
+                   </div>
 
-                {/* CSV Drag and Drop */}
-                {csvData === null ? (
-                  <div className="flex justify-center items-center w-full">
-                    <label
-                      htmlFor="csv-upload"
-                      className="flex flex-col justify-center items-center w-full h-32 px-4 bg-slate-800/30 rounded-xl border-2 border-slate-700 border-dashed cursor-pointer hover:bg-slate-800/50 hover:border-slate-500 transition"
-                    >
-                      <div className="flex flex-col justify-center items-center pt-5 pb-6 text-center">
-                        <p className="mb-1 text-sm text-gray-300 font-bold">
-                          Click to select or drop CSV file
-                        </p>
-                        <p className="text-xs text-gray-400">Standard CSV metadata file</p>
-                      </div>
-                      <input
-                        className="hidden"
-                        id="csv-upload"
-                        type="file"
-                        accept=".csv"
-                        onChange={(e: any) => {
-                          const file = e.target.files[0];
-                          if (file) handleCsvUpload(file);
-                        }}
-                      />
-                    </label>
-                  </div>
-                ) : (
-                  <div className="bg-slate-800/40 p-4 rounded-xl border border-slate-700 flex justify-between items-center">
-                    <div className="text-left">
-                      <span className="text-green-400 font-semibold text-sm block">CSV File Loaded Successfully</span>
-                      <span className="text-xs text-gray-400">{csvData.length - 1} assets detected in file.</span>
-                    </div>
-                    <button
-                      className="text-xs bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/30 py-1.5 px-3 rounded-lg transition"
-                      onClick={() => setCsvData(null)}
-                    >
-                      Remove File
-                    </button>
-                  </div>
-                )}
-              </div>
-            )}
+                   {/* CSV Drag and Drop */}
+                   {csvData === null ? (
+                     <div className="flex justify-center items-center w-full">
+                       <label
+                         htmlFor="csv-upload"
+                         className="flex flex-col justify-center items-center w-full h-32 px-4 bg-slate-800/30 rounded-xl border-2 border-slate-700 border-dashed cursor-pointer hover:bg-slate-800/50 hover:border-slate-500 transition"
+                       >
+                         <div className="flex flex-col justify-center items-center pt-5 pb-6 text-center">
+                           <p className="mb-1 text-sm text-gray-300 font-bold">
+                             Click to select or drop CSV file
+                           </p>
+                           <p className="text-xs text-gray-400">Standard CSV metadata file</p>
+                         </div>
+                         <input
+                           className="hidden"
+                           id="csv-upload"
+                           type="file"
+                           accept=".csv"
+                           onChange={(e: any) => {
+                             const file = e.target.files[0];
+                             if (file) handleCsvUpload(file);
+                           }}
+                         />
+                       </label>
+                     </div>
+                   ) : (
+                     <div className="bg-slate-800/40 p-4 rounded-xl border border-slate-700 flex justify-between items-center">
+                       <div className="text-left">
+                         <span className="text-green-400 font-semibold text-sm block">CSV File Loaded Successfully</span>
+                         <span className="text-xs text-gray-400">{csvData.length - 1} assets detected in file.</span>
+                       </div>
+                       <button
+                         className="text-xs bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/30 py-1.5 px-3 rounded-lg transition"
+                         onClick={() => {
+                           setCsvData(null);
+                           setFormData((prev: any) => ({ ...prev, sourceMode: "folder" }));
+                         }}
+                       >
+                         Remove File
+                       </button>
+                     </div>
+                   )}
+                 </div>
+               )}
+             </div>
 
             {/* Custom parameters (Freeze / Clawback) */}
             <div className="bg-slate-800/10 p-4 rounded-xl border border-slate-700/40 space-y-3">
