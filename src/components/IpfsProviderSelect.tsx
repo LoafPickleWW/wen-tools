@@ -42,6 +42,18 @@ export default function IpfsProviderSelect({
         )}
 
         <div className="flex bg-slate-900/80 p-1.5 rounded-xl border border-slate-700 w-full gap-1">
+          <button
+            type="button"
+            className={`flex-1 py-2 text-xs md:text-sm font-bold rounded-lg transition-all duration-300 ${
+              effectiveProvider === "algofile"
+                ? "bg-gradient-to-r from-orange-500 to-amber-500 text-black shadow-md font-extrabold"
+                : "text-slate-400 hover:text-white"
+            }`}
+            onClick={() => setProvider("algofile")}
+          >
+            AlgoFile (USDC)
+          </button>
+
           {!hideCrust && (
             <button
               type="button"

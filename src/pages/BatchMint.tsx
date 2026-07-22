@@ -33,7 +33,7 @@ export function BatchMint() {
 
   const [formData, setFormData] = useState({
     collectionFormat: "ARC3", // ARC3, ARC19, ARC69
-    pinningProvider: "crust", // crust, pinata, none
+    pinningProvider: "algofile", // algofile, crust, pinata, none
     sourceMode: "folder", // folder, csv
 
     // Folder Mode inputs
@@ -79,7 +79,7 @@ export function BatchMint() {
     if (formData.collectionFormat !== "ARC69" && formData.pinningProvider === "none") {
       setFormData((prev: any) => ({
         ...prev,
-        pinningProvider: isTestnet ? "pinata" : "crust"
+        pinningProvider: "algofile"
       }));
     }
   }, [formData.collectionFormat, isTestnet, formData.pinningProvider]);

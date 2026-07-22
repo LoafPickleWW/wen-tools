@@ -19,7 +19,8 @@ import IpfsProviderSelect from "../components/IpfsProviderSelect";
 import { IpfsProvider } from "../types";
 import { TOOLS, IPFS_ENDPOINT, ASSET_PREVIEW } from "../constants";
 import { isCrustAuth } from "../crust-auth";
-import { pinImageToCrust, makeCrustPinTx } from "../crust";
+import { makeCrustPinTx } from "../crust";
+import { uploadToAlgoFile } from "../utils/algofile";
 import { useWallet } from "@txnlab/use-wallet-react";
 import "react-json-view-lite/dist/index.css";
 import { PreviewAssetComponent } from "../components/PreviewAssetComponent";
@@ -46,7 +47,7 @@ const simpleUpdateAtom = atomWithStorage("simpleUpdate", {
 const suAssetIdAtom = atomWithStorage("suAssetId", "");
 const suTokenAtom = atomWithStorage("suToken", "");
 const suFilebaseTokenAtom = atomWithStorage("suFilebaseToken", "");
-const simpleUpdateProviderAtom = atomWithStorage("simpleUpdateProvider", "crust");
+const simpleUpdateProviderAtom = atomWithStorage("simpleUpdateProvider", "algofile");
 
 export function SimpleUpdate() {
   const [formData, setFormData] = useAtom(simpleUpdateAtom);
@@ -354,9 +355,14 @@ export function SimpleUpdate() {
       ) {
         toast.info("Uploading the image to IPFS...");
 
-        if (effectiveProvider === "crust") {
-          const atoken = localStorage.getItem("authBasic");
-          imageCid = await pinImageToCrust(atoken, formData.image);
+        if (effectiveProvider === "algofile") {
+          imageCid = await uploadToAlgoFile(
+            formData.image,
+            formData.image.name || "image.png",
+            activeAddress,
+            transactionSigner,
+            algodClient
+          );
           const imageURL = "ipfs://" + imageCid;
           if (
             formData.image &&

@@ -17,6 +17,7 @@ import {
   pinImageToCrust, 
   pinJSONToCrust, 
 } from '../../../crust';
+import { uploadToAlgoFile } from '../../../utils/algofile';
 import algosdk from 'algosdk';
 import { loadImage } from '../ProjectUtils';
 
@@ -24,13 +25,13 @@ const MintStep = () => {
   const { project, previewItems } = useProject();
   const { activeAccount, activeNetwork, transactionSigner } = useWallet();
   const [standard, setStandard] = useState<'ARC3' | 'ARC69' | 'ARC19'>('ARC19');
-  const [provider, setProvider] = useState<'Crust' | 'Pinata'>('Crust');
+  const [provider, setProvider] = useState<'AlgoFile' | 'Crust' | 'Pinata'>('AlgoFile');
   const [ipfsToken, setIpfsToken] = useState(localStorage.getItem('authBasic') || '');
   const [isMinting, setIsMinting] = useState(false);
   const [progress, setProgress] = useState({ current: 0, total: previewItems.length, status: '' });
 
   const isTestnet = activeNetwork === 'testnet';
-  const effectiveProvider = isTestnet ? 'Pinata' : provider;
+  const effectiveProvider = isTestnet && provider === 'Crust' ? 'Pinata' : provider;
 
   const generateBlob = async (item: any) => {
     const canvas = document.createElement('canvas');
@@ -53,7 +54,7 @@ const MintStep = () => {
 
   const handleMint = async () => {
     if (!activeAccount) return toast.error('Please connect your wallet');
-    if (!ipfsToken) return toast.error('Please provide an IPFS token');
+    if (effectiveProvider !== 'AlgoFile' && !ipfsToken) return toast.error('Please provide an IPFS token');
     if (previewItems.length === 0) return toast.error('No items to mint');
 
     setIsMinting(true);
@@ -61,6 +62,7 @@ const MintStep = () => {
 
     try {
       const mintedData = [];
+      const algodClient = new algosdk.Algodv2('', getIndexerURL(activeNetwork!), '');
       
       // 1. Pinning Step
       for (let i = 0; i < previewItems.length; i++) {
@@ -70,7 +72,15 @@ const MintStep = () => {
         const blob = await generateBlob(item);
         
         let imageCid = '';
-        if (effectiveProvider === 'Crust') {
+        if (effectiveProvider === 'AlgoFile') {
+          imageCid = await uploadToAlgoFile(
+            blob,
+            `image_${item.index}.png`,
+            activeAccount.address,
+            transactionSigner,
+            algodClient
+          );
+        } else if (effectiveProvider === 'Crust') {
           imageCid = await pinImageToCrust(ipfsToken, blob);
         } else {
           imageCid = await pinImageToPinata(ipfsToken, blob);
@@ -102,7 +112,15 @@ const MintStep = () => {
         } else {
            setProgress({ current: i + 1, total: previewItems.length, status: `Pinning metadata #${item.index}...` });
             let jsonCid = '';
-            if (effectiveProvider === 'Crust') {
+            if (effectiveProvider === 'AlgoFile') {
+              jsonCid = await uploadToAlgoFile(
+                JSON.stringify(metadata),
+                `metadata_${item.index}.json`,
+                activeAccount.address,
+                transactionSigner,
+                algodClient
+              );
+            } else if (effectiveProvider === 'Crust') {
               jsonCid = await pinJSONToCrust(ipfsToken, JSON.stringify(metadata));
             } else {
               jsonCid = await pinJSONToPinata(ipfsToken, JSON.stringify(metadata));
@@ -118,7 +136,6 @@ const MintStep = () => {
       // 2. Minting Step
       setProgress({ current: previewItems.length, total: previewItems.length, status: 'Creating transactions...' });
       
-      const algodClient = new algosdk.Algodv2('', getIndexerURL(activeNetwork!), '');
       let txnsGroups: algosdk.Transaction[][] = [];
       
       if (standard === 'ARC3') {
@@ -201,40 +218,50 @@ const MintStep = () => {
 
           <div className="space-y-3">
             <label className="text-[10px] font-black text-primary-orange uppercase tracking-[0.2em] ml-1">IPFS Provider</label>
-            <div className="grid grid-cols-2 gap-2">
-              {(isTestnet ? ['Pinata'] : ['Crust', 'Pinata']).map((p) => (
-                <button
-                  key={p}
-                  onClick={() => setProvider(p as any)}
-                  className={`py-3 rounded-2xl border text-xs font-black transition-all ${
-                    effectiveProvider === p ? 'bg-primary-orange text-black border-primary-orange shadow-lg shadow-primary-orange/20' : 'bg-gray-900/50 border-gray-800 text-gray-500 hover:border-gray-700'
-                  }`}
-                >
-                  {p}
-                </button>
-              ))}
+            <div className="grid grid-cols-3 gap-2">
+              {['AlgoFile', 'Crust', 'Pinata'].map((p) => {
+                const disabled = isTestnet && p === 'Crust';
+                return (
+                  <button
+                    key={p}
+                    disabled={disabled}
+                    onClick={() => setProvider(p as any)}
+                    className={`py-3 rounded-2xl border text-xs font-black transition-all ${
+                      effectiveProvider === p ? 'bg-primary-orange text-black border-primary-orange shadow-lg shadow-primary-orange/20' : 'bg-gray-900/50 border-gray-800 text-gray-500 hover:border-gray-700'
+                    } ${disabled ? 'opacity-40 cursor-not-allowed' : ''}`}
+                  >
+                    {p === 'AlgoFile' ? 'AlgoFile (USDC)' : p === 'Crust' ? 'Crust' : 'Pinata'}
+                  </button>
+                );
+              })}
             </div>
-            {isTestnet && (
+            {isTestnet && provider === 'Crust' && (
               <p className="mt-2 text-xs text-amber-500 font-medium">
-                ⚠️ Crust pinning is disabled on Testnet. Pinata is used as the only IPFS pinning provider.
+                ⚠️ Crust pinning is disabled on Testnet. Pinata or AlgoFile can be used instead.
               </p>
             )}
           </div>
         </div>
 
-        <div className="space-y-3">
-          <label className="text-[10px] font-black text-primary-orange uppercase tracking-[0.2em] ml-1">{effectiveProvider} API Token</label>
-          <input 
-            type="password"
-            value={ipfsToken}
-            onChange={(e) => {
-               setIpfsToken(e.target.value);
-               localStorage.setItem('authBasic', e.target.value);
-            }}
-            placeholder={`Paste your ${effectiveProvider} API Key here...`}
-            className="w-full bg-gray-900/50 border border-gray-800 rounded-2xl px-5 py-4 text-sm focus:outline-none focus:border-primary-orange/50 transition-all placeholder:text-gray-700"
-          />
-        </div>
+        {effectiveProvider === 'AlgoFile' ? (
+          <div className="bg-gray-900/40 p-5 border border-gray-800/80 rounded-3xl text-xs text-gray-400 font-medium leading-relaxed">
+            ℹ️ AlgoFile utilizes on-chain x402 pay-per-use payments. No API token or signup is required. You will be prompted to approve a USDC/ALGO storage fee transaction for each upload.
+          </div>
+        ) : (
+          <div className="space-y-3">
+            <label className="text-[10px] font-black text-primary-orange uppercase tracking-[0.2em] ml-1">{effectiveProvider} API Token</label>
+            <input 
+              type="password"
+              value={ipfsToken}
+              onChange={(e) => {
+                 setIpfsToken(e.target.value);
+                 localStorage.setItem('authBasic', e.target.value);
+              }}
+              placeholder={`Paste your ${effectiveProvider} API Key here...`}
+              className="w-full bg-gray-900/50 border border-gray-800 rounded-2xl px-5 py-4 text-sm focus:outline-none focus:border-primary-orange/50 transition-all placeholder:text-gray-700"
+            />
+          </div>
+        )}
       </div>
 
       <div className="flex flex-col gap-4">

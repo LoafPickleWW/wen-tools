@@ -90,6 +90,49 @@ function testAgentPlugin(): Plugin {
           return;
         }
 
+        if (url.startsWith('/api/algofile')) {
+          if (req.method === 'OPTIONS') {
+            res.setHeader('Access-Control-Allow-Origin', '*');
+            res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+            res.setHeader('Access-Control-Allow-Headers', 'Content-Type, x-api-key, x-x402-payment-payload');
+            res.statusCode = 200;
+            res.end();
+            return;
+          }
+
+          try {
+            const headers: Record<string, string> = {};
+            if (req.headers['x-api-key']) {
+              headers['x-api-key'] = req.headers['x-api-key'] as string;
+            }
+            if (req.headers['x-x402-payment-payload']) {
+              headers['x-x402-payment-payload'] = req.headers['x-x402-payment-payload'] as string;
+            }
+            if (req.headers['content-type']) {
+              headers['content-type'] = req.headers['content-type'] as string;
+            }
+
+            const targetRes = await fetch("https://api.algofile.io/api/algofile/upload", {
+              method: 'POST',
+              headers,
+              body: req as any,
+              // @ts-ignore
+              duplex: 'half'
+            });
+
+            res.setHeader('Access-Control-Allow-Origin', '*');
+            res.setHeader('Access-Control-Expose-Headers', 'x-x402-payment-payload');
+            res.statusCode = targetRes.status;
+            res.setHeader('Content-Type', targetRes.headers.get('content-type') || 'application/json');
+            res.end(await targetRes.text().catch(() => ''));
+          } catch (err: any) {
+            res.statusCode = 502;
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify({ error: 'Failed to connect to AlgoFile API via proxy', message: err.message }));
+          }
+          return;
+        }
+
         if (url.startsWith('/api/opensea')) {
           const parsedUrl = new URL(url, 'http://localhost');
           const slug = parsedUrl.searchParams.get('slug');

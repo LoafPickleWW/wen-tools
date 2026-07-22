@@ -36,6 +36,7 @@ import {
 } from "./crust";
 import { pinJSONToFilebase } from "./filebase";
 import { IpfsProvider } from "./types";
+import { uploadToAlgoFile } from "./utils/algofile";
 import * as digest from "multiformats/hashes/digest";
 import { NetworkId } from "@txnlab/use-wallet-react";
 import * as algokit from "@algorandfoundation/algokit-utils";
@@ -325,7 +326,15 @@ export async function createARC3AssetMintArrayV2(
       const jsonString = JSON.stringify(data_for_txns[i].ipfs_data);
 
       let cid: string;
-      if (provider === "crust") {
+      if (provider === "algofile") {
+        cid = await uploadToAlgoFile(
+          jsonString,
+          `metadata_${i}.json`,
+          address,
+          txSigner,
+          algodClient
+        );
+      } else if (provider === "crust") {
         const authBasic = localStorage.getItem("authBasic");
         cid = await pinJSONToCrust(authBasic, jsonString);
         allPinCids.push(cid);
@@ -420,7 +429,15 @@ export async function createARC3AssetMintArrayV2Batch(
       const jsonString = JSON.stringify(data_for_txns[i].ipfs_data);
 
       let cid: string;
-      if (provider === "crust") {
+      if (provider === "algofile") {
+        cid = await uploadToAlgoFile(
+          jsonString,
+          `metadata_${i}.json`,
+          address,
+          txSigner,
+          algodClient
+        );
+      } else if (provider === "crust") {
         const authBasic = localStorage.getItem("authBasic");
         cid = await pinJSONToCrust(authBasic, jsonString);
         pinCids.push(cid);
@@ -586,7 +603,15 @@ export async function createARC19AssetMintArrayV2(
       const jsonString = JSON.stringify(data_for_txns[i].ipfs_data);
 
       let cid: string;
-      if (provider === "crust") {
+      if (provider === "algofile") {
+        cid = await uploadToAlgoFile(
+          jsonString,
+          `metadata_${i}.json`,
+          address,
+          txSigner,
+          algodClient
+        );
+      } else if (provider === "crust") {
         const authBasic = localStorage.getItem("authBasic");
         cid = await pinJSONToCrust(authBasic, jsonString);
         allPinCids.push(cid);
@@ -675,7 +700,15 @@ export async function createARC19AssetMintArrayV2Batch(
       const jsonString = JSON.stringify(data_for_txns[i].ipfs_data);
 
       let cid: string;
-      if (provider === "crust") {
+      if (provider === "algofile") {
+        cid = await uploadToAlgoFile(
+          jsonString,
+          `metadata_${i}.json`,
+          address,
+          txSigner,
+          algodClient
+        );
+      } else if (provider === "crust") {
         const authBasic = localStorage.getItem("authBasic");
         cid = await pinJSONToCrust(authBasic, jsonString);
         pinCids.push(cid);
@@ -840,7 +873,15 @@ export async function updateARC19AssetMintArrayV2(
       const jsonString = JSON.stringify(data_for_txns[i].ipfs_data);
 
       let cid: string;
-      if (provider === "crust") {
+      if (provider === "algofile") {
+        cid = await uploadToAlgoFile(
+          jsonString,
+          `metadata_${i}.json`,
+          address,
+          txSigner,
+          algodClient
+        );
+      } else if (provider === "crust") {
         const authBasic = localStorage.getItem("authBasic");
         cid = await pinJSONToCrust(
           authBasic,

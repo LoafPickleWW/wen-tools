@@ -35,5 +35,5 @@ export interface HeadCell {
   numeric: boolean;
 }
 
-export type IpfsProvider = "crust" | "pinata" | "filebase" | "none";
+export type IpfsProvider = "algofile" | "crust" | "pinata" | "filebase" | "none";
 

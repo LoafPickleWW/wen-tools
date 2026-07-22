@@ -48,7 +48,7 @@ export function SimpleBatchMint() {
     creatorName: "",
     tokenId: "",
     royalty: "",
-    pinningProvider: "crust",
+    pinningProvider: "algofile",
     pinataToken: "",
     filebaseToken: "",
   } as any);

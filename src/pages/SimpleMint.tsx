@@ -18,6 +18,7 @@ import { IpfsProvider } from "../types";
 import { ASSET_PREVIEW, TOOLS } from "../constants";
 import FaqSectionComponent from "../components/FaqSectionComponent";
 import { pinImageToCrust, makeCrustPinTx } from "../crust";
+import { uploadToAlgoFile } from "../utils/algofile";
 import { useWallet } from "@txnlab/use-wallet-react";
 import "react-json-view-lite/dist/index.css";
 import { PreviewAssetComponent } from "../components/PreviewAssetComponent";
@@ -62,7 +63,7 @@ const simpleMintAtom = atomWithStorage("simpleMint", {
 
 const smTokenAtom = atomWithStorage("smToken", "");
 const filebaseTokenAtom = atomWithStorage("filebaseToken", "");
-const simpleMintProviderAtom = atomWithStorage("simpleMintProvider", "crust");
+const simpleMintProviderAtom = atomWithStorage("simpleMintProvider", "algofile");
 
 const formatNumberWithCommas = (val: string | number) => {
   if (val === undefined || val === null) return "";
@@ -498,7 +499,17 @@ wen.contentWindow.postMessage({
           toast.error("Please select an image");
           return;
         }
-        if (effectiveProvider === "crust") {
+        if (effectiveProvider === "algofile") {
+          toast.info("Uploading the image to IPFS via AlgoFile...");
+          imageCID = await uploadToAlgoFile(
+            formData.image,
+            formData.image.name || "image.png",
+            activeAddress,
+            transactionSigner,
+            algodClient
+          );
+          imageURL = "ipfs://" + imageCID;
+        } else if (effectiveProvider === "crust") {
           toast.info("Uploading the image to IPFS via Crust...");
           let authBasic = localStorage.getItem("authBasic");
           if (!authBasic) {
