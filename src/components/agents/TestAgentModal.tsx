@@ -339,6 +339,15 @@ const modeOptions: VRFMode[] = _vrfInfo && _vrfInfo.capabilities && Array.isArra
       const signedTxnB64 = bytesToBase64(signedTxns[0]);
 
       // Build PaymentPayload envelope
+      const acceptedOptionClone = JSON.parse(JSON.stringify(acceptedOption));
+      if (acceptedOptionClone.price && typeof acceptedOptionClone.price === "object" && "amount" in acceptedOptionClone.price) {
+        acceptedOptionClone.price.amount = amountMicro;
+      } else if (acceptedOptionClone.price !== undefined && typeof acceptedOptionClone.price !== "object") {
+        acceptedOptionClone.price = amountMicro;
+      } else if (acceptedOptionClone.amount !== undefined) {
+        acceptedOptionClone.amount = amountMicro;
+      }
+
       const paymentPayload = {
         x402Version: challengeDetails.x402Version || 1,
         payload: {
@@ -346,7 +355,7 @@ const modeOptions: VRFMode[] = _vrfInfo && _vrfInfo.capabilities && Array.isArra
           paymentIndex: 0,
         },
         ...(challengeDetails.x402Version === 2 ? {
-          accepted: acceptedOption,
+          accepted: acceptedOptionClone,
           resource: challengeDetails.resource || { url: endpointUrl },
           extensions: challengeDetails.extensions || {},
         } : {}),
