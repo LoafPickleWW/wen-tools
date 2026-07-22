@@ -14,6 +14,7 @@ import {
   createARC19AssetMintArray,
   walletSign,
 } from "../utils";
+import { completeAlgoFileUpload } from "../utils/algofile";
 import IpfsProviderSelect from "../components/IpfsProviderSelect";
 import { IpfsProvider } from "../types";
 import { IPFS_ENDPOINT, MINT_FEE_PER_ASA } from "../constants";
@@ -66,6 +67,7 @@ export function BatchMint() {
   const [processStep, setProcessStep] = useState(START_PROCESS);
   const [mnemonic, setMnemonic] = useState("");
   const [assetTransactions, setAssetTransactions] = useState([] as algosdk.Transaction[][]);
+  const [algofileUploads, setAlgofileUploads] = useState<any[]>([]);
   const [previewAsset, setPreviewAsset] = useState(null as any);
 
   const { activeAddress, algodClient, transactionSigner, activeWallet, activeNetwork } = useWallet();
@@ -356,9 +358,22 @@ export function BatchMint() {
       let unsignedAssetTransaction: algosdk.Transaction[][] = [];
 
       if (formData.collectionFormat === "ARC3") {
-        if (effectiveProvider === "crust") {
+        if (effectiveProvider === "algofile") {
+          toast.info("Generating AlgoFile-based ARC3 Transactions...");
+          const result = await createARC3AssetMintArrayV2Batch(
+            data_for_txns,
+            activeAddress,
+            algodClient,
+            transactionSigner,
+            "algofile",
+            undefined,
+            mnemonic
+          );
+          unsignedAssetTransaction = result.txnsArray;
+          setAlgofileUploads(result.algofileUploads || []);
+        } else if (effectiveProvider === "crust") {
           toast.info("Generating Crust-based ARC3 Transactions...");
-          const { txnsArray } = await createARC3AssetMintArrayV2Batch(
+          const result = await createARC3AssetMintArrayV2Batch(
             data_for_txns,
             activeAddress,
             algodClient,
@@ -367,10 +382,10 @@ export function BatchMint() {
             undefined,
             mnemonic
           );
-          unsignedAssetTransaction = txnsArray;
+          unsignedAssetTransaction = result.txnsArray;
         } else if (effectiveProvider === "filebase") {
           toast.info("Generating Filebase-based ARC3 Transactions...");
-          const { txnsArray } = await createARC3AssetMintArrayV2Batch(
+          const result = await createARC3AssetMintArrayV2Batch(
             data_for_txns,
             activeAddress,
             algodClient,
@@ -379,10 +394,10 @@ export function BatchMint() {
             formData.filebaseToken,
             mnemonic
           );
-          unsignedAssetTransaction = txnsArray;
+          unsignedAssetTransaction = result.txnsArray;
         } else if (effectiveProvider === "pinata") {
           toast.info("Generating Pinata-based ARC3 Transactions...");
-          const { txnsArray } = await createARC3AssetMintArrayV2Batch(
+          const result = await createARC3AssetMintArrayV2Batch(
             data_for_txns,
             activeAddress,
             algodClient,
@@ -391,7 +406,7 @@ export function BatchMint() {
             formData.pinataToken,
             mnemonic
           );
-          unsignedAssetTransaction = txnsArray;
+          unsignedAssetTransaction = result.txnsArray;
         } else {
           // None (no pinning, use direct URL/CID)
           toast.info("Generating ARC3 Transactions without IPFS pinning...");
@@ -406,9 +421,22 @@ export function BatchMint() {
           );
         }
       } else if (formData.collectionFormat === "ARC19") {
-        if (effectiveProvider === "crust") {
+        if (effectiveProvider === "algofile") {
+          toast.info("Generating AlgoFile-based ARC19 Transactions...");
+          const result = await createARC19AssetMintArrayV2Batch(
+            data_for_txns,
+            activeAddress,
+            algodClient,
+            transactionSigner,
+            "algofile",
+            undefined,
+            mnemonic
+          );
+          unsignedAssetTransaction = result.txnsArray;
+          setAlgofileUploads(result.algofileUploads || []);
+        } else if (effectiveProvider === "crust") {
           toast.info("Generating Crust-based ARC19 Transactions...");
-          const { txnsArray } = await createARC19AssetMintArrayV2Batch(
+          const result = await createARC19AssetMintArrayV2Batch(
             data_for_txns,
             activeAddress,
             algodClient,
@@ -417,10 +445,10 @@ export function BatchMint() {
             undefined,
             mnemonic
           );
-          unsignedAssetTransaction = txnsArray;
+          unsignedAssetTransaction = result.txnsArray;
         } else if (effectiveProvider === "filebase") {
           toast.info("Generating Filebase-based ARC19 Transactions...");
-          const { txnsArray } = await createARC19AssetMintArrayV2Batch(
+          const result = await createARC19AssetMintArrayV2Batch(
             data_for_txns,
             activeAddress,
             algodClient,
@@ -429,10 +457,10 @@ export function BatchMint() {
             formData.filebaseToken,
             mnemonic
           );
-          unsignedAssetTransaction = txnsArray;
+          unsignedAssetTransaction = result.txnsArray;
         } else if (effectiveProvider === "pinata") {
           toast.info("Generating Pinata-based ARC19 Transactions...");
-          const { txnsArray } = await createARC19AssetMintArrayV2Batch(
+          const result = await createARC19AssetMintArrayV2Batch(
             data_for_txns,
             activeAddress,
             algodClient,
@@ -441,7 +469,7 @@ export function BatchMint() {
             formData.pinataToken,
             mnemonic
           );
-          unsignedAssetTransaction = txnsArray;
+          unsignedAssetTransaction = result.txnsArray;
         } else {
           toast.info("Generating ARC19 Transactions...");
           unsignedAssetTransaction = await createARC19AssetMintArray(
@@ -503,13 +531,41 @@ export function BatchMint() {
         );
       }
 
-      // Crust groups are 4 txs, Pinata / None / ARC69 are 2 txs
-      const chunkSize = (effectiveProvider === "crust" && formData.collectionFormat !== "ARC69") ? 4 : 2;
+      // Crust groups are 4 txs, AlgoFile are 3 txs, Pinata / None / ARC69 are 2 txs
+      const chunkSize = (effectiveProvider === "crust" && formData.collectionFormat !== "ARC69") ? 4 : (effectiveProvider === "algofile" && formData.collectionFormat !== "ARC69") ? 3 : 2;
       const groups = sliceIntoChunks(signedTransactions, chunkSize);
 
       for (let i = 0; i < groups.length; i++) {
         try {
           await algodClient.sendRawTransaction(groups[i]).do();
+
+          // Upload metadata to AlgoFile using the signed transactions group
+          if (effectiveProvider === "algofile" && algofileUploads && algofileUploads.length > 0) {
+            const upload = algofileUploads.find((u) => u.groupIndex === i);
+            if (upload) {
+              try {
+                const signedGroupB64 = groups[i].map((txnBytes: Uint8Array) => {
+                  let binary = "";
+                  const len = txnBytes.byteLength;
+                  for (let k = 0; k < len; k++) {
+                    binary += String.fromCharCode(txnBytes[k]);
+                  }
+                  return window.btoa(binary);
+                });
+
+                await completeAlgoFileUpload(
+                  upload.file,
+                  upload.fileName,
+                  signedGroupB64,
+                  upload.paymentIndex,
+                  upload.requirements
+                );
+              } catch (uploadErr) {
+                console.error("AlgoFile upload failed for index:", i, uploadErr);
+              }
+            }
+          }
+
           if (i % 5 === 0) {
             toast.success(`Sent batch ${i + 1} of ${groups.length}`, {
               autoClose: 1000,

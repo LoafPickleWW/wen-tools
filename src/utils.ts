@@ -36,7 +36,7 @@ import {
 } from "./crust";
 import { pinJSONToFilebase } from "./filebase";
 import { IpfsProvider } from "./types";
-import { uploadToAlgoFile } from "./utils/algofile";
+import { getAlgoFilePaymentRequirements } from "./utils/algofile";
 import * as digest from "multiformats/hashes/digest";
 import { NetworkId } from "@txnlab/use-wallet-react";
 import * as algokit from "@algorandfoundation/algokit-utils";
@@ -320,6 +320,7 @@ export async function createARC3AssetMintArrayV2(
 
   // Collect all CIDs that need pinning (JSON metadata CIDs + image CIDs)
   const allPinCids: string[] = [];
+  const algofileUploads: any[] = [];
 
   for (let i = 0; i < data_for_txns.length; i++) {
     try {
@@ -327,13 +328,42 @@ export async function createARC3AssetMintArrayV2(
 
       let cid: string;
       if (provider === "algofile") {
-        cid = await uploadToAlgoFile(
+        const { requirements, cid: computedCid } = await getAlgoFilePaymentRequirements(
           jsonString,
-          `metadata_${i}.json`,
-          address,
-          txSigner,
-          algodClient
+          `metadata_${i}.json`
         );
+        cid = computedCid;
+
+        const params = await algodClient.getTransactionParams().do();
+        const assetId = Number(requirements.asset || 0);
+        const amountMicro = BigInt(requirements.amount);
+        let paymentTxn;
+        if (assetId === 0) {
+          paymentTxn = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
+            from: address,
+            to: requirements.payTo,
+            amount: amountMicro,
+            suggestedParams: params,
+          });
+        } else {
+          paymentTxn = algosdk.makeAssetTransferTxnWithSuggestedParamsFromObject({
+            from: address,
+            to: requirements.payTo,
+            amount: amountMicro,
+            assetIndex: assetId,
+            suggestedParams: params,
+          });
+        }
+
+        const paymentIndexInGroup = atc.count();
+        atc.addTransaction({ txn: paymentTxn, signer: txSigner });
+
+        algofileUploads.push({
+          file: jsonString,
+          fileName: `metadata_${i}.json`,
+          requirements,
+          paymentIndex: paymentIndexInGroup,
+        });
       } else if (provider === "crust") {
         const authBasic = localStorage.getItem("authBasic");
         cid = await pinJSONToCrust(authBasic, jsonString);
@@ -386,7 +416,7 @@ export async function createARC3AssetMintArrayV2(
   }
 
   // Return mint ATC + pinCids separately for sequential execution
-  return { atc, pinCids: allPinCids };
+  return { atc, pinCids: allPinCids, algofileUploads };
 }
 
 export function getTxnGroupFromATC(atc: algosdk.AtomicTransactionComposer) {
@@ -421,6 +451,7 @@ export async function createARC3AssetMintArrayV2Batch(
 
   const txnsArray = [];
   const pinCids = [];
+  const algofileUploads: any[] = [];
   for (let i = 0; i < data_for_txns.length; i++) {
     // create new atomic transaction composer
     const atc = new algosdk.AtomicTransactionComposer();
@@ -430,13 +461,43 @@ export async function createARC3AssetMintArrayV2Batch(
 
       let cid: string;
       if (provider === "algofile") {
-        cid = await uploadToAlgoFile(
+        const { requirements, cid: computedCid } = await getAlgoFilePaymentRequirements(
           jsonString,
-          `metadata_${i}.json`,
-          address,
-          txSigner,
-          algodClient
+          `metadata_${i}.json`
         );
+        cid = computedCid;
+
+        const params = await algodClient.getTransactionParams().do();
+        const assetId = Number(requirements.asset || 0);
+        const amountMicro = BigInt(requirements.amount);
+        let paymentTxn;
+        if (assetId === 0) {
+          paymentTxn = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
+            from: address,
+            to: requirements.payTo,
+            amount: amountMicro,
+            suggestedParams: params,
+          });
+        } else {
+          paymentTxn = algosdk.makeAssetTransferTxnWithSuggestedParamsFromObject({
+            from: address,
+            to: requirements.payTo,
+            amount: amountMicro,
+            assetIndex: assetId,
+            suggestedParams: params,
+          });
+        }
+
+        const paymentIndexInGroup = atc.count();
+        atc.addTransaction({ txn: paymentTxn, signer: txSigner });
+
+        algofileUploads.push({
+          file: jsonString,
+          fileName: `metadata_${i}.json`,
+          requirements,
+          paymentIndex: paymentIndexInGroup,
+          groupIndex: i
+        });
       } else if (provider === "crust") {
         const authBasic = localStorage.getItem("authBasic");
         cid = await pinJSONToCrust(authBasic, jsonString);
@@ -480,7 +541,7 @@ export async function createARC3AssetMintArrayV2Batch(
     }
   }
 
-  return { txnsArray, pinCids };
+  return { txnsArray, pinCids, algofileUploads };
 }
 
 export async function createARC3AssetMintArray(
@@ -597,6 +658,7 @@ export async function createARC19AssetMintArrayV2(
 
   // Collect all CIDs that need pinning
   const allPinCids: string[] = [];
+  const algofileUploads: any[] = [];
 
   for (let i = 0; i < data_for_txns.length; i++) {
     try {
@@ -604,13 +666,42 @@ export async function createARC19AssetMintArrayV2(
 
       let cid: string;
       if (provider === "algofile") {
-        cid = await uploadToAlgoFile(
+        const { requirements, cid: computedCid } = await getAlgoFilePaymentRequirements(
           jsonString,
-          `metadata_${i}.json`,
-          address,
-          txSigner,
-          algodClient
+          `metadata_${i}.json`
         );
+        cid = computedCid;
+
+        const params = await algodClient.getTransactionParams().do();
+        const assetId = Number(requirements.asset || 0);
+        const amountMicro = BigInt(requirements.amount);
+        let paymentTxn;
+        if (assetId === 0) {
+          paymentTxn = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
+            from: address,
+            to: requirements.payTo,
+            amount: amountMicro,
+            suggestedParams: params,
+          });
+        } else {
+          paymentTxn = algosdk.makeAssetTransferTxnWithSuggestedParamsFromObject({
+            from: address,
+            to: requirements.payTo,
+            amount: amountMicro,
+            assetIndex: assetId,
+            suggestedParams: params,
+          });
+        }
+
+        const paymentIndexInGroup = atc.count();
+        atc.addTransaction({ txn: paymentTxn, signer: txSigner });
+
+        algofileUploads.push({
+          file: jsonString,
+          fileName: `metadata_${i}.json`,
+          requirements,
+          paymentIndex: paymentIndexInGroup,
+        });
       } else if (provider === "crust") {
         const authBasic = localStorage.getItem("authBasic");
         cid = await pinJSONToCrust(authBasic, jsonString);
@@ -627,7 +718,7 @@ export async function createARC19AssetMintArrayV2(
       suggestedParams.flatFee = true;
       suggestedParams.fee = 2000 * 4; // set fee
 
-      // build ATC (no longer includes Crust pin txns)
+      // build ATC
       await buildAssetMintAtomicTransactionComposer(
         atc,
         address,
@@ -663,7 +754,7 @@ export async function createARC19AssetMintArrayV2(
   }
 
   // Return mint ATC + pinCids separately for sequential execution
-  return { atc, pinCids: allPinCids };
+  return { atc, pinCids: allPinCids, algofileUploads };
 }
 
 export async function createARC19AssetMintArrayV2Batch(
@@ -692,6 +783,7 @@ export async function createARC19AssetMintArrayV2Batch(
 
   const txnsArray = [];
   const pinCids = [];
+  const algofileUploads: any[] = [];
   for (let i = 0; i < data_for_txns.length; i++) {
     // create atomic transaction composer
     const atc = new algosdk.AtomicTransactionComposer();
@@ -701,13 +793,43 @@ export async function createARC19AssetMintArrayV2Batch(
 
       let cid: string;
       if (provider === "algofile") {
-        cid = await uploadToAlgoFile(
+        const { requirements, cid: computedCid } = await getAlgoFilePaymentRequirements(
           jsonString,
-          `metadata_${i}.json`,
-          address,
-          txSigner,
-          algodClient
+          `metadata_${i}.json`
         );
+        cid = computedCid;
+
+        const params = await algodClient.getTransactionParams().do();
+        const assetId = Number(requirements.asset || 0);
+        const amountMicro = BigInt(requirements.amount);
+        let paymentTxn;
+        if (assetId === 0) {
+          paymentTxn = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
+            from: address,
+            to: requirements.payTo,
+            amount: amountMicro,
+            suggestedParams: params,
+          });
+        } else {
+          paymentTxn = algosdk.makeAssetTransferTxnWithSuggestedParamsFromObject({
+            from: address,
+            to: requirements.payTo,
+            amount: amountMicro,
+            assetIndex: assetId,
+            suggestedParams: params,
+          });
+        }
+
+        const paymentIndexInGroup = atc.count();
+        atc.addTransaction({ txn: paymentTxn, signer: txSigner });
+
+        algofileUploads.push({
+          file: jsonString,
+          fileName: `metadata_${i}.json`,
+          requirements,
+          paymentIndex: paymentIndexInGroup,
+          groupIndex: i
+        });
       } else if (provider === "crust") {
         const authBasic = localStorage.getItem("authBasic");
         cid = await pinJSONToCrust(authBasic, jsonString);
@@ -751,7 +873,7 @@ export async function createARC19AssetMintArrayV2Batch(
     }
   }
 
-  return { txnsArray, pinCids };
+  return { txnsArray, pinCids, algofileUploads };
 }
 
 export async function createARC19AssetMintArray(
@@ -859,6 +981,7 @@ export async function updateARC19AssetMintArrayV2(
 
   // Collect all CIDs that need pinning
   const allPinCids: string[] = [];
+  const algofileUploads: any[] = [];
 
   for (let i = 0; i < data_for_txns.length; i++) {
     try {
@@ -874,13 +997,42 @@ export async function updateARC19AssetMintArrayV2(
 
       let cid: string;
       if (provider === "algofile") {
-        cid = await uploadToAlgoFile(
+        const { requirements, cid: computedCid } = await getAlgoFilePaymentRequirements(
           jsonString,
-          `metadata_${i}.json`,
-          address,
-          txSigner,
-          algodClient
+          `metadata_${i}.json`
         );
+        cid = computedCid;
+
+        const params = await algodClient.getTransactionParams().do();
+        const assetId = Number(requirements.asset || 0);
+        const amountMicro = BigInt(requirements.amount);
+        let paymentTxn;
+        if (assetId === 0) {
+          paymentTxn = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
+            from: address,
+            to: requirements.payTo,
+            amount: amountMicro,
+            suggestedParams: params,
+          });
+        } else {
+          paymentTxn = algosdk.makeAssetTransferTxnWithSuggestedParamsFromObject({
+            from: address,
+            to: requirements.payTo,
+            amount: amountMicro,
+            assetIndex: assetId,
+            suggestedParams: params,
+          });
+        }
+
+        const paymentIndexInGroup = atc.count();
+        atc.addTransaction({ txn: paymentTxn, signer: txSigner });
+
+        algofileUploads.push({
+          file: jsonString,
+          fileName: `metadata_${i}.json`,
+          requirements,
+          paymentIndex: paymentIndexInGroup,
+        });
       } else if (provider === "crust") {
         const authBasic = localStorage.getItem("authBasic");
         cid = await pinJSONToCrust(
@@ -943,7 +1095,7 @@ export async function updateARC19AssetMintArrayV2(
   }
 
   // Return mint ATC + pinCids separately for sequential execution
-  return { atc, pinCids: allPinCids };
+  return { atc, pinCids: allPinCids, algofileUploads };
 }
 
 export async function updateARC19AssetMintArray(

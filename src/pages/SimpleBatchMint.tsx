@@ -12,6 +12,7 @@ import {
   createARC19AssetMintArrayV2Batch,
   walletSign,
 } from "../utils";
+import { completeAlgoFileUpload } from "../utils/algofile";
 import IpfsProviderSelect from "../components/IpfsProviderSelect";
 import { IpfsProvider } from "../types";
 import { IPFS_ENDPOINT, MINT_FEE_PER_ASA, TOOLS } from "../constants";
@@ -61,6 +62,7 @@ export function SimpleBatchMint() {
   const [assetTransactions, setAssetTransactions] = useState(
     [] as algosdk.Transaction[][]
   );
+  const [algofileUploads, setAlgofileUploads] = useState<any[]>([]);
 
   const [previewAsset, setPreviewAsset] = useState(null as any);
   const { activeAddress, activeNetwork, algodClient, transactionSigner, activeWallet } = useWallet();
@@ -355,7 +357,7 @@ export function SimpleBatchMint() {
       console.log(formData.collectionFormat);
       if (formData.collectionFormat === "ARC3") {
         toast.info("Creating ARC3 transactions...");
-        const { txnsArray } = await createARC3AssetMintArrayV2Batch(
+        const result = await createARC3AssetMintArrayV2Batch(
           data_for_txns,
           activeAddress,
           algodClient,
@@ -364,12 +366,13 @@ export function SimpleBatchMint() {
           effectiveProvider === "filebase" ? formData.filebaseToken : formData.pinataToken,
           mnemonic
         );
-        unsignedAssetTransaction = txnsArray;
+        unsignedAssetTransaction = result.txnsArray;
+        setAlgofileUploads(result.algofileUploads || []);
         setProcessStep(CREATE_TRANSACTIONS_PROCESS);
       } else if (formData.collectionFormat === "ARC19") {
         toast.info("Creating ARC19 transactions...");
         setProcessStep(CREATE_TRANSACTIONS_PROCESS);
-        const { txnsArray } = await createARC19AssetMintArrayV2Batch(
+        const result = await createARC19AssetMintArrayV2Batch(
           data_for_txns,
           activeAddress,
           algodClient,
@@ -378,7 +381,8 @@ export function SimpleBatchMint() {
           effectiveProvider === "filebase" ? formData.filebaseToken : formData.pinataToken,
           mnemonic
         );
-        unsignedAssetTransaction = txnsArray;
+        unsignedAssetTransaction = result.txnsArray;
+        setAlgofileUploads(result.algofileUploads || []);
       } else if (formData.collectionFormat === "ARC69") {
         toast.info("Creating ARC69 transactions...");
         setProcessStep(CREATE_TRANSACTIONS_PROCESS);
@@ -441,14 +445,42 @@ export function SimpleBatchMint() {
         // 2 txs per asset, for ARC69
         signedAssetTransactions = sliceIntoChunks(signedAssetTransactions, 2);
       } else {
-        // 4 txs per asset for Crust, 2 for Pinata & Filebase
-        const chunkSize = (effectiveProvider === "crust") ? 4 : 2;
+        // 4 txs per asset for Crust, 3 for AlgoFile, 2 for Pinata & Filebase
+        const chunkSize = (effectiveProvider === "crust") ? 4 : (effectiveProvider === "algofile") ? 3 : 2;
         signedAssetTransactions = sliceIntoChunks(signedAssetTransactions, chunkSize);
       }
 
       for (let i = 0; i < signedAssetTransactions.length; i++) {
         try {
           await algodClient.sendRawTransaction(signedAssetTransactions[i]).do();
+
+          // Upload metadata to AlgoFile using the signed transactions group
+          if (effectiveProvider === "algofile" && algofileUploads && algofileUploads.length > 0) {
+            const upload = algofileUploads.find((u) => u.groupIndex === i);
+            if (upload) {
+              try {
+                const signedGroupB64 = signedAssetTransactions[i].map((txnBytes: Uint8Array) => {
+                  let binary = "";
+                  const len = txnBytes.byteLength;
+                  for (let k = 0; k < len; k++) {
+                    binary += String.fromCharCode(txnBytes[k]);
+                  }
+                  return window.btoa(binary);
+                });
+
+                await completeAlgoFileUpload(
+                  upload.file,
+                  upload.fileName,
+                  signedGroupB64,
+                  upload.paymentIndex,
+                  upload.requirements
+                );
+              } catch (uploadErr) {
+                console.error("AlgoFile upload failed for index:", i, uploadErr);
+              }
+            }
+          }
+
           if (i % 5 === 0) {
             toast.success(
               `Transaction ${i + 1} of ${

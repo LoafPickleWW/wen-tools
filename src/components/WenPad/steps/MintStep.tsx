@@ -17,7 +17,7 @@ import {
   pinImageToCrust, 
   pinJSONToCrust, 
 } from '../../../crust';
-import { uploadToAlgoFile } from '../../../utils/algofile';
+import { uploadToAlgoFile, completeAlgoFileUpload } from '../../../utils/algofile';
 import algosdk from 'algosdk';
 import { loadImage } from '../ProjectUtils';
 
@@ -110,22 +110,16 @@ const MintStep = () => {
         if (standard === 'ARC69') {
            assetData.asset_note = metadata;
         } else {
-           setProgress({ current: i + 1, total: previewItems.length, status: `Pinning metadata #${item.index}...` });
-            let jsonCid = '';
-            if (effectiveProvider === 'AlgoFile') {
-              jsonCid = await uploadToAlgoFile(
-                JSON.stringify(metadata),
-                `metadata_${item.index}.json`,
-                activeAccount.address,
-                transactionSigner,
-                algodClient
-              );
-            } else if (effectiveProvider === 'Crust') {
-              jsonCid = await pinJSONToCrust(ipfsToken, JSON.stringify(metadata));
-            } else {
-              jsonCid = await pinJSONToPinata(ipfsToken, JSON.stringify(metadata));
-            }
-           assetData.cid = jsonCid;
+           if (effectiveProvider !== 'AlgoFile') {
+             setProgress({ current: i + 1, total: previewItems.length, status: `Pinning metadata #${item.index}...` });
+             let jsonCid = '';
+             if (effectiveProvider === 'Crust') {
+               jsonCid = await pinJSONToCrust(ipfsToken, JSON.stringify(metadata));
+             } else {
+               jsonCid = await pinJSONToPinata(ipfsToken, JSON.stringify(metadata));
+             }
+             assetData.cid = jsonCid;
+           }
            assetData.ipfs_data = metadata;
         }
 
@@ -137,26 +131,51 @@ const MintStep = () => {
       setProgress({ current: previewItems.length, total: previewItems.length, status: 'Creating transactions...' });
       
       let txnsGroups: algosdk.Transaction[][] = [];
+      let localAlgofileUploads: any[] = [];
       
       if (standard === 'ARC3') {
-        const { txnsArray } = await createARC3AssetMintArrayV2Batch(mintedData, activeAccount.address, algodClient, transactionSigner);
-        txnsGroups = txnsArray;
+        const result = await createARC3AssetMintArrayV2Batch(
+          mintedData,
+          activeAccount.address,
+          algodClient,
+          transactionSigner,
+          effectiveProvider as any,
+          ipfsToken
+        );
+        txnsGroups = result.txnsArray;
+        localAlgofileUploads = result.algofileUploads || [];
       } else if (standard === 'ARC19') {
-        const { txnsArray } = await createARC19AssetMintArrayV2Batch(mintedData, activeAccount.address, algodClient, transactionSigner);
-        txnsGroups = txnsArray;
+        const result = await createARC19AssetMintArrayV2Batch(
+          mintedData,
+          activeAccount.address,
+          algodClient,
+          transactionSigner,
+          effectiveProvider as any,
+          ipfsToken
+        );
+        txnsGroups = result.txnsArray;
+        localAlgofileUploads = result.algofileUploads || [];
       } else {
         // ARC69 or Standard
-        // We'll need a generic batch creator if we want to support ARC69 in batch
-        // For now let's focus on ARC19/3 as they are most requested
         toast.warning('ARC69 batch minting coming soon. Using ARC19 instead for this demo.');
-        const { txnsArray } = await createARC19AssetMintArrayV2Batch(mintedData, activeAccount.address, algodClient, transactionSigner);
-        txnsGroups = txnsArray;
+        const result = await createARC19AssetMintArrayV2Batch(
+          mintedData,
+          activeAccount.address,
+          algodClient,
+          transactionSigner,
+          effectiveProvider as any,
+          ipfsToken
+        );
+        txnsGroups = result.txnsArray;
+        localAlgofileUploads = result.algofileUploads || [];
       }
 
       // 3. Signing Loop
       setProgress({ current: previewItems.length, total: previewItems.length, status: 'Awaiting signatures...' });
       
       const chunks = sliceIntoChunks(txnsGroups, 16); // Sign in groups of 16
+      const groupSize = effectiveProvider === 'AlgoFile' ? 3 : effectiveProvider === 'Crust' ? 4 : 2;
+
       for (let i = 0; i < chunks.length; i++) {
         setProgress({ 
           current: previewItems.length, 
@@ -164,7 +183,42 @@ const MintStep = () => {
           status: `Signing batch ${i + 1} of ${chunks.length}...` 
         });
         const signedTxns = await walletSign(chunks[i], transactionSigner);
-        await algodClient.sendRawTransaction(signedTxns).do();
+        
+        // slice the flat array of signed transactions back into their groups
+        const signedGroups = sliceIntoChunks(signedTxns, groupSize);
+        
+        for (let j = 0; j < signedGroups.length; j++) {
+          const globalIndex = (i * 16) + j;
+          const groupBytes = signedGroups[j];
+          await algodClient.sendRawTransaction(groupBytes).do();
+          
+          if (effectiveProvider === 'AlgoFile' && localAlgofileUploads.length > 0) {
+            const upload = localAlgofileUploads.find((u) => u.groupIndex === globalIndex);
+            if (upload) {
+              try {
+                const signedGroupB64 = groupBytes.map((txnBytes: Uint8Array) => {
+                  let binary = "";
+                  const len = txnBytes.byteLength;
+                  for (let k = 0; k < len; k++) {
+                    binary += String.fromCharCode(txnBytes[k]);
+                  }
+                  return window.btoa(binary);
+                });
+
+                await completeAlgoFileUpload(
+                  upload.file,
+                  upload.fileName,
+                  signedGroupB64,
+                  upload.paymentIndex,
+                  upload.requirements
+                );
+              } catch (uploadErr) {
+                console.error("AlgoFile upload failed for index:", globalIndex, uploadErr);
+              }
+            }
+          }
+        }
+        
         toast.success(`Batch ${i + 1} sent!`);
       }
 

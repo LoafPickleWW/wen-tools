@@ -18,7 +18,7 @@ import { IpfsProvider } from "../types";
 import { ASSET_PREVIEW, TOOLS } from "../constants";
 import FaqSectionComponent from "../components/FaqSectionComponent";
 import { pinImageToCrust, makeCrustPinTx } from "../crust";
-import { uploadToAlgoFile } from "../utils/algofile";
+import { uploadToAlgoFile, completeAlgoFileUpload } from "../utils/algofile";
 import { useWallet } from "@txnlab/use-wallet-react";
 import "react-json-view-lite/dist/index.css";
 import { PreviewAssetComponent } from "../components/PreviewAssetComponent";
@@ -89,6 +89,7 @@ export function SimpleMint() {
 
   const [batchATC, setBatchATC] = useState(null as any);
   const [pinCids, setPinCids] = useState<string[]>([]);
+  const [algofileUploads, setAlgofileUploads] = useState<any[]>([]);
   const [previewAsset, setPreviewAsset] = useState(null as any);
   const [showIntegratorPortal, setShowIntegratorPortal] = useState(false);
   const [searchParams] = useSearchParams();
@@ -614,6 +615,7 @@ wen.contentWindow.postMessage({
 
         setPinCids(result.pinCids);
         setBatchATC(result.atc);
+        setAlgofileUploads(result.algofileUploads || []);
       } else if (finalFormat === "ARC69" || finalFormat === "Token") {
         metadata.properties = isCustomMode ? (metadata.properties.traits || {}) : {};
         metadataForIPFS = {
@@ -634,6 +636,7 @@ wen.contentWindow.postMessage({
 
         setPinCids(cids);
         setBatchATC(atc);
+        setAlgofileUploads([]);
       } else {
         toast.error("Invalid ARC format");
         return;
@@ -695,7 +698,36 @@ wen.contentWindow.postMessage({
       const result = await algosdk.waitForConfirmation(algodClient, txId, 4);
       setCreatedAssetID(result["asset-index"]);
 
-      // 2. Send Pin Transactions
+      // 2. Upload to AlgoFile if applicable
+      if (effectiveProvider === "algofile" && algofileUploads && algofileUploads.length > 0) {
+        toast.info("Uploading metadata to AlgoFile...");
+        for (const upload of algofileUploads) {
+          try {
+            // Encode the whole group since paymentPayload.payload.paymentGroup takes an array of all signed transactions in the group
+            const signedGroupB64 = mintSigned.map((txnBytes) => {
+              let binary = "";
+              const len = txnBytes.byteLength;
+              for (let i = 0; i < len; i++) {
+                binary += String.fromCharCode(txnBytes[i]);
+              }
+              return window.btoa(binary);
+            });
+
+            await completeAlgoFileUpload(
+              upload.file,
+              upload.fileName,
+              signedGroupB64,
+              upload.paymentIndex,
+              upload.requirements
+            );
+          } catch (uploadErr) {
+            console.error("AlgoFile metadata upload failed:", uploadErr);
+            toast.error("AlgoFile metadata upload failed, but asset was created!");
+          }
+        }
+      }
+
+      // 3. Send Pin Transactions
       const pinSigned = signedTxns.slice(mintTxns.length);
       if (pinSigned.length > 0) {
          toast.info("Sending IPFS Pin transactions...");

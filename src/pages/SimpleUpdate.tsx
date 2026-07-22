@@ -20,7 +20,7 @@ import { IpfsProvider } from "../types";
 import { TOOLS, IPFS_ENDPOINT, ASSET_PREVIEW } from "../constants";
 import { isCrustAuth } from "../crust-auth";
 import { makeCrustPinTx } from "../crust";
-import { uploadToAlgoFile } from "../utils/algofile";
+import { uploadToAlgoFile, completeAlgoFileUpload } from "../utils/algofile";
 import { useWallet } from "@txnlab/use-wallet-react";
 import "react-json-view-lite/dist/index.css";
 import { PreviewAssetComponent } from "../components/PreviewAssetComponent";
@@ -65,6 +65,7 @@ export function SimpleUpdate() {
 
   // batchATC is a AtomicTransactionComposer to batch and send all transactions
   const [batchATC, setBatchATC] = useState(null as any);
+  const [algofileUploads, setAlgofileUploads] = useState<any[]>([]);
   const { activeAddress, activeNetwork, algodClient, transactionSigner } =
     useWallet();
   const isTestnet = activeNetwork === "testnet";
@@ -451,7 +452,7 @@ export function SimpleUpdate() {
         ipfs_data = metadata;
 
         const currentToken = effectiveProvider === "filebase" ? filebaseToken : token;
-        const { atc, pinCids: cids } = await updateARC19AssetMintArrayV2(
+        const result = await updateARC19AssetMintArrayV2(
           [transaction_data],
           activeAddress,
           algodClient,
@@ -463,14 +464,15 @@ export function SimpleUpdate() {
 
         if (effectiveProvider === "crust") {
           // Bundle pins into the same group
-          for (const cid of cids) {
-            atc.addMethodCall(
+          for (const cid of result.pinCids) {
+            result.atc.addMethodCall(
               await makeCrustPinTx(cid, transactionSigner, activeAddress, algodClient)
             );
           }
         }
 
-        setBatchATC(atc);
+        setBatchATC(result.atc);
+        setAlgofileUploads(result.algofileUploads || []);
         setTransaction(null);
       } else if (formData.format === "ARC69") {
         metadata.properties = metadata.properties.traits;
@@ -535,10 +537,43 @@ export function SimpleUpdate() {
 
       // use ATC batch, test asset ID: 2315438437
       if (formData.format === "ARC19" && batchATC) {
-        // Use atc.execute for robust signing and submission of the entire group
-        const { txIDs } = await batchATC.execute(algodClient, 4);
-        const txId = txIDs[0];
+        const txns = batchATC.buildGroup().map((t: any) => t.txn);
+        const signedTxns = await walletSign(txns, transactionSigner);
+        if (!signedTxns || signedTxns.length === 0) {
+          setProcessStep(2);
+          toast.error("Transaction not signed!");
+          return;
+        }
+        const { txId } = await algodClient.sendRawTransaction(signedTxns).do();
         await algosdk.waitForConfirmation(algodClient, txId, 4);
+
+        // Upload metadata to AlgoFile using the signed transactions group
+        if (effectiveProvider === "algofile" && algofileUploads && algofileUploads.length > 0) {
+          toast.info("Uploading metadata to AlgoFile...");
+          for (const upload of algofileUploads) {
+            try {
+              const signedGroupB64 = signedTxns.map((txnBytes) => {
+                let binary = "";
+                const len = txnBytes.byteLength;
+                for (let i = 0; i < len; i++) {
+                  binary += String.fromCharCode(txnBytes[i]);
+                }
+                return window.btoa(binary);
+              });
+
+              await completeAlgoFileUpload(
+                upload.file,
+                upload.fileName,
+                signedGroupB64,
+                upload.paymentIndex,
+                upload.requirements
+              );
+            } catch (uploadErr) {
+              console.error("AlgoFile metadata upload failed:", uploadErr);
+              toast.error("AlgoFile metadata upload failed, but asset was updated!");
+            }
+          }
+        }
       } else {
         // other formats or Pinata paths
         const signedAssetTransaction = await walletSign(
