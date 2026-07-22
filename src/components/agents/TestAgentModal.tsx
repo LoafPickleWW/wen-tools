@@ -191,6 +191,19 @@ const modeOptions: VRFMode[] = _vrfInfo && _vrfInfo.capabilities && Array.isArra
 
     try {
       // 1. Initial Call (probe for 402 challenge)
+      let finalEndpointUrl = endpointUrl;
+      if (customAmount && !isNaN(Number(customAmount)) && Number(customAmount) >= 0) {
+        const amountMicro = Math.round(Number(customAmount) * 1_000_000);
+        try {
+          const urlObj = new URL(endpointUrl);
+          urlObj.searchParams.set("amount", amountMicro.toString());
+          finalEndpointUrl = urlObj.toString();
+        } catch {
+          const separator = endpointUrl.includes("?") ? "&" : "?";
+          finalEndpointUrl = `${endpointUrl}${separator}amount=${amountMicro}`;
+        }
+      }
+
       let initialPayload: any = {};
       if (isVrfAgent) {
         const cleanParams: Record<string, any> = {};
@@ -217,7 +230,7 @@ const modeOptions: VRFMode[] = _vrfInfo && _vrfInfo.capabilities && Array.isArra
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          endpointUrl: endpointUrl,
+          endpointUrl: finalEndpointUrl,
           method: method,
           body: initialPayload,
         }),
@@ -339,15 +352,6 @@ const modeOptions: VRFMode[] = _vrfInfo && _vrfInfo.capabilities && Array.isArra
       const signedTxnB64 = bytesToBase64(signedTxns[0]);
 
       // Build PaymentPayload envelope
-      const acceptedOptionClone = JSON.parse(JSON.stringify(acceptedOption));
-      if (acceptedOptionClone.price && typeof acceptedOptionClone.price === "object" && "amount" in acceptedOptionClone.price) {
-        acceptedOptionClone.price.amount = amountMicro;
-      } else if (acceptedOptionClone.price !== undefined && typeof acceptedOptionClone.price !== "object") {
-        acceptedOptionClone.price = amountMicro;
-      } else if (acceptedOptionClone.amount !== undefined) {
-        acceptedOptionClone.amount = amountMicro;
-      }
-
       const paymentPayload = {
         x402Version: challengeDetails.x402Version || 1,
         payload: {
@@ -355,8 +359,8 @@ const modeOptions: VRFMode[] = _vrfInfo && _vrfInfo.capabilities && Array.isArra
           paymentIndex: 0,
         },
         ...(challengeDetails.x402Version === 2 ? {
-          accepted: acceptedOptionClone,
-          resource: challengeDetails.resource || { url: endpointUrl },
+          accepted: acceptedOption,
+          resource: challengeDetails.resource || { url: finalEndpointUrl },
           extensions: challengeDetails.extensions || {},
         } : {}),
       };
@@ -369,7 +373,7 @@ const modeOptions: VRFMode[] = _vrfInfo && _vrfInfo.capabilities && Array.isArra
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          endpointUrl: endpointUrl,
+          endpointUrl: finalEndpointUrl,
           method: method,
           headers: {
             "X-Payment": paymentHeader,

@@ -183,8 +183,8 @@ export function CollectionSnapshot() {
       }
 
       // 2. Fetch Rand listings
-      let randListingsMap: Record<number, string> = {};
-      let randCreatorListingsGrouped: Record<string, number[]> = {};
+      const randListingsMap: Record<number, string> = {};
+      const randCreatorListingsGrouped: Record<string, number[]> = {};
       if (checkRandSupport) {
         for (let i = 0; i < creatorWallets.length; i++) {
           let creatorListings = await getRandCreatorListings(creatorWallets[i]);
@@ -203,8 +203,8 @@ export function CollectionSnapshot() {
       }
 
       // 3. Fetch Downbad listings
-      let downbadListingsMap: Record<number, { sellerAddress: string }> = {};
-      let downbadCreatorListings: Record<string, number[]> = {};
+      const downbadListingsMap: Record<number, { sellerAddress: string }> = {};
+      const downbadCreatorListings: Record<string, number[]> = {};
       if (checkDownbadSupport) {
         const allDownbadListings = await getDownbadListingsMap(activeNetwork);
         Object.entries(allDownbadListings).forEach(([assetIdStr, listing]) => {
@@ -221,8 +221,8 @@ export function CollectionSnapshot() {
       }
 
       // 3b. Fetch Akita listings
-      let akitaListingsMap: Record<number, { sellerAddress: string }> = {};
-      let akitaCreatorListings: Record<string, number[]> = {};
+      const akitaListingsMap: Record<number, { sellerAddress: string }> = {};
+      const akitaCreatorListings: Record<string, number[]> = {};
       if (checkAkitaSupport) {
         const allAkitaListings = await getAkitaListingsMap(activeNetwork);
         Object.entries(allAkitaListings).forEach(([assetIdStr, listing]) => {
@@ -239,7 +239,7 @@ export function CollectionSnapshot() {
       }
 
       // 4. Audit asset owners
-      let data: Record<string, { nfd: string, assets: number[], listed_assets_rand?: number[], listed_assets_downbad?: number[], listed_assets_akita?: number[] }> = {};
+      const data: Record<string, { nfd: string, assets: number[], listed_assets_rand?: number[], listed_assets_downbad?: number[], listed_assets_akita?: number[] }> = {};
       let count = 0;
       for (const asset_id of assetIds) {
         let asset_owner = await getAssetOwner(asset_id);

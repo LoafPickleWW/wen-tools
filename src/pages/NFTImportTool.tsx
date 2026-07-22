@@ -119,7 +119,7 @@ function truncateStringToBytes(str: string, maxBytes: number): string {
   const encoded = encoder.encode(str);
   if (encoded.length <= maxBytes) return str;
 
-  let sliced = encoded.slice(0, maxBytes);
+  const sliced = encoded.slice(0, maxBytes);
   let decoded = decoder.decode(sliced);
   
   // Strip trailing replacement characters if truncation happened in the middle of a UTF-8 character
@@ -168,7 +168,7 @@ function tryCompressUrl(url: string): string {
       combined.set(contractBytes, 1);
       combined.set(hash2Bytes, 21);
 
-      let base64 = btoa(String.fromCharCode(...combined))
+      const base64 = btoa(String.fromCharCode(...combined))
         .replace(/\+/g, "-")
         .replace(/\//g, "_")
         .replace(/=+$/, "");
@@ -191,7 +191,7 @@ function tryCompressUrl(url: string): string {
       combined[0] = 2;
       combined.set(hashBytes, 1);
 
-      let base64 = btoa(String.fromCharCode(...combined))
+      const base64 = btoa(String.fromCharCode(...combined))
         .replace(/\+/g, "-")
         .replace(/\//g, "_")
         .replace(/=+$/, "");
@@ -212,10 +212,10 @@ function buildAndTruncateNote(noteObj: any): Uint8Array {
   if (bytes.length <= 1024) return bytes;
 
   // Clone note object to avoid mutating input params
-  let tempNote = JSON.parse(JSON.stringify(noteObj));
+  const tempNote = JSON.parse(JSON.stringify(noteObj));
 
   // Step 1: Truncate description (if present)
-  let desc = String(tempNote.description || "");
+  const desc = String(tempNote.description || "");
   if (desc.length > 0) {
     for (let len = desc.length - 10; len >= 0; len -= 10) {
       tempNote.description = desc.substring(0, len) + "...";
