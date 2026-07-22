@@ -30,7 +30,7 @@ export function TestAgentModal({ open, onClose, listing, network }: TestAgentMod
   const { activeAddress, transactionSigner } = useWallet();
   const [vrfMode, setVrfMode] = useState<string>("number");
   const [step, setStep] = useState<TestStep>("idle");
-const [method, setMethod] = useState<"GET" | "POST">("GET");
+  const [method, setMethod] = useState<"GET" | "POST">("GET");
   const [payloadText, setPayloadText] = useState(
     JSON.stringify({ message: "Hello from the wen.tools agent test panel!" }, null, 2)
   );
@@ -38,6 +38,7 @@ const [method, setMethod] = useState<"GET" | "POST">("GET");
   const [errorDetails, setErrorDetails] = useState("");
   const [testResult, setTestResult] = useState<any>(null);
   const [endpointUrl, setEndpointUrl] = useState("");
+  const [customAmount, setCustomAmount] = useState<string>("");
   // Unused VRF info (fetched but not displayed)
   const [_vrfInfo, setVrfInfo] = useState<any>(null);
 
@@ -58,6 +59,7 @@ const [method, setMethod] = useState<"GET" | "POST">("GET");
       setTestResult(null);
       setErrorDetails("");
       setRefundTxId(null);
+      setCustomAmount("");
     }
   }, [open, listing]);
   const [vrfInfoLoading, setVrfInfoLoading] = useState<boolean>(false);
@@ -292,12 +294,15 @@ const modeOptions: VRFMode[] = _vrfInfo && _vrfInfo.capabilities && Array.isArra
       // Prefer USDC (non-zero asset) — the GoPlausible facilitator's exact AVM scheme
       // expects asset transfer transactions; native ALGO pay txns get rejected.
       const acceptedOption = networkOptions.find((a: any) => getAssetId(a) !== "0") || networkOptions[0];
-      const amountMicro = Number(getAmount(acceptedOption));
+      const defaultAmountMicro = Number(getAmount(acceptedOption));
+      const amountMicro = customAmount && !isNaN(Number(customAmount)) && Number(customAmount) >= 0
+        ? Math.round(Number(customAmount) * 1_000_000)
+        : defaultAmountMicro;
       const recipient = acceptedOption.payTo;
       const assetId = Number(getAssetId(acceptedOption));
 
       const assetLabel = assetId === 0 ? "ALGO" : "USDC";
-      setStatusMessage(`Constructing ${assetLabel} payment transaction...`);
+      setStatusMessage(`Constructing ${assetLabel} payment transaction for ${(amountMicro / 1_000_000).toFixed(6)} ${assetLabel}...`);
       setStep("signing");
 
       // 3. Create & Sign Payment Transaction
@@ -477,6 +482,27 @@ const modeOptions: VRFMode[] = _vrfInfo && _vrfInfo.capabilities && Array.isArra
                   >
                     POST
                   </button>
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <div className="flex justify-between items-center">
+                  <label className="text-sm font-bold text-neutral-300">Custom Payment Amount (Optional)</label>
+                  <span className="text-[10px] text-neutral-500">Overrides the default challenge price</span>
+                </div>
+                <div className="relative">
+                  <input
+                    type="number"
+                    step="any"
+                    min="0"
+                    value={customAmount}
+                    onChange={(e) => setCustomAmount(e.target.value)}
+                    placeholder="e.g. 1.0"
+                    className="w-full bg-neutral-950 border border-neutral-800 focus:border-orange-500 rounded-xl p-3 font-mono text-sm text-neutral-300 focus:outline-none transition-all pr-24"
+                  />
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-neutral-500 font-mono">
+                    USDC / ALGO
+                  </div>
                 </div>
               </div>
                 {/* Mode selector for VRF testing */}
