@@ -98,6 +98,26 @@ export function SimpleBatchMint() {
     );
   };
 
+  const getPinFeeText = () => {
+    if (effectiveProvider === "none") {
+      return "Free (No pinning service selected)";
+    }
+    if (effectiveProvider === "pinata") {
+      return "Free (Uses your custom Pinata JWT)";
+    }
+    if (effectiveProvider === "filebase") {
+      return "Free (Requires your custom Filebase API token)";
+    }
+    if (effectiveProvider === "algofile") {
+      return "Variable USDC (AlgoFile x402 Pinning: paid directly on-chain. Valid for 1 year)";
+    }
+    // Crust Network fees
+    if (formData.collectionFormat === "ARC69") {
+      return "1.4 ALGO per pin (Crust Pinning: 1 pin for image)";
+    }
+    return "1.4 ALGO per pin (Crust Pinning: 2 pins: Image + JSON = 2.8 ALGO)";
+  };
+
   async function createTransactions() {
     try {
       if (!activeAddress) {
@@ -872,9 +892,27 @@ export function SimpleBatchMint() {
           </button>
         )}
       </div>
-      <p className="text-sm italic text-slate-200">
-        Site Fee: Free/Pinning Fee: Variable{" "}
-      </p>
+      {/* Cost Summary Box */}
+      <div className="bg-orange-500/5 p-4 rounded-xl border border-orange-500/20 text-sm max-w-sm mx-auto my-4 text-left">
+        <h4 className="text-orange-400 font-semibold mb-1">Fee & Pinning Breakdown</h4>
+        <ul className="space-y-1 text-xs text-gray-300">
+          {effectiveProvider === "algofile" ? (
+            <>
+              <li>• Pinning Fee (AlgoFile): <span className="font-semibold text-white">Variable USDC (paid directly on-chain. Valid for 1 year)</span></li>
+              <li className="opacity-70">• Secondary Option (Crust Pinning): <span className="font-semibold text-white/85">1.4 ALGO per pin ({formData.collectionFormat === "ARC69" ? "1 pin: image" : "2 pins: image + JSON"} = {formData.collectionFormat === "ARC69" ? "1.4 ALGO" : "2.8 ALGO"})</span></li>
+            </>
+          ) : effectiveProvider === "crust" ? (
+            <>
+              <li>• Pinning Fee (Crust): <span className="font-semibold text-white">1.4 ALGO per pin ({formData.collectionFormat === "ARC69" ? "1 pin: image" : "2 pins: image + JSON"} = {formData.collectionFormat === "ARC69" ? "1.4 ALGO" : "2.8 ALGO"})</span></li>
+              <li className="opacity-70">• Primary Option (AlgoFile Pinning): <span className="font-semibold text-white/85">Variable USDC (paid directly on-chain. Valid for 1 year)</span></li>
+            </>
+          ) : (
+            <li>• Pinning Fee: <span className="font-semibold text-white">{getPinFeeText()}</span></li>
+          )}
+          <li>• Network Fee: <span className="font-semibold text-white">0.1 ALGO per asset</span></li>
+          <li>• Platform Minter Fee: <span className="font-semibold text-white">Free (wen.tools site fee is 0 ALGO)</span></li>
+        </ul>
+      </div>
       
       {/* mnemonic */}
       <InfinityModeComponent mnemonic={mnemonic} setMnemonic={setMnemonic} />
