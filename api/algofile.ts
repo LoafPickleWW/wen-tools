@@ -31,8 +31,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       headers["content-type"] = req.headers["content-type"] as string;
     }
 
-    // Call AlgoFile upload API
-    const targetRes = await fetch("https://api.algofile.io/api/algofile/upload", {
+    // Call AlgoFile API dynamically forwarding the request subpath
+    const subpath = req.url ? req.url.replace(/^\/api\/algofile/, "") : "";
+    const targetUrl = `https://api.algofile.io/api/algofile${subpath || "/upload"}`;
+    
+    const targetRes = await fetch(targetUrl, {
       method: "POST",
       headers,
       body: req as any, // stream the raw request body

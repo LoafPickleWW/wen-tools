@@ -17,7 +17,13 @@ import {
   pinImageToCrust, 
   pinJSONToCrust, 
 } from '../../../crust';
-import { uploadToAlgoFile, completeAlgoFileUpload } from '../../../utils/algofile';
+import { 
+  completeAlgoFileUpload,
+  getAlgoFileBatchPaymentRequirements,
+  completeAlgoFileBatchUpload,
+  uploadFilesToS3,
+  confirmAlgoFileBatch
+} from '../../../utils/algofile';
 import algosdk from 'algosdk';
 import { loadImage } from '../ProjectUtils';
 
@@ -65,52 +71,228 @@ const MintStep = () => {
       const algodClient = new algosdk.Algodv2('', getIndexerURL(activeNetwork!), '');
       
       // 1. Pinning Step
-      for (let i = 0; i < previewItems.length; i++) {
-        const item = previewItems[i];
-        setProgress({ current: i + 1, total: previewItems.length, status: `Preparing NFT #${item.index}...` });
-        
-        const blob = await generateBlob(item);
-        
-        let imageCid = '';
-        if (effectiveProvider === 'AlgoFile') {
-          imageCid = await uploadToAlgoFile(
-            blob,
-            `image_${item.index}.png`,
-            activeAccount.address,
-            transactionSigner,
-            algodClient
-          );
-        } else if (effectiveProvider === 'Crust') {
-          imageCid = await pinImageToCrust(ipfsToken, blob);
-        } else {
-          imageCid = await pinImageToPinata(ipfsToken, blob);
+      if (effectiveProvider === 'AlgoFile') {
+        setProgress({ current: 0, total: previewItems.length, status: 'Generating image assets...' });
+        const imageBlobs: Blob[] = [];
+        for (let i = 0; i < previewItems.length; i++) {
+          const blob = await generateBlob(previewItems[i]);
+          imageBlobs.push(blob);
         }
 
-        const metadata: any = {
-          name: `${project.name} #${item.index}`,
-          description: project.description,
-          image: `ipfs://${imageCid}`,
-          properties: {}
-        };
+        // 1. Image Bucket Quote
+        setProgress({ current: 0, total: previewItems.length, status: 'Requesting image storage quote...' });
+        const imgItems = imageBlobs.map((blob, idx) => ({
+          fileName: `image_${previewItems[idx].index}.png`,
+          sizeBytes: blob.size,
+          contentType: 'image/png'
+        }));
+
+        const imgRequirements = await getAlgoFileBatchPaymentRequirements(imgItems);
+        const params = await algodClient.getTransactionParams().do();
+        const imgAssetId = Number(imgRequirements.asset || 0);
+        const imgAmountMicro = BigInt(imgRequirements.amount);
+        let imgPaymentTxn;
+        if (imgAssetId === 0) {
+          imgPaymentTxn = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
+            from: activeAccount.address,
+            to: imgRequirements.payTo,
+            amount: imgAmountMicro,
+            suggestedParams: params,
+          });
+        } else {
+          imgPaymentTxn = algosdk.makeAssetTransferTxnWithSuggestedParamsFromObject({
+            from: activeAccount.address,
+            to: imgRequirements.payTo,
+            amount: imgAmountMicro,
+            assetIndex: imgAssetId,
+            suggestedParams: params,
+          });
+        }
+
+        setProgress({ current: 0, total: previewItems.length, status: 'Sign image storage payment in wallet...' });
+        const imgSigned = await walletSign([imgPaymentTxn], transactionSigner);
+        if (!imgSigned || imgSigned.length === 0) throw new Error('Image storage payment rejected.');
         
-        Object.values(item.traits).forEach((t: any) => {
-          if (!t.excludeFromMetadata) {
-            metadata.properties[t.trait_type] = t.value;
-          }
+        let imgBinary = "";
+        for (let k = 0; k < imgSigned[0].byteLength; k++) {
+          imgBinary += String.fromCharCode(imgSigned[0][k]);
+        }
+        const imgSignedB64 = window.btoa(imgBinary);
+
+        setProgress({ current: 0, total: previewItems.length, status: 'Uploading images...' });
+        const imgBatchRes = await completeAlgoFileBatchUpload(imgItems, [imgSignedB64], 0, imgRequirements);
+
+        const imgUploadItems = imgBatchRes.items.map((item, idx) => ({
+          file: imageBlobs[idx],
+          uploadUrl: item.uploadUrl,
+          contentType: 'image/png'
+        }));
+        await uploadFilesToS3(imgUploadItems);
+
+        setProgress({ current: 0, total: previewItems.length, status: 'Confirming images...' });
+        const imgConfirmRes = await confirmAlgoFileBatch(imgBatchRes.bucketName, imgBatchRes.items.map(it => ({
+          key: it.key,
+          originalName: it.fileName
+        })));
+
+        const imageCidsMap = new Map<string, string>();
+        imgConfirmRes.items.forEach(it => {
+          imageCidsMap.set(it.fileName, it.cid);
         });
 
-        const assetData: any = {
-          asset_name: metadata.name,
-          unit_name: project.unitName,
-          total_supply: 1,
-          decimals: 0,
-          asset_url: metadata.image,
-        };
+        // 2. Build metadata JSONs
+        setProgress({ current: 0, total: previewItems.length, status: 'Preparing metadata JSONs...' });
+        const metadataList: any[] = [];
+        const metadataStrings: string[] = [];
+        for (let i = 0; i < previewItems.length; i++) {
+          const item = previewItems[i];
+          const imgFileName = `image_${item.index}.png`;
+          const imageCid = imageCidsMap.get(imgFileName) || '';
+
+          const metadata: any = {
+            name: `${project.name} #${item.index}`,
+            description: project.description,
+            image: `ipfs://${imageCid}`,
+            properties: {}
+          };
+          
+          Object.values(item.traits).forEach((t: any) => {
+            if (!t.excludeFromMetadata) {
+              metadata.properties[t.trait_type] = t.value;
+            }
+          });
+
+          metadataList.push(metadata);
+          metadataStrings.push(JSON.stringify(metadata));
+        }
 
         if (standard === 'ARC69') {
-           assetData.asset_note = metadata;
+          for (let i = 0; i < previewItems.length; i++) {
+            const assetData: any = {
+              asset_name: metadataList[i].name,
+              unit_name: project.unitName,
+              total_supply: 1,
+              decimals: 0,
+              asset_url: metadataList[i].image,
+              asset_note: metadataList[i],
+            };
+            mintedData.push(assetData);
+          }
         } else {
-           if (effectiveProvider !== 'AlgoFile') {
+          setProgress({ current: 0, total: previewItems.length, status: 'Requesting metadata storage quote...' });
+          const jsonItems = metadataStrings.map((jsonStr, idx) => ({
+            fileName: `metadata_${previewItems[idx].index}.json`,
+            sizeBytes: new TextEncoder().encode(jsonStr).length,
+            contentType: 'application/json'
+          }));
+
+          const jsonRequirements = await getAlgoFileBatchPaymentRequirements(jsonItems);
+          const jsonAssetId = Number(jsonRequirements.asset || 0);
+          const jsonAmountMicro = BigInt(jsonRequirements.amount);
+          let jsonPaymentTxn;
+          if (jsonAssetId === 0) {
+            jsonPaymentTxn = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
+              from: activeAccount.address,
+              to: jsonRequirements.payTo,
+              amount: jsonAmountMicro,
+              suggestedParams: params,
+            });
+          } else {
+            jsonPaymentTxn = algosdk.makeAssetTransferTxnWithSuggestedParamsFromObject({
+              from: activeAccount.address,
+              to: jsonRequirements.payTo,
+              amount: jsonAmountMicro,
+              assetIndex: jsonAssetId,
+              suggestedParams: params,
+            });
+          }
+
+          setProgress({ current: 0, total: previewItems.length, status: 'Sign metadata storage payment in wallet...' });
+          const jsonSigned = await walletSign([jsonPaymentTxn], transactionSigner);
+          if (!jsonSigned || jsonSigned.length === 0) throw new Error('Metadata storage payment rejected.');
+
+          let jsonBinary = "";
+          for (let k = 0; k < jsonSigned[0].byteLength; k++) {
+            jsonBinary += String.fromCharCode(jsonSigned[0][k]);
+          }
+          const jsonSignedB64 = window.btoa(jsonBinary);
+
+          setProgress({ current: 0, total: previewItems.length, status: 'Uploading metadata files...' });
+          const jsonBatchRes = await completeAlgoFileBatchUpload(jsonItems, [jsonSignedB64], 0, jsonRequirements);
+
+          const jsonUploadItems = jsonBatchRes.items.map((item, idx) => ({
+            file: new Blob([metadataStrings[idx]], { type: 'application/json' }),
+            uploadUrl: item.uploadUrl,
+            contentType: 'application/json'
+          }));
+          await uploadFilesToS3(jsonUploadItems);
+
+          setProgress({ current: 0, total: previewItems.length, status: 'Confirming metadata...' });
+          const jsonConfirmRes = await confirmAlgoFileBatch(jsonBatchRes.bucketName, jsonBatchRes.items.map(it => ({
+            key: it.key,
+            originalName: it.fileName
+          })));
+
+          const jsonCidsMap = new Map<string, string>();
+          jsonConfirmRes.items.forEach(it => {
+            jsonCidsMap.set(it.fileName, it.cid);
+          });
+
+          for (let i = 0; i < previewItems.length; i++) {
+            const item = previewItems[i];
+            const jsonFileName = `metadata_${item.index}.json`;
+            const jsonCid = jsonCidsMap.get(jsonFileName) || '';
+
+            const assetData: any = {
+              asset_name: metadataList[i].name,
+              unit_name: project.unitName,
+              total_supply: 1,
+              decimals: 0,
+              asset_url: metadataList[i].image,
+              cid: jsonCid,
+              ipfs_data: metadataList[i]
+            };
+            mintedData.push(assetData);
+          }
+        }
+      } else {
+        for (let i = 0; i < previewItems.length; i++) {
+          const item = previewItems[i];
+          setProgress({ current: i + 1, total: previewItems.length, status: `Preparing NFT #${item.index}...` });
+          
+          const blob = await generateBlob(item);
+          
+          let imageCid = '';
+          if (effectiveProvider === 'Crust') {
+            imageCid = await pinImageToCrust(ipfsToken, blob);
+          } else {
+            imageCid = await pinImageToPinata(ipfsToken, blob);
+          }
+
+          const metadata: any = {
+            name: `${project.name} #${item.index}`,
+            description: project.description,
+            image: `ipfs://${imageCid}`,
+            properties: {}
+          };
+          
+          Object.values(item.traits).forEach((t: any) => {
+            if (!t.excludeFromMetadata) {
+              metadata.properties[t.trait_type] = t.value;
+            }
+          });
+
+          const assetData: any = {
+            asset_name: metadata.name,
+            unit_name: project.unitName,
+            total_supply: 1,
+            decimals: 0,
+            asset_url: metadata.image,
+          };
+
+          if (standard === 'ARC69') {
+             assetData.asset_note = metadata;
+          } else {
              setProgress({ current: i + 1, total: previewItems.length, status: `Pinning metadata #${item.index}...` });
              let jsonCid = '';
              if (effectiveProvider === 'Crust') {
@@ -119,12 +301,12 @@ const MintStep = () => {
                jsonCid = await pinJSONToPinata(ipfsToken, JSON.stringify(metadata));
              }
              assetData.cid = jsonCid;
-           }
-           assetData.ipfs_data = metadata;
-        }
+             assetData.ipfs_data = metadata;
+          }
 
-        mintedData.push(assetData);
-        toast.info(`Uploaded ${i + 1}/${previewItems.length}`, { autoClose: 500 });
+          mintedData.push(assetData);
+          toast.info(`Uploaded ${i + 1}/${previewItems.length}`, { autoClose: 500 });
+        }
       }
 
       // 2. Minting Step
@@ -139,22 +321,22 @@ const MintStep = () => {
           activeAccount.address,
           algodClient,
           transactionSigner,
-          effectiveProvider as any,
+          effectiveProvider === 'AlgoFile' ? 'none' : (effectiveProvider as any),
           ipfsToken
         );
         txnsGroups = result.txnsArray;
-        localAlgofileUploads = result.algofileUploads || [];
+        localAlgofileUploads = [];
       } else if (standard === 'ARC19') {
         const result = await createARC19AssetMintArrayV2Batch(
           mintedData,
           activeAccount.address,
           algodClient,
           transactionSigner,
-          effectiveProvider as any,
+          effectiveProvider === 'AlgoFile' ? 'none' : (effectiveProvider as any),
           ipfsToken
         );
         txnsGroups = result.txnsArray;
-        localAlgofileUploads = result.algofileUploads || [];
+        localAlgofileUploads = [];
       } else {
         // ARC69 or Standard
         toast.warning('ARC69 batch minting coming soon. Using ARC19 instead for this demo.');
@@ -163,11 +345,11 @@ const MintStep = () => {
           activeAccount.address,
           algodClient,
           transactionSigner,
-          effectiveProvider as any,
+          effectiveProvider === 'AlgoFile' ? 'none' : (effectiveProvider as any),
           ipfsToken
         );
         txnsGroups = result.txnsArray;
-        localAlgofileUploads = result.algofileUploads || [];
+        localAlgofileUploads = [];
       }
 
       // 3. Signing Loop

@@ -460,7 +460,9 @@ export async function createARC3AssetMintArrayV2Batch(
       const jsonString = JSON.stringify(data_for_txns[i].ipfs_data);
 
       let cid: string;
-      if (provider === "algofile") {
+      if (provider === "none") {
+        cid = data_for_txns[i].cid;
+      } else if (provider === "algofile") {
         const { requirements, cid: computedCid } = await getAlgoFilePaymentRequirements(
           jsonString,
           `metadata_${i}.json`
@@ -792,7 +794,9 @@ export async function createARC19AssetMintArrayV2Batch(
       const jsonString = JSON.stringify(data_for_txns[i].ipfs_data);
 
       let cid: string;
-      if (provider === "algofile") {
+      if (provider === "none") {
+        cid = data_for_txns[i].cid;
+      } else if (provider === "algofile") {
         const { requirements, cid: computedCid } = await getAlgoFilePaymentRequirements(
           jsonString,
           `metadata_${i}.json`
@@ -996,7 +1000,9 @@ export async function updateARC19AssetMintArrayV2(
       const jsonString = JSON.stringify(data_for_txns[i].ipfs_data);
 
       let cid: string;
-      if (provider === "algofile") {
+      if (provider === "none") {
+        cid = data_for_txns[i].cid;
+      } else if (provider === "algofile") {
         const { requirements, cid: computedCid } = await getAlgoFilePaymentRequirements(
           jsonString,
           `metadata_${i}.json`
@@ -1125,7 +1131,9 @@ export async function updateARC19AssetMintArray(
       const cidCodec = chunks[1].split(":")[2];
       const jsonString = JSON.stringify(data_for_txns[i].ipfs_data);
       let cid: string;
-      if (provider === "filebase") {
+      if (provider === "none") {
+        cid = data_for_txns[i].cid;
+      } else if (provider === "filebase") {
         cid = await pinJSONToFilebase(token, jsonString, cidVersion, cidCodec);
       } else {
         cid = await pinJSONToPinata(token, jsonString, cidVersion, cidCodec);

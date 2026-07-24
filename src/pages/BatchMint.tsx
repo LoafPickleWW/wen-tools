@@ -14,7 +14,13 @@ import {
   createARC19AssetMintArray,
   walletSign,
 } from "../utils";
-import { completeAlgoFileUpload } from "../utils/algofile";
+import {
+  completeAlgoFileUpload,
+  getAlgoFileBatchPaymentRequirements,
+  completeAlgoFileBatchUpload,
+  uploadFilesToS3,
+  confirmAlgoFileBatch
+} from "../utils/algofile";
 import IpfsProviderSelect from "../components/IpfsProviderSelect";
 import { IpfsProvider } from "../types";
 import { IPFS_ENDPOINT, MINT_FEE_PER_ASA } from "../constants";
@@ -358,6 +364,87 @@ export function BatchMint() {
 
       setPreviewAsset(data_for_txns[0]);
 
+      if (effectiveProvider === "algofile") {
+        toast.info("Preparing AlgoFile batch storage requirements...");
+        const items = data_for_txns.map((item: any, idx: number) => {
+          const jsonStr = JSON.stringify(item.ipfs_data);
+          const sizeBytes = new TextEncoder().encode(jsonStr).length;
+          return {
+            fileName: `metadata_${idx}.json`,
+            sizeBytes,
+            contentType: "application/json"
+          };
+        });
+
+        const requirements = await getAlgoFileBatchPaymentRequirements(items);
+        const params = await algodClient.getTransactionParams().do();
+        const assetId = Number(requirements.asset || 0);
+        const amountMicro = BigInt(requirements.amount);
+        let paymentTxn;
+        if (assetId === 0) {
+          paymentTxn = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
+            from: activeAddress,
+            to: requirements.payTo,
+            amount: amountMicro,
+            suggestedParams: params,
+          });
+        } else {
+          paymentTxn = algosdk.makeAssetTransferTxnWithSuggestedParamsFromObject({
+            from: activeAddress,
+            to: requirements.payTo,
+            amount: amountMicro,
+            assetIndex: assetId,
+            suggestedParams: params,
+          });
+        }
+
+        toast.info("Please sign the AlgoFile batch storage payment...");
+        const signedTxns = await walletSign([paymentTxn], transactionSigner);
+        if (!signedTxns || signedTxns.length === 0) {
+          throw new Error("Payment transaction signature was rejected by user.");
+        }
+        let binary = "";
+        const len = signedTxns[0].byteLength;
+        for (let k = 0; k < len; k++) {
+          binary += String.fromCharCode(signedTxns[0][k]);
+        }
+        const signedTxnB64 = window.btoa(binary);
+
+        toast.info("Acquiring pre-signed upload URLs...");
+        const batchRes = await completeAlgoFileBatchUpload(items, [signedTxnB64], 0, requirements);
+
+        toast.info("Uploading metadata files directly to S3...");
+        const uploadItems = batchRes.items.map((item: any, idx: number) => {
+          const fileContent = JSON.stringify(data_for_txns[idx].ipfs_data);
+          const blob = new Blob([fileContent], { type: "application/json" });
+          return {
+            file: blob,
+            uploadUrl: item.uploadUrl,
+            contentType: "application/json"
+          };
+        });
+        await uploadFilesToS3(uploadItems);
+
+        toast.info("Confirming uploads and pinning to IPFS...");
+        const confirmItems = batchRes.items.map((item: any) => ({
+          key: item.key,
+          originalName: item.fileName
+        }));
+        const confirmRes = await confirmAlgoFileBatch(batchRes.bucketName, confirmItems);
+
+        const cidMap = new Map<string, string>();
+        confirmRes.items.forEach((item: any) => {
+          cidMap.set(item.fileName, item.cid);
+        });
+
+        data_for_txns.forEach((item: any, idx: number) => {
+          const fileName = `metadata_${idx}.json`;
+          item.cid = cidMap.get(fileName) || "";
+        });
+
+        toast.success("AlgoFile batch upload & pinning completed!");
+      }
+
       let unsignedAssetTransaction: algosdk.Transaction[][] = [];
 
       if (formData.collectionFormat === "ARC3") {
@@ -368,12 +455,12 @@ export function BatchMint() {
             activeAddress,
             algodClient,
             transactionSigner,
-            "algofile",
+            "none",
             undefined,
             mnemonic
           );
           unsignedAssetTransaction = result.txnsArray;
-          setAlgofileUploads(result.algofileUploads || []);
+          setAlgofileUploads([]);
         } else if (effectiveProvider === "crust") {
           toast.info("Generating Crust-based ARC3 Transactions...");
           const result = await createARC3AssetMintArrayV2Batch(
@@ -431,12 +518,12 @@ export function BatchMint() {
             activeAddress,
             algodClient,
             transactionSigner,
-            "algofile",
+            "none",
             undefined,
             mnemonic
           );
           unsignedAssetTransaction = result.txnsArray;
-          setAlgofileUploads(result.algofileUploads || []);
+          setAlgofileUploads([]);
         } else if (effectiveProvider === "crust") {
           toast.info("Generating Crust-based ARC19 Transactions...");
           const result = await createARC19AssetMintArrayV2Batch(

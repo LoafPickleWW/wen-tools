@@ -189,3 +189,149 @@ export async function uploadToAlgoFile(
   
   return completeAlgoFileUpload(file, fileName, [signedTxnB64], 0, requirements, apiKey);
 }
+
+async function runWithConcurrencyLimit<T>(
+  limit: number,
+  tasks: (() => Promise<T>)[]
+): Promise<T[]> {
+  const results: T[] = [];
+  const executing: Promise<any>[] = [];
+  for (const task of tasks) {
+    const p = task().then((res) => {
+      executing.splice(executing.indexOf(p), 1);
+      return res;
+    });
+    results.push(p as any);
+    if (limit <= tasks.length) {
+      executing.push(p);
+      if (executing.length >= limit) {
+        await Promise.race(executing);
+      }
+    }
+  }
+  return Promise.all(results);
+}
+
+export async function getAlgoFileBatchPaymentRequirements(
+  items: { fileName: string; sizeBytes: number; contentType: string }[],
+  apiKey: string = "algofilerouteapi1y"
+): Promise<any> {
+  const endpoint = "/api/algofile/upload/bulk-presigned";
+  try {
+    await axios.post(
+      endpoint,
+      { items },
+      {
+        headers: {
+          "x-api-key": apiKey,
+          "Content-Type": "application/json",
+        },
+      }
+    );
+    throw new Error("Expected 402 payment challenge but bulk-presigned request succeeded without payment.");
+  } catch (error: any) {
+    if (error.response && error.response.status === 402) {
+      const challengeDetails = error.response.data;
+      const requirements = challengeDetails.requirements;
+      if (!requirements) {
+        throw new Error("Invalid payment challenge response from AlgoFile.");
+      }
+      return requirements;
+    }
+    throw new Error(error.response?.data?.message || error.message || "Failed to get batch payment requirements.");
+  }
+}
+
+export async function completeAlgoFileBatchUpload(
+  items: { fileName: string; sizeBytes: number; contentType: string }[],
+  signedTxnsB64: string[],
+  paymentIndex: number,
+  requirements: any,
+  apiKey: string = "algofilerouteapi1y"
+): Promise<{ bucketName: string; items: any[] }> {
+  const endpoint = "/api/algofile/upload/bulk-presigned";
+
+  const paymentPayload = {
+    x402Version: 2,
+    network: requirements.network,
+    payload: {
+      paymentGroup: signedTxnsB64,
+      paymentIndex: paymentIndex,
+    },
+    accepted: {
+      payTo: requirements.payTo,
+      price: {
+        amount: requirements.amount.toString(),
+        asset: Number(requirements.asset || 0),
+      },
+      network: requirements.network,
+    },
+    resource: { url: requirements.url || "https://api.algofile.io/api/algofile/upload/bulk-presigned" },
+    extensions: {},
+  };
+
+  const paymentHeader = window.btoa(JSON.stringify(paymentPayload));
+
+  const successResponse = await axios.post(
+    endpoint,
+    { items },
+    {
+      headers: {
+        "x-api-key": apiKey,
+        "x-x402-payment-payload": paymentHeader,
+        "Content-Type": "application/json",
+      },
+    }
+  );
+
+  if (successResponse.status === 200 || successResponse.status === 201) {
+    return successResponse.data;
+  }
+  throw new Error("AlgoFile bulk-presigned call failed.");
+}
+
+export async function uploadFilesToS3(
+  files: { file: File | Blob; uploadUrl: string; contentType: string }[],
+  onProgress?: (index: number, progressPercent: number) => void
+): Promise<void> {
+  const limit = 15;
+  const tasks = files.map((item, index) => {
+    return async () => {
+      await axios.put(item.uploadUrl, item.file, {
+        headers: {
+          "Content-Type": item.contentType,
+        },
+        onUploadProgress: (progressEvent) => {
+          if (onProgress && progressEvent.total) {
+            const percent = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+            onProgress(index, percent);
+          }
+        },
+      });
+    };
+  });
+
+  await runWithConcurrencyLimit(limit, tasks);
+}
+
+export async function confirmAlgoFileBatch(
+  bucketName: string,
+  items: { key: string; originalName: string }[],
+  apiKey: string = "algofilerouteapi1y"
+): Promise<{ success: boolean; items: any[] }> {
+  const endpoint = "/api/algofile/upload/confirm-bulk";
+  const res = await axios.post(
+    endpoint,
+    { bucketName, items },
+    {
+      headers: {
+        "x-api-key": apiKey,
+        "Content-Type": "application/json",
+      },
+    }
+  );
+  if (res.status === 200 || res.status === 201) {
+    return res.data;
+  }
+  throw new Error("AlgoFile batch confirmation failed.");
+}
