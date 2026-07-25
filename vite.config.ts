@@ -112,11 +112,13 @@ function testAgentPlugin(): Plugin {
               headers['content-type'] = req.headers['content-type'] as string;
             }
 
-            const targetRes = await fetch("https://api.algofile.io/api/algofile/upload", {
+            const subpath = req.url ? req.url.replace(/^\/api\/algofile/, "") : "";
+            const targetUrl = `https://api.algofile.io/api/algofile${subpath || "/upload"}`;
+
+            const targetRes = await fetch(targetUrl, {
               method: 'POST',
               headers,
               body: req as any,
-              // @ts-ignore
               duplex: 'half'
             });
 

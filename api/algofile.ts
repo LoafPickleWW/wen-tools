@@ -39,7 +39,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       method: "POST",
       headers,
       body: req as any, // stream the raw request body
-      // @ts-ignore
+      // @ts-expect-error
       duplex: "half",
     });
 

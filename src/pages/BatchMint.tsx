@@ -74,6 +74,7 @@ export function BatchMint() {
   const [mnemonic, setMnemonic] = useState("");
   const [assetTransactions, setAssetTransactions] = useState([] as algosdk.Transaction[][]);
   const [algofileUploads, setAlgofileUploads] = useState<any[]>([]);
+  const [mediaFiles, setMediaFiles] = useState<File[]>([]);
   const [previewAsset, setPreviewAsset] = useState(null as any);
 
   const { activeAddress, algodClient, transactionSigner, activeWallet, activeNetwork } = useWallet();
@@ -366,11 +367,26 @@ export function BatchMint() {
 
       if (effectiveProvider === "algofile") {
         toast.info("Preparing AlgoFile batch storage requirements...");
+        
+        const getMetaFileName = (imageUrl: string, idx: number) => {
+          if (imageUrl) {
+            const parts = imageUrl.split('/');
+            const lastPart = parts[parts.length - 1];
+            if (lastPart && lastPart.includes('.')) {
+              const nameWithoutExtension = lastPart.substring(0, lastPart.lastIndexOf('.'));
+              if (nameWithoutExtension) {
+                return `${nameWithoutExtension}.json`;
+              }
+            }
+          }
+          return `metadata_${idx}.json`;
+        };
+
         const items = data_for_txns.map((item: any, idx: number) => {
           const jsonStr = JSON.stringify(item.ipfs_data);
           const sizeBytes = new TextEncoder().encode(jsonStr).length;
           return {
-            fileName: `metadata_${idx}.json`,
+            fileName: getMetaFileName(item.ipfs_data.image, idx),
             sizeBytes,
             contentType: "application/json"
           };
@@ -438,7 +454,7 @@ export function BatchMint() {
         });
 
         data_for_txns.forEach((item: any, idx: number) => {
-          const fileName = `metadata_${idx}.json`;
+          const fileName = getMetaFileName(item.ipfs_data.image, idx);
           item.cid = cidMap.get(fileName) || "";
         });
 
@@ -749,13 +765,71 @@ export function BatchMint() {
                   setProvider={(p) => setFormData({ ...formData, pinningProvider: p })}
                   isTestnet={isTestnet}
                   showNone={formData.collectionFormat === "ARC69"}
-                  pinataToken={formData.pinataToken}
-                  setPinataToken={(t) => setFormData({ ...formData, pinataToken: t })}
-                  filebaseToken={formData.filebaseToken}
-                  setFilebaseToken={(t) => setFormData({ ...formData, filebaseToken: t })}
                 />
               </div>
             </div>
+
+            {/* Token inputs - full width below the grid */}
+            {effectiveProvider === "pinata" && (
+              <div className="flex flex-col animate-fadeIn bg-slate-900/40 p-4 rounded-xl border border-slate-800">
+                <label className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-400">
+                  Pinata JWT Token*
+                </label>
+                <input
+                  type="password"
+                  placeholder="Paste Pinata JWT Token"
+                  className="w-full bg-slate-900/60 border border-slate-700 text-sm font-medium text-white placeholder:text-slate-500 px-4 py-3 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary-orange focus:border-primary-orange transition-all"
+                  required
+                  value={formData.pinataToken}
+                  onChange={(e) => setFormData({ ...formData, pinataToken: e.target.value })}
+                />
+                <span className="text-[11px] text-slate-500 mt-2 block">
+                  Need a token? Create one in your{" "}
+                  <a
+                    href="https://knowledge.pinata.cloud/en/articles/6191471-how-to-create-an-pinata-api-key"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-orange-400 hover:underline"
+                  >
+                    Pinata account
+                  </a>.
+                </span>
+              </div>
+            )}
+
+            {effectiveProvider === "filebase" && (
+              <div className="flex flex-col animate-fadeIn bg-slate-900/40 p-4 rounded-xl border border-slate-800">
+                <label className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-400">
+                  Filebase API Token*
+                </label>
+                <input
+                  type="password"
+                  placeholder="Paste Filebase API Token"
+                  className="w-full bg-slate-900/60 border border-slate-700 text-sm font-medium text-white placeholder:text-slate-500 px-4 py-3 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary-orange focus:border-primary-orange transition-all"
+                  required
+                  value={formData.filebaseToken}
+                  onChange={(e) => setFormData({ ...formData, filebaseToken: e.target.value })}
+                />
+                <span className="text-[11px] text-slate-500 mt-2 block">
+                  Need a token? Create or find one in your{" "}
+                  <a
+                    href="https://console.filebase.com/keys"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-orange-400 hover:underline"
+                  >
+                    Filebase console
+                  </a>.
+                </span>
+              </div>
+            )}
+
+            {effectiveProvider === "algofile" && (
+              <div className="w-full text-xs bg-slate-900/60 p-4 border border-slate-800 rounded-xl text-slate-400 font-medium leading-relaxed animate-fadeIn text-left mt-3">
+                <span className="text-orange-500 font-extrabold mr-1.5 uppercase tracking-wide">Beta Feature:</span> 
+                Direct browser-to-S3 media upload and automatic CID replacement in JSON metadata files is in active development. Please verify transaction previews carefully before executing on Mainnet.
+              </div>
+            )}
 
              {/* Folder CID Mode Fields (Core Configuration) */}
              <div className="space-y-4 bg-slate-900/40 p-4 rounded-xl border border-slate-850 animate-fadeIn text-left">
@@ -784,28 +858,56 @@ export function BatchMint() {
                  </div>
                </div>
 
-               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+               {effectiveProvider === "algofile" ? (
                  <div>
-                   <label className="block mb-1.5 text-xs text-gray-400 uppercase tracking-wider font-bold">Media IPFS CID (Folder CID)</label>
-                   <input
-                     type="text"
-                     placeholder="Qm..."
-                     className="w-full bg-slate-900/60 border border-slate-700 text-sm font-medium text-white placeholder:text-slate-500 px-4 py-2.5 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary-orange focus:border-primary-orange transition-all"
-                     value={formData.mediaIPFSCID}
-                     onChange={(e) => setFormData({ ...formData, mediaIPFSCID: e.target.value })}
-                   />
+                   <label className="block mb-1.5 text-xs text-gray-400 uppercase tracking-wider font-bold">Upload Collection Images (Multiple)*</label>
+                   <div className="flex flex-col items-center justify-center border-2 border-dashed border-slate-700 hover:border-orange-500/50 bg-slate-900/40 hover:bg-slate-900/60 p-6 rounded-xl cursor-pointer transition-all relative">
+                     <svg className="w-8 h-8 text-slate-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
+                     </svg>
+                     <span className="text-sm font-semibold text-slate-200">
+                       Click to upload or drag files here
+                     </span>
+                     <span className="text-xs text-slate-500 mt-1">
+                       {mediaFiles.length > 0 ? `${mediaFiles.length} file(s) selected.` : "PNG, JPG, JPEG, GIF, MP4, etc."}
+                     </span>
+                     <input
+                       type="file"
+                       multiple
+                       onChange={(e) => {
+                         if (e.target.files) {
+                           setMediaFiles(Array.from(e.target.files));
+                         }
+                       }}
+                       className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                       required
+                     />
+                   </div>
                  </div>
-                 <div>
-                   <label className="block mb-1.5 text-xs text-gray-400 uppercase tracking-wider font-bold">Media Extension</label>
-                   <input
-                     type="text"
-                     placeholder="Ex: .png, .jpg"
-                     className="w-full bg-slate-900/60 border border-slate-700 text-sm font-medium text-white placeholder:text-slate-500 px-4 py-2.5 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary-orange focus:border-primary-orange transition-all"
-                     value={formData.mediaExtension}
-                     onChange={(e) => setFormData({ ...formData, mediaExtension: e.target.value })}
-                   />
+               ) : (
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                   <div>
+                     <label className="block mb-1.5 text-xs text-gray-400 uppercase tracking-wider font-bold">Media IPFS CID (Folder CID)</label>
+                     <input
+                       type="text"
+                       placeholder="Qm..."
+                       className="w-full bg-slate-900/60 border border-slate-700 text-sm font-medium text-white placeholder:text-slate-500 px-4 py-2.5 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary-orange focus:border-primary-orange transition-all"
+                       value={formData.mediaIPFSCID}
+                       onChange={(e) => setFormData({ ...formData, mediaIPFSCID: e.target.value })}
+                     />
+                   </div>
+                   <div>
+                     <label className="block mb-1.5 text-xs text-gray-400 uppercase tracking-wider font-bold">Media Extension</label>
+                     <input
+                       type="text"
+                       placeholder="Ex: .png, .jpg"
+                       className="w-full bg-slate-900/60 border border-slate-700 text-sm font-medium text-white placeholder:text-slate-500 px-4 py-2.5 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary-orange focus:border-primary-orange transition-all"
+                       value={formData.mediaExtension}
+                       onChange={(e) => setFormData({ ...formData, mediaExtension: e.target.value })}
+                     />
+                   </div>
                  </div>
-               </div>
+               )}
 
                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                  <div>
