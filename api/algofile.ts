@@ -35,10 +35,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const subpath = req.url ? req.url.replace(/^\/api\/algofile/, "") : "";
     const targetUrl = `https://api.algofile.io/api/algofile${subpath || "/upload"}`;
     
+    let bodyToSend: any = req;
+    if (req.headers["content-type"]?.includes("application/json")) {
+      const chunks = [];
+      for await (const chunk of req) {
+        chunks.push(chunk);
+      }
+      bodyToSend = Buffer.concat(chunks).toString("utf-8");
+    }
+
     const targetRes = await fetch(targetUrl, {
       method: "POST",
       headers,
-      body: req as any, // stream the raw request body
+      body: bodyToSend,
       // @ts-expect-error
       duplex: "half",
     });

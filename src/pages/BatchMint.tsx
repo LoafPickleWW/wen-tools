@@ -164,13 +164,20 @@ export function BatchMint() {
           toast.error("End index must be greater than or equal to start index.");
           return;
         }
-        if (!formData.mediaIPFSCID) {
-          toast.error("Please enter the media folder IPFS CID.");
-          return;
-        }
-        if (!formData.mediaExtension || !formData.mediaExtension.includes(".")) {
-          toast.error("Please enter a valid media extension (e.g. .png, .jpg).");
-          return;
+        if (effectiveProvider === "algofile") {
+          if (mediaFiles.length === 0) {
+            toast.error("Please upload the collection images.");
+            return;
+          }
+        } else {
+          if (!formData.mediaIPFSCID) {
+            toast.error("Please enter the media folder IPFS CID.");
+            return;
+          }
+          if (!formData.mediaExtension || !formData.mediaExtension.includes(".")) {
+            toast.error("Please enter a valid media extension (e.g. .png, .jpg).");
+            return;
+          }
         }
         if (!formData.name || !formData.unitName) {
           toast.error("Please enter collection Name and Unit Name.");
@@ -237,7 +244,7 @@ export function BatchMint() {
             index: i,
             name: `${formData.name} ${i}`,
             unit_name: `${formData.unitName} ${i}`,
-            image_ipfs_cid: `ipfs://${formData.mediaIPFSCID}/${i}${formData.mediaExtension}`,
+            image_ipfs_cid: effectiveProvider === "algofile" ? "" : `ipfs://${formData.mediaIPFSCID}/${i}${formData.mediaExtension}`,
             // Optional defaults
             description: formData.description,
             external_url: formData.externalUrl,
@@ -248,9 +255,122 @@ export function BatchMint() {
         }
       }
 
+
       if (data.length === 0) {
         toast.error("No assets found to mint!");
         return;
+      }
+
+      // 1. Upload Images to AlgoFile (if using algofile provider)
+      const imageCidsMap = new Map<string, string>();
+      if (effectiveProvider === "algofile") {
+        toast.info("Preparing AlgoFile image assets...");
+        
+        // Match each data item with its corresponding file in mediaFiles
+        const matchedFiles: { file: File; idx: number }[] = [];
+        data.forEach((item, idx) => {
+          let matchedFile = null;
+          // Match by index (e.g. "1.png" matches index 1)
+          if (item.index !== undefined) {
+            const targetName = String(item.index).padStart(2, '0');
+            matchedFile = mediaFiles.find(f => {
+              const baseName = f.name.substring(0, f.name.lastIndexOf('.'));
+              return baseName === String(item.index) || baseName === targetName;
+            }) || null;
+          }
+          // Match by name
+          if (!matchedFile && item.name) {
+            matchedFile = mediaFiles.find(f => {
+              const baseName = f.name.substring(0, f.name.lastIndexOf('.'));
+              return baseName.toLowerCase() === item.name.toLowerCase();
+            }) || null;
+          }
+          // Fallback to array index match
+          if (!matchedFile && idx < mediaFiles.length) {
+            matchedFile = mediaFiles[idx];
+          }
+
+          if (matchedFile) {
+            matchedFiles.push({ file: matchedFile, idx });
+            data[idx].original_image_name = matchedFile.name;
+          }
+        });
+
+        if (matchedFiles.length === 0) {
+          toast.error("Could not find matching image files for the assets!");
+          return;
+        }
+
+        // Get storage quote for images
+        const imgItems = matchedFiles.map(mf => ({
+          fileName: mf.file.name,
+          sizeBytes: mf.file.size,
+          contentType: mf.file.type
+        }));
+
+        toast.info("Requesting image storage quote from AlgoFile...");
+        const imgRequirements = await getAlgoFileBatchPaymentRequirements(imgItems);
+        const params = await algodClient.getTransactionParams().do();
+        const imgAssetId = Number(imgRequirements.asset || 0);
+        const imgAmountMicro = BigInt(imgRequirements.amount);
+        
+        let imgPaymentTxn;
+        if (imgAssetId === 0) {
+          imgPaymentTxn = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
+            from: activeAddress,
+            to: imgRequirements.payTo,
+            amount: imgAmountMicro,
+            suggestedParams: params,
+          });
+        } else {
+          imgPaymentTxn = algosdk.makeAssetTransferTxnWithSuggestedParamsFromObject({
+            from: activeAddress,
+            to: imgRequirements.payTo,
+            amount: imgAmountMicro,
+            assetIndex: imgAssetId,
+            suggestedParams: params,
+          });
+        }
+
+        toast.info("Please sign the image storage payment in your wallet...");
+        const imgSigned = await walletSign([imgPaymentTxn], transactionSigner);
+        if (!imgSigned || imgSigned.length === 0) throw new Error("Image storage payment rejected.");
+
+        let imgBinary = "";
+        for (let k = 0; k < imgSigned[0].byteLength; k++) {
+          imgBinary += String.fromCharCode(imgSigned[0][k]);
+        }
+        const imgSignedB64 = window.btoa(imgBinary);
+
+        toast.info("Uploading images directly to S3...");
+        const imgBatchRes = await completeAlgoFileBatchUpload(imgItems, [imgSignedB64], 0, imgRequirements);
+
+        const imgUploadItems = imgBatchRes.items.map((item, idx) => ({
+          file: matchedFiles[idx].file,
+          uploadUrl: item.uploadUrl,
+          contentType: matchedFiles[idx].file.type
+        }));
+        await uploadFilesToS3(imgUploadItems);
+
+        toast.info("Confirming image uploads & pinning...");
+        const imgConfirmRes = await confirmAlgoFileBatch(imgBatchRes.bucketName, imgBatchRes.items.map(it => ({
+          key: it.key,
+          originalName: it.fileName
+        })));
+
+        imgConfirmRes.items.forEach(it => {
+          imageCidsMap.set(it.fileName, it.cid);
+        });
+
+        // Update the data array items with the computed CIDs
+        matchedFiles.forEach(mf => {
+          const cid = imageCidsMap.get(mf.file.name);
+          if (cid) {
+            data[mf.idx].image_ipfs_cid = `ipfs://${cid}`;
+          }
+        });
+
+        toast.success("AlgoFile image upload completed!");
       }
 
       // Check balance
@@ -353,6 +473,7 @@ export function BatchMint() {
           decimals,
           total_supply,
           ipfs_data,
+          original_image_name: item.original_image_name,
         };
 
         if (formData.collectionFormat === "ARC69") {
@@ -369,6 +490,13 @@ export function BatchMint() {
         toast.info("Preparing AlgoFile batch storage requirements...");
         
         const getMetaFileName = (imageUrl: string, idx: number) => {
+          const origName = data_for_txns[idx]?.original_image_name;
+          if (origName && origName.includes('.')) {
+            const nameWithoutExtension = origName.substring(0, origName.lastIndexOf('.'));
+            if (nameWithoutExtension) {
+              return `${nameWithoutExtension}.json`;
+            }
+          }
           if (imageUrl) {
             const parts = imageUrl.split('/');
             const lastPart = parts[parts.length - 1];
@@ -602,6 +730,9 @@ export function BatchMint() {
       toast.success("Transactions compiled successfully!");
     } catch (err: any) {
       console.error(err);
+      if (err.response && err.response.data) {
+        console.error("Error response details:", err.response.data);
+      }
       toast.error(err.message || "Failed to compile transactions.");
       setProcessStep(START_PROCESS);
     }

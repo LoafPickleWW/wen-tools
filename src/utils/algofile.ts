@@ -107,23 +107,14 @@ export async function completeAlgoFileUpload(
 
   const endpoint = "/api/algofile";
 
+  const x402Network = (requirements.network || "").includes("mainnet") || (requirements.network || "").includes("wGHE2") ? "mainnet" : "testnet";
   const paymentPayload = {
     x402Version: 2,
-    network: requirements.network,
+    network: x402Network,
     payload: {
       paymentGroup: signedTxnsB64,
       paymentIndex: paymentIndex,
     },
-    accepted: {
-      payTo: requirements.payTo,
-      price: {
-        amount: requirements.amount.toString(),
-        asset: Number(requirements.asset || 0),
-      },
-      network: requirements.network,
-    },
-    resource: { url: requirements.url || "https://api.algofile.io/api/algofile/upload" },
-    extensions: {},
   };
 
   const paymentHeader = window.btoa(JSON.stringify(paymentPayload));
@@ -251,23 +242,14 @@ export async function completeAlgoFileBatchUpload(
 ): Promise<{ bucketName: string; items: any[] }> {
   const endpoint = "/api/algofile/upload/bulk-presigned";
 
+  const x402Network = (requirements.network || "").includes("mainnet") || (requirements.network || "").includes("wGHE2") ? "mainnet" : "testnet";
   const paymentPayload = {
     x402Version: 2,
-    network: requirements.network,
+    network: x402Network,
     payload: {
       paymentGroup: signedTxnsB64,
       paymentIndex: paymentIndex,
     },
-    accepted: {
-      payTo: requirements.payTo,
-      price: {
-        amount: requirements.amount.toString(),
-        asset: Number(requirements.asset || 0),
-      },
-      network: requirements.network,
-    },
-    resource: { url: requirements.url || "https://api.algofile.io/api/algofile/upload/bulk-presigned" },
-    extensions: {},
   };
 
   const paymentHeader = window.btoa(JSON.stringify(paymentPayload));

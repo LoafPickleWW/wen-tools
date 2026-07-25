@@ -115,19 +115,39 @@ function testAgentPlugin(): Plugin {
             const subpath = req.url ? req.url.replace(/^\/api\/algofile/, "") : "";
             const targetUrl = `https://api.algofile.io/api/algofile${subpath || "/upload"}`;
 
+            let bodyToSend: any = req;
+            if (req.headers['content-type']?.includes('application/json')) {
+              const chunks = [];
+              for await (const chunk of req) {
+                chunks.push(chunk);
+              }
+              bodyToSend = Buffer.concat(chunks).toString('utf-8');
+            }
+
+            console.log("---- Proxy Request to AlgoFile ----");
+            console.log("URL:", targetUrl);
+            console.log("Headers:", JSON.stringify(headers, null, 2));
+            console.log("Body:", bodyToSend);
+
             const targetRes = await fetch(targetUrl, {
               method: 'POST',
               headers,
-              body: req as any,
+              body: bodyToSend,
               duplex: 'half'
             });
+
+            console.log("---- Proxy Response from AlgoFile ----");
+            console.log("Status:", targetRes.status);
+            const resText = await targetRes.text().catch(() => '');
+            console.log("Response Body:", resText);
 
             res.setHeader('Access-Control-Allow-Origin', '*');
             res.setHeader('Access-Control-Expose-Headers', 'x-x402-payment-payload');
             res.statusCode = targetRes.status;
             res.setHeader('Content-Type', targetRes.headers.get('content-type') || 'application/json');
-            res.end(await targetRes.text().catch(() => ''));
+            res.end(resText);
           } catch (err: any) {
+            console.error("Proxy middleware error:", err);
             res.statusCode = 502;
             res.setHeader('Content-Type', 'application/json');
             res.end(JSON.stringify({ error: 'Failed to connect to AlgoFile API via proxy', message: err.message }));
