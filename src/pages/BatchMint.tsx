@@ -353,9 +353,10 @@ export function BatchMint() {
         await uploadFilesToS3(imgUploadItems);
 
         toast.info("Confirming image uploads & pinning...");
-        const imgConfirmRes = await confirmAlgoFileBatch(imgBatchRes.bucketName, imgBatchRes.items.map(it => ({
+        const imgConfirmRes = await confirmAlgoFileBatch(imgBatchRes.bucketName, imgBatchRes.items.map((it, idx) => ({
           key: it.key,
-          originalName: it.fileName
+          originalName: it.fileName,
+          sizeBytes: matchedFiles[idx].file.size
         })));
 
         imgConfirmRes.items.forEach(it => {
@@ -570,9 +571,10 @@ export function BatchMint() {
         await uploadFilesToS3(uploadItems);
 
         toast.info("Confirming uploads and pinning to IPFS...");
-        const confirmItems = batchRes.items.map((item: any) => ({
+        const confirmItems = batchRes.items.map((item: any, idx: number) => ({
           key: item.key,
-          originalName: item.fileName
+          originalName: item.fileName,
+          sizeBytes: new TextEncoder().encode(JSON.stringify(data_for_txns[idx].ipfs_data)).length
         }));
         const confirmRes = await confirmAlgoFileBatch(batchRes.bucketName, confirmItems);
 

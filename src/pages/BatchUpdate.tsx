@@ -282,9 +282,10 @@ export function BatchUpdate() {
           await uploadFilesToS3(uploadItems);
 
           toast.info("Confirming uploads and pinning to IPFS...");
-          const confirmItems = batchRes.items.map((item: any) => ({
+          const confirmItems = batchRes.items.map((item: any, idx: number) => ({
             key: item.key,
-            originalName: item.fileName
+            originalName: item.fileName,
+            sizeBytes: new TextEncoder().encode(JSON.stringify(data_for_txns[idx].ipfs_data)).length
           }));
           const confirmRes = await confirmAlgoFileBatch(batchRes.bucketName, confirmItems);
 

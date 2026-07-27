@@ -298,7 +298,7 @@ export async function uploadFilesToS3(
 
 export async function confirmAlgoFileBatch(
   bucketName: string,
-  items: { key: string; originalName: string }[],
+  items: { key: string; originalName: string; sizeBytes: number }[],
   apiKey: string = "algofilerouteapi1y"
 ): Promise<{ success: boolean; items: any[] }> {
   const endpoint = "/api/algofile/upload/confirm-bulk";

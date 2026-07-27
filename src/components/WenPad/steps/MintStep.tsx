@@ -130,9 +130,10 @@ const MintStep = () => {
         await uploadFilesToS3(imgUploadItems);
 
         setProgress({ current: 0, total: previewItems.length, status: 'Confirming images...' });
-        const imgConfirmRes = await confirmAlgoFileBatch(imgBatchRes.bucketName, imgBatchRes.items.map(it => ({
+        const imgConfirmRes = await confirmAlgoFileBatch(imgBatchRes.bucketName, imgBatchRes.items.map((it, idx) => ({
           key: it.key,
-          originalName: it.fileName
+          originalName: it.fileName,
+          sizeBytes: imageBlobs[idx].size
         })));
 
         const imageCidsMap = new Map<string, string>();
@@ -228,9 +229,10 @@ const MintStep = () => {
           await uploadFilesToS3(jsonUploadItems);
 
           setProgress({ current: 0, total: previewItems.length, status: 'Confirming metadata...' });
-          const jsonConfirmRes = await confirmAlgoFileBatch(jsonBatchRes.bucketName, jsonBatchRes.items.map(it => ({
+          const jsonConfirmRes = await confirmAlgoFileBatch(jsonBatchRes.bucketName, jsonBatchRes.items.map((it, idx) => ({
             key: it.key,
-            originalName: it.fileName
+            originalName: it.fileName,
+            sizeBytes: new TextEncoder().encode(metadataStrings[idx]).length
           })));
 
           const jsonCidsMap = new Map<string, string>();
