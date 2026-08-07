@@ -48,7 +48,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       method: "POST",
       headers,
       body: bodyToSend,
-      // @ts-expect-error
+      // @ts-expect-error duplex property is required for Node fetch streaming body support
       duplex: "half",
     });
 
