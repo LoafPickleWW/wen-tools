@@ -7,13 +7,22 @@ export const PreviewAssetComponent = ({
   previewAsset: any;
   imageUrl: string;
 }) => {
-  const isVideo = previewAsset?.ipfs_data?.animation_url_mime_type?.includes("video");
-  const isAudio = previewAsset?.ipfs_data?.properties?.file_url_mimetype?.includes("audio") || previewAsset?.ipfs_data?.animation_url_mime_type?.includes("audio");
+  const isVideo =
+    previewAsset?.ipfs_data?.animation_url_mime_type?.includes("video") ||
+    previewAsset?.ipfs_data?.animation_url_mimetype?.includes("video");
+  const isAudio =
+    previewAsset?.ipfs_data?.properties?.file_url_mimetype?.includes("audio") ||
+    previewAsset?.ipfs_data?.animation_url_mime_type?.includes("audio") ||
+    previewAsset?.ipfs_data?.animation_url_mimetype?.includes("audio");
   const isModel =
     previewAsset?.ipfs_data?.animation_url_mime_type?.includes("model") ||
+    previewAsset?.ipfs_data?.animation_url_mimetype?.includes("model") ||
     previewAsset?.ipfs_data?.image_mime_type?.includes("model") ||
+    previewAsset?.ipfs_data?.image_mimetype?.includes("model") ||
     previewAsset?.ipfs_data?.animation_url_mime_type?.includes("obj") ||
-    previewAsset?.ipfs_data?.image_mime_type?.includes("obj");
+    previewAsset?.ipfs_data?.animation_url_mimetype?.includes("obj") ||
+    previewAsset?.ipfs_data?.image_mime_type?.includes("obj") ||
+    previewAsset?.ipfs_data?.image_mimetype?.includes("obj");
 
   return (
     <div className="flex flex-col mt-2 justify-center items-center w-full bg-secondary-black p-4 rounded-lg">

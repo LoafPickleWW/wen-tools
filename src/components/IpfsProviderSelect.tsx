@@ -118,7 +118,10 @@ export default function IpfsProviderSelect({
             Pinata JWT Token*
           </label>
           <input
+            id="pinataTokenInput"
+            name="pinataToken"
             type="password"
+            autoComplete="new-password"
             placeholder="Paste Pinata JWT Token"
             className="w-full bg-slate-900/60 border border-slate-700 text-sm font-medium text-white placeholder:text-slate-500 px-4 py-3 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary-orange focus:border-primary-orange transition-all"
             required
@@ -145,7 +148,10 @@ export default function IpfsProviderSelect({
             Filebase API Token*
           </label>
           <input
+            id="filebaseTokenInput"
+            name="filebaseToken"
             type="password"
+            autoComplete="new-password"
             placeholder="Paste Filebase API Token"
             className="w-full bg-slate-900/60 border border-slate-700 text-sm font-medium text-white placeholder:text-slate-500 px-4 py-3 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary-orange focus:border-primary-orange transition-all"
             required

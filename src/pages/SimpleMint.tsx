@@ -32,6 +32,7 @@ const simpleMintAtom = atomWithStorage("simpleMint", {
   totalSupply: 1,
   decimals: 0,
   image: null,
+  coverImage: null,
   format: "ARC69",
   freeze: false,
   clawback: false,
@@ -517,15 +518,19 @@ wen.contentWindow.postMessage({
       }
       let imageURL;
       let imageCID = null;
+      let coverURL = null;
+      let coverCID = null;
+      let coverMimeType = "";
+
       if (finalFormat === "Token") {
         imageURL = formData.urlField;
       } else {
         if (formData.image === null || !(formData.image instanceof File)) {
-          toast.error("Please select an image");
+          toast.error("Please select an image or media file");
           return;
         }
         if (effectiveProvider === "algofile") {
-          toast.info("Uploading the image to IPFS via AlgoFile...");
+          toast.info("Uploading the main media to IPFS via AlgoFile...");
           imageCID = await uploadToAlgoFile(
             formData.image,
             formData.image.name || "image.png",
@@ -534,32 +539,65 @@ wen.contentWindow.postMessage({
             algodClient
           );
           imageURL = "ipfs://" + imageCID;
+
+          if (formData.coverImage && formData.coverImage instanceof File) {
+            toast.info("Uploading cover image to IPFS via AlgoFile...");
+            coverCID = await uploadToAlgoFile(
+              formData.coverImage,
+              formData.coverImage.name || "cover.png",
+              activeAddress,
+              transactionSigner,
+              algodClient
+            );
+            coverURL = "ipfs://" + coverCID;
+            coverMimeType = getFileMimeType(formData.coverImage);
+          }
         } else if (effectiveProvider === "crust") {
-          toast.info("Uploading the image to IPFS via Crust...");
+          toast.info("Uploading the main media to IPFS via Crust...");
           let authBasic = localStorage.getItem("authBasic");
           if (!authBasic) {
-            // Hardcoded emergency auth
             authBasic = "YWxnby1CQ0FQV0pBTFdBM04zRUlaUkZDTzU1UFEzWUJZQ1NHUFpYTkRIT09BNlI3Q0dIVElTVjJHQ1NZQzZZOkZyYjl6RWhudVVKZ0ZaY0d1cmRTUE45dW1SL1hHMnRlalc0VFpkb3huN3ZXMTVKOFd6TGMva3R2LytnMklWRVFRMVN4Vnk3N0plZ3laZkVKMkRxaEFRPT0=";
             localStorage.setItem("authBasic", authBasic);
           }
           imageCID = await pinImageToCrust(authBasic, formData.image);
           imageURL = "ipfs://" + imageCID;
+
+          if (formData.coverImage && formData.coverImage instanceof File) {
+            toast.info("Uploading cover image to IPFS via Crust...");
+            coverCID = await pinImageToCrust(authBasic, formData.coverImage);
+            coverURL = "ipfs://" + coverCID;
+            coverMimeType = getFileMimeType(formData.coverImage);
+          }
         } else if (effectiveProvider === "filebase") {
           if (!filebaseToken) {
             toast.error("Please enter a Filebase API Token");
             return;
           }
-          toast.info("Uploading the image to IPFS via Filebase...");
+          toast.info("Uploading the main media to IPFS via Filebase...");
           imageCID = await pinImageToFilebase(filebaseToken, formData.image);
           imageURL = "ipfs://" + imageCID;
+
+          if (formData.coverImage && formData.coverImage instanceof File) {
+            toast.info("Uploading cover image to IPFS via Filebase...");
+            coverCID = await pinImageToFilebase(filebaseToken, formData.coverImage);
+            coverURL = "ipfs://" + coverCID;
+            coverMimeType = getFileMimeType(formData.coverImage);
+          }
         } else {
           if (!token) {
             toast.error("Please enter a Pinata JWT token");
             return;
           }
-          toast.info("Uploading the image to IPFS via Pinata...");
+          toast.info("Uploading the main media to IPFS via Pinata...");
           imageCID = await pinImageToPinata(token, formData.image);
           imageURL = "ipfs://" + imageCID;
+
+          if (formData.coverImage && formData.coverImage instanceof File) {
+            toast.info("Uploading cover image to IPFS via Pinata...");
+            coverCID = await pinImageToPinata(token, formData.coverImage);
+            coverURL = "ipfs://" + coverCID;
+            coverMimeType = getFileMimeType(formData.coverImage);
+          }
         }
       }
 
@@ -567,18 +605,37 @@ wen.contentWindow.postMessage({
         const mimeType = getFileMimeType(formData.image);
         if (mimeType.includes("video") || mimeType.includes("model") || mimeType.startsWith("model/")) {
           metadata.animation_url = imageURL;
+          metadata.animation_url_mimetype = mimeType;
           metadata.animation_url_mime_type = mimeType;
-          metadata.image = imageURL;
-          metadata.image_mime_type = mimeType;
+
+          if (coverURL) {
+            metadata.image = coverURL;
+            metadata.image_mimetype = coverMimeType;
+            metadata.image_mime_type = coverMimeType;
+          } else {
+            metadata.image = imageURL;
+            metadata.image_mimetype = mimeType;
+            metadata.image_mime_type = mimeType;
+          }
         } else if (mimeType.includes("audio")) {
           metadata.animation_url = imageURL;
+          metadata.animation_url_mimetype = mimeType;
           metadata.animation_url_mime_type = mimeType;
           metadata.properties.file_url = imageURL;
           metadata.properties.file_url_mimetype = mimeType;
-          metadata.image = imageURL;
-          metadata.image_mime_type = mimeType;
+
+          if (coverURL) {
+            metadata.image = coverURL;
+            metadata.image_mimetype = coverMimeType;
+            metadata.image_mime_type = coverMimeType;
+          } else {
+            metadata.image = imageURL;
+            metadata.image_mimetype = mimeType;
+            metadata.image_mime_type = mimeType;
+          }
         } else {
           metadata.image = imageURL;
+          metadata.image_mimetype = mimeType;
           metadata.image_mime_type = mimeType;
         }
       }
@@ -894,26 +951,27 @@ wen.contentWindow.postMessage({
               )}
             </div>
 
-            {/* Description in Simple Mode */}
-            {!isCustomMode && (
-              <div className="flex flex-col">
-                <label className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-400">
-                  Description (optional)
-                </label>
-                <textarea
-                  placeholder="Describe your NFT..."
-                  className="w-full bg-slate-900/60 border border-slate-700 text-sm font-medium leading-normal text-white placeholder:text-slate-500 px-4 py-3 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary-orange focus:border-primary-orange transition-all min-h-[90px]"
-                  maxLength={1000}
-                  value={formData.description}
-                  onChange={(e) => {
-                    setFormData({
-                      ...formData,
-                      description: e.target.value,
-                    });
-                  }}
-                />
-              </div>
-            )}
+            {/* Description Field (Always shown in NFT mode) */}
+            <div className="flex flex-col">
+              <label className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-400">
+                Description (optional)
+              </label>
+              <textarea
+                id="nft_description_textarea"
+                name="nftDescription"
+                autoComplete="off"
+                placeholder="Describe your NFT..."
+                className="w-full bg-slate-900/60 border border-slate-700 text-sm font-medium leading-normal text-white placeholder:text-slate-500 px-4 py-3 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary-orange focus:border-primary-orange transition-all min-h-[90px]"
+                maxLength={1000}
+                value={formData.description}
+                onChange={(e) => {
+                  setFormData({
+                    ...formData,
+                    description: e.target.value,
+                  });
+                }}
+              />
+            </div>
 
             {/* Custom Supply and Decimals */}
             {isCustomMode && (
@@ -963,24 +1021,55 @@ wen.contentWindow.postMessage({
 
             <div className={`grid grid-cols-1 ${isCustomMode ? 'md:grid-cols-2' : ''} gap-4`}>
               {finalFormat !== "Token" ? (
-                <div className="flex flex-col">
-                  <label className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-400">
-                    Select Image / Media*
-                  </label>
-                  <input
-                    className="block w-full text-sm border border-slate-700 rounded-xl cursor-pointer bg-slate-900/60 text-slate-300 focus:outline-none focus:ring-1 focus:ring-primary-orange focus:border-primary-orange file:mr-4 file:py-2.5 file:px-4 file:rounded-l-xl file:border-0 file:text-xs file:font-semibold file:bg-slate-800 file:text-white hover:file:bg-slate-700 transition-all"
-                    id="select_image"
-                    type="file"
-                    accept="image/*,video/*,audio/*,model/*,.obj,.glb,.gltf,.stl,.3mf,.fbx,.dae"
-                    multiple={false}
-                    required
-                    onChange={(e: any) => {
-                      setFormData({
-                        ...formData,
-                        image: e.target.files[0],
-                      });
-                    }}
-                  />
+                <div className="flex flex-col space-y-3">
+                  <div className="flex flex-col">
+                    <label className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-400">
+                      Select Image / Media*
+                    </label>
+                    <input
+                      className="block w-full text-sm border border-slate-700 rounded-xl cursor-pointer bg-slate-900/60 text-slate-300 focus:outline-none focus:ring-1 focus:ring-primary-orange focus:border-primary-orange file:mr-4 file:py-2.5 file:px-4 file:rounded-l-xl file:border-0 file:text-xs file:font-semibold file:bg-slate-800 file:text-white hover:file:bg-slate-700 transition-all"
+                      id="select_image"
+                      type="file"
+                      accept="image/*,video/*,audio/*,model/*,.obj,.glb,.gltf,.stl,.3mf,.fbx,.dae"
+                      multiple={false}
+                      required
+                      onChange={(e: any) => {
+                        setFormData({
+                          ...formData,
+                          image: e.target.files[0],
+                        });
+                      }}
+                    />
+                  </div>
+
+                  {/* Optional 2D Cover Image for 3D/Video/Audio */}
+                  {formData.image &&
+                    (getFileMimeType(formData.image).includes("model") ||
+                      getFileMimeType(formData.image).includes("video") ||
+                      getFileMimeType(formData.image).includes("audio") ||
+                      getFileMimeType(formData.image).startsWith("model/")) && (
+                      <div className="flex flex-col animate-fadeIn bg-slate-900/40 p-3.5 rounded-xl border border-slate-800 space-y-1.5">
+                        <label className="text-xs font-bold text-slate-200">
+                          2D Preview Cover Image (Optional)
+                        </label>
+                        <p className="text-[11px] text-slate-400 leading-tight">
+                          Upload a PNG/JPG cover image for wallet galleries. If omitted, your 3D model/media file is used directly.
+                        </p>
+                        <input
+                          className="block w-full text-xs border border-slate-700 rounded-lg cursor-pointer bg-slate-900/60 text-slate-300 focus:outline-none file:mr-3 file:py-1.5 file:px-3 file:rounded-l-lg file:border-0 file:text-xs file:font-semibold file:bg-slate-800 file:text-white hover:file:bg-slate-700 transition-all"
+                          id="select_cover_image"
+                          type="file"
+                          accept="image/*"
+                          multiple={false}
+                          onChange={(e: any) => {
+                            setFormData({
+                              ...formData,
+                              coverImage: e.target.files[0],
+                            });
+                          }}
+                        />
+                      </div>
+                    )}
                 </div>
               ) : (
                 <div className="flex flex-col">
@@ -1212,24 +1301,24 @@ wen.contentWindow.postMessage({
               <>
                 {/* Property Metadata */}
                 <div className="space-y-3 animate-fadeIn">
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">Property Metadata</h4>
-                  {["external_url", "description"].map((key) => (
-                    <div className="flex gap-2" key={key}>
-                      <div className="w-28 bg-slate-850 border border-slate-700 text-xs font-bold uppercase tracking-wider flex items-center justify-center text-slate-300 rounded-xl px-3 py-2 select-none">
-                        {key === "external_url" ? "External URL" : "Description"}
-                      </div>
-                      <input
-                        id={key}
-                        type="text"
-                        placeholder="(optional)"
-                        className="flex-1 bg-slate-900/60 border border-slate-700 text-sm font-medium text-white placeholder:text-slate-500 px-4 py-2.5 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary-orange focus:border-primary-orange transition-all"
-                        value={formData[key]}
-                        onChange={(e) => {
-                          setFormData({ ...formData, [key]: e.target.value });
-                        }}
-                      />
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">External URL</h4>
+                  <div className="flex gap-2">
+                    <div className="w-28 bg-slate-850 border border-slate-700 text-xs font-bold uppercase tracking-wider flex items-center justify-center text-slate-300 rounded-xl px-3 py-2 select-none">
+                      External URL
                     </div>
-                  ))}
+                    <input
+                      id="external_url"
+                      name="externalUrl"
+                      type="url"
+                      autoComplete="off"
+                      placeholder="https://yourwebsite.com (optional)"
+                      className="flex-1 bg-slate-900/60 border border-slate-700 text-sm font-medium text-white placeholder:text-slate-500 px-4 py-2.5 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary-orange focus:border-primary-orange transition-all"
+                      value={formData.external_url}
+                      onChange={(e) => {
+                        setFormData({ ...formData, external_url: e.target.value });
+                      }}
+                    />
+                  </div>
                 </div>
 
                 {/* Rarity Traits */}
