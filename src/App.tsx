@@ -42,8 +42,8 @@ import AgentMarketplace from './pages/AgentMarketplace';
 import { BulkAssetManager } from "./pages/BulkAssetManager";
 import { MintingSuite } from "./pages/MintingSuite";
 import { WenWallet } from "./pages/WenWallet";
-import WalletAssetDetail from "./pages/WalletAssetDetail";
 import { ClusterMap } from "./pages/ClusterMap";
+import { StablecoinStudio } from "./pages/StablecoinStudio";
 
 
 
@@ -169,6 +169,7 @@ function App() {
             <Route path="/minting-journey" element={<MintingSuite />} />
             <Route path="/creator-suite" element={<MintingSuite />} />
             <Route path="/creator-suite/:toolId" element={<MintingSuite />} />
+            <Route path="/stablecoin-studio" element={<StablecoinStudio />} />
             <Route
               path="/nft-import"
               element={<MintingSuite defaultPath="import" />}

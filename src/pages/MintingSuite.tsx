@@ -262,6 +262,21 @@ export function MintingSuite({ defaultPath = null }: MintingSuiteProps) {
               </p>
               <span className="text-orange-400 text-xs font-semibold mt-6 block">Launch NFT Import Tool →</span>
             </div>
+
+            {/* Path 7: Stablecoin Studio */}
+            <div
+              onClick={() => navigate("/stablecoin-studio")}
+              className="bg-white/5 backdrop-blur-md border border-white/10 hover:border-orange-500/30 hover:bg-white/10 rounded-2xl p-6 md:p-8 cursor-pointer transition shadow-xl group duration-300 transform hover:scale-[1.01]"
+            >
+              <img src="/icons/devtools.png" alt="Stablecoin Studio" className="w-12 h-12 mb-4 object-contain invert" />
+              <h3 className="text-xl font-bold group-hover:text-orange-400 transition">
+                Stablecoin Studio (via Brale)
+              </h3>
+              <p className="text-gray-300 text-sm mt-3 leading-relaxed">
+                Configure, mint, and manage fiat-backed stablecoins on Algorand using Brale's infrastructure.
+              </p>
+              <span className="text-orange-400 text-xs font-semibold mt-6 block">Launch Stablecoin Studio →</span>
+            </div>
           </div>
         );
     }

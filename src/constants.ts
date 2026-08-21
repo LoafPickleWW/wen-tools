@@ -62,6 +62,15 @@ export const TOOLS = [
   },
   // Sub-routes under Creator Suite (hidden on landing page)
   {
+    id: "stablecoin_studio",
+    label: "Stablecoin Studio",
+    description: "Configure, mint, and manage fiat-backed stablecoins on Algorand via Brale.",
+    path: "/stablecoin-studio",
+    category: "creator",
+    icon: "/icons/devtools.png",
+    hideFromLanding: true
+  },
+  {
     id: "simple_mint",
     label: "Simple Mint",
     description: "Mint a single asset (NFT or Token) on Algorand. Supports Simple/Custom modes with Pinata and Crust Network.",
