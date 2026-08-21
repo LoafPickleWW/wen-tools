@@ -640,15 +640,17 @@ wen.contentWindow.postMessage({
         }
       }
 
-      let imageURLForPreview ;
+      let imageURLForPreview;
 
-      try{
-        if (formData.image) {
+      try {
+        if (formData.coverImage && formData.coverImage instanceof File) {
+          imageURLForPreview = URL.createObjectURL(formData.coverImage);
+        } else if (formData.image) {
           imageURLForPreview = URL.createObjectURL(formData.image);
         } else {
           imageURLForPreview = "";
         }
-      }catch(e){
+      } catch (e) {
         imageURLForPreview = "";
         console.error(e);
       }
