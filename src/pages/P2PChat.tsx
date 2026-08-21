@@ -135,7 +135,7 @@ export function P2PChat() {
         to: activeAddress,
         amount: 0,
         note,
-        suggestedParams: { ...suggestedParams, fee: 1000, flatFee: true },
+        suggestedParams: { ...suggestedParams, fee: Math.max(suggestedParams.minFee || 1000, suggestedParams.fee || 1000, 3000), flatFee: true },
       });
 
       const encodedTxn = algosdk.encodeUnsignedTransaction(txn);
@@ -332,7 +332,7 @@ export function P2PChat() {
         to: activeAddress,
         amount: 0,
         note: new TextEncoder().encode(`Wen Tools P2P Session Init:${Date.now()}`),
-        suggestedParams: { ...suggestedParams, fee: 1000, flatFee: true },
+        suggestedParams: { ...suggestedParams, fee: Math.max(suggestedParams.minFee || 1000, suggestedParams.fee || 1000, 3000), flatFee: true },
       });
 
       const signedInit = await signTransactions([algosdk.encodeUnsignedTransaction(initTxn)]);

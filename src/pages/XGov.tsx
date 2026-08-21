@@ -323,7 +323,7 @@ export function XGov() {
       const algodClient = new algosdk.Algodv2('', 'https://mainnet-api.algonode.cloud', '');
       const atc = new algosdk.AtomicTransactionComposer();
       const suggestedParams = await algodClient.getTransactionParams().do();
-      suggestedParams.fee = 2000;
+      suggestedParams.fee = Math.max((suggestedParams.minFee || 1000) * 2, (suggestedParams.fee || 1000) * 2, 4000);
       suggestedParams.flatFee = true;
 
       // Simplified ABI for vote_proposal

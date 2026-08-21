@@ -162,7 +162,7 @@ export function BeaconDropTool() {
         to: BEACON_PROTOCOL_ADDRESS,
         amount: 0,
         note: noteBytes,
-        suggestedParams: { ...suggestedParams, fee: 1000, flatFee: true },
+        suggestedParams: { ...suggestedParams, fee: Math.max(suggestedParams.minFee || 1000, suggestedParams.fee || 1000, 3000), flatFee: true },
       });
 
       const signedTxn = await signTransactions([algosdk.encodeUnsignedTransaction(txn)]);
@@ -284,7 +284,7 @@ export function BeaconDropTool() {
         to: BEACON_PROTOCOL_ADDRESS,
         amount: 0,
         note: noteBytes,
-        suggestedParams: { ...suggestedParams, fee: 1000, flatFee: true },
+        suggestedParams: { ...suggestedParams, fee: Math.max(suggestedParams.minFee || 1000, suggestedParams.fee || 1000, 3000), flatFee: true },
       });
 
       const encodedTxn = algosdk.encodeUnsignedTransaction(txn);

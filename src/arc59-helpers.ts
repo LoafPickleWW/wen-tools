@@ -415,7 +415,7 @@ export const generateARC59ClaimTxns = async (
       boxes: [algosdk.decodeAddress(claimer).publicKey],
       accounts: [claimer, inboxAddress],
       assets: [Number(assetId)],
-      sendParams: { fee: algokit.microAlgos(1000 * totalTxns) as any },
+      sendParams: { fee: algokit.microAlgos(3000 * totalTxns) as any },
     }
   );
 

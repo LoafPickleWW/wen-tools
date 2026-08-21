@@ -249,7 +249,7 @@ export async function sendFalconPayment(
 
   // 1. Get suggested params
   const sp = await algod.getTransactionParams().do();
-  const minFee = Number(sp.fee) || 1000;
+  const minFee = Math.max(Number(sp.minFee || 0), Number(sp.fee || 0), 3000);
 
   // 2. Build 3 zero-pay padding txns (fee = 0, covered by pooling)
   const paddingSp = { ...sp, fee: 0, flatFee: true };
@@ -472,7 +472,7 @@ export async function decryptSecretKey(
   const decrypted = await crypto.subtle.decrypt(
     { name: "AES-GCM", iv: hexToBytes(iv) as any },
     key,
-    hexToBytes(ciphertext),
+    hexToBytes(ciphertext) as BufferSource,
   );
   return new TextDecoder().decode(decrypted);
 }

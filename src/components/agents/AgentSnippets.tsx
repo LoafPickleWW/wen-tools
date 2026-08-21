@@ -44,7 +44,7 @@ async function registerAgent() {
       "DeFi"
     ],
     sender: senderAddress,
-    suggestedParams: { ...suggestedParams, fee: 2000, flatFee: true }, // Extra fee for inner txn
+    suggestedParams: { ...suggestedParams, fee: Math.max((suggestedParams.minFee || 1000) * 2, 4000), flatFee: true }, // Extra fee for inner txn (PQ compatible)
     signer: walletSigner,
   });
 

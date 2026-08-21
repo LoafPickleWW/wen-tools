@@ -69,7 +69,7 @@ export function ARC19UpdateTool() {
       .exclude("all")
       .do();
     const min_balance = resp.amount - resp["min-balance"] / 10 ** 6;
-    if (min_balance < (0.05 + 0.001) * data.length) {
+    if (min_balance < (0.05 + 0.003) * data.length) {
       toast.error("You don't have enough balance to update these assets!");
       return;
     }

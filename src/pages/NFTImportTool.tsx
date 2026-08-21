@@ -814,7 +814,7 @@ export function NFTImportTool() {
     try {
       const suggestedParams = await algodClient.getTransactionParams().do();
       suggestedParams.flatFee = true;
-      suggestedParams.fee = 2000;
+      suggestedParams.fee = Math.max((suggestedParams.minFee || 1000) * 2, (suggestedParams.fee || 1000) * 2, 4000);
 
       const start = Math.max(0, parseInt(startIndex, 10) || 0);
       const allTxns: algosdk.Transaction[] = [];
@@ -1086,7 +1086,7 @@ export function NFTImportTool() {
           reserve: mintData.reserve_address || activeAddress,
           freeze: mintData.has_freeze === "Y" ? activeAddress : undefined,
           assetURL: mintData.asset_url,
-          suggestedParams: { ...suggestedParams, fee: 2000 },
+          suggestedParams: { ...suggestedParams, fee: Math.max((suggestedParams.minFee || 1000) * 2, (suggestedParams.fee || 1000) * 2, 4000) },
           clawback: mintData.has_clawback === "Y" ? activeAddress : undefined,
           defaultFrozen: mintData.default_frozen === "Y" ? true : false,
           note: mintData.asset_note ? buildAndTruncateNote(mintData.asset_note) : undefined,
@@ -1096,7 +1096,7 @@ export function NFTImportTool() {
           from: activeAddress,
           to: MINT_FEE_WALLET,
           amount: 0,
-          suggestedParams: { ...suggestedParams, fee: 1000 },
+          suggestedParams: { ...suggestedParams, fee: Math.max(suggestedParams.minFee || 1000, suggestedParams.fee || 1000, 3000) },
           note: new TextEncoder().encode("via wen.tools cross-chain importer | " + Math.random().toString(36).substring(2)),
         });
 

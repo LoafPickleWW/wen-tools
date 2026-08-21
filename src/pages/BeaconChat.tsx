@@ -487,7 +487,7 @@ export function BeaconChat() {
         to: BEACON_PROTOCOL_ADDRESS,
         amount: 0,
         note: noteBytes,
-        suggestedParams: { ...params, fee: 1000, flatFee: true },
+        suggestedParams: { ...params, fee: Math.max(params.minFee || 1000, params.fee || 1000, 3000), flatFee: true },
       });
 
       const signed = await signTransactions([algosdk.encodeUnsignedTransaction(txn)]);
@@ -578,7 +578,7 @@ export function BeaconChat() {
         to: BEACON_PROTOCOL_ADDRESS,
         amount: 0,
         note,
-        suggestedParams: { ...params, fee: 1000, flatFee: true },
+        suggestedParams: { ...params, fee: Math.max(params.minFee || 1000, params.fee || 1000, 3000), flatFee: true },
       });
 
     // Try single tx first
@@ -840,7 +840,7 @@ export function BeaconChat() {
         to: BEACON_PROTOCOL_ADDRESS,
         amount: 0,
         note: noteBytes,
-        suggestedParams: { ...params, fee: 1000, flatFee: true },
+        suggestedParams: { ...params, fee: Math.max(params.minFee || 1000, params.fee || 1000, 3000), flatFee: true },
       });
       const signed = await signTransactions([algosdk.encodeUnsignedTransaction(txn)]);
       if (!signed?.[0]) throw new Error("Cancelled");
@@ -869,7 +869,7 @@ export function BeaconChat() {
         to: BEACON_PROTOCOL_ADDRESS,
         amount: 0,
         note: noteBytes,
-        suggestedParams: { ...params, fee: 1000, flatFee: true },
+        suggestedParams: { ...params, fee: Math.max(params.minFee || 1000, params.fee || 1000, 3000), flatFee: true },
       });
       const signed = await signTransactions([algosdk.encodeUnsignedTransaction(txn)]);
       if (!signed?.[0]) throw new Error("Cancelled");
