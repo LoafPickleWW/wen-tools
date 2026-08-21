@@ -34,7 +34,7 @@ export function StablecoinStudio() {
   const [tokenSymbol, setTokenSymbol] = useState("MUSD");
   const [network, setNetwork] = useState<"mainnet" | "testnet">("mainnet");
   const [decimals, setDecimals] = useState(6);
-  const [iconUrl, setIconUrl] = useState("");
+  const [_iconUrl, _setIconUrl] = useState("");
 
   // Sub-Accounts & KYB State
   const [accounts, setAccounts] = useState<BraleAccount[]>([]);
@@ -43,11 +43,11 @@ export function StablecoinStudio() {
   const [subAccountName, setSubAccountName] = useState("");
   const [taxId, setTaxId] = useState("");
   const [email, setEmail] = useState("");
-  const [street, setStreet] = useState("");
-  const [city, setCity] = useState("");
-  const [state, setState] = useState("");
-  const [postalCode, setPostalCode] = useState("");
-  const [country, setCountry] = useState("US");
+  const [street, _setStreet] = useState("");
+  const [city, _setCity] = useState("");
+  const [state, _setState] = useState("");
+  const [postalCode, _setPostalCode] = useState("");
+  const [country, _setCountry] = useState("US");
   const [isCreatingAccount, setIsCreatingAccount] = useState(false);
 
   // Mint / Burn State
@@ -57,8 +57,8 @@ export function StablecoinStudio() {
   const [isSubmittingTransfer, setIsSubmittingTransfer] = useState(false);
 
   // Deployments & Market Data
-  const [deployments, setDeployments] = useState<BraleDeployment[]>([]);
-  const [marketData, setMarketData] = useState<any>(null);
+  const [_deployments, setDeployments] = useState<BraleDeployment[]>([]);
+  const [_marketData, setMarketData] = useState<any>(null);
 
   // Load saved credentials on mount
   useEffect(() => {

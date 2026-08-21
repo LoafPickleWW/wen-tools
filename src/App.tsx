@@ -42,6 +42,7 @@ import AgentMarketplace from './pages/AgentMarketplace';
 import { BulkAssetManager } from "./pages/BulkAssetManager";
 import { MintingSuite } from "./pages/MintingSuite";
 import { WenWallet } from "./pages/WenWallet";
+import WalletAssetDetail from "./pages/WalletAssetDetail";
 import { ClusterMap } from "./pages/ClusterMap";
 import { StablecoinStudio } from "./pages/StablecoinStudio";
 

@@ -13,6 +13,7 @@ import {
   createARC3AssetMintArray,
   createARC19AssetMintArray,
   walletSign,
+  getFileMimeType,
 } from "../utils";
 import {
   completeAlgoFileUpload,
@@ -827,23 +828,7 @@ export function BatchMint() {
   }
 
   function getMimeType(extension: string) {
-    if (!extension) return "";
-    const ext = extension.toLowerCase().trim();
-    switch (ext) {
-      case ".png":
-        return "image/png";
-      case ".jpg":
-      case ".jpeg":
-        return "image/jpeg";
-      case ".gif":
-        return "image/gif";
-      case ".webp":
-        return "image/webp";
-      case ".mp4":
-        return "video/mp4";
-      default:
-        return "";
-    }
+    return getFileMimeType(extension);
   }
 
   const handleReset = () => {

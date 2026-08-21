@@ -11,6 +11,7 @@ import {
   createAssetMintArrayV2,
   walletSign,
   pinImageToPinata,
+  getFileMimeType,
 } from "../utils";
 import { pinImageToFilebase } from "../filebase";
 import IpfsProviderSelect from "../components/IpfsProviderSelect";
@@ -464,7 +465,7 @@ wen.contentWindow.postMessage({
         finalFormat !== "Token" &&
         (formData.image === null || !(formData.image instanceof File))
       ) {
-        toast.error("Please select an image");
+        toast.error("Please select an image or media file");
         return;
       }
       setProcessStep(1);
@@ -563,19 +564,22 @@ wen.contentWindow.postMessage({
       }
 
       if (formData.image && formData.image instanceof File) {
-        if (formData.image.type && formData.image.type.includes("video")) {
+        const mimeType = getFileMimeType(formData.image);
+        if (mimeType.includes("video") || mimeType.includes("model") || mimeType.startsWith("model/")) {
           metadata.animation_url = imageURL;
-          metadata.animation_url_mime_type = formData.image
-            ? formData.image.type
-            : "";
-        } else if (formData.image.type && formData.image.type.includes("audio")) {
+          metadata.animation_url_mime_type = mimeType;
+          metadata.image = imageURL;
+          metadata.image_mime_type = mimeType;
+        } else if (mimeType.includes("audio")) {
+          metadata.animation_url = imageURL;
+          metadata.animation_url_mime_type = mimeType;
           metadata.properties.file_url = imageURL;
-          metadata.properties.file_url_mimetype = formData.image
-            ? formData.image.type
-            : "";
+          metadata.properties.file_url_mimetype = mimeType;
+          metadata.image = imageURL;
+          metadata.image_mime_type = mimeType;
         } else {
           metadata.image = imageURL;
-          metadata.image_mime_type = formData.image ? formData.image.type : "";
+          metadata.image_mime_type = mimeType;
         }
       }
 
@@ -967,7 +971,7 @@ wen.contentWindow.postMessage({
                     className="block w-full text-sm border border-slate-700 rounded-xl cursor-pointer bg-slate-900/60 text-slate-300 focus:outline-none focus:ring-1 focus:ring-primary-orange focus:border-primary-orange file:mr-4 file:py-2.5 file:px-4 file:rounded-l-xl file:border-0 file:text-xs file:font-semibold file:bg-slate-800 file:text-white hover:file:bg-slate-700 transition-all"
                     id="select_image"
                     type="file"
-                    accept="image/*,video/*,audio/*"
+                    accept="image/*,video/*,audio/*,model/*,.obj,.glb,.gltf,.stl,.3mf,.fbx,.dae"
                     multiple={false}
                     required
                     onChange={(e: any) => {

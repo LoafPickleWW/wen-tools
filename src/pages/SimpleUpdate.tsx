@@ -761,7 +761,7 @@ export function SimpleUpdate() {
                     className="block w-full text-sm border border-slate-700 rounded-xl cursor-pointer bg-slate-900/60 text-slate-300 focus:outline-none focus:ring-1 focus:ring-primary-orange focus:border-primary-orange file:mr-4 file:py-2.5 file:px-4 file:rounded-l-xl file:border-0 file:text-xs file:font-semibold file:bg-slate-800 file:text-white hover:file:bg-slate-700 transition-all"
                     id="select_image"
                     type="file"
-                    accept="image/*,video/*"
+                    accept="image/*,video/*,audio/*,model/*,.obj,.glb,.gltf,.stl,.3mf,.fbx,.dae"
                     multiple={false}
                     onChange={(e: any) => {
                       setFormData({

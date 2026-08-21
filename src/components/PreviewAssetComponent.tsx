@@ -8,7 +8,12 @@ export const PreviewAssetComponent = ({
   imageUrl: string;
 }) => {
   const isVideo = previewAsset?.ipfs_data?.animation_url_mime_type?.includes("video");
-  const isAudio = previewAsset?.ipfs_data?.properties?.file_url_mimetype?.includes("audio");
+  const isAudio = previewAsset?.ipfs_data?.properties?.file_url_mimetype?.includes("audio") || previewAsset?.ipfs_data?.animation_url_mime_type?.includes("audio");
+  const isModel =
+    previewAsset?.ipfs_data?.animation_url_mime_type?.includes("model") ||
+    previewAsset?.ipfs_data?.image_mime_type?.includes("model") ||
+    previewAsset?.ipfs_data?.animation_url_mime_type?.includes("obj") ||
+    previewAsset?.ipfs_data?.image_mime_type?.includes("obj");
 
   return (
     <div className="flex flex-col mt-2 justify-center items-center w-full bg-secondary-black p-4 rounded-lg">
@@ -31,6 +36,14 @@ export const PreviewAssetComponent = ({
                 controls
                 className="w-full max-w-md mt-4"
               />
+            ) : isModel ? (
+              <div className="w-48 h-48 bg-slate-800/80 border border-slate-700 rounded-xl flex flex-col items-center justify-center p-4 text-center shadow-lg">
+                <span className="text-4xl mb-2">🧊</span>
+                <span className="text-sm font-bold text-white">3D Model File</span>
+                <span className="text-xs text-orange-400 mt-1 font-mono">
+                  {previewAsset?.ipfs_data?.animation_url_mime_type || previewAsset?.ipfs_data?.image_mime_type || "model/obj"}
+                </span>
+              </div>
             ) : (
               <img
                 src={imageUrl}

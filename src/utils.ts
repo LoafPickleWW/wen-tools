@@ -51,6 +51,60 @@ export function trackEvent(action: string, category: string, label?: string, val
   }
 }
 
+export function getFileMimeType(file: File | string): string {
+  if (!file) return "";
+  const fileName = typeof file === "string" ? file : file.name || "";
+  const mimeType = typeof file === "object" && file.type ? file.type : "";
+
+  const ext = fileName ? fileName.split(".").pop()?.toLowerCase().trim() || "" : "";
+
+  // 3D model formats
+  if (ext === "obj") return "model/obj";
+  if (ext === "glb") return "model/gltf-binary";
+  if (ext === "gltf") return "model/gltf+json";
+  if (ext === "stl") return "model/stl";
+  if (ext === "3mf") return "model/3mf";
+  if (ext === "fbx") return "model/vnd.fbx";
+  if (ext === "dae") return "model/vnd.collada+xml";
+  if (ext === "ply") return "model/ply";
+
+  // Return non-generic mimeType if available from browser
+  if (mimeType && mimeType !== "application/octet-stream" && mimeType !== "text/plain") {
+    return mimeType;
+  }
+
+  // Fallback map by extension
+  switch (ext) {
+    case "png":
+      return "image/png";
+    case "jpg":
+    case "jpeg":
+      return "image/jpeg";
+    case "gif":
+      return "image/gif";
+    case "webp":
+      return "image/webp";
+    case "svg":
+      return "image/svg+xml";
+    case "mp4":
+      return "video/mp4";
+    case "webm":
+      return "video/webm";
+    case "mov":
+      return "video/quicktime";
+    case "mp3":
+      return "audio/mpeg";
+    case "wav":
+      return "audio/wav";
+    case "ogg":
+      return "audio/ogg";
+    case "pdf":
+      return "application/pdf";
+    default:
+      return mimeType || "";
+  }
+}
+
 export const peraWallet = new PeraWalletConnect({
   shouldShowSignTxnToast: true,
 });
