@@ -68,14 +68,15 @@ function isTxnPQFromSender(tx: any, targetAddress: string): boolean {
  */
 export async function checkIsPQAccount(
   address: string,
-  network: "mainnet" | "testnet" | "betanet" = "mainnet"
+  network: "mainnet" | "testnet" | "betanet" = "mainnet",
+  bypassCache = false
 ): Promise<PQCheckResult> {
   if (!address || typeof address !== "string") {
     return { isPQ: false, pqTxCount: 0 };
   }
 
   const cacheKey = `${address}_${network}`;
-  if (pqCheckCache[cacheKey] !== undefined) {
+  if (!bypassCache && pqCheckCache[cacheKey] !== undefined) {
     return pqCheckCache[cacheKey];
   }
 
@@ -102,15 +103,34 @@ export async function checkIsPQAccount(
     try {
       const indexerUrl = `https://${net}-idx.algonode.cloud`;
       const indexer = new algosdk.Indexer("", indexerUrl, "");
-      const res = await indexer.searchForTransactions().address(address).limit(100).do();
-      const txns = res.transactions || [];
-
+      
+      let nextToken: string | undefined = undefined;
+      let maxPages = 50; // Scan up to 5,000 transactions per network
       let netPQCount = 0;
-      for (const tx of txns) {
-        if (isTxnPQFromSender(tx, address)) {
-          netPQCount++;
+
+      do {
+        let req = indexer
+          .searchForTransactions()
+          .address(address)
+          .addressRole("sender")
+          .limit(100);
+
+        if (nextToken) {
+          req = req.nextToken(nextToken);
         }
-      }
+
+        const res: any = await req.do();
+        const txns = res.transactions || [];
+
+        for (const tx of txns) {
+          if (isTxnPQFromSender(tx, address)) {
+            netPQCount++;
+          }
+        }
+
+        nextToken = res["next-token"];
+        maxPages--;
+      } while (nextToken && maxPages > 0);
 
       if (netPQCount > 0) {
         totalPQTxCount += netPQCount;
@@ -138,8 +158,16 @@ export async function checkIsPQAccount(
 }
 
 /**
- * Clear cache entirely.
+ * Clear cache entirely or for a specific address.
  */
-export function clearPQCache(): void {
-  Object.keys(pqCheckCache).forEach((k) => delete pqCheckCache[k]);
+export function clearPQCache(address?: string): void {
+  if (address) {
+    Object.keys(pqCheckCache).forEach((k) => {
+      if (k.startsWith(address)) {
+        delete pqCheckCache[k];
+      }
+    });
+  } else {
+    Object.keys(pqCheckCache).forEach((k) => delete pqCheckCache[k]);
+  }
 }

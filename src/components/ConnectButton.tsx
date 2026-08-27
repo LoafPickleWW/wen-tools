@@ -17,7 +17,8 @@ import { getNfDomainsInBulk } from "../utils";
 import { FaCopy, FaWallet } from "react-icons/fa";
 import { IoPlanet, IoLockClosed, IoShieldCheckmark, IoRefresh } from "react-icons/io5";
 import { toast } from "react-toastify";
-import { usePQTheme, THEME_TIERS } from "../context/PQThemeContext";
+import { usePQTheme } from "../context/PQThemeContext";
+import { THEME_TIERS } from "../types/pqTheme";
 
 export default function ConnectButton({
   inmain = false

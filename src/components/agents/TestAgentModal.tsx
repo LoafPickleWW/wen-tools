@@ -691,22 +691,28 @@ const modeOptions: VRFMode[] = _vrfInfo && _vrfInfo.capabilities && Array.isArra
                   <div className="flex justify-between border-b border-neutral-900 pb-2">
                     <span className="text-neutral-500">Refund Transaction ID</span>
                     <span className="text-neutral-300 font-mono">
-                      {refundTxId || refundObj?.refund_tx_id || refundObj?.tx_id ? (
-                        <a
-                          href={`https://${network === NetworkId.TESTNET ? "testnet." : ""}explorer.perawallet.app/tx/${refundTxId || refundObj?.refund_tx_id || refundObj?.tx_id}`}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="text-orange-400 hover:underline"
-                        >
-                          {(refundTxId || refundObj?.refund_tx_id || refundObj?.tx_id).slice(0, 10)}...{(refundTxId || refundObj?.refund_tx_id || refundObj?.tx_id).slice(-6)}
-                        </a>
-                      ) : isPollingRefund ? (
-                        <span className="text-orange-400 animate-pulse font-medium">Processing refund (polling blockchain...)</span>
-                      ) : refundObj?.refund_pending ? (
-                        <span className="text-orange-400 animate-pulse font-medium">Processing in background...</span>
-                      ) : (
-                        <span className="text-red-400">Failed / Pending</span>
-                      )}
+                      {(() => {
+                        const displayRefundTxId = refundTxId || refundObj?.refund_tx_id || refundObj?.tx_id;
+                        if (displayRefundTxId) {
+                          return (
+                            <a
+                              href={`https://${network === NetworkId.TESTNET ? "testnet." : ""}explorer.perawallet.app/tx/${displayRefundTxId}`}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-orange-400 hover:underline"
+                            >
+                              {displayRefundTxId.slice(0, 10)}...{displayRefundTxId.slice(-6)}
+                            </a>
+                          );
+                        }
+                        if (isPollingRefund) {
+                          return <span className="text-orange-400 animate-pulse font-medium">Processing refund (polling blockchain...)</span>;
+                        }
+                        if (refundObj?.refund_pending) {
+                          return <span className="text-orange-400 animate-pulse font-medium">Processing in background...</span>;
+                        }
+                        return <span className="text-red-400">Failed / Pending</span>;
+                      })()}
                     </span>
                   </div>
                 )}

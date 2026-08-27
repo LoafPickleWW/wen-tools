@@ -1,6 +1,7 @@
+/* eslint-disable react-refresh/only-export-components */
 import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
 import { useWallet } from "@txnlab/use-wallet-react";
-import { checkIsPQAccount } from "../utils/pqDetection";
+import { checkIsPQAccount, clearPQCache } from "../utils/pqDetection";
 import { toast } from "react-toastify";
 import {
   QuantumTheme,
@@ -12,7 +13,6 @@ import {
 } from "../types/pqTheme";
 
 export type { QuantumTheme, ThemeTierInfo, PQThemeContextType };
-export { THEME_TIERS, getUnlockedThemes, triggerQuantumConfetti };
 
 const PQThemeContext = createContext<PQThemeContextType | undefined>(undefined);
 
@@ -48,11 +48,11 @@ export const PQThemeProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setForceThemeState(force);
   };
 
-  const performScan = useCallback(async (address: string) => {
+  const performScan = useCallback(async (address: string, bypassCache = false) => {
     setIsScanning(true);
     setScanReason(undefined);
     try {
-      const result = await checkIsPQAccount(address);
+      const result = await checkIsPQAccount(address, "mainnet", bypassCache);
       setIsPQAccount(result.isPQ);
       setPqTxCount(result.pqTxCount);
       setScanReason(result.reason);
@@ -74,7 +74,8 @@ export const PQThemeProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const recheckPQ = useCallback(async () => {
     if (activeAddress) {
-      await performScan(activeAddress);
+      clearPQCache(activeAddress);
+      await performScan(activeAddress, true);
     }
   }, [activeAddress, performScan]);
 
