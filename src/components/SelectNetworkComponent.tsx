@@ -12,7 +12,14 @@ export default function SelectNetworkComponent() {
     <FormGroup sx={{ justifyContent: "center" }}>
       <FormControlLabel
         label={
-          <span className={`font-sans text-sm font-medium transition-colors ${isThemeActive ? "text-cyan-300 font-bold" : "text-primary-gray"}`}>
+          <span
+            className={`font-sans text-sm font-medium transition-colors ${
+              isThemeActive ? "font-bold" : "text-primary-gray"
+            }`}
+            style={{
+              color: isThemeActive ? "var(--pq-primary, #00f0ff)" : undefined,
+            }}
+          >
             {activeNetwork.charAt(0).toUpperCase() + activeNetwork.slice(1)}
           </span>
         }
@@ -25,18 +32,25 @@ export default function SelectNetworkComponent() {
                 : setActiveNetwork(NetworkId.MAINNET)
             }
             sx={{
+              "& .MuiSwitch-switchBase.Mui-checked": {
+                color: isThemeActive ? "var(--pq-primary, #00f0ff)" : "#f57b14",
+              },
+              "& .MuiSwitch-switchBase.Mui-checked .MuiSwitch-thumb": {
+                backgroundColor: isThemeActive ? "var(--pq-primary, #00f0ff)" : "#f57b14",
+                boxShadow: isThemeActive ? "0 0 10px var(--pq-glow)" : "none",
+              },
+              "& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track": {
+                backgroundColor: isThemeActive ? "var(--pq-primary, #00f0ff)" : "#f57b14",
+                opacity: 0.7,
+              },
               "& .MuiSwitch-thumb": {
                 backgroundColor: isThemeActive ? "var(--pq-primary, #00f0ff)" : "#f57b14",
                 boxShadow: isThemeActive ? "0 0 10px var(--pq-glow)" : "none",
                 transition: "all 0.3s ease",
               },
               "& .MuiSwitch-track": {
-                backgroundColor: isThemeActive ? "var(--pq-glow, rgba(0,240,255,0.4))" : "#fff",
-                opacity: isThemeActive ? 0.8 : 0.3,
-              },
-              "& .Mui-checked + span.MuiSwitch-track": {
-                backgroundColor: isThemeActive ? "var(--pq-primary, #00f0ff)" : "#f57b14",
-                opacity: 0.7,
+                backgroundColor: isThemeActive ? "var(--pq-primary, #00f0ff)" : "#fff",
+                opacity: isThemeActive ? 0.6 : 0.3,
               },
             }}
           />

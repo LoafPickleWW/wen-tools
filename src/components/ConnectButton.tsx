@@ -266,7 +266,13 @@ export default function ConnectButton({
           </div>
         ) : (
           /* Seamless Unified Quantum Wallet Control Panel */
-          <div className="w-[320px] p-4 rounded-3xl bg-slate-950/95 border border-slate-800 text-white shadow-2xl backdrop-blur-2xl space-y-3.5 font-sans">
+          <div
+            className="w-[320px] p-4 rounded-3xl bg-slate-950/95 border border-slate-800 text-white shadow-2xl backdrop-blur-2xl space-y-3.5 font-sans transition-all duration-300"
+            style={{
+              borderColor: isThemeActive ? "var(--pq-glow)" : undefined,
+              boxShadow: isThemeActive ? "0 0 25px var(--pq-glow-subtle)" : undefined,
+            }}
+          >
             {/* 1. Account Header & Identity */}
             <div className="flex items-center justify-between pb-3 border-b border-slate-800/80">
               <div className="flex items-center gap-2.5">
@@ -285,7 +291,8 @@ export default function ConnectButton({
                         navigator.clipboard.writeText(activeAddress);
                         toast.success("Address copied!");
                       }}
-                      className="text-slate-400 hover:text-cyan-400 transition p-1"
+                      className="text-slate-400 hover:opacity-80 transition p-1"
+                      style={{ color: isThemeActive ? "var(--pq-primary)" : undefined }}
                       title="Copy address"
                     >
                       <FaCopy className="text-xs" />
@@ -293,7 +300,14 @@ export default function ConnectButton({
                   </div>
                   <div className="flex items-center gap-1.5 mt-0.5">
                     {nfdName && (
-                      <span className="font-mono text-[10px] text-teal-400 font-bold bg-teal-950/80 px-1.5 py-0.5 rounded border border-teal-800/60">
+                      <span
+                        className="font-mono text-[10px] font-bold px-1.5 py-0.5 rounded border"
+                        style={{
+                          color: isThemeActive ? "var(--pq-primary)" : "#34d399",
+                          backgroundColor: isThemeActive ? "var(--pq-glow-subtle)" : "rgba(52,211,153,0.1)",
+                          borderColor: isThemeActive ? "var(--pq-glow)" : "rgba(52,211,153,0.3)",
+                        }}
+                      >
                         {shortenAddress(activeAddress)}
                       </span>
                     )}
@@ -305,7 +319,14 @@ export default function ConnectButton({
               </div>
 
               {isScanning ? (
-                <span className="flex items-center gap-1 text-[10px] text-cyan-400 font-semibold animate-pulse bg-cyan-950/50 px-2.5 py-1 rounded-full border border-cyan-800/50">
+                <span
+                  className="flex items-center gap-1 text-[10px] font-semibold animate-pulse px-2.5 py-1 rounded-full border"
+                  style={{
+                    color: isThemeActive ? "var(--pq-primary)" : "#38bdf8",
+                    backgroundColor: isThemeActive ? "var(--pq-glow-subtle)" : "rgba(56,189,248,0.1)",
+                    borderColor: isThemeActive ? "var(--pq-glow)" : "rgba(56,189,248,0.3)",
+                  }}
+                >
                   <IoRefresh className="animate-spin text-xs" /> Scanning
                 </span>
               ) : isPQAccount ? (
@@ -321,7 +342,12 @@ export default function ConnectButton({
                 <span className="text-[10px] uppercase tracking-wider text-slate-400 font-semibold">Balance</span>
                 <div className="flex items-center justify-between mt-1">
                   <span className="font-extrabold text-sm text-white">{((accountData?.amount || 0) / 10 ** 6).toFixed(2)}</span>
-                  <span className="text-cyan-400 font-bold text-xxs">ALGO</span>
+                  <span
+                    className="font-bold text-xxs transition-colors"
+                    style={{ color: isThemeActive ? "var(--pq-primary, #00f0ff)" : "#38bdf8" }}
+                  >
+                    ALGO
+                  </span>
                 </div>
               </div>
 
@@ -339,10 +365,25 @@ export default function ConnectButton({
               <div className="pt-2.5 border-t border-slate-800/80 space-y-2.5">
                 <div className="flex items-center justify-between text-xs">
                   <div className="flex items-center gap-1.5">
-                    <IoPlanet className="text-cyan-400 text-sm animate-pulse" />
-                    <span className="font-bold text-xs text-cyan-300">PQSIG Tx Count</span>
+                    <IoPlanet
+                      className="text-sm animate-pulse"
+                      style={{ color: isThemeActive ? "var(--pq-primary, #00f0ff)" : "#38bdf8" }}
+                    />
+                    <span
+                      className="font-bold text-xs"
+                      style={{ color: isThemeActive ? "var(--pq-primary, #00f0ff)" : "#38bdf8" }}
+                    >
+                      PQSIG Tx Count
+                    </span>
                   </div>
-                  <span className="font-mono font-extrabold text-xs text-cyan-300 bg-cyan-950/80 px-2 py-0.5 rounded-lg border border-cyan-800/60">
+                  <span
+                    className="font-mono font-extrabold text-xs px-2 py-0.5 rounded-lg border"
+                    style={{
+                      color: isThemeActive ? "var(--pq-primary, #00f0ff)" : "#38bdf8",
+                      backgroundColor: isThemeActive ? "var(--pq-glow-subtle)" : "rgba(56,189,248,0.1)",
+                      borderColor: isThemeActive ? "var(--pq-glow)" : "rgba(56,189,248,0.3)",
+                    }}
+                  >
                     {pqTxCount} {pqTxCount === 1 ? "Tx" : "Txns"}
                   </span>
                 </div>
@@ -356,8 +397,13 @@ export default function ConnectButton({
                     </div>
                     <div className="w-full bg-slate-900 rounded-full h-1.5 overflow-hidden border border-slate-800">
                       <div
-                        className="h-full bg-gradient-to-r from-cyan-400 to-purple-500 rounded-full transition-all duration-500"
-                        style={{ width: `${Math.min(100, (pqTxCount / nextTier.requiredTx) * 100)}%` }}
+                        className="h-full rounded-full transition-all duration-500"
+                        style={{
+                          width: `${Math.min(100, (pqTxCount / nextTier.requiredTx) * 100)}%`,
+                          background: isThemeActive
+                            ? "linear-gradient(90deg, var(--pq-primary), var(--pq-secondary))"
+                            : "linear-gradient(90deg, #38bdf8, #a855f7)",
+                        }}
                       />
                     </div>
                   </div>
@@ -375,9 +421,18 @@ export default function ConnectButton({
                           key={tier.id}
                           disabled={!isUnlocked}
                           onClick={() => setQuantumTheme(tier.id)}
+                          style={
+                            isSelected
+                              ? {
+                                  borderColor: tier.color,
+                                  backgroundColor: `${tier.color}22`,
+                                  boxShadow: `0 0 10px ${tier.color}44`,
+                                }
+                              : undefined
+                          }
                           className={`flex items-center justify-between px-2.5 py-1.5 rounded-xl border text-left text-[10px] transition-all ${
                             isSelected
-                              ? "border-cyan-400 bg-cyan-950/70 text-white font-bold ring-1 ring-cyan-400 shadow-sm"
+                              ? "text-white font-bold shadow-sm ring-1 ring-white/20"
                               : isUnlocked
                               ? "border-slate-800 bg-slate-900/60 text-slate-300 hover:border-slate-700 hover:text-white"
                               : "border-slate-800/40 bg-slate-950/30 text-slate-600 opacity-50 cursor-not-allowed"
@@ -399,9 +454,14 @@ export default function ConnectButton({
                   <span className="text-slate-400 text-[10px]">Atomic Orbital FX</span>
                   <button
                     onClick={() => setBackgroundFxEnabled(!backgroundFxEnabled)}
-                    className={`w-8 h-4 flex items-center rounded-full p-0.5 transition-colors ${
-                      backgroundFxEnabled ? "bg-cyan-500" : "bg-slate-800"
-                    }`}
+                    className="w-8 h-4 flex items-center rounded-full p-0.5 transition-colors"
+                    style={{
+                      backgroundColor: backgroundFxEnabled
+                        ? isThemeActive
+                          ? "var(--pq-primary, #00f0ff)"
+                          : "#f57b14"
+                        : "#1e293b",
+                    }}
                   >
                     <div className={`bg-white w-3 h-3 rounded-full shadow-md transform transition-transform ${backgroundFxEnabled ? "translate-x-4" : "translate-x-0"}`} />
                   </button>
