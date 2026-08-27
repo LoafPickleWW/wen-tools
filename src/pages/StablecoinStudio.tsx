@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useWallet } from "@txnlab/use-wallet-react";
 import { Meta } from "../components/Meta";
 import { toast } from "react-toastify";
@@ -34,7 +34,6 @@ export function StablecoinStudio() {
   const [tokenSymbol, setTokenSymbol] = useState("MUSD");
   const [network, setNetwork] = useState<"mainnet" | "testnet">("mainnet");
   const [decimals, setDecimals] = useState(6);
-  const [_iconUrl, _setIconUrl] = useState("");
 
   // Sub-Accounts & KYB State
   const [accounts, setAccounts] = useState<BraleAccount[]>([]);
@@ -43,11 +42,11 @@ export function StablecoinStudio() {
   const [subAccountName, setSubAccountName] = useState("");
   const [taxId, setTaxId] = useState("");
   const [email, setEmail] = useState("");
-  const [street, _setStreet] = useState("");
-  const [city, _setCity] = useState("");
-  const [state, _setState] = useState("");
-  const [postalCode, _setPostalCode] = useState("");
-  const [country, _setCountry] = useState("US");
+  const [street] = useState("");
+  const [city] = useState("");
+  const [state] = useState("");
+  const [postalCode] = useState("");
+  const [country] = useState("US");
   const [isCreatingAccount, setIsCreatingAccount] = useState(false);
 
   // Mint / Burn State
@@ -57,8 +56,32 @@ export function StablecoinStudio() {
   const [isSubmittingTransfer, setIsSubmittingTransfer] = useState(false);
 
   // Deployments & Market Data
-  const [_deployments, setDeployments] = useState<BraleDeployment[]>([]);
-  const [_marketData, setMarketData] = useState<any>(null);
+  const [, setDeployments] = useState<BraleDeployment[]>([]);
+  const [, setMarketData] = useState<any>(null);
+
+  const loadAccountData = useCallback(async () => {
+    setIsLoadingAccounts(true);
+    const accs = await getBraleAccounts();
+    setAccounts(accs);
+    if (accs.length > 0 && !selectedAccountId) {
+      setSelectedAccountId(accs[0].id);
+    }
+    const deps = await getBraleDeployments();
+    setDeployments(deps);
+    const mData = await fetchBraleMarketData();
+    setMarketData(mData);
+    setIsLoadingAccounts(false);
+  }, [selectedAccountId]);
+
+  const checkConnection = useCallback(async (creds: BraleCredentials) => {
+    setIsTestingConn(true);
+    const valid = await testBraleConnection(creds);
+    setIsConnected(valid);
+    setIsTestingConn(false);
+    if (valid) {
+      loadAccountData();
+    }
+  }, [loadAccountData]);
 
   // Load saved credentials on mount
   useEffect(() => {
@@ -67,24 +90,14 @@ export function StablecoinStudio() {
       setCredentials(saved);
       checkConnection(saved);
     }
-  }, []);
+  }, [checkConnection]);
 
   // Pre-fill destination address with active wallet
   useEffect(() => {
     if (activeAddress && !destAddress) {
       setDestAddress(activeAddress);
     }
-  }, [activeAddress]);
-
-  const checkConnection = async (creds: BraleCredentials) => {
-    setIsTestingConn(true);
-    const valid = await testBraleConnection(creds);
-    setIsConnected(valid);
-    setIsTestingConn(false);
-    if (valid) {
-      loadAccountData();
-    }
-  };
+  }, [activeAddress, destAddress]);
 
   const handleSaveCredentials = async () => {
     if (!credentials.clientId || !credentials.clientSecret) {
@@ -107,20 +120,6 @@ export function StablecoinStudio() {
     setIsConnected(false);
     setAccounts([]);
     toast.info("Brale credentials cleared from browser storage.");
-  };
-
-  const loadAccountData = async () => {
-    setIsLoadingAccounts(true);
-    const accs = await getBraleAccounts();
-    setAccounts(accs);
-    if (accs.length > 0 && !selectedAccountId) {
-      setSelectedAccountId(accs[0].id);
-    }
-    const deps = await getBraleDeployments();
-    setDeployments(deps);
-    const mData = await fetchBraleMarketData();
-    setMarketData(mData);
-    setIsLoadingAccounts(false);
   };
 
   const handleCreateSubAccount = async (e: React.FormEvent) => {

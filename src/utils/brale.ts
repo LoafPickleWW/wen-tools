@@ -92,7 +92,7 @@ export async function testBraleConnection(credentials: BraleCredentials): Promis
   try {
     const token = await fetchBraleAccessToken(credentials);
     return !!token;
-  } catch (err) {
+  } catch {
     return false;
   }
 }

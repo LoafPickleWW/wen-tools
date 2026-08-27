@@ -48,12 +48,18 @@ export function TestAgentModal({ open, onClose, listing, network }: TestAgentMod
     if (open && listing) {
       setEndpointUrl(listing.endpointUrl || "");
       const isVrf = !!(listing.name?.toLowerCase().includes("vrf") || listing.endpointUrl?.toLowerCase().includes("vrf"));
+      const isNeighborly = !!(listing.name?.toLowerCase().includes("neighborly") || listing.endpointUrl?.toLowerCase().includes("neighborly"));
+
       if (isVrf) {
         setMethod("POST");
         setVrfMode("number");
         setVrfParams({});
+      } else if (isNeighborly) {
+        setMethod("POST");
+        setPayloadText(JSON.stringify({ query: "real estate map", action: "search" }, null, 2));
       } else {
         setMethod("GET");
+        setPayloadText(JSON.stringify({ message: "Hello from wen.tools!" }, null, 2));
       }
       setStep("idle");
       setTestResult(null);
@@ -125,7 +131,7 @@ const modeOptions: VRFMode[] = _vrfInfo && _vrfInfo.capabilities && Array.isArra
         : "https://mainnet-idx.algonode.cloud";
 
       try {
-        const assetLabel = testResult.echo?.asset || "USDC";
+        const assetLabel = testResult.echo?.asset || testResult.asset || "USDC";
         const txType = assetLabel === "ALGO" ? "pay" : "axfer";
         const url = `${indexerBase}/v2/accounts/${activeAddress}/transactions?tx-type=${txType}&address-role=receiver&limit=5`;
 
@@ -137,7 +143,8 @@ const modeOptions: VRFMode[] = _vrfInfo && _vrfInfo.capabilities && Array.isArra
 
         // Find the matching refund transaction
         const refundTx = txns.find((tx: any) => {
-          const isSenderMatch = tx.sender === testResult.echo?.receiver;
+          const expectedReceiver = testResult.echo?.receiver || testResult.receiver;
+          const isSenderMatch = expectedReceiver ? tx.sender === expectedReceiver : false;
           
           let isNoteMatch = false;
           if (tx.note) {
@@ -223,6 +230,21 @@ const modeOptions: VRFMode[] = _vrfInfo && _vrfInfo.capabilities && Array.isArra
           initialPayload = JSON.parse(payloadText);
         } catch {
           initialPayload = {};
+        }
+
+        // If method is GET, append payload object properties as query search params
+        if (method === "GET" && initialPayload && typeof initialPayload === "object" && !Array.isArray(initialPayload)) {
+          try {
+            const urlObj = new URL(finalEndpointUrl);
+            Object.entries(initialPayload).forEach(([k, v]) => {
+              if (v !== undefined && v !== null && v !== "") {
+                urlObj.searchParams.set(k, String(v));
+              }
+            });
+            finalEndpointUrl = urlObj.toString();
+          } catch {
+            // Ignore URL parse errors
+          }
         }
       }
 
@@ -390,11 +412,19 @@ const modeOptions: VRFMode[] = _vrfInfo && _vrfInfo.capabilities && Array.isArra
       if (verifyRes.status === 200 || verifyRes.status === 201) {
         setTestResult(responseBody);
         setStep("success");
-        if (responseBody.refund?.refund_pending) {
+
+        // Trigger polling for refund if refund data or echo receiver present
+        const hasRefundPotential = responseBody?.refund || responseBody?.response?.refund || responseBody?.echo?.receiver || responseBody?.receiver;
+        if (hasRefundPotential) {
           setIsPollingRefund(true);
         }
       } else {
-        let errorMessage = responseBody.message || responseBody.error || `Verification failed with status ${verifyRes.status}`;
+        let errorMessage = `Endpoint returned status ${verifyRes.status}`;
+        if (typeof responseBody === "object" && responseBody.error) {
+          errorMessage = responseBody.error;
+        } else if (typeof responseBody === "object" && responseBody.message) {
+          errorMessage = responseBody.message;
+        }
         
         // If it's a 402, try to get the real error from the payment-required header
         if (verifyRes.status === 402) {
@@ -419,6 +449,19 @@ const modeOptions: VRFMode[] = _vrfInfo && _vrfInfo.capabilities && Array.isArra
       setErrorDetails(err.message || "An unexpected error occurred during testing.");
     }
   };
+
+  const settleTxId = testResult?.echo?.tx_id || 
+                    testResult?.settle_tx_id || 
+                    testResult?.tx_id || 
+                    testResult?.txId || 
+                    testResult?.payment?.tx_id || 
+                    testResult?.response?.echo?.tx_id || 
+                    testResult?.response?.settle_tx_id || 
+                    testResult?.response?.tx_id || 
+                    testResult?.response?.payment?.tx_id || 
+                    null;
+
+  const refundObj = testResult?.refund || testResult?.response?.refund || null;
 
   return (
     <div className="fixed inset-0 z-[1200] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md overflow-y-auto">
@@ -562,11 +605,13 @@ const modeOptions: VRFMode[] = _vrfInfo && _vrfInfo.capabilities && Array.isArra
                     )}
                   </>
                 )}
-{method === "POST" && !isVrfAgent && (
+{!isVrfAgent && (
   <div className="space-y-2 animate-fadeIn">
     <div className="flex justify-between items-center">
-      <label className="text-sm font-bold text-neutral-300">Request Payload (JSON)</label>
-      <span className="text-[10px] text-neutral-500">Optional POST body arguments</span>
+      <label className="text-sm font-bold text-neutral-300">Request Parameters / Payload (JSON)</label>
+      <span className="text-[10px] text-neutral-500">
+        {method === "GET" ? "Appended as URL query parameters" : "JSON request body"}
+      </span>
     </div>
     <textarea
       value={payloadText}
@@ -626,48 +671,44 @@ const modeOptions: VRFMode[] = _vrfInfo && _vrfInfo.capabilities && Array.isArra
                   <span className="text-green-400 font-bold font-mono">200 OK</span>
                 </div>
                 
-                {testResult.echo && (
-                  <>
-                    <div className="flex justify-between border-b border-neutral-900 pb-2">
-                      <span className="text-neutral-500">Settle Transaction ID</span>
-                      <span className="text-neutral-300 font-mono">
-                        {testResult.echo.tx_id ? (
-                          <a
-                            href={`https://${network === NetworkId.TESTNET ? "testnet." : ""}explorer.perawallet.app/tx/${testResult.echo.tx_id}`}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="text-orange-400 hover:underline"
-                          >
-                            {testResult.echo.tx_id.slice(0, 10)}...{testResult.echo.tx_id.slice(-6)}
-                          </a>
-                        ) : "N/A"}
-                      </span>
-                    </div>
+                {settleTxId && (
+                  <div className="flex justify-between border-b border-neutral-900 pb-2">
+                    <span className="text-neutral-500">Settle Transaction ID</span>
+                    <span className="text-neutral-300 font-mono">
+                      <a
+                        href={`https://${network === NetworkId.TESTNET ? "testnet." : ""}explorer.perawallet.app/tx/${settleTxId}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-orange-400 hover:underline"
+                      >
+                        {settleTxId.slice(0, 10)}...{settleTxId.slice(-6)}
+                      </a>
+                    </span>
+                  </div>
+                )}
 
-                    {testResult.refund && (
-                      <div className="flex justify-between border-b border-neutral-900 pb-2">
-                        <span className="text-neutral-500">Refund Transaction ID</span>
-                        <span className="text-neutral-300 font-mono">
-                          {refundTxId || testResult.refund.refund_tx_id ? (
-                            <a
-                              href={`https://${network === NetworkId.TESTNET ? "testnet." : ""}explorer.perawallet.app/tx/${refundTxId || testResult.refund.refund_tx_id}`}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="text-orange-400 hover:underline"
-                            >
-                              {(refundTxId || testResult.refund.refund_tx_id).slice(0, 10)}...{(refundTxId || testResult.refund.refund_tx_id).slice(-6)}
-                            </a>
-                          ) : isPollingRefund ? (
-                            <span className="text-orange-400 animate-pulse font-medium">Processing refund (polling blockchain...)</span>
-                          ) : testResult.refund.refund_pending ? (
-                            <span className="text-orange-400 animate-pulse font-medium">Processing in background...</span>
-                          ) : (
-                            <span className="text-red-400">Failed / Pending</span>
-                          )}
-                        </span>
-                      </div>
-                    )}
-                  </>
+                {(refundTxId || refundObj) && (
+                  <div className="flex justify-between border-b border-neutral-900 pb-2">
+                    <span className="text-neutral-500">Refund Transaction ID</span>
+                    <span className="text-neutral-300 font-mono">
+                      {refundTxId || refundObj?.refund_tx_id || refundObj?.tx_id ? (
+                        <a
+                          href={`https://${network === NetworkId.TESTNET ? "testnet." : ""}explorer.perawallet.app/tx/${refundTxId || refundObj?.refund_tx_id || refundObj?.tx_id}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-orange-400 hover:underline"
+                        >
+                          {(refundTxId || refundObj?.refund_tx_id || refundObj?.tx_id).slice(0, 10)}...{(refundTxId || refundObj?.refund_tx_id || refundObj?.tx_id).slice(-6)}
+                        </a>
+                      ) : isPollingRefund ? (
+                        <span className="text-orange-400 animate-pulse font-medium">Processing refund (polling blockchain...)</span>
+                      ) : refundObj?.refund_pending ? (
+                        <span className="text-orange-400 animate-pulse font-medium">Processing in background...</span>
+                      ) : (
+                        <span className="text-red-400">Failed / Pending</span>
+                      )}
+                    </span>
+                  </div>
                 )}
               </div>
 

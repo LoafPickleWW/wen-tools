@@ -5,7 +5,6 @@ import { useEffect, useState } from "react";
 import { IconButton } from "@mui/material";
 import Button, { ButtonProps } from "@mui/material/Button";
 import Menu from "@mui/material/Menu";
-import MenuList from "@mui/material/MenuList";
 import Tooltip from "@mui/material/Tooltip";
 import { styled } from '@mui/material/styles';
 import { useWallet } from "@txnlab/use-wallet-react";
@@ -13,6 +12,7 @@ import { useWallet } from "@txnlab/use-wallet-react";
 // ** Wallet Imports
 import { PeraWalletConnect } from "@perawallet/connect";
 import { isCrustAuth, isCrustAuthFail, signLoginAlgorandForCrustIpfsEndpoint } from "../crust-auth";
+import { getNfDomainsInBulk } from "../utils";
 
 import { FaCopy, FaWallet } from "react-icons/fa";
 import { IoPlanet, IoLockClosed, IoShieldCheckmark, IoRefresh } from "react-icons/io5";
@@ -43,6 +43,23 @@ export default function ConnectButton({
   const open = Boolean(anchorEl);
   const peraWallet = new PeraWalletConnect();
   const [accountData, setAccountData] = useState(null as any);
+  const [nfdName, setNfdName] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (activeAddress) {
+      getNfDomainsInBulk([activeAddress])
+        .then((map) => {
+          if (map && map[activeAddress]) {
+            setNfdName(map[activeAddress]);
+          } else {
+            setNfdName(null);
+          }
+        })
+        .catch(() => setNfdName(null));
+    } else {
+      setNfdName(null);
+    }
+  }, [activeAddress]);
 
   // handlers
   const handleClick = (event: any) => {
@@ -189,44 +206,64 @@ export default function ConnectButton({
         anchorEl={anchorEl}
         open={open}
         onClose={handleClose}
+        anchorOrigin={{
+          vertical: "bottom",
+          horizontal: "right",
+        }}
+        transformOrigin={{
+          vertical: "top",
+          horizontal: "right",
+        }}
+        disableScrollLock={true}
         MenuListProps={{
           "aria-labelledby": "connect-button" + (inmain ? "-main" : ""),
         }}
         sx={{
-          mt: "6px",
+          mt: 1,
           "& .MuiMenu-paper": {
             backgroundColor: "transparent",
             boxShadow: "none",
+            borderRadius: "1rem",
+            overflow: "visible",
+          },
+          "& .MuiList-root": {
+            padding: 0,
           },
         }}
       >
         {!activeAddress ? (
-          <MenuList
-            sx={{ p: "0px", borderRadius: "24px" }}
-            className="flex flex-col gap-3 w-[160px] md:w-[180px] p-4 bg-slate-950/95 border border-slate-800 rounded-2xl text-white shadow-2xl backdrop-blur-2xl items-center justify-center"
-          >
+          <div className="flex flex-col gap-1 w-[200px] p-2.5 bg-slate-950/95 border border-slate-800 rounded-2xl text-white shadow-2xl backdrop-blur-2xl">
+            <div className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400 border-b border-slate-800/80 mb-1">
+              Select Wallet
+            </div>
             <button
-              className="flex items-center gap-3 w-full p-2.5 rounded-xl hover:bg-slate-900 transition text-left text-sm"
+              className="flex items-center gap-3 w-full px-3 py-2.5 rounded-xl hover:bg-orange-500/10 hover:border-orange-500/30 border border-transparent transition-all text-left text-xs font-bold text-slate-200 hover:text-orange-400 group"
               onClick={connectToPera}
             >
-              <img src="/pera-logomark-white.png" alt="Pera" className="w-6 h-6 object-contain" />
-              <span>Pera</span>
+              <div className="w-7 h-7 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-center p-1.5 shrink-0 group-hover:border-orange-500/40 group-hover:scale-105 transition-all">
+                <img src="/pera-logomark-white.png" alt="Pera" className="w-full h-full object-contain" />
+              </div>
+              <span>Pera Wallet</span>
             </button>
             <button
-              className="flex items-center gap-3 w-full p-2.5 rounded-xl hover:bg-slate-900 transition text-left text-sm"
+              className="flex items-center gap-3 w-full px-3 py-2.5 rounded-xl hover:bg-orange-500/10 hover:border-orange-500/30 border border-transparent transition-all text-left text-xs font-bold text-slate-200 hover:text-orange-400 group"
               onClick={connectToDefly}
             >
-              <img src="/defly-logo.png" alt="Defly" className="w-6 h-6 object-contain" />
-              <span>Defly</span>
+              <div className="w-7 h-7 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-center p-1.5 shrink-0 group-hover:border-orange-500/40 group-hover:scale-105 transition-all">
+                <img src="/defly-logo.png" alt="Defly" className="w-full h-full object-contain" />
+              </div>
+              <span>Defly Wallet</span>
             </button>
             <button
-              className="flex items-center gap-3 w-full p-2.5 rounded-xl hover:bg-slate-900 transition text-left text-sm"
+              className="flex items-center gap-3 w-full px-3 py-2.5 rounded-xl hover:bg-orange-500/10 hover:border-orange-500/30 border border-transparent transition-all text-left text-xs font-bold text-slate-200 hover:text-orange-400 group"
               onClick={connectToLute}
             >
-              <img src="/lute-wallet.svg" alt="Lute" className="w-6 h-6 object-contain" />
-              <span>Lute</span>
+              <div className="w-7 h-7 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-center p-1.5 shrink-0 group-hover:border-orange-500/40 group-hover:scale-105 transition-all">
+                <img src="/lute-wallet.svg" alt="Lute" className="w-full h-full object-contain" />
+              </div>
+              <span>Lute Wallet</span>
             </button>
-          </MenuList>
+          </div>
         ) : (
           /* Seamless Unified Quantum Wallet Control Panel */
           <div className="w-[320px] p-4 rounded-3xl bg-slate-950/95 border border-slate-800 text-white shadow-2xl backdrop-blur-2xl space-y-3.5 font-sans">
@@ -240,7 +277,9 @@ export default function ConnectButton({
                 </div>
                 <div>
                   <div className="flex items-center gap-1.5">
-                    <span className="font-mono font-bold text-sm text-white tracking-tight">{shortenAddress(activeAddress)}</span>
+                    <span className="font-bold text-sm text-white tracking-tight font-sans">
+                      {nfdName ? nfdName : shortenAddress(activeAddress)}
+                    </span>
                     <button
                       onClick={() => {
                         navigator.clipboard.writeText(activeAddress);
@@ -252,7 +291,16 @@ export default function ConnectButton({
                       <FaCopy className="text-xs" />
                     </button>
                   </div>
-                  <span className="text-[11px] text-slate-400 font-medium capitalize">{activeWallet?.id || "Algorand"} Wallet</span>
+                  <div className="flex items-center gap-1.5 mt-0.5">
+                    {nfdName && (
+                      <span className="font-mono text-[10px] text-teal-400 font-bold bg-teal-950/80 px-1.5 py-0.5 rounded border border-teal-800/60">
+                        {shortenAddress(activeAddress)}
+                      </span>
+                    )}
+                    <span className="text-[11px] text-slate-400 font-medium capitalize">
+                      {activeWallet?.id || "Algorand"} Wallet
+                    </span>
+                  </div>
                 </div>
               </div>
 
