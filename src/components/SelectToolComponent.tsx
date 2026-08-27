@@ -39,7 +39,6 @@ const SUITES = [
     description: "Advanced account cryptography and portfolio analysis tools. Snapshot holdings across multiple assets and generate vanity addresses.",
     features: [
       "Wen Wallet (Visual explorer & bulk send/opt-in/opt-out/destroy)",
-      "Falcon-1024 Post-Quantum secured account creator",
       "Holdings Auditor (Wallet holdings & asset distribution)",
       "Vanity address generator for custom prefixes"
     ],
@@ -106,9 +105,9 @@ function ToolCard({ tool, index }: { tool: any; index: number }) {
 
 const FEATURED_TOOL_LABELS = [
   "Creator Suite",
+  "Distribution Suite",
   "Bulk Asset Manager",
   "Agent Marketplace",
-  "Post-Quantum Wallet",
 ];
 
 export function SelectToolComponent() {
@@ -142,9 +141,14 @@ export function SelectToolComponent() {
   }, [selectedSuiteId]);
 
   return (
-    <main className="text-center w-full max-w-7xl mx-auto px-4" aria-label="Algorand Tool Discovery">
+    <main className="text-center w-full max-w-7xl mx-auto px-4 pt-0" aria-label="Algorand Tool Discovery">
+      {/* Navigation & Search (Pinned Flush To Top) */}
+      <div className="w-full bg-primary-black py-3 mb-6 border-b border-secondary-gray/30">
+        <ToolSearch query={searchQuery} setQuery={setSearchQuery} />
+      </div>
+
       {/* Carousels Section */}
-      <div className="mx-auto my-4 md:my-8">
+      <div className="mx-auto my-4 md:my-6">
         <div className="flex flex-col lg:flex-row items-center justify-center lg:gap-8 gap-6">
           <CarouselComponent
             images={[
@@ -157,11 +161,6 @@ export function SelectToolComponent() {
             ]}
           />
         </div>
-      </div>
-
-      {/* Navigation & Search */}
-      <div className="sticky top-[64px] md:top-[72px] z-20 bg-primary-black/80 backdrop-blur-md py-4 mb-10 border-b border-secondary-gray/30 shadow-xl shadow-black/20">
-        <ToolSearch query={searchQuery} setQuery={setSearchQuery} />
       </div>
 
       {/* Tools Listing */}

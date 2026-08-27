@@ -71,12 +71,16 @@ export function Jukebox() {
     }
   }, [activeAddress, activeNetwork]);
 
+  const [hasScanned, setHasScanned] = useState(false);
+
   useEffect(() => {
     if (activeAddress) {
       fetchAssets();
+      setHasScanned(false);
     } else {
       setAssets([]);
       setSongs([]);
+      setHasScanned(false);
     }
   }, [activeAddress, activeNetwork, fetchAssets]);
 
@@ -191,12 +195,13 @@ export function Jukebox() {
     }
   }, [algodClient, assets, activeNetwork]);
 
-  // Auto-scan when assets are loaded
+  // Auto-scan ONCE when assets are loaded
   useEffect(() => {
-    if (assets.length > 0 && songs.length === 0 && !scanning) {
+    if (assets.length > 0 && !hasScanned && !scanning) {
+      setHasScanned(true);
       scanForMusic();
     }
-  }, [assets, songs.length, scanning, scanForMusic]);
+  }, [assets, hasScanned, scanning, scanForMusic]);
 
   const togglePlay = () => {
     if (!audioRef.current || currentSongIndex === null) return;
@@ -391,7 +396,7 @@ export function Jukebox() {
                <button 
                  onClick={scanForMusic}
                  disabled={scanning || loading}
-                 className="flex-grow bg-white text-black font-bold py-4 rounded-2xl hover:bg-primary-yellow transition flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                 className="flex-grow bg-primary-yellow text-black font-bold py-4 rounded-2xl hover:scale-[1.01] transition flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-primary-yellow/20"
                >
                  {scanning ? (
                    <>

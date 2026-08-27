@@ -91,7 +91,7 @@ export function ClusterMap() {
 
       <article className="mx-auto text-white mb-16 flex flex-col items-center max-w-6xl w-full px-4 gap-8">
         {/* Header Section */}
-        <header className="w-full flex flex-col items-center mt-10 text-center">
+        <div className="w-full flex flex-col items-center mt-10 text-center">
           <div className="flex items-center gap-3 justify-center">
             <div className="p-2.5 bg-gradient-to-br from-amber-400 to-orange-500 rounded-2xl shadow-lg shadow-orange-500/20">
               <IoShareSocialOutline className="text-2xl text-black" aria-hidden="true" />
@@ -103,7 +103,7 @@ export function ClusterMap() {
           <p className="text-slate-400 mt-4 text-sm md:text-base font-medium max-w-xl leading-relaxed">
             Trace relationships and uncover coordinated wallet networks or transaction flows on Algorand.
           </p>
-        </header>
+        </div>
 
         {/* Action Panel */}
         <div className="w-full bg-[#18181c]/90 border border-white/5 rounded-3xl p-6 md:p-8 backdrop-blur-xl shadow-2xl flex flex-col gap-6">

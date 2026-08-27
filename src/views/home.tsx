@@ -4,7 +4,7 @@ import { Meta } from "../components/Meta";
 
 export default function Home() {
   return (
-    <div className="bg-primary-black pt-2 flex justify-center flex-col text-white pb-10">
+    <div className="bg-primary-black pt-0 flex justify-center flex-col text-white pb-10">
       <Meta 
         title="Home" 
         description="A comprehensive suite of high-performance tools for Algorand developers. From ANCHOR supply chain security to WEN.DEPLOY decentralized hosting and advanced asset management."

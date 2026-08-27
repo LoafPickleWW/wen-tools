@@ -298,7 +298,7 @@ const AssetImageCard = ({
                 top: "0px",
                 right: "0px",
                 color: toolState.selectedAssets.includes(asset["asset-id"])
-                  ? "#f57b14"
+                  ? "var(--pq-primary, #f57b14)"
                   : "black",
               }}
               inputProps={{ "aria-label": `Select image ${asset["asset-id"]}` }}

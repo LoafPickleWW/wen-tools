@@ -248,7 +248,12 @@ export function ClusterGraph({ nodes: initialNodes, edges: initialEdges, onNodeC
         ctx.arc(node.x!, node.y!, radius, 0, 2 * Math.PI);
 
         // Core colors depending on transaction flow
-        let color = "#f59e0b"; // amber (balanced/hub)
+        const isQuantum = document.documentElement.classList.contains("quantum-mode");
+        const quantumPrimary = isQuantum 
+          ? getComputedStyle(document.documentElement).getPropertyValue("--pq-primary").trim() || "#00f0ff"
+          : "#f59e0b";
+
+        let color = quantumPrimary; // quantum primary or amber (balanced/hub)
         if (node.sentCount / (node.totalCount || 1) > 0.6) {
           color = "#a855f7"; // purple (net sender)
         } else if (node.recvCount / (node.totalCount || 1) > 0.6) {

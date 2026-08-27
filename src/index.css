@@ -1,7 +1,7 @@
 @import url("https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&family=Roboto:ital,wght@0,100;0,300;0,400;0,500;0,700;0,900;1,100;1,300;1,400;1,500;1,700;1,900&display=swap");
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss/base";
+@import "tailwindcss/components";
+@import "tailwindcss/utilities";
 
 /* Chrome, Safari, Edge, Opera */
 input::-webkit-outer-spin-button,
@@ -111,3 +111,425 @@ body {
 .animate-fade-in {
   animation: fadeIn 0.3s ease-out forwards;
 }
+
+@keyframes spinSlow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.animate-spin-slow {
+  animation: spinSlow 12s linear infinite;
+}
+
+/* ---------------------------------------------------------------------------
+ * Quantum Atomic Theme Definitions & Overrides
+ * --------------------------------------------------------------------------- */
+
+:root[data-quantum-theme="cyan"] {
+  --pq-primary: #00f0ff;
+  --pq-secondary: #3b82f6;
+  --pq-glow: rgba(0, 240, 255, 0.45);
+  --pq-glow-subtle: rgba(0, 240, 255, 0.12);
+}
+
+:root[data-quantum-theme="violet"] {
+  --pq-primary: #c084fc;
+  --pq-secondary: #a855f7;
+  --pq-glow: rgba(192, 132, 252, 0.45);
+  --pq-glow-subtle: rgba(192, 132, 252, 0.12);
+}
+
+:root[data-quantum-theme="emerald"] {
+  --pq-primary: #34d399;
+  --pq-secondary: #10b981;
+  --pq-glow: rgba(52, 211, 153, 0.45);
+  --pq-glow-subtle: rgba(52, 211, 153, 0.12);
+}
+
+:root[data-quantum-theme="amber"] {
+  --pq-primary: #fbbf24;
+  --pq-secondary: #f59e0b;
+  --pq-glow: rgba(251, 191, 36, 0.45);
+  --pq-glow-subtle: rgba(251, 191, 36, 0.12);
+}
+
+/* Quantum active scrollbar & ambient glow */
+html.quantum-mode ::-webkit-scrollbar-thumb,
+html.quantum-mode *::-webkit-scrollbar-thumb,
+html.quantum-mode .custom-scrollbar::-webkit-scrollbar-thumb {
+  background: var(--pq-primary, #00f0ff) !important;
+  box-shadow: 0 0 12px var(--pq-glow, rgba(0, 240, 255, 0.6)) !important;
+  border-radius: 10px !important;
+}
+
+html.quantum-mode ::-webkit-scrollbar-thumb:hover,
+html.quantum-mode *::-webkit-scrollbar-thumb:hover,
+html.quantum-mode .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: var(--pq-secondary, #00f0ff) !important;
+}
+
+html.quantum-mode,
+html.quantum-mode * {
+  scrollbar-color: var(--pq-primary, #00f0ff) #04060f !important;
+}
+
+/* ---------------------------------------------------------------------------
+ * Quantum App-Wide Component Shifts
+ * --------------------------------------------------------------------------- */
+
+@keyframes quantumLaser {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* 1. Header Quantum Shift with Laser Beam Sweep */
+html.quantum-mode .wentools-header,
+html.quantum-mode .MuiAppBar-root {
+  position: relative !important;
+  background: rgba(4, 6, 18, 0.88) !important;
+  backdrop-filter: blur(24px) saturate(190%) !important;
+  border-bottom: 1px solid var(--pq-glow) !important;
+  box-shadow: 0 4px 35px var(--pq-glow-subtle) !important;
+  transition: border-color 0.5s ease, box-shadow 0.5s ease;
+}
+
+html.quantum-mode .wentools-header::after,
+html.quantum-mode .MuiAppBar-root::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--pq-primary), var(--pq-secondary), transparent);
+  background-size: 200% 100%;
+  animation: quantumLaser 4s linear infinite;
+  pointer-events: none;
+}
+
+html.quantum-mode .wentools-logo {
+  filter: drop-shadow(0 0 14px var(--pq-glow));
+}
+
+.quantum-wallet-btn {
+  border: 1px solid var(--pq-primary) !important;
+  box-shadow: 0 0 16px var(--pq-glow) !important;
+  background: rgba(0, 240, 255, 0.08) !important;
+  transition: all 0.3s ease !important;
+}
+
+.quantum-wallet-btn:hover {
+  box-shadow: 0 0 24px var(--pq-glow) !important;
+  transform: scale(1.05);
+}
+
+/* 2. Footer Quantum Shift */
+html.quantum-mode footer {
+  background: rgba(3, 5, 12, 0.95) !important;
+  border-top: 1px solid var(--pq-glow) !important;
+  box-shadow: 0 -4px 30px var(--pq-glow-subtle) !important;
+  transition: border-color 0.5s ease;
+}
+
+html.quantum-mode footer a:hover {
+  color: var(--pq-primary) !important;
+  text-shadow: 0 0 8px var(--pq-glow);
+}
+
+/* 3. Primary Button Quantum Shift */
+html.quantum-mode .bg-primary-yellow,
+html.quantum-mode .bg-primary-orange,
+html.quantum-mode .bg-secondary-orange {
+  background: linear-gradient(135deg, var(--pq-primary), var(--pq-secondary)) !important;
+  color: #020617 !important;
+  font-weight: 800 !important;
+  border: 1px solid var(--pq-primary) !important;
+  box-shadow: 0 0 20px -2px var(--pq-glow) !important;
+  transition: all 0.3s ease !important;
+}
+
+html.quantum-mode .bg-primary-yellow:hover,
+html.quantum-mode .bg-primary-orange:hover,
+html.quantum-mode .bg-secondary-orange:hover {
+  transform: translateY(-1px) scale(1.02);
+  box-shadow: 0 0 30px 2px var(--pq-glow) !important;
+}
+
+/* 4. Text, Headings & Title Gradients Quantum Shift */
+html.quantum-mode .text-primary-yellow,
+html.quantum-mode .text-primary-orange,
+html.quantum-mode .text-primary-orange\/70,
+html.quantum-mode .text-primary-orange\/80,
+html.quantum-mode .text-primary-orange\/90,
+html.quantum-mode .text-amber-400,
+html.quantum-mode .text-amber-400\/70,
+html.quantum-mode .text-amber-400\/80,
+html.quantum-mode .text-amber-400\/90,
+html.quantum-mode .text-amber-500,
+html.quantum-mode .text-yellow-400,
+html.quantum-mode .text-orange-400,
+html.quantum-mode .text-orange-500,
+html.quantum-mode .text-orange-500\/70,
+html.quantum-mode .text-orange-500\/80,
+html.quantum-mode .text-orange-500\/90 {
+  color: var(--pq-primary) !important;
+}
+
+html.quantum-mode .group:hover .group-hover\:text-amber-400,
+html.quantum-mode .group:hover .group-hover\:text-orange-400,
+html.quantum-mode .hover\:text-orange-400:hover,
+html.quantum-mode .hover\:text-amber-400:hover {
+  color: var(--pq-primary) !important;
+}
+
+html.quantum-mode .border-primary-yellow,
+html.quantum-mode .border-primary-orange,
+html.quantum-mode .border-primary-orange\/10,
+html.quantum-mode .border-primary-orange\/20,
+html.quantum-mode .border-primary-orange\/30,
+html.quantum-mode .border-primary-orange\/40,
+html.quantum-mode .border-primary-orange\/50,
+html.quantum-mode .border-secondary-orange,
+html.quantum-mode .border-secondary-orange\/10,
+html.quantum-mode .border-secondary-orange\/20,
+html.quantum-mode .border-secondary-orange\/30,
+html.quantum-mode .border-amber-400,
+html.quantum-mode .border-amber-400\/10,
+html.quantum-mode .border-amber-400\/20,
+html.quantum-mode .border-amber-400\/30,
+html.quantum-mode .border-amber-400\/40,
+html.quantum-mode .border-amber-400\/50,
+html.quantum-mode .border-amber-500,
+html.quantum-mode .border-amber-500\/10,
+html.quantum-mode .border-amber-500\/20,
+html.quantum-mode .border-amber-500\/30,
+html.quantum-mode .border-orange-400,
+html.quantum-mode .border-orange-500,
+html.quantum-mode .border-orange-500\/10,
+html.quantum-mode .border-orange-500\/20,
+html.quantum-mode .border-orange-500\/30,
+html.quantum-mode .focus\:border-primary-orange:focus,
+html.quantum-mode .focus\:border-amber-400:focus {
+  border-color: var(--pq-primary) !important;
+}
+
+/* Card Banners & Title Gradients Shift */
+html.quantum-mode .from-primary-orange,
+html.quantum-mode .from-primary-yellow,
+html.quantum-mode .from-amber-200,
+html.quantum-mode .from-amber-300,
+html.quantum-mode .from-amber-400,
+html.quantum-mode .from-amber-500,
+html.quantum-mode .from-yellow-400,
+html.quantum-mode .from-orange-300,
+html.quantum-mode .from-orange-400,
+html.quantum-mode .from-orange-500,
+html.quantum-mode .from-\[\#E4E808\],
+html.quantum-mode .from-\[\#FF512F\] {
+  --tw-gradient-from: var(--pq-primary) var(--tw-gradient-from-position) !important;
+  --tw-gradient-to: #ffffff var(--tw-gradient-to-position) !important;
+  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important;
+}
+
+html.quantum-mode .to-secondary-orange,
+html.quantum-mode .to-amber-300,
+html.quantum-mode .to-amber-400,
+html.quantum-mode .to-amber-500,
+html.quantum-mode .to-amber-600,
+html.quantum-mode .to-amber-700,
+html.quantum-mode .to-orange-400,
+html.quantum-mode .to-orange-500,
+html.quantum-mode .to-orange-600,
+html.quantum-mode .to-red-500,
+html.quantum-mode .to-\[\#FD941D\],
+html.quantum-mode .to-\[\#DD2476\] {
+  --tw-gradient-to: #ffffff var(--tw-gradient-to-position) !important;
+}
+
+@keyframes quantumPulseBorder {
+  0%, 100% {
+    border-color: var(--pq-glow) !important;
+    box-shadow: 0 0 18px -1px var(--pq-glow-subtle), inset 0 0 12px -4px var(--pq-glow-subtle) !important;
+  }
+  50% {
+    border-color: var(--pq-primary) !important;
+    box-shadow: 0 0 30px 3px var(--pq-glow), inset 0 0 18px -2px var(--pq-glow-subtle) !important;
+  }
+}
+
+/* 5. Tool Card Glassmorphism & Pulsing Glow Overrides */
+html.quantum-mode .quantum-card-glow,
+html.quantum-mode .bg-primary-black\/60,
+html.quantum-mode .bg-banner-grey,
+html.quantum-mode .button-link {
+  animation: quantumPulseBorder 3.5s ease-in-out infinite !important;
+}
+
+/* 6. WenPad, Fee Breakdown & Agent Marketplace Overrides */
+html.quantum-mode .bg-primary-orange\/10,
+html.quantum-mode .bg-orange-500\/5,
+html.quantum-mode .bg-orange-500\/10,
+html.quantum-mode .bg-orange-500\/20 {
+  background-color: var(--pq-glow-subtle) !important;
+}
+
+html.quantum-mode .border-primary-orange,
+html.quantum-mode .border-orange-500\/20,
+html.quantum-mode .border-orange-500\/30,
+html.quantum-mode .border-primary-orange\/20 {
+  border-color: var(--pq-glow) !important;
+}
+
+html.quantum-mode .shadow-primary-orange\/5 {
+  box-shadow: 0 0 20px var(--pq-glow-subtle) !important;
+}
+
+html.quantum-mode .text-orange-500\/60 {
+  color: var(--pq-primary) !important;
+  opacity: 0.8;
+}
+
+html.quantum-mode .bg-orange-500 {
+  background: linear-gradient(135deg, var(--pq-primary), var(--pq-secondary)) !important;
+  color: #020617 !important;
+}
+
+html.quantum-mode .hover\:bg-orange-500:hover {
+  background: var(--pq-primary) !important;
+  color: #020617 !important;
+}
+
+/* 7. MUI Components, Wallet Grid & Pagination Overrides */
+html.quantum-mode .MuiChip-colorWarning {
+  background-color: var(--pq-primary) !important;
+  color: #020617 !important;
+  font-weight: 800 !important;
+}
+
+html.quantum-mode .MuiButton-containedWarning {
+  background-color: var(--pq-primary) !important;
+  color: #020617 !important;
+  font-weight: 800 !important;
+  box-shadow: 0 0 15px var(--pq-glow) !important;
+}
+
+html.quantum-mode .MuiPaginationItem-root.Mui-selected {
+  background-color: var(--pq-primary) !important;
+  color: #020617 !important;
+  font-weight: 800 !important;
+  box-shadow: 0 0 12px var(--pq-glow) !important;
+}
+
+html.quantum-mode .MuiPaginationItem-root.Mui-selected:hover {
+  background-color: var(--pq-primary) !important;
+}
+
+html.quantum-mode .MuiCheckbox-root.Mui-checked {
+  color: var(--pq-primary) !important;
+}
+
+html.quantum-mode .text-secondary-orange,
+html.quantum-mode .text-primary-orange {
+  color: var(--pq-primary) !important;
+}
+
+html.quantum-mode .bg-secondary-orange,
+html.quantum-mode .bg-primary-orange {
+  background-color: var(--pq-primary) !important;
+  color: #020617 !important;
+}
+
+/* 8. Complete Hover Border Quantum Overrides */
+html.quantum-mode .group:hover,
+html.quantum-mode .button-link:hover,
+html.quantum-mode .hover\:border-amber-400:hover,
+html.quantum-mode .hover\:border-amber-400\/20:hover,
+html.quantum-mode .hover\:border-amber-400\/30:hover,
+html.quantum-mode .hover\:border-amber-400\/40:hover,
+html.quantum-mode .hover\:border-amber-500:hover,
+html.quantum-mode .hover\:border-amber-500\/20:hover,
+html.quantum-mode .hover\:border-amber-500\/30:hover,
+html.quantum-mode .hover\:border-amber-500\/50:hover,
+html.quantum-mode .hover\:border-orange-400:hover,
+html.quantum-mode .hover\:border-orange-500:hover,
+html.quantum-mode .hover\:border-orange-500\/20:hover,
+html.quantum-mode .hover\:border-orange-500\/30:hover,
+html.quantum-mode .hover\:border-orange-500\/40:hover,
+html.quantum-mode .hover\:border-orange-500\/50:hover,
+html.quantum-mode .hover\:border-primary-orange:hover,
+html.quantum-mode .hover\:border-primary-yellow:hover {
+  border-color: var(--pq-primary) !important;
+  box-shadow: 0 0 25px var(--pq-glow) !important;
+}
+
+/* 9. Complete Amber & Yellow Background & Shadow Quantum Overrides */
+html.quantum-mode .bg-amber-300,
+html.quantum-mode .bg-amber-400,
+html.quantum-mode .bg-amber-500,
+html.quantum-mode .bg-yellow-400 {
+  background: linear-gradient(135deg, var(--pq-primary), var(--pq-secondary)) !important;
+  color: #020617 !important;
+}
+
+html.quantum-mode .bg-amber-400\/10,
+html.quantum-mode .bg-amber-500\/5,
+html.quantum-mode .bg-amber-500\/10,
+html.quantum-mode .bg-amber-500\/20,
+html.quantum-mode .bg-orange-500\/10,
+html.quantum-mode .bg-orange-500\/15,
+html.quantum-mode .bg-orange-500\/20,
+html.quantum-mode .bg-orange-500\/30,
+html.quantum-mode .bg-orange-500\/40,
+html.quantum-mode .bg-amber-950\/20,
+html.quantum-mode .bg-amber-900\/10 {
+  background-color: var(--pq-glow-subtle) !important;
+  color: var(--pq-primary) !important;
+}
+
+html.quantum-mode .bg-orange-500,
+html.quantum-mode .bg-orange-600 {
+  background: linear-gradient(135deg, var(--pq-primary), var(--pq-secondary)) !important;
+  color: #020617 !important;
+}
+
+html.quantum-mode .shadow-orange-500\/10,
+html.quantum-mode .shadow-orange-500\/20,
+html.quantum-mode .shadow-orange-500\/25,
+html.quantum-mode .shadow-orange-500\/30,
+html.quantum-mode .shadow-orange-500\/40 {
+  box-shadow: 0 0 20px var(--pq-glow) !important;
+}
+
+html.quantum-mode .hover\:bg-amber-300:hover,
+html.quantum-mode .hover\:bg-amber-400:hover,
+html.quantum-mode .hover\:bg-amber-500:hover,
+html.quantum-mode .hover\:bg-amber-400\/10:hover {
+  background: var(--pq-primary) !important;
+  color: #020617 !important;
+  box-shadow: 0 0 20px var(--pq-glow) !important;
+}
+
+html.quantum-mode .shadow-amber-400\/20,
+html.quantum-mode .shadow-amber-400\/10,
+html.quantum-mode .shadow-amber-500\/20,
+html.quantum-mode .shadow-amber-500\/10,
+html.quantum-mode .shadow-primary-yellow\/20 {
+  box-shadow: 0 0 20px var(--pq-glow) !important;
+}
+
+html.quantum-mode .accent-primary-yellow,
+html.quantum-mode .accent-yellow-400,
+html.quantum-mode .accent-amber-400 {
+  accent-color: var(--pq-primary) !important;
+}
+
+html.quantum-mode .bg-primary-yellow {
+  background: linear-gradient(135deg, var(--pq-primary), var(--pq-secondary)) !important;
+  color: #020617 !important;
+}
+
+html.quantum-mode .bg-primary-yellow\/10 {
+  background-color: var(--pq-glow-subtle) !important;
+}
+
+

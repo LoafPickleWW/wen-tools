@@ -340,14 +340,6 @@ export const TOOLS = [
     icon: "/icons/wallet.png"
   },
   {
-    id: "post_quantum",
-    label: "Post-Quantum Wallet",
-    description: "Create & manage Falcon-1024 post-quantum secured Algorand accounts.",
-    path: "/post-quantum",
-    category: "analytics",
-    icon: "/icons/pqwallet.png"
-  },
-  {
     id: "holdings_auditor",
     label: "Holdings Auditor",
     description: "Consolidated auditor to review wallet asset inventories and track distribution balances across multiple assets.",

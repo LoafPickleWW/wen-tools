@@ -16,10 +16,12 @@ import { FaCopy, FaHeart, FaChevronDown } from "react-icons/fa";
 import { toast } from "react-toastify";
 import { useWallet } from "@txnlab/use-wallet-react";
 import algosdk from "algosdk";
+import { usePQTheme } from "../context/PQThemeContext";
 
 const DonationDialog = () => {
   const [open, setOpen] = useState(false);
   const { activeAddress, algodClient, transactionSigner, activeNetwork } = useWallet();
+  const { isThemeActive } = usePQTheme();
 
   const [donateAmount, setDonateAmount] = useState<string>("10");
   const [assetType, setAssetType] = useState<"ALGO" | "USDC">("ALGO");
@@ -50,7 +52,7 @@ const DonationDialog = () => {
             setAssetType("ALGO");
           }
         })
-        .catch((err) => {
+        .catch((err: any) => {
           console.error("Error checking USDC balance:", err);
           setIsOptedInUSDC(false);
           setAssetType("ALGO");
@@ -140,9 +142,11 @@ const DonationDialog = () => {
         variant="contained"
         size="large"
         sx={{
-          color: "#010010",
+          color: isThemeActive ? "#020617" : "#010010",
           border: "0",
-          background: "linear-gradient(to right, #EAE004, #FF931E)",
+          background: isThemeActive
+            ? "linear-gradient(135deg, var(--pq-primary, #00f0ff), var(--pq-secondary, #3b82f6))"
+            : "linear-gradient(to right, #EAE004, #FF931E)",
           transition: "all 0.3s ease",
           borderRadius: "9999px",
           padding: {
@@ -160,23 +164,29 @@ const DonationDialog = () => {
           },
           fontFamily: "Poppins, sans-serif",
           opacity: 1,
-          boxShadow: "0 0 8px rgba(234, 224, 4, 0.5)",
+          boxShadow: isThemeActive
+            ? "0 0 16px var(--pq-glow)"
+            : "0 0 8px rgba(234, 224, 4, 0.5)",
           animation: "donatePulse 2.5s infinite ease-in-out",
           "@keyframes donatePulse": {
             "0%": {
-              boxShadow: "0 0 0 0 rgba(234, 224, 4, 0.7)",
+              boxShadow: isThemeActive
+                ? "0 0 0 0 var(--pq-glow)"
+                : "0 0 0 0 rgba(234, 224, 4, 0.7)",
             },
             "70%": {
-              boxShadow: "0 0 0 8px rgba(255, 147, 30, 0)",
+              boxShadow: "0 0 0 8px transparent",
             },
             "100%": {
-              boxShadow: "0 0 0 0 rgba(255, 147, 30, 0)",
+              boxShadow: "0 0 0 0 transparent",
             },
           },
           "&:hover": {
-            opacity: 0.9,
+            opacity: 0.95,
             transform: "scale(1.05)",
-            boxShadow: "0 0 12px rgba(255, 147, 30, 0.8)",
+            boxShadow: isThemeActive
+              ? "0 0 24px var(--pq-glow)"
+              : "0 0 12px rgba(255, 147, 30, 0.8)",
           },
         }}
         onClick={handleOpen}

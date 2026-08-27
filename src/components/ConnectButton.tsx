@@ -2,10 +2,9 @@
 import { useEffect, useState } from "react";
 
 // ** MUI Imports
-import { Icon, IconButton } from "@mui/material";
+import { IconButton } from "@mui/material";
 import Button, { ButtonProps } from "@mui/material/Button";
 import Menu from "@mui/material/Menu";
-import MenuItem from "@mui/material/MenuItem";
 import MenuList from "@mui/material/MenuList";
 import Tooltip from "@mui/material/Tooltip";
 import { styled } from '@mui/material/styles';
@@ -16,7 +15,9 @@ import { PeraWalletConnect } from "@perawallet/connect";
 import { isCrustAuth, isCrustAuthFail, signLoginAlgorandForCrustIpfsEndpoint } from "../crust-auth";
 
 import { FaCopy, FaWallet } from "react-icons/fa";
+import { IoPlanet, IoLockClosed, IoShieldCheckmark, IoRefresh } from "react-icons/io5";
 import { toast } from "react-toastify";
+import { usePQTheme, THEME_TIERS } from "../context/PQThemeContext";
 
 export default function ConnectButton({
   inmain = false
@@ -25,9 +26,21 @@ export default function ConnectButton({
   inmain?: boolean
 }) {
   const { activeAddress, activeWallet, algodClient, wallets } = useWallet();
+  const {
+    isPQAccount,
+    isScanning,
+    pqTxCount,
+    quantumTheme,
+    setQuantumTheme,
+    backgroundFxEnabled,
+    setBackgroundFxEnabled,
+    isThemeActive,
+    unlockedThemes,
+    nextTier,
+  } = usePQTheme();
+
   const [anchorEl, setAnchorEl] = useState(null);
   const open = Boolean(anchorEl);
-  // wallet
   const peraWallet = new PeraWalletConnect();
   const [accountData, setAccountData] = useState(null as any);
 
@@ -52,7 +65,6 @@ export default function ConnectButton({
 
   const connectToPera = async () => {
     handleClose();
-
     try {
       await wallets.find((w) => w.id === "pera")?.connect();
       toast.success("Connected!");
@@ -81,28 +93,6 @@ export default function ConnectButton({
     }
   };
 
-  const algoLogo = (
-    <svg
-      className="fill-text-color me-1 mb-1 ml-1"
-      version="1.1"
-      id="Layer_1"
-      xmlns="http://www.w3.org/2000/svg"
-      x="0px"
-      y="0px"
-      viewBox="0 0 200 200"
-      style={{ height: "1.5rem", width: "16px" }}
-    >
-      <path
-        style={{ fill: "white" }}
-        d="M170.7,28.8C151.1,9.6,127.5,0,99.9,0C72.1,0,48.4,9.6,28.8,28.8C9.6,48.4,0,72.1,0,99.9 c0,27.6,9.6,51.2,28.8,70.7C48.4,190.2,72.1,200,99.9,200c27.6,0,51.2-9.7,70.7-29.2c19.5-19.6,29.2-43.3,29.2-70.9 C199.9,72.1,190.1,48.4,170.7,28.8 M106.2,41.9H123l7.2,27h17.1l-11.7,20.7l16.6,61.6H135l-11.2-41.4l-23.9,41.4H81l36.9-63.9 l-6.3-22.5l-49.5,86.4H42.8L106.2,41.9z"
-      ></path>
-      <path
-        style={{ fill: "#FFFFF", fillOpacity: "0" }}
-        d="M123,41.9h-16.7L42.8,151.3h19.3l49.5-86.4l6.3,22.5L81,151.3h18.9l23.9-41.4l11.3,41.4 c33.7-1.3-5.5-51.1,12.2-82.3h-17.1L123,41.9z"
-      ></path>
-    </svg>
-  );
-
   const clearLoginState = async () => {
     activeWallet?.disconnect();
     localStorage.removeItem("authBasic");
@@ -110,6 +100,7 @@ export default function ConnectButton({
   };
 
   const disconnect = async () => {
+    handleClose();
     clearLoginState();
     toast.success("Disconnected!");
     window.location.reload();
@@ -127,45 +118,28 @@ export default function ConnectButton({
     }
   }, [activeAddress, algodClient]);
 
-  // This is for authenticating with Crust, which is needed for some of the tools (Simple Mint,
-  // Simple Update, etc.)
   useEffect(() => {
-    // XXX: The following code was needed when Crust authentication token wasn't faked and only Pera
-    // supported signing the arbitrary bytes needed to create a token. This code is commented out
-    // because the authentication token is faked, which allows any wallet to successfully use Crust.
-    // // Only Pera supports signing the arbitrary bytes, which is needed for Crust authentication
-    // if (activeWallet?.id !== WalletId.PERA) return;
-
-    // The connect button in the main body should not activate this useEffect
     if (activeAddress && !inmain) {
-      // Already authenticated or the authentication was rejected. Do nothing.
-      if (isCrustAuth() || isCrustAuthFail()) return
+      if (isCrustAuth() || isCrustAuthFail()) return;
 
       signLoginAlgorandForCrustIpfsEndpoint(activeAddress)
         .then(authBasic => {
           localStorage.setItem("authBasic", authBasic ?? '');
-          console.log("------------crust auth success: ", authBasic);
-          // toast.success("Crust authentication success!")
         })
-        .catch((err: any) => {
-          localStorage.setItem("authBasicFail", "true")
-          console.error('Failed to log into Crust:', err)
-          toast.warn("Crust authentication failed. Don't worry, your wallet is still connected to wen.tools.")
+        .catch(() => {
+          localStorage.setItem("authBasicFail", "true");
         });
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeWallet, activeAddress])
+  }, [activeWallet, activeAddress, inmain]);
 
   return (
     <div className={
       "flex flex-row justify-center items-center font-sans rounded-2xl mx-2"
-      // Add extra vertical spacing when connect button is in the main part of the page
       + ((inmain && !activeAddress) ? " mt-4 mb-2" : "")
     }>
       {!activeAddress ? (
-        // Show a different button according to where it is on the page
         inmain
-          ? <ButtonMain // Button in main section of the page
+          ? <ButtonMain
             id="connect-button-main"
             aria-controls={open ? "connect-menu" : undefined}
             aria-haspopup="true"
@@ -178,7 +152,7 @@ export default function ConnectButton({
               Login
             </span>
           </ButtonMain>
-          : <Button // Button in header
+          : <Button
             id={"connect-button"}
             aria-controls={open ? "connect-menu" : undefined}
             aria-haspopup="true"
@@ -190,17 +164,23 @@ export default function ConnectButton({
               Login
             </span>
           </Button>
-      ) : (!inmain && /* Render this section if the button is not in the body (in the header) */
-        <Tooltip title="Account" placement="bottom-start">
+      ) : (!inmain &&
+        <Tooltip title="Account Options" placement="bottom-start">
           <IconButton
             id={"connect-button" + (inmain ? "-main" : "")}
             aria-controls={open ? "connect-menu" : undefined}
             aria-haspopup="true"
             aria-expanded={open ? "true" : undefined}
             onClick={handleClick}
-            sx={{ fontFamily: "sans", color: "white", borderRadius: "24px" }}
+            sx={{
+              fontFamily: "sans",
+              color: "white",
+              borderRadius: "24px",
+              position: "relative",
+            }}
+            className={isThemeActive ? "quantum-wallet-btn" : ""}
           >
-            <FaWallet className="pr-4 text-4xl" />
+            <FaWallet className="text-2xl" />
           </IconButton>
         </Tooltip>
       )}
@@ -213,198 +193,191 @@ export default function ConnectButton({
           "aria-labelledby": "connect-button" + (inmain ? "-main" : ""),
         }}
         sx={{
-          mt: "1px",
-          "& .MuiMenu-paper": { backgroundColor: "#1A1A1A" },
-          fontFamily: "poppins, sans-serif",
-          borderRadius: "24px",
+          mt: "6px",
+          "& .MuiMenu-paper": {
+            backgroundColor: "transparent",
+            boxShadow: "none",
+          },
         }}
-        className="p-6 w-[100%] overflow-hidden rounded-xl"
       >
         {!activeAddress ? (
           <MenuList
             sx={{ p: "0px", borderRadius: "24px" }}
-            className="flex flex-col gap-3 w-[130px] md:w-[180px] rounded-xl items-center justify-center"
+            className="flex flex-col gap-3 w-[160px] md:w-[180px] p-4 bg-slate-950/95 border border-slate-800 rounded-2xl text-white shadow-2xl backdrop-blur-2xl items-center justify-center"
           >
-            <MenuItem
-              sx={{
-                backgroundColor: "transparent",
-                color: "white",
-                ":hover": { backgroundColor: "#1A1A1A", opacity: "0.8" },
-              }}
+            <button
+              className="flex items-center gap-3 w-full p-2.5 rounded-xl hover:bg-slate-900 transition text-left text-sm"
               onClick={connectToPera}
             >
-              <div className="flex flex-col gap-2 items-start rounded-xl">
-                <div className="font-sans text-lg font-medium flex flex-row items-center">
-                  <img
-                    src="/pera-logomark-white.png"
-                    alt=""
-                    className="w-[24px] h-[24px]"
-                  />
-                  <span className="ml-2 font-normal">Pera</span>
-                </div>
-              </div>
-            </MenuItem>
-            <MenuItem
-              sx={{
-                backgroundColor: "transparent",
-                color: "white",
-                ":hover": { backgroundColor: "transparent", opacity: "0.8" },
-              }}
+              <img src="/pera-logomark-white.png" alt="Pera" className="w-6 h-6 object-contain" />
+              <span>Pera</span>
+            </button>
+            <button
+              className="flex items-center gap-3 w-full p-2.5 rounded-xl hover:bg-slate-900 transition text-left text-sm"
               onClick={connectToDefly}
             >
-              <div className="flex flex-col gap-2 items-start">
-                <div className="font-sans text-lg font-medium flex flex-row items-center">
-                  <img
-                    src="/defly-logo.png"
-                    alt=""
-                    className="w-[30px] h-[30px]"
-                  />
-                  <span className="ml-2 font-normal">Defly</span>
-                </div>
-              </div>
-            </MenuItem>
-            <MenuItem
-              sx={{
-                backgroundColor: "transparent",
-                color: "white",
-                borderBottomLeftRadius: "4px",
-                borderBottomRightRadius: "4px",
-                ":hover": { backgroundColor: "transparent", opacity: "0.8" },
-              }}
+              <img src="/defly-logo.png" alt="Defly" className="w-6 h-6 object-contain" />
+              <span>Defly</span>
+            </button>
+            <button
+              className="flex items-center gap-3 w-full p-2.5 rounded-xl hover:bg-slate-900 transition text-left text-sm"
               onClick={connectToLute}
             >
-              <div className="flex flex-col gap-2 items-start">
-                <div className="font-sans text-lg font-medium flex flex-row items-center">
-                  <img
-                    src="/lute-wallet.svg"
-                    alt=""
-                    className="w-[26px] h-[26px]"
-                  />
-                  <span className="ml-2 font-normal">Lute</span>
-                </div>
-              </div>
-            </MenuItem>
+              <img src="/lute-wallet.svg" alt="Lute" className="w-6 h-6 object-contain" />
+              <span>Lute</span>
+            </button>
           </MenuList>
         ) : (
-          <MenuList
-            sx={{ p: "0px", fontFamily: "poppins, sans-serif" }}
-            className="flex flex-col gap-1 w-[260px] rounded-lg"
-          >
-            {activeWallet?.id && (
-              <MenuItem
-                sx={{
-                  backgroundColor: "transparent",
-                  color: "white",
-                  borderTopLeftRadius: "4px",
-                  borderTopRightRadius: "4px",
-                  fontFamily: "poppins, sans-serif",
-                  ":hover": { backgroundColor: "#1A1A1A", opacity: "0.8" },
-                }}
-                onClick={handleClose}
-              >
-                <div className="flex flex-row items-center gap-2">
-                  <div>
-                    {activeWallet?.id === "pera" && (
-                      <img
-                        src="/pera-logomark-white.png"
-                        alt=""
-                        className="w-[24px] h-[24px]"
-                      />
-                    )}
-                    {activeWallet?.id === "defly" && (
-                      <img
-                        src="/defly-logo.png"
-                        alt=""
-                        className="w-[30px] h-[30px]"
-                      />
-                    )}
-                    {activeWallet?.id === "lute" && (
-                      <img
-                        src="/lute-wallet.svg"
-                        alt=""
-                        className="w-[26px] h-[26px]"
-                      />
-                    )}
-                  </div>
-                  <span>{activeWallet?.id}</span>
+          /* Seamless Unified Quantum Wallet Control Panel */
+          <div className="w-[320px] p-4 rounded-3xl bg-slate-950/95 border border-slate-800 text-white shadow-2xl backdrop-blur-2xl space-y-3.5 font-sans">
+            {/* 1. Account Header & Identity */}
+            <div className="flex items-center justify-between pb-3 border-b border-slate-800/80">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-center p-1.5 shrink-0 shadow-inner">
+                  {activeWallet?.id === "pera" && <img src="/pera-logomark-white.png" alt="Pera" className="w-5 h-5 object-contain" />}
+                  {activeWallet?.id === "defly" && <img src="/defly-logo.png" alt="Defly" className="w-6 h-6 object-contain" />}
+                  {activeWallet?.id === "lute" && <img src="/lute-wallet.svg" alt="Lute" className="w-5 h-5 object-contain" />}
                 </div>
-              </MenuItem>
+                <div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-mono font-bold text-sm text-white tracking-tight">{shortenAddress(activeAddress)}</span>
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(activeAddress);
+                        toast.success("Address copied!");
+                      }}
+                      className="text-slate-400 hover:text-cyan-400 transition p-1"
+                      title="Copy address"
+                    >
+                      <FaCopy className="text-xs" />
+                    </button>
+                  </div>
+                  <span className="text-[11px] text-slate-400 font-medium capitalize">{activeWallet?.id || "Algorand"} Wallet</span>
+                </div>
+              </div>
+
+              {isScanning ? (
+                <span className="flex items-center gap-1 text-[10px] text-cyan-400 font-semibold animate-pulse bg-cyan-950/50 px-2.5 py-1 rounded-full border border-cyan-800/50">
+                  <IoRefresh className="animate-spin text-xs" /> Scanning
+                </span>
+              ) : isPQAccount ? (
+                <span className="flex items-center gap-1 text-[10px] font-bold text-emerald-400 bg-emerald-500/15 px-2.5 py-1 rounded-full border border-emerald-500/30 shadow-sm">
+                  <IoShieldCheckmark className="text-xs text-emerald-400" /> PQ SECURED
+                </span>
+              ) : null}
+            </div>
+
+            {/* 2. Account Balances Grid */}
+            <div className="grid grid-cols-2 gap-2 text-xs">
+              <div className="bg-slate-900/70 p-2.5 rounded-2xl border border-slate-800/80 flex flex-col justify-between">
+                <span className="text-[10px] uppercase tracking-wider text-slate-400 font-semibold">Balance</span>
+                <div className="flex items-center justify-between mt-1">
+                  <span className="font-extrabold text-sm text-white">{((accountData?.amount || 0) / 10 ** 6).toFixed(2)}</span>
+                  <span className="text-cyan-400 font-bold text-xxs">ALGO</span>
+                </div>
+              </div>
+
+              <div className="bg-slate-900/70 p-2.5 rounded-2xl border border-slate-800/80 flex flex-col justify-between">
+                <span className="text-[10px] uppercase tracking-wider text-slate-400 font-semibold">Min Balance</span>
+                <div className="flex items-center justify-between mt-1">
+                  <span className="font-bold text-sm text-slate-300">{((accountData?.["min-balance"] || 0) / 10 ** 6).toFixed(2)}</span>
+                  <span className="text-slate-500 font-medium text-xxs">ALGO</span>
+                </div>
+              </div>
+            </div>
+
+            {/* 3. Quantum Mastery & Themes (rendered when PQ account active or scanning) */}
+            {(isScanning || isThemeActive || isPQAccount) && (
+              <div className="pt-2.5 border-t border-slate-800/80 space-y-2.5">
+                <div className="flex items-center justify-between text-xs">
+                  <div className="flex items-center gap-1.5">
+                    <IoPlanet className="text-cyan-400 text-sm animate-pulse" />
+                    <span className="font-bold text-xs text-cyan-300">PQSIG Tx Count</span>
+                  </div>
+                  <span className="font-mono font-extrabold text-xs text-cyan-300 bg-cyan-950/80 px-2 py-0.5 rounded-lg border border-cyan-800/60">
+                    {pqTxCount} {pqTxCount === 1 ? "Tx" : "Txns"}
+                  </span>
+                </div>
+
+                {/* Progress to Next Unlock Tier */}
+                {nextTier && (
+                  <div className="space-y-1">
+                    <div className="flex justify-between text-[10px] text-slate-400">
+                      <span>Next: {nextTier.nextTheme.name}</span>
+                      <span>{pqTxCount} / {nextTier.requiredTx} Tx</span>
+                    </div>
+                    <div className="w-full bg-slate-900 rounded-full h-1.5 overflow-hidden border border-slate-800">
+                      <div
+                        className="h-full bg-gradient-to-r from-cyan-400 to-purple-500 rounded-full transition-all duration-500"
+                        style={{ width: `${Math.min(100, (pqTxCount / nextTier.requiredTx) * 100)}%` }}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* Theme Selectors */}
+                <div className="space-y-1.5">
+                  <span className="text-[10px] font-semibold text-slate-400 block">Unlocked Color Themes</span>
+                  <div className="grid grid-cols-2 gap-1.5">
+                    {THEME_TIERS.map((tier) => {
+                      const isUnlocked = unlockedThemes.includes(tier.id);
+                      const isSelected = quantumTheme === tier.id;
+                      return (
+                        <button
+                          key={tier.id}
+                          disabled={!isUnlocked}
+                          onClick={() => setQuantumTheme(tier.id)}
+                          className={`flex items-center justify-between px-2.5 py-1.5 rounded-xl border text-left text-[10px] transition-all ${
+                            isSelected
+                              ? "border-cyan-400 bg-cyan-950/70 text-white font-bold ring-1 ring-cyan-400 shadow-sm"
+                              : isUnlocked
+                              ? "border-slate-800 bg-slate-900/60 text-slate-300 hover:border-slate-700 hover:text-white"
+                              : "border-slate-800/40 bg-slate-950/30 text-slate-600 opacity-50 cursor-not-allowed"
+                          }`}
+                        >
+                          <div className="flex items-center gap-1.5 truncate">
+                            <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: tier.color }} />
+                            <span className="truncate">{tier.name}</span>
+                          </div>
+                          {!isUnlocked && <IoLockClosed className="text-slate-600 shrink-0 text-[10px]" />}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Atomic FX Switch */}
+                <div className="flex items-center justify-between text-[11px] pt-1 border-t border-slate-800/60">
+                  <span className="text-slate-400 text-[10px]">Atomic Orbital FX</span>
+                  <button
+                    onClick={() => setBackgroundFxEnabled(!backgroundFxEnabled)}
+                    className={`w-8 h-4 flex items-center rounded-full p-0.5 transition-colors ${
+                      backgroundFxEnabled ? "bg-cyan-500" : "bg-slate-800"
+                    }`}
+                  >
+                    <div className={`bg-white w-3 h-3 rounded-full shadow-md transform transition-transform ${backgroundFxEnabled ? "translate-x-4" : "translate-x-0"}`} />
+                  </button>
+                </div>
+              </div>
             )}
-            <MenuItem
-              sx={{
-                color: "white",
-                fontWeight: "500",
-                fontFamily: "poppins, sans-serif",
-              }}
-              onClick={() => {
-                navigator.clipboard.writeText(activeAddress);
-                toast.success("Copied!");
-              }}
-            >
-              <div className="flex flex-row items-center">
-                <span>{shortenAddress(activeAddress)}</span>
-                <Icon className="ml-2" style={{ fontSize: "1rem" }}>
-                  <FaCopy />
-                </Icon>
-              </div>
-            </MenuItem>
-            <MenuItem
-              sx={{
-                textAlign: "start",
-                color: "white",
-                fontFamily: "poppins, sans-serif",
-                borderBottomLeftRadius: "4px",
-                borderBottomRightRadius: "4px",
-              }}
-              onClick={handleClose}
-            >
-              <div className="flex flex-col justify-start">
-                <span className="text-sm font-medium font-sans">
-                  <div className="flex flex-row items-center">
-                    Balance: {((accountData?.amount || 0) / 10 ** 6).toFixed(2)}
-                    {algoLogo}
-                  </div>
-                </span>
-                <span className="text-sm font-medium mb-2 font-sans">
-                  <div className="flex flex-row items-center">
-                    Min Balance:{" "}
-                    {((accountData?.["min-balance"] || 0) / 10 ** 6).toFixed(2)}
-                    {algoLogo}
-                  </div>
-                </span>
-                <span className="text-sm font-medium font-sans">
-                  Asset Count: {accountData?.["total-assets-opted-in"]}
-                </span>
-              </div>
-            </MenuItem>
-            <MenuItem
-              sx={{
-                backgroundColor: "red",
-                color: "white",
-                ":hover": { backgroundColor: "red", opacity: "0.8" },
-                fontFamily: "poppins, sans-serif",
-                fontWeight: "500",
-                borderBottomLeftRadius: "4px",
-                borderBottomRightRadius: "4px",
-              }}
-              onClick={disconnect}
-            >
-              Disconnect
-            </MenuItem>
-          </MenuList>
+
+            {/* 4. Disconnect Action Button */}
+            <div className="pt-2 border-t border-slate-800/80">
+              <button
+                onClick={disconnect}
+                className="w-full py-2 px-3 rounded-xl bg-red-950/40 hover:bg-red-900/60 border border-red-800/50 text-red-300 hover:text-white text-xs font-semibold transition-all duration-200 shadow-sm flex items-center justify-center gap-2"
+              >
+                Disconnect Wallet
+              </button>
+            </div>
+          </div>
         )}
       </Menu>
     </div>
   );
 }
 
-/**
- * A customized button for the Wallet Connect button when it is in the main section of the page.
- * See the MUI documentation for more information:
- * <https://mui.com/material-ui/react-button/#customization>
- */
 const ButtonMain = styled(Button)<ButtonProps>(({ theme }) => ({
-  // #f57b14 is what "primary-orange" color is set to in tailwind.config.js
   borderColor: '#f57b14',
   color: '#f57b14',
   '&:hover': {
@@ -412,4 +385,3 @@ const ButtonMain = styled(Button)<ButtonProps>(({ theme }) => ({
     color: theme.palette.getContrastText('#f57b14'),
   },
 }));
-

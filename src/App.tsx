@@ -9,6 +9,8 @@ import axios from "axios";
 import Home from "./views/home";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.min.css";
+import { PQThemeProvider } from "./context/PQThemeContext";
+import { AtomicBackground } from "./components/quantum/AtomicBackground";
 import { Header } from "./components/Header";
 import { Footer } from "./components/Footer";
 import { DistributionSuite } from "./pages/DistributionSuite";
@@ -84,19 +86,21 @@ axios.interceptors.response.use(
 function App() {
   return (
     <WalletProvider manager={walletManager}>
-      <div className="bg-primary-black flex flex-col min-h-screen font-sans ">
-        <ToastContainer
-          pauseOnFocusLoss={false}
-          closeOnClick
-          draggable
-          pauseOnHover={false}
-          position="bottom-right"
-          rtl={false}
-          hideProgressBar={false}
-          autoClose={3500}
-          newestOnTop={true}
-          theme="dark"
-        />
+      <PQThemeProvider>
+        <div className="bg-primary-black flex flex-col min-h-screen font-sans relative">
+          <AtomicBackground />
+          <ToastContainer
+            pauseOnFocusLoss={false}
+            closeOnClick
+            draggable
+            pauseOnHover={false}
+            position="bottom-right"
+            rtl={false}
+            hideProgressBar={false}
+            autoClose={3500}
+            newestOnTop={true}
+            theme="dark"
+          />
         <Router>
           <ScrollToTop />
           <Header />
@@ -201,6 +205,7 @@ function App() {
         </Router>
       </div>
       <Analytics />
+      </PQThemeProvider>
     </WalletProvider>
   );
 }

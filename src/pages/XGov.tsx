@@ -406,7 +406,7 @@ export function XGov() {
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-white p-4 md:p-8">
       <div className="max-w-6xl mx-auto mt-20">
-        <header className="mb-12 text-center relative">
+        <div className="mb-12 text-center relative">
           <h1 className="text-5xl md:text-6xl font-black mb-4 bg-gradient-to-r from-amber-300 via-amber-400 to-orange-500 bg-clip-text text-transparent italic tracking-tighter">
             xGov Command Center <span className="text-xs align-top opacity-30">v2.1</span>
           </h1>
@@ -439,7 +439,7 @@ export function XGov() {
               </span>
             </div>
           )}
-        </header>
+        </div>
 
         {/* Stats Section */}
         {activeAddress && userProposals.length > 0 && (

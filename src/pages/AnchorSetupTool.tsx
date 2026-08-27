@@ -362,7 +362,7 @@ Verification cross-references npm metadata (wallet \`${wallet || "YOUR_WALLET_AD
       />
 
       {/* Header */}
-      <header className="w-full flex flex-col items-center mt-12 mb-8">
+      <div className="w-full flex flex-col items-center mt-12 mb-8">
         <div className="flex items-center gap-4">
           <div className="p-2 md:p-3 bg-amber-400 rounded-2xl shadow-lg shadow-amber-400/20">
             <IoShieldCheckmark className="text-3xl md:text-4xl text-black" aria-hidden="true" />
@@ -391,7 +391,7 @@ Verification cross-references npm metadata (wallet \`${wallet || "YOUR_WALLET_AD
             </button>
           ))}
         </nav>
-      </header>
+      </div>
 
       {/* ── SETUP TAB ─────────────────────────────────────────────────────────── */}
       {tab === "setup" && (

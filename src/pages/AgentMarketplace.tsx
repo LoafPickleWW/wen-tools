@@ -13,6 +13,7 @@ import { TestAgentModal } from "../components/agents/TestAgentModal";
 import { AgentLeaderboard } from "../components/agents/AgentLeaderboard";
 import { agentListingsAtom, agentListingsLoadingAtom } from "../atoms/agentAtoms";
 
+import SelectNetworkComponent from "../components/SelectNetworkComponent";
 import {
   getAllListings,
   buildDeleteListingTxns,
@@ -127,7 +128,7 @@ export default function AgentMarketplace() {
 
       <article className="mx-auto text-white mb-10 flex flex-col items-center max-w-6xl w-full px-4 min-h-screen">
         {/* ── Header ────────────────────────────────────────────────────────── */}
-        <header className="w-full flex flex-col items-center mt-12 mb-10">
+        <div className="w-full flex flex-col items-center mt-12 mb-10">
           <div className="flex items-center gap-4">
             <div className="p-2 md:p-3 bg-orange-500 rounded-2xl shadow-lg shadow-orange-500/20">
               <IoSparkles className="text-3xl md:text-4xl text-black" aria-hidden="true" />
@@ -141,22 +142,10 @@ export default function AgentMarketplace() {
           </p>
 
           {/* Network toggle */}
-          <div className="flex gap-2 mt-6">
-            {([NetworkId.MAINNET, NetworkId.TESTNET] as const).map((n) => (
-              <button
-                key={n}
-                onClick={() => setNetwork(n)}
-                className={`px-6 py-2 rounded-xl font-bold text-sm transition-all uppercase tracking-wider ${
-                  network === n
-                    ? "bg-orange-500 text-black shadow-lg shadow-orange-500/20"
-                    : "bg-primary-black text-neutral-500 border border-secondary-gray hover:border-neutral-600"
-                }`}
-              >
-                {n === NetworkId.TESTNET ? "TESTNET" : "MAINNET"}
-              </button>
-            ))}
+          <div className="flex gap-2 mt-4">
+            <SelectNetworkComponent />
           </div>
-        </header>
+        </div>
 
         {/* ── Toolbar ───────────────────────────────────────────────────────── */}
         <div className="w-full flex flex-col sm:flex-row gap-4 items-start sm:items-center mb-8">
