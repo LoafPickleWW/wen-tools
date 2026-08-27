@@ -37,6 +37,7 @@ export default function ConnectButton({
     isThemeActive,
     unlockedThemes,
     nextTier,
+    recheckPQ,
   } = usePQTheme();
 
   const [anchorEl, setAnchorEl] = useState(null);
@@ -44,6 +45,23 @@ export default function ConnectButton({
   const peraWallet = new PeraWalletConnect();
   const [accountData, setAccountData] = useState(null as any);
   const [nfdName, setNfdName] = useState<string | null>(null);
+
+  const handleRefreshPQ = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (isScanning) return;
+    toast.info("Rescanning PQSIG transactions on-chain...");
+    if (activeAddress) {
+      algodClient
+        .accountInformation(activeAddress)
+        .exclude("all")
+        .do()
+        .then((data: any) => {
+          setAccountData(data);
+        })
+        .catch(() => {});
+    }
+    await recheckPQ();
+  };
 
   useEffect(() => {
     if (activeAddress) {
@@ -375,6 +393,21 @@ export default function ConnectButton({
                     >
                       PQSIG Tx Count
                     </span>
+                    <button
+                      onClick={handleRefreshPQ}
+                      disabled={isScanning}
+                      className="p-1 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white transition-all disabled:opacity-50"
+                      title="Refresh PQSIG transaction count & balance"
+                    >
+                      <IoRefresh
+                        className={`text-xs ${
+                          isScanning
+                            ? "animate-spin text-cyan-400"
+                            : "hover:rotate-180 transition-transform duration-500"
+                        }`}
+                        style={{ color: isThemeActive ? "var(--pq-primary, #00f0ff)" : undefined }}
+                      />
+                    </button>
                   </div>
                   <span
                     className="font-mono font-extrabold text-xs px-2 py-0.5 rounded-lg border"
