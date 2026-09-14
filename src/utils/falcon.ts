@@ -11,6 +11,8 @@
 import Falcon from "falcon-signatures";
 import FalconAlgoSDK, { Networks } from "falcon-algo-sdk";
 import algosdk from "algosdk";
+import nacl from "tweetnacl";
+import { deriveKeyFromSignature } from "./deadDropCrypto";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -236,7 +238,7 @@ export async function sendFalconPayment(
   walletSigner: (
     txnGroup: any[],
     indexesToSign: number[],
-  ) => Promise<Uint8Array[]>,
+  ) => Promise<(Uint8Array | null)[]>,
 ): Promise<string> {
   const sdk = getSdk(account.network);
   const algod = getAlgod(account.network);
@@ -305,11 +307,15 @@ export async function sendFalconPayment(
   const encodedGroup = group.map((txn) => algosdk.encodeUnsignedTransaction(txn));
   const signedPaddings = await walletSigner(encodedGroup, [0, 1, 2]);
 
+  if (!signedPaddings || !signedPaddings[0] || !signedPaddings[1] || !signedPaddings[2]) {
+    throw new Error("Cancelled padding transaction signatures");
+  }
+
   // 7. Assemble the fully-signed group
   const signedGroup = [
-    signedPaddings[0]!,
-    signedPaddings[1]!,
-    signedPaddings[2]!,
+    signedPaddings[0],
+    signedPaddings[1],
+    signedPaddings[2],
     signedPayment.blob,
   ];
 
@@ -318,6 +324,121 @@ export async function sendFalconPayment(
   
   // Return the txid of the actual payment transaction, not the first padding txn
   return paymentTxn.txID().toString();
+}
+
+/**
+ * Send one or more transactions from a Falcon-protected account using LogicSig + 3 zero-pay padding txns.
+ * Handles single payments or grouped multi-part payments (e.g. WebRTC SDP signals).
+ */
+export async function sendFalconTransactions(
+  account: FalconAccount,
+  txnsParams: Array<{ receiver: string; amount: number; note?: string | Uint8Array }>,
+  funderAddress: string,
+  walletSigner: (
+    txnGroup: any[],
+    indexesToSign: number[],
+  ) => Promise<(Uint8Array | null)[]>,
+): Promise<string[]> {
+  const sdk = getSdk(account.network);
+  const algod = getAlgod(account.network);
+  const accountInfo = JSON.parse(account.sdkAccountInfo);
+
+  accountInfo.falconKeys = {
+    publicKey: account.publicKey,
+    secretKey: account.secretKey,
+  };
+
+  // 1. Get suggested params
+  const sp = await algod.getTransactionParams().do();
+  const minFee = Math.max(Number(sp.minFee || 0), Number(sp.fee || 0), 3000);
+  const numTxns = txnsParams.length;
+  const totalGroupCount = 3 + numTxns;
+
+  // 2. Build 3 zero-pay padding txns (fee = 0, covered by fee pooling)
+  const paddingSp = { ...sp, fee: 0, flatFee: true };
+  const paddings = [];
+  for (let i = 0; i < 3; i++) {
+    paddings.push(
+      algosdk.makePaymentTxnWithSuggestedParamsFromObject({
+        from: funderAddress,
+        to: funderAddress,
+        amount: 0,
+        suggestedParams: paddingSp,
+        note: new Uint8Array(
+          new TextEncoder().encode(`wen.tools PQ padding ${i}-${Date.now()}`),
+        ),
+      }),
+    );
+  }
+
+  // 3. Build payment txns. First payment tx pays total fee for the group.
+  const paymentTxns = txnsParams.map((p, idx) => {
+    const fee = idx === 0 ? totalGroupCount * minFee : 0;
+    const paymentSp = { ...sp, fee, flatFee: true };
+    const noteBytes = typeof p.note === "string" 
+      ? new Uint8Array(new TextEncoder().encode(p.note)) 
+      : p.note;
+
+    return algosdk.makePaymentTxnWithSuggestedParamsFromObject({
+      from: account.address,
+      to: p.receiver,
+      amount: p.amount,
+      suggestedParams: paymentSp,
+      note: noteBytes,
+    });
+  });
+
+  // 4. Group all transactions: [pad, pad, pad, payment0, payment1, ...]
+  const group = [...paddings, ...paymentTxns];
+  algosdk.assignGroupID(group);
+
+  // 5. Sign payment txns with Falcon LogicSig
+  const programBytes = new Uint8Array(
+    Buffer.from(accountInfo.logicSig.program, "base64"),
+  );
+  const secretKeyBytes = Falcon.hexToBytes(accountInfo.falconKeys.secretKey);
+
+  const signedPayments = await Promise.all(
+    paymentTxns.map(async (paymentTxn) => {
+      const txnIdBytes = paymentTxn.rawTxID();
+      const arg0 = await sdk.falcon.sign(txnIdBytes, secretKeyBytes);
+      const lsig = new algosdk.LogicSigAccount(programBytes, [arg0]);
+      return algosdk.signLogicSigTransactionObject(paymentTxn, lsig).blob;
+    })
+  );
+
+  // 6. Sign padding txns with connected wallet
+  const encodedGroup = group.map((txn) => algosdk.encodeUnsignedTransaction(txn));
+  const signedPaddings = await walletSigner(encodedGroup, [0, 1, 2]);
+
+  if (!signedPaddings || !signedPaddings[0] || !signedPaddings[1] || !signedPaddings[2]) {
+    throw new Error("Cancelled padding transaction signatures");
+  }
+
+  // 7. Assemble signed group
+  const signedGroup = [
+    signedPaddings[0],
+    signedPaddings[1],
+    signedPaddings[2],
+    ...signedPayments,
+  ];
+
+  // 8. Submit
+  await algod.sendRawTransaction(signedGroup).do();
+
+  return paymentTxns.map((t) => t.txID().toString());
+}
+
+/**
+ * Derives a deterministic BEACON X25519 keypair for a local WASM Falcon account
+ * using a client-side Falcon signature over the domain note.
+ */
+export async function deriveBeaconKeyFromFalconAccount(account: FalconAccount): Promise<nacl.BoxKeyPair> {
+  const sdk = getSdk(account.network);
+  const secretKeyBytes = Falcon.hexToBytes(account.secretKey);
+  const domainBytes = new TextEncoder().encode("BEACON/1:derive-encryption-key");
+  const sigBytes = await sdk.falcon.sign(domainBytes, secretKeyBytes);
+  return deriveKeyFromSignature(sigBytes);
 }
 
 /**

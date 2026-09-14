@@ -14,6 +14,58 @@ export function deriveKeyFromSignature(signature: Uint8Array): nacl.BoxKeyPair {
 }
 
 /**
+ * Safely extracts signature bytes from a decoded Algorand SignedTransaction object.
+ * Supports standard Ed25519 (.sig), Consensus v42 Post-Quantum (.pqsig), LogicSig (.lsig), and Multisig (.msig).
+ */
+export function extractSignatureBytes(decodedTxn: any): Uint8Array | null {
+  if (!decodedTxn) return null;
+
+  // 1. Native Consensus v42 Post-Quantum (PQSIG) signature from Pera / Lute / v42 wallets
+  if (decodedTxn.pqsig) {
+    if (decodedTxn.pqsig instanceof Uint8Array) {
+      return decodedTxn.pqsig;
+    }
+    if (decodedTxn.pqsig.sig instanceof Uint8Array) {
+      return decodedTxn.pqsig.sig;
+    }
+    if (typeof decodedTxn.pqsig === "string") {
+      return base64ToUint8(decodedTxn.pqsig);
+    }
+    try {
+      return nacl.hash(algosdk.encodeObj(decodedTxn.pqsig));
+    } catch {
+      // fallback
+    }
+  }
+
+  // 2. Standard Ed25519 signature
+  if (decodedTxn.sig instanceof Uint8Array && decodedTxn.sig.length > 0) {
+    return decodedTxn.sig;
+  }
+
+  // 3. LogicSig signature (e.g. WASM Falcon LogicSig)
+  if (decodedTxn.lsig) {
+    if (Array.isArray(decodedTxn.lsig.arg) && decodedTxn.lsig.arg[0] instanceof Uint8Array) {
+      return decodedTxn.lsig.arg[0];
+    }
+    if (decodedTxn.lsig.logic instanceof Uint8Array) {
+      return nacl.hash(decodedTxn.lsig.logic);
+    }
+  }
+
+  // 4. Multisig
+  if (decodedTxn.msig) {
+    try {
+      return nacl.hash(algosdk.encodeObj(decodedTxn.msig));
+    } catch {
+      // fallback
+    }
+  }
+
+  return null;
+}
+
+/**
  * Encrypts a text payload for a recipient using their registered X25519 public key.
  * The recipientPubKeyB64 MUST be an X25519 key (from the relay registry or NFD).
  * Using a raw Algorand Ed25519 key here will produce undecryptable output.

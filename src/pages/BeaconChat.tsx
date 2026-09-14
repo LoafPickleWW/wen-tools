@@ -20,7 +20,10 @@ import {
   uint8ToBase64,
   base64ToUint8,
   deriveKeyFromSignature,
+  extractSignatureBytes,
 } from "../utils/deadDropCrypto";
+import { getAccountByAddress } from "../db/falconDb";
+import { sendFalconTransactions, deriveBeaconKeyFromFalconAccount } from "../utils/falcon";
 import { getNfdDomain } from "../utils";
 
 // ═══════════════════════════════════════════════════════════════════
@@ -332,10 +335,19 @@ export function BeaconChat() {
 
   const getBeaconKeypair = useCallback(async (forceSign = false): Promise<nacl.BoxKeyPair> => {
     if (!forceSign && beaconKeypairRef.current) return beaconKeypairRef.current;
-    if (!activeAddress || !signTransactions) throw new Error("Wallet not connected");
+    if (!activeAddress) throw new Error("Wallet not connected");
 
-    // We no longer store the signature in localStorage for security.
-    // The user signs once per session to derive their secret identity.
+    // 1. Check if activeAddress is a local WASM Falcon account
+    const falconAcc = await getAccountByAddress(activeAddress);
+    if (falconAcc) {
+      const keypair = await deriveBeaconKeyFromFalconAccount(falconAcc);
+      beaconKeypairRef.current = keypair;
+      return keypair;
+    }
+
+    if (!signTransactions) throw new Error("Wallet not connected");
+
+    // 2. Standard, Rekeyed, or Native Consensus v42 PQSIG account
     const authTxn = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
       from: activeAddress,
       to: activeAddress,
@@ -355,13 +367,56 @@ export function BeaconChat() {
     if (!signed?.[0]) throw new Error("Cancelled");
 
     const decoded = algosdk.decodeSignedTransaction(signed[0]);
-    const sig = decoded.sig || (decoded.msig ? nacl.hash(algosdk.encodeObj(decoded.msig)) : null);
+    const sig = extractSignatureBytes(decoded);
     if (!sig) throw new Error("No signature found");
 
     const keypair = deriveKeyFromSignature(sig);
     beaconKeypairRef.current = keypair;
     return keypair;
   }, [activeAddress, signTransactions]);
+
+  const sendBeaconTransactions = useCallback(async (
+    txnsParams: Array<{ receiver: string; amount: number; note: string | Uint8Array }>
+  ) => {
+    if (!activeAddress || !algodClient) throw new Error("Wallet not connected");
+    const falconAcc = await getAccountByAddress(activeAddress);
+
+    if (falconAcc) {
+      if (!signTransactions) throw new Error("Wallet not connected");
+      return await sendFalconTransactions(falconAcc, txnsParams, activeAddress, signTransactions);
+    }
+
+    if (!signTransactions) throw new Error("Wallet not connected");
+    const params = await algodClient.getTransactionParams().do();
+    const minFee = Math.max(params.minFee || 1000, params.fee || 1000, 3000);
+
+    const txns = txnsParams.map((p) => {
+      const noteBytes = typeof p.note === "string" ? new TextEncoder().encode(p.note) : p.note;
+      return algosdk.makePaymentTxnWithSuggestedParamsFromObject({
+        from: activeAddress,
+        to: p.receiver,
+        amount: p.amount,
+        note: noteBytes,
+        suggestedParams: { ...params, fee: minFee, flatFee: true },
+      });
+    });
+
+    if (txns.length > 1) {
+      algosdk.assignGroupID(txns);
+    }
+
+    const encodedGroup = txns.map((t) => algosdk.encodeUnsignedTransaction(t));
+    const signed = await signTransactions(encodedGroup);
+    if (!signed || signed.some((s) => !s)) throw new Error("Cancelled transaction");
+
+    if (signed.length === 1) {
+      const { txId } = await algodClient.sendRawTransaction(signed[0]!).do();
+      return [txId];
+    } else {
+      await algodClient.sendRawTransaction(signed as Uint8Array[]).do();
+      return txns.map((t) => t.txID().toString());
+    }
+  }, [activeAddress, signTransactions, algodClient]);
 
   const lookupWpk = useCallback(async (targetAddress: string): Promise<{ wpk: string; nfd?: string } | null> => {
     try {
@@ -463,14 +518,10 @@ export function BeaconChat() {
   }, [sendFile]);
 
   const handleAnnounce = useCallback(async () => {
-    if (!activeAddress || !signTransactions || !algodClient) return;
+    if (!activeAddress || !algodClient) return;
     setAnnouncing(true);
     try {
-      // 1. Get (or derive) the persistent identity keypair
-      // This will prompt for "Identity Proof" if not cached. 
-      // This MUST be an off-chain signature to keep the secretKey private.
       const keypair = await getBeaconKeypair();
-      
       const nfdName = await getNfdDomain(activeAddress);
       const payload: BeaconNote = {
         proto: "BEACON/1",
@@ -480,20 +531,8 @@ export function BeaconChat() {
         nfd: nfdName || undefined,
       };
       
-      const noteBytes = new TextEncoder().encode(`${BEACON_PREFIX}${btoa(JSON.stringify(payload))}`);
-      const params = await algodClient.getTransactionParams().do();
-      const txn = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
-        from: activeAddress,
-        to: BEACON_PROTOCOL_ADDRESS,
-        amount: 0,
-        note: noteBytes,
-        suggestedParams: { ...params, fee: Math.max(params.minFee || 1000, params.fee || 1000, 3000), flatFee: true },
-      });
-
-      const signed = await signTransactions([algosdk.encodeUnsignedTransaction(txn)]);
-      if (!signed?.[0]) throw new Error("Cancelled");
-
-      await algodClient.sendRawTransaction(signed[0]).do();
+      const noteStr = `${BEACON_PREFIX}${btoa(JSON.stringify(payload))}`;
+      await sendBeaconTransactions([{ receiver: BEACON_PROTOCOL_ADDRESS, amount: 0, note: noteStr }]);
       toast.success("Identity Published!");
       setIsAnnounced(true);
     } catch (err: any) {
@@ -501,7 +540,7 @@ export function BeaconChat() {
     } finally {
       setAnnouncing(false);
     }
-  }, [activeAddress, signTransactions, algodClient, getBeaconKeypair]);
+  }, [activeAddress, algodClient, getBeaconKeypair, sendBeaconTransactions]);
 
   // ═══════════════════════════════════════════════════════════════════
   //  WebRTC & Signaling
@@ -555,11 +594,10 @@ export function BeaconChat() {
     recipientWpk: string,
     extraFields: Partial<BeaconNote>
   ) => {
-    if (!activeAddress || !signTransactions || !algodClient) throw new Error("Not connected");
+    if (!activeAddress || !algodClient) throw new Error("Not connected");
     const keypair = await getBeaconKeypair();
-    const params = await algodClient.getTransactionParams().do();
 
-    const buildNote = (sdpChunk: string, part?: number, total?: number): Uint8Array => {
+    const buildNote = (sdpChunk: string, part?: number, total?: number): string => {
       const payload: BeaconNote = {
         proto: "BEACON/1",
         type,
@@ -569,25 +607,13 @@ export function BeaconChat() {
         ...(part !== undefined ? { part, total } : {}),
         ...extraFields,
       };
-      return new TextEncoder().encode(encryptBeaconNote(payload, base64ToUint8(recipientWpk)));
+      return encryptBeaconNote(payload, base64ToUint8(recipientWpk));
     };
-
-    const buildTxn = (note: Uint8Array) =>
-      algosdk.makePaymentTxnWithSuggestedParamsFromObject({
-        from: activeAddress,
-        to: BEACON_PROTOCOL_ADDRESS,
-        amount: 0,
-        note,
-        suggestedParams: { ...params, fee: Math.max(params.minFee || 1000, params.fee || 1000, 3000), flatFee: true },
-      });
 
     // Try single tx first
     const singleNote = buildNote(compressedSdp);
-    if (singleNote.length <= 1024) {
-      const txn = buildTxn(singleNote);
-      const signed = await signTransactions([algosdk.encodeUnsignedTransaction(txn)]);
-      if (!signed?.[0]) throw new Error("Cancelled");
-      await algodClient.sendRawTransaction(signed[0]).do();
+    if (new TextEncoder().encode(singleNote).length <= 1024) {
+      await sendBeaconTransactions([{ receiver: BEACON_PROTOCOL_ADDRESS, amount: 0, note: singleNote }]);
       return;
     }
 
@@ -595,16 +621,14 @@ export function BeaconChat() {
     const mid = Math.ceil(compressedSdp.length / 2);
     const part1Note = buildNote(compressedSdp.slice(0, mid), 1, 2);
     const part2Note = buildNote(compressedSdp.slice(mid), 2, 2);
-    if (part1Note.length > 1024 || part2Note.length > 1024)
+    if (new TextEncoder().encode(part1Note).length > 1024 || new TextEncoder().encode(part2Note).length > 1024)
       throw new Error("SDP too large even after splitting");
 
-    const txn1 = buildTxn(part1Note);
-    const txn2 = buildTxn(part2Note);
-    algosdk.assignGroupID([txn1, txn2]);
-    const signed = await signTransactions([txn1, txn2].map(t => algosdk.encodeUnsignedTransaction(t)));
-    if (!signed?.[0] || !signed?.[1]) throw new Error("Cancelled");
-    await algodClient.sendRawTransaction([signed[0], signed[1]]).do();
-  }, [activeAddress, signTransactions, algodClient, getBeaconKeypair]);
+    await sendBeaconTransactions([
+      { receiver: BEACON_PROTOCOL_ADDRESS, amount: 0, note: part1Note },
+      { receiver: BEACON_PROTOCOL_ADDRESS, amount: 0, note: part2Note },
+    ]);
+  }, [activeAddress, algodClient, getBeaconKeypair, sendBeaconTransactions]);
 
   const initiateChat = useCallback(async (contact: { address: string; wpk: string; nfd?: string }) => {
     if (!activeAddress || !signTransactions || !algodClient) return;
@@ -730,6 +754,18 @@ export function BeaconChat() {
     setScanning(true);
     try {
       const keypair = await getBeaconKeypair();
+      const candidateSecretKeys: Uint8Array[] = [keypair.secretKey];
+
+      const falconAcc = await getAccountByAddress(activeAddress);
+      if (falconAcc) {
+        try {
+          const fkp = await deriveBeaconKeyFromFalconAccount(falconAcc);
+          if (uint8ToBase64(fkp.secretKey) !== uint8ToBase64(keypair.secretKey)) {
+            candidateSecretKeys.push(fkp.secretKey);
+          }
+        } catch { /* ignore */ }
+      }
+
       const url = `${MAINNET_ALGONODE_INDEXER}/v2/transactions?address=${BEACON_PROTOCOL_ADDRESS}&address-role=receiver&note-prefix=${BEACON_PREFIX_B64}&limit=100`;
       const res = await fetch(url);
       const data = await res.json();
@@ -741,7 +777,12 @@ export function BeaconChat() {
 
       for (const tx of data.transactions || []) {
         const noteStr = new TextDecoder().decode(base64ToUint8(tx.note));
-        const payload = decryptBeaconNote(noteStr, keypair.secretKey);
+        
+        let payload: BeaconNote | null = null;
+        for (const sk of candidateSecretKeys) {
+          payload = decryptBeaconNote(noteStr, sk);
+          if (payload) break;
+        }
         if (!payload) continue;
 
         if (payload.type === "bond-request") {
@@ -797,7 +838,7 @@ export function BeaconChat() {
   }, [activeAddress, getBeaconKeypair]);
 
   const sendBondRequest = useCallback(async (target: string) => {
-    if (!activeAddress || !signTransactions || !algodClient) return;
+    if (!activeAddress || !algodClient) return;
     setSendingBond(true);
     try {
       let addr = target.trim();
@@ -833,26 +874,16 @@ export function BeaconChat() {
         ts: Date.now(),
         nfd: myNfd,
       };
-      const noteBytes = new TextEncoder().encode(encryptBeaconNote(payload, base64ToUint8(targetInfo.wpk)));
-      const params = await algodClient.getTransactionParams().do();
-      const txn = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
-        from: activeAddress,
-        to: BEACON_PROTOCOL_ADDRESS,
-        amount: 0,
-        note: noteBytes,
-        suggestedParams: { ...params, fee: Math.max(params.minFee || 1000, params.fee || 1000, 3000), flatFee: true },
-      });
-      const signed = await signTransactions([algosdk.encodeUnsignedTransaction(txn)]);
-      if (!signed?.[0]) throw new Error("Cancelled");
-      await algodClient.sendRawTransaction(signed[0]).do();
+      const noteStr = encryptBeaconNote(payload, base64ToUint8(targetInfo.wpk));
+      await sendBeaconTransactions([{ receiver: BEACON_PROTOCOL_ADDRESS, amount: 0, note: noteStr }]);
       toast.success("Bond request sent!");
       setPhase("home");
     } catch (err: any) { toast.error(err.message); }
     finally { setSendingBond(false); }
-  }, [activeAddress, signTransactions, algodClient, getBeaconKeypair, lookupWpk, myNfd]);
+  }, [activeAddress, algodClient, getBeaconKeypair, lookupWpk, myNfd, sendBeaconTransactions]);
 
   const acceptBond = useCallback(async (req: BondRequest) => {
-    if (!activeAddress || !signTransactions || !algodClient) return;
+    if (!activeAddress || !algodClient) return;
     try {
       const keypair = await getBeaconKeypair();
       const payload: BeaconNote = {
@@ -862,18 +893,8 @@ export function BeaconChat() {
         ts: Date.now(),
         nfd: myNfd,
       };
-      const noteBytes = new TextEncoder().encode(encryptBeaconNote(payload, base64ToUint8(req.wpk)));
-      const params = await algodClient.getTransactionParams().do();
-      const txn = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
-        from: activeAddress,
-        to: BEACON_PROTOCOL_ADDRESS,
-        amount: 0,
-        note: noteBytes,
-        suggestedParams: { ...params, fee: Math.max(params.minFee || 1000, params.fee || 1000, 3000), flatFee: true },
-      });
-      const signed = await signTransactions([algosdk.encodeUnsignedTransaction(txn)]);
-      if (!signed?.[0]) throw new Error("Cancelled");
-      await algodClient.sendRawTransaction(signed[0]).do();
+      const noteStr = encryptBeaconNote(payload, base64ToUint8(req.wpk));
+      await sendBeaconTransactions([{ receiver: BEACON_PROTOCOL_ADDRESS, amount: 0, note: noteStr }]);
 
       const updated = [...contacts, { address: req.fromAddress, wpk: req.wpk, nfd: req.nfd, addedAt: Date.now() }];
       saveContacts(activeAddress, updated);

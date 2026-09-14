@@ -11,9 +11,12 @@ import {
   decryptDeadDrop,
   decryptBinaryDeadDrop,
   deriveKeyFromSignature,
+  extractSignatureBytes,
   uint8ToBase64,
   base64ToUint8
 } from "../utils/deadDropCrypto";
+import { getAccountByAddress } from "../db/falconDb";
+import { sendFalconTransactions, deriveBeaconKeyFromFalconAccount } from "../utils/falcon";
 import { BEACON_PROTOCOL_ADDRESS, MAINNET_ALGONODE_INDEXER } from "../constants";
 import { Meta } from "../components/Meta";
 
@@ -113,9 +116,18 @@ export function BeaconDropTool() {
 
   const getBeaconKeypair = useCallback(async () => {
     if (beaconKeypairRef.current) return beaconKeypairRef.current;
-    if (!activeAddress || !signTransactions) throw new Error("Wallet not connected");
+    if (!activeAddress) throw new Error("Wallet not connected");
 
-    // Deterministic transaction for signature (never broadcast)
+    // 1. Check if activeAddress is a local WASM Falcon account
+    const falconAcc = await getAccountByAddress(activeAddress);
+    if (falconAcc) {
+      beaconKeypairRef.current = await deriveBeaconKeyFromFalconAccount(falconAcc);
+      return beaconKeypairRef.current;
+    }
+
+    if (!signTransactions) throw new Error("Wallet not connected");
+
+    // 2. Standard, Rekeyed, or Native Consensus v42 PQSIG account
     const domainTxn = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
       from: activeAddress,
       to: activeAddress,
@@ -135,7 +147,8 @@ export function BeaconDropTool() {
     const signed = await signTransactions([encodedDomainTxn]);
     if (!signed || !signed[0]) throw new Error("Cancelled auth signature");
 
-    const sigBytes = algosdk.decodeSignedTransaction(signed[0]).sig;
+    const decoded = algosdk.decodeSignedTransaction(signed[0]);
+    const sigBytes = extractSignatureBytes(decoded);
     if (!sigBytes) throw new Error("No signature found");
 
     beaconKeypairRef.current = deriveKeyFromSignature(sigBytes);
@@ -143,7 +156,7 @@ export function BeaconDropTool() {
   }, [activeAddress, signTransactions]);
 
   const handleAnnounce = async () => {
-    if (!activeAddress || !signTransactions || !algodClient) {
+    if (!activeAddress || !algodClient) {
       toast.error("Please connect your wallet");
       return;
     }
@@ -156,19 +169,36 @@ export function BeaconDropTool() {
       const payloadString = JSON.stringify(payload);
       const noteBytes = new TextEncoder().encode(`${BEACON_PREFIX}${btoa(payloadString)}`);
 
-      const suggestedParams = await algodClient.getTransactionParams().do();
-      const txn = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
-        from: activeAddress,
-        to: BEACON_PROTOCOL_ADDRESS,
-        amount: 0,
-        note: noteBytes,
-        suggestedParams: { ...suggestedParams, fee: Math.max(suggestedParams.minFee || 1000, suggestedParams.fee || 1000, 3000), flatFee: true },
-      });
+      const falconAcc = await getAccountByAddress(activeAddress);
+      let txId = "";
 
-      const signedTxn = await signTransactions([algosdk.encodeUnsignedTransaction(txn)]);
-      if (!signedTxn || !signedTxn[0]) throw new Error("Transaction cancelled.");
+      if (falconAcc) {
+        if (!signTransactions) throw new Error("Wallet not connected");
+        const txIds = await sendFalconTransactions(
+          falconAcc,
+          [{ receiver: BEACON_PROTOCOL_ADDRESS, amount: 0, note: noteBytes }],
+          activeAddress,
+          signTransactions
+        );
+        txId = txIds[0];
+      } else {
+        if (!signTransactions) throw new Error("Wallet not connected");
+        const suggestedParams = await algodClient.getTransactionParams().do();
+        const txn = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
+          from: activeAddress,
+          to: BEACON_PROTOCOL_ADDRESS,
+          amount: 0,
+          note: noteBytes,
+          suggestedParams: { ...suggestedParams, fee: Math.max(suggestedParams.minFee || 1000, suggestedParams.fee || 1000, 3000), flatFee: true },
+        });
 
-      const { txId } = await algodClient.sendRawTransaction(signedTxn[0]).do();
+        const signedTxn = await signTransactions([algosdk.encodeUnsignedTransaction(txn)]);
+        if (!signedTxn || !signedTxn[0]) throw new Error("Transaction cancelled.");
+
+        const res = await algodClient.sendRawTransaction(signedTxn[0]).do();
+        txId = res.txId;
+      }
+
       toast.success(`Inbox Initialized! TxID: ${txId.slice(0, 8)}...`);
       setIsInitialized(true);
     } catch (err: any) {
@@ -180,7 +210,7 @@ export function BeaconDropTool() {
   };
 
   const handleDeployDrop = async () => {
-    if (!activeAddress || !signTransactions || !algodClient) {
+    if (!activeAddress || !algodClient) {
       toast.error("Please connect your wallet");
       return;
     }
@@ -277,24 +307,39 @@ export function BeaconDropTool() {
         throw new Error("Payload too large for Algorand Note field! (Max 1KB)");
       }
 
-      // Construct a 0 ALGO transaction to the Shared Protocol Address (BEACON_PROTOCOL_ADDRESS)
-      const suggestedParams = await algodClient.getTransactionParams().do();
-      const txn = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
-        from: activeAddress,
-        to: BEACON_PROTOCOL_ADDRESS,
-        amount: 0,
-        note: noteBytes,
-        suggestedParams: { ...suggestedParams, fee: Math.max(suggestedParams.minFee || 1000, suggestedParams.fee || 1000, 3000), flatFee: true },
-      });
+      const falconAcc = await getAccountByAddress(activeAddress);
+      let txId = "";
 
-      const encodedTxn = algosdk.encodeUnsignedTransaction(txn);
-      const signedTxn = await signTransactions([encodedTxn]);
+      if (falconAcc) {
+        if (!signTransactions) throw new Error("Wallet not connected");
+        const txIds = await sendFalconTransactions(
+          falconAcc,
+          [{ receiver: BEACON_PROTOCOL_ADDRESS, amount: 0, note: noteBytes }],
+          activeAddress,
+          signTransactions
+        );
+        txId = txIds[0];
+      } else {
+        if (!signTransactions) throw new Error("Wallet not connected");
+        const suggestedParams = await algodClient.getTransactionParams().do();
+        const txn = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
+          from: activeAddress,
+          to: BEACON_PROTOCOL_ADDRESS,
+          amount: 0,
+          note: noteBytes,
+          suggestedParams: { ...suggestedParams, fee: Math.max(suggestedParams.minFee || 1000, suggestedParams.fee || 1000, 3000), flatFee: true },
+        });
 
-      if (!signedTxn || !signedTxn[0]) {
-        throw new Error("Transaction cancelled.");
+        const encodedTxn = algosdk.encodeUnsignedTransaction(txn);
+        const signedTxn = await signTransactions([encodedTxn]);
+
+        if (!signedTxn || !signedTxn[0]) {
+          throw new Error("Transaction cancelled.");
+        }
+
+        const res = await algodClient.sendRawTransaction(signedTxn[0]).do();
+        txId = res.txId;
       }
-
-      const { txId } = await algodClient.sendRawTransaction(signedTxn[0]).do();
       
       toast.success(`BEACON Drop deployed! TxID: ${txId.slice(0, 8)}...`);
       setDdMessage("");
@@ -309,21 +354,31 @@ export function BeaconDropTool() {
   };
 
   const handleScanDrops = async () => {
-    if (!activeAddress || !signTransactions || !algodClient) {
+    if (!activeAddress || !algodClient) {
       toast.error("Please connect your wallet");
       return;
     }
     
     setDdLoading(true);
     try {
-      // Prompt user for signature to derive Web Key deterministically
       const keypair = await getBeaconKeypair();
-      const secretKey = keypair.secretKey;
+      
+      // Candidate secret keys for drop decryption (active key + Falcon WASM key fallback if available)
+      const candidateSecretKeys: Uint8Array[] = [keypair.secretKey];
+      const falconAcc = await getAccountByAddress(activeAddress);
+      if (falconAcc) {
+        try {
+          const falconBeaconKp = await deriveBeaconKeyFromFalconAccount(falconAcc);
+          if (uint8ToBase64(falconBeaconKp.secretKey) !== uint8ToBase64(keypair.secretKey)) {
+            candidateSecretKeys.push(falconBeaconKp.secretKey);
+          }
+        } catch {
+          // ignore derivation errors
+        }
+      }
 
       toast.info(`Scanning BEACON Protocol Address for drops...`);
 
-      // Query Indexer for all transactions to BEACON_PROTOCOL_ADDRESS with the BEACON prefix
-      // In production you might paginate this and keep a last-round tracker.
       const indexerUrl = `${MAINNET_ALGONODE_INDEXER}/v2/accounts/${BEACON_PROTOCOL_ADDRESS}/transactions?note-prefix=${BEACON_PREFIX_B64}&limit=100`;
       const res = await fetch(indexerUrl);
       const data = await res.json();
@@ -343,7 +398,6 @@ export function BeaconDropTool() {
           const payloadStr = atob(payloadB64);
           const drop = JSON.parse(payloadStr);
 
-          // If the drop specifies a recipient and it's not us, skip.
           if (drop.recipient && drop.recipient !== activeAddress) continue;
 
           drop.sender = tx.sender;
@@ -354,36 +408,42 @@ export function BeaconDropTool() {
       }
 
       if (allDrops.length > 0) {
-        // Attempt decryption
         const processed = await Promise.all(allDrops.map(async (drop: any) => {
-          try {
-            if (drop.type === "file") {
-              // Fetch from Crust
-              const fileRes = await fetch(`https://crustipfs.mobi/ipfs/${drop.cid}`);
-              const encryptedFileJson = await fileRes.json();
-              
-              const decryptedBytes = decryptBinaryDeadDrop(encryptedFileJson.ciphertext, encryptedFileJson.nonce, encryptedFileJson.ephemeralPk, secretKey);
-              const blob = new Blob([decryptedBytes as BlobPart], { type: drop.fileType || "application/octet-stream" });
-              const url = URL.createObjectURL(blob);
-              
-              return { 
-                ...drop, 
-                decrypted: `File: ${drop.fileName}`,
-                isFile: true,
-                fileUrl: url
-              };
+          let decryptedText: string | null = null;
+          let decryptedBytes: Uint8Array | null = null;
+
+          for (const sk of candidateSecretKeys) {
+            try {
+              if (drop.type === "file") {
+                const fileRes = await fetch(`https://crustipfs.mobi/ipfs/${drop.cid}`);
+                const encryptedFileJson = await fileRes.json();
+                decryptedBytes = decryptBinaryDeadDrop(encryptedFileJson.ciphertext, encryptedFileJson.nonce, encryptedFileJson.ephemeralPk, sk);
+                if (decryptedBytes) break;
+              } else {
+                decryptedText = decryptDeadDrop(drop.ciphertext, drop.nonce, drop.ephemeralPk, sk);
+                if (decryptedText) break;
+              }
+            } catch {
+              // Try next candidate key
             }
+          }
 
-            // Text Decryption
-            const text = decryptDeadDrop(drop.ciphertext, drop.nonce, drop.ephemeralPk, secretKey);
-            return { ...drop, decrypted: text };
-
-          } catch { 
-            return { ...drop, decrypted: "Decryption failed. (Encrypted for a different key or native address key)." }; 
+          if (drop.type === "file" && decryptedBytes) {
+            const blob = new Blob([decryptedBytes as BlobPart], { type: drop.fileType || "application/octet-stream" });
+            const url = URL.createObjectURL(blob);
+            return {
+              ...drop,
+              decrypted: `File: ${drop.fileName}`,
+              isFile: true,
+              fileUrl: url
+            };
+          } else if (decryptedText !== null) {
+            return { ...drop, decrypted: decryptedText };
+          } else {
+            return { ...drop, decrypted: "Decryption failed. (Encrypted for a previous pre-rekey key or native address key)." };
           }
         }));
 
-        // Filter out drops that failed to decrypt entirely
         const successfulDrops = processed.filter(d => !d.decrypted.includes("Decryption failed"));
 
         const scanTime = Date.now();
@@ -412,7 +472,7 @@ export function BeaconDropTool() {
           }
           toast.success(msg);
         } else {
-          toast.info(`Found ${allDrops.length} drops, but none were decryptable by your key.`);
+          toast.info(`Found ${allDrops.length} drops, but none were decryptable by your active or fallback keys.`);
         }
         
       } else {
