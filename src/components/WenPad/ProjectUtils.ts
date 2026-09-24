@@ -76,9 +76,15 @@ export function addRankings(items: PreviewItemT[]) {
 }
 
 export function getTraitsFromTraitStore(traitStore: { [key: string]: string[] }, layer: LayerT) {
-  const availableTraitNames = traitStore[layer.name];
-  const availableTraits = availableTraitNames.map((name) => layer.traits.find((f) => f.name === name)!);
-  return availableTraits;
+  const availableTraitNames = traitStore[layer.name] || [];
+  const validTraits = layer.traits.filter((t) => !t.sameAs && t.excludeTraitFromRandomGenerations !== true);
+  if (availableTraitNames.length === 0) {
+    return validTraits;
+  }
+  const availableTraits = availableTraitNames
+    .map((name) => layer.traits.find((f) => f.name === name)!)
+    .filter(Boolean);
+  return availableTraits.length > 0 ? availableTraits : validTraits;
 }
 
 export function createTraitStore(layers: LayerT[], size: number) {
@@ -86,16 +92,33 @@ export function createTraitStore(layers: LayerT[], size: number) {
 
   for (const layer of layers) {
     const availableTraits = layer.traits.filter((trait) => !trait.sameAs && trait.excludeTraitFromRandomGenerations !== true);
+    if (availableTraits.length === 0) {
+      traitStore[layer.name] = [];
+      continue;
+    }
+
     const traitRarityArray: string[] = [];
+    const totalRarity = availableTraits.reduce((acc, t) => acc + (t.rarity || 0), 0);
+
     for (const trait of availableTraits) {
+      const traitRarity = trait.rarity || 0;
       if (trait.rarityType === RarityType.PERCENT) {
-        for (let i = 0; i < size * (trait.rarity / 100); i++) {
+        const effectivePercent = totalRarity === 0 ? (100 / availableTraits.length) : traitRarity;
+        const count = Math.max(1, Math.round(size * (effectivePercent / 100)));
+        for (let i = 0; i < count; i++) {
           traitRarityArray.push(trait.name);
         }
       } else {
-        traitRarityArray.push(...Array(trait.rarity).fill(trait.name));
+        const count = totalRarity === 0 ? Math.max(1, Math.ceil(size / availableTraits.length)) : Math.max(1, Math.round(traitRarity));
+        traitRarityArray.push(...Array(count).fill(trait.name));
       }
     }
+
+    while (traitRarityArray.length < size && availableTraits.length > 0) {
+      const randomTrait = availableTraits[Math.floor(Math.random() * availableTraits.length)];
+      traitRarityArray.push(randomTrait.name);
+    }
+
     traitStore[layer.name] = traitRarityArray;
   }
   return traitStore;
@@ -164,24 +187,64 @@ export function handleBlockTraits(previewItem: PreviewItemT, layers: LayerT[]) {
   return previewItem;
 }
 
-export const loadImage = (src: any, imageCache?: any, type: 'object' | 'string' = 'object') => {
+export const loadImage = (src: any, imageCache?: any): Promise<HTMLImageElement> => {
+  if (!src) return Promise.reject(new Error('No image source provided'));
+
   if (imageCache && imageCache.has(src)) {
     return Promise.resolve(imageCache.get(src));
   }
 
   return new Promise((resolve, reject) => {
     const img = new Image();
-    if (type === 'object') {
-      img.src = URL.createObjectURL(src);
-    } else {
-      img.src = src;
+    let objectUrlToRevoke: string | null = null;
+
+    try {
+      if (typeof src === 'string') {
+        img.src = src;
+      } else if (src instanceof Blob) {
+        objectUrlToRevoke = URL.createObjectURL(src);
+        img.src = objectUrlToRevoke;
+      } else if (src instanceof ArrayBuffer || ArrayBuffer.isView(src)) {
+        const blob = new Blob([src], { type: 'image/png' });
+        objectUrlToRevoke = URL.createObjectURL(blob);
+        img.src = objectUrlToRevoke;
+      } else if (src && typeof src === 'object' && src.data) {
+        const data = src.data;
+        if (data instanceof Blob) {
+          objectUrlToRevoke = URL.createObjectURL(data);
+          img.src = objectUrlToRevoke;
+        } else if (data instanceof ArrayBuffer || ArrayBuffer.isView(data)) {
+          const blob = new Blob([data], { type: src.type || 'image/png' });
+          objectUrlToRevoke = URL.createObjectURL(blob);
+          img.src = objectUrlToRevoke;
+        } else if (typeof data === 'string') {
+          img.src = data;
+        } else {
+          const blob = new Blob([data], { type: src.type || 'image/png' });
+          objectUrlToRevoke = URL.createObjectURL(blob);
+          img.src = objectUrlToRevoke;
+        }
+      } else {
+        const blob = new Blob([src], { type: 'image/png' });
+        objectUrlToRevoke = URL.createObjectURL(blob);
+        img.src = objectUrlToRevoke;
+      }
+    } catch (err) {
+      return reject(err);
     }
+
     img.onload = () => {
       if (imageCache) {
         imageCache.set(src, img);
       }
       resolve(img);
     };
-    img.onerror = reject;
+
+    img.onerror = (err) => {
+      if (objectUrlToRevoke) {
+        URL.revokeObjectURL(objectUrlToRevoke);
+      }
+      reject(err);
+    };
   });
 };

@@ -26,6 +26,7 @@ import {
 } from '../../../utils/algofile';
 import algosdk from 'algosdk';
 import { loadImage } from '../ProjectUtils';
+import { traitImageCache } from '../PreviewImage';
 
 const MintStep = () => {
   const { project, previewItems } = useProject();
@@ -46,12 +47,20 @@ const MintStep = () => {
     const ctx = canvas.getContext('2d');
     if (!ctx) throw new Error('Could not get canvas context');
 
-    const traits = Object.values(item.traits)
-      .filter((trait: any) => trait.image)
-      .map((trait: any) => trait.image);
+    // Draw traits according to project layer order
+    let traits: any[] = [];
+    if (project.layers && project.layers.length > 0) {
+      traits = project.layers
+        .map((layer: any) => item.traits[layer.name]?.image)
+        .filter(Boolean);
+    } else {
+      traits = Object.values(item.traits)
+        .filter((trait: any) => trait.image)
+        .map((trait: any) => trait.image);
+    }
 
     for (const traitData of traits) {
-      const img: any = await loadImage(traitData);
+      const img: any = await loadImage(traitData, traitImageCache);
       ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
     }
 

@@ -20,6 +20,7 @@ import {
   handleBlockTraits,
   handleForceTraits,
 } from './ProjectUtils';
+import { clearPreviewCaches } from './PreviewImage';
 
 import { ProjectContext } from './ProjectContext';
 
@@ -199,7 +200,7 @@ export const ProjectProvider = ({ children }: Props) => {
     if (!window.confirm('Are you sure you want to delete this trait?')) return;
     const traits = layer.traits.filter((f) => f.id !== trait.id);
     const layerIndex = layers.findIndex((f) => f.id === layer.id);
-    form.setValue(`layers.${layerIndex}.traits`, traits);
+    form.setValue(`layers.${layerIndex}.traits`, traits, { shouldDirty: true });
     resetOriginalProject();
     toast.success('Trait deleted');
   };
@@ -229,6 +230,7 @@ export const ProjectProvider = ({ children }: Props) => {
 
     if (!window.confirm('Are you sure you want to generate new images?')) return;
 
+    clearPreviewCaches();
     form.setValue('previewItems', []);
     setOriginalProject({
       ...form.getValues(),
@@ -324,14 +326,29 @@ export const ProjectProvider = ({ children }: Props) => {
   };
 
   const autofillRarity = (layerIndex: number) => {
-    const layers = form.getValues('layers');
-    const traits = layers[layerIndex].traits;
-    const rarityPerTrait = 100 / traits.length;
-    traits.forEach((trait) => {
-      if (trait.rarityType === RarityType.PERCENT) trait.rarity = rarityPerTrait;
+    const currentLayers = form.getValues('layers');
+    const layer = currentLayers[layerIndex];
+    if (!layer || !layer.traits || layer.traits.length === 0) return;
+
+    const count = layer.traits.length;
+    const baseRarity = Math.floor((100 / count) * 100) / 100;
+    const remainder = Math.round((100 - baseRarity * count) * 100) / 100;
+
+    const updatedLayers = currentLayers.map((l, lIdx) => {
+      if (lIdx !== layerIndex) return l;
+      return {
+        ...l,
+        traits: l.traits.map((t, tIdx) => ({
+          ...t,
+          rarityType: RarityType.PERCENT,
+          rarity: tIdx === 0 ? Math.round((baseRarity + remainder) * 100) / 100 : baseRarity,
+        })),
+      };
     });
-    form.setValue(`layers.${layerIndex}.traits`, traits);
-    toast.success('Rarity autofilled');
+
+    form.setValue('layers', updatedLayers, { shouldDirty: true });
+    resetOriginalProject();
+    toast.success('Rarity autofilled (100% total)');
   };
 
   const filterPreviewItems = (e: any, traitType: string, traitValue: string) => {
