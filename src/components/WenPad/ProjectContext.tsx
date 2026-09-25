@@ -37,6 +37,7 @@ export type ContextT = {
   addCustom: () => void;
   deleteCustom: (index: string) => void;
   resetOriginalProject: () => void;
+  downloadBackup: () => void;
   purgeDeletedTraitAssets: () => number;
   addTraitRule: (sourceLayerId: string, sourceTraitId: string, rule: RuleT) => void;
   deleteTraitRule: (sourceLayerId: string, sourceTraitId: string, ruleIndex: number) => void;
