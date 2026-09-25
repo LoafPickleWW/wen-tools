@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useProject } from '../ProjectContext';
-import { MdRocketLaunch, MdCheckCircle, MdError, MdHourglassEmpty } from 'react-icons/md';
+import { MdRocketLaunch, MdCheckCircle, MdError, MdHourglassEmpty, MdCode, MdExpandMore, MdExpandLess } from 'react-icons/md';
 import { useWallet } from '@txnlab/use-wallet-react';
 import { toast } from 'react-toastify';
 import confetti from 'canvas-confetti';
@@ -9,6 +9,7 @@ import {
   pinJSONToPinata,
   createARC3AssetMintArrayV2Batch,
   createARC19AssetMintArrayV2Batch,
+  createAssetMintArray,
   walletSign,
   getIndexerURL,
   sliceIntoChunks
@@ -25,7 +26,7 @@ import {
   confirmAlgoFileBatch
 } from '../../../utils/algofile';
 import algosdk from 'algosdk';
-import { loadImage } from '../ProjectUtils';
+import { loadImage, buildMintMetadata } from '../ProjectUtils';
 import { traitImageCache } from '../PreviewImage';
 
 const MintStep = () => {
@@ -36,6 +37,13 @@ const MintStep = () => {
   const [ipfsToken, setIpfsToken] = useState(localStorage.getItem('authBasic') || '');
   const [isMinting, setIsMinting] = useState(false);
   const [progress, setProgress] = useState({ current: 0, total: previewItems.length, status: '' });
+  const [showMetadataPreview, setShowMetadataPreview] = useState(false);
+  const [showRawJson, setShowRawJson] = useState(false);
+
+  const sampleItem = previewItems.length > 0 ? previewItems[0] : null;
+  const sampleMetadata = sampleItem
+    ? buildMintMetadata(sampleItem, project, 'QmSampleCIDHashForDemonstration11111111111111', standard)
+    : null;
 
   const isTestnet = activeNetwork === 'testnet';
   const effectiveProvider = isTestnet && provider === 'Crust' ? 'Pinata' : provider;
@@ -159,31 +167,22 @@ const MintStep = () => {
           const imgFileName = `image_${item.index}.png`;
           const imageCid = imageCidsMap.get(imgFileName) || '';
 
-          const metadata: any = {
-            name: `${project.name} #${item.index}`,
-            description: project.description,
-            image: `ipfs://${imageCid}`,
-            properties: {}
-          };
-          
-          Object.values(item.traits).forEach((t: any) => {
-            if (!t.excludeFromMetadata) {
-              metadata.properties[t.trait_type] = t.value;
-            }
-          });
-
+          const metadata = buildMintMetadata(item, project, imageCid, standard);
           metadataList.push(metadata);
           metadataStrings.push(JSON.stringify(metadata));
         }
 
         if (standard === 'ARC69') {
           for (let i = 0; i < previewItems.length; i++) {
+            const item = previewItems[i];
+            const imgFileName = `image_${item.index}.png`;
+            const imageCid = imageCidsMap.get(imgFileName) || '';
             const assetData: any = {
-              asset_name: metadataList[i].name,
+              asset_name: metadataList[i].name || `${project.name ? project.name + ' ' : ''}#${item.index}`,
               unit_name: project.unitName,
               total_supply: 1,
               decimals: 0,
-              asset_url: metadataList[i].image,
+              asset_url: `ipfs://${imageCid}`,
               asset_note: metadataList[i],
             };
             mintedData.push(assetData);
@@ -280,25 +279,14 @@ const MintStep = () => {
             imageCid = await pinImageToPinata(ipfsToken, blob);
           }
 
-          const metadata: any = {
-            name: `${project.name} #${item.index}`,
-            description: project.description,
-            image: `ipfs://${imageCid}`,
-            properties: {}
-          };
-          
-          Object.values(item.traits).forEach((t: any) => {
-            if (!t.excludeFromMetadata) {
-              metadata.properties[t.trait_type] = t.value;
-            }
-          });
+          const metadata = buildMintMetadata(item, project, imageCid, standard);
 
           const assetData: any = {
-            asset_name: metadata.name,
+            asset_name: metadata.name || `${project.name ? project.name + ' ' : ''}#${item.index}`,
             unit_name: project.unitName,
             total_supply: 1,
             decimals: 0,
-            asset_url: metadata.image,
+            asset_url: `ipfs://${imageCid}`,
           };
 
           if (standard === 'ARC69') {
@@ -349,17 +337,13 @@ const MintStep = () => {
         txnsGroups = result.txnsArray;
         localAlgofileUploads = [];
       } else {
-        // ARC69 or Standard
-        toast.warning('ARC69 batch minting coming soon. Using ARC19 instead for this demo.');
-        const result = await createARC19AssetMintArrayV2Batch(
+        // ARC69
+        const result = await createAssetMintArray(
           mintedData,
           activeAccount.address,
-          algodClient,
-          transactionSigner,
-          effectiveProvider === 'AlgoFile' ? 'none' : (effectiveProvider as any),
-          ipfsToken
+          algodClient
         );
-        txnsGroups = result.txnsArray;
+        txnsGroups = result;
         localAlgofileUploads = [];
       }
 
@@ -367,22 +351,22 @@ const MintStep = () => {
       setProgress({ current: previewItems.length, total: previewItems.length, status: 'Awaiting signatures...' });
       
       const chunks = sliceIntoChunks(txnsGroups, 16); // Sign in groups of 16
-      const groupSize = effectiveProvider === 'AlgoFile' ? 3 : effectiveProvider === 'Crust' ? 4 : 2;
 
       for (let i = 0; i < chunks.length; i++) {
+        const chunk = chunks[i];
         setProgress({ 
           current: previewItems.length, 
           total: previewItems.length, 
           status: `Signing batch ${i + 1} of ${chunks.length}...` 
         });
-        const signedTxns = await walletSign(chunks[i], transactionSigner);
+        const signedTxns = await walletSign(chunk, transactionSigner);
         
-        // slice the flat array of signed transactions back into their groups
-        const signedGroups = sliceIntoChunks(signedTxns, groupSize);
-        
-        for (let j = 0; j < signedGroups.length; j++) {
+        let offset = 0;
+        for (let j = 0; j < chunk.length; j++) {
+          const gLen = chunk[j].length;
+          const groupBytes = signedTxns.slice(offset, offset + gLen);
+          offset += gLen;
           const globalIndex = (i * 16) + j;
-          const groupBytes = signedGroups[j];
           await algodClient.sendRawTransaction(groupBytes).do();
           
           if (effectiveProvider === 'AlgoFile' && localAlgofileUploads.length > 0) {
@@ -510,6 +494,76 @@ const MintStep = () => {
           </div>
         )}
       </div>
+
+      {sampleMetadata && (
+        <div className="bg-gray-800/30 border border-gray-700/50 rounded-3xl backdrop-blur-md overflow-hidden transition-all">
+          <div 
+            onClick={() => setShowMetadataPreview(!showMetadataPreview)}
+            className="p-5 flex items-center justify-between cursor-pointer hover:bg-white/[0.02] transition-colors"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-primary-orange/10 border border-primary-orange/30 flex items-center justify-center text-primary-orange font-bold">
+                <MdCode size={20} />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h4 className="text-sm font-black text-white">Trait Metadata Verification</h4>
+                  <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-primary-orange/20 text-primary-orange border border-primary-orange/40">
+                    {standard}
+                  </span>
+                </div>
+                <p className="text-xs text-gray-400">
+                  Inspect the exact trait attributes and properties attached to your NFT mints
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 text-xs font-bold text-gray-400">
+              <span>{sampleMetadata.attributes?.length || 0} traits</span>
+              <button type="button" className="p-1 text-gray-400 hover:text-white">
+                {showMetadataPreview ? <MdExpandLess size={22} /> : <MdExpandMore size={22} />}
+              </button>
+            </div>
+          </div>
+
+          {showMetadataPreview && (
+            <div className="p-5 pt-0 border-t border-gray-800/80 space-y-4">
+              <div className="flex items-center justify-between text-xs pt-4">
+                <span className="text-gray-400 font-medium">Sample Preview: <span className="text-white font-bold">{sampleMetadata.name || `#${sampleItem?.index}`}</span></span>
+                <button
+                  type="button"
+                  onClick={() => setShowRawJson(!showRawJson)}
+                  className="px-3 py-1 rounded-xl bg-gray-900 border border-gray-700 text-gray-300 hover:text-white text-xs font-semibold transition-colors"
+                >
+                  {showRawJson ? 'View Visual Traits' : 'View Raw JSON'}
+                </button>
+              </div>
+
+              {!showRawJson ? (
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+                  {sampleMetadata.attributes?.map((attr: any, idx: number) => (
+                    <div key={idx} className="bg-gray-900/70 border border-gray-800/90 rounded-2xl p-3 flex flex-col">
+                      <span className="text-[10px] font-black uppercase tracking-wider text-primary-orange/80 truncate">
+                        {attr.trait_type}
+                      </span>
+                      <span className="text-xs font-bold text-white mt-0.5 truncate">
+                        {attr.value}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <pre className="bg-black/60 border border-gray-800 rounded-2xl p-4 text-[11px] font-mono text-emerald-400 max-h-60 overflow-y-auto whitespace-pre-wrap leading-relaxed">
+                  {JSON.stringify(sampleMetadata, null, 2)}
+                </pre>
+              )}
+
+              <p className="text-[11px] text-gray-500 leading-normal">
+                ✓ Validated: All {previewItems.length} items will have these ARC-compliant trait structures embedded directly into their metadata and on-chain records.
+              </p>
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="flex flex-col gap-4">
         <button 

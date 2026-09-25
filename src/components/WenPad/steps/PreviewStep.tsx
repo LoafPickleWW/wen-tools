@@ -15,7 +15,9 @@ import {
   MdDelete,
   MdAdd,
   MdRule,
-  MdDataObject
+  MdDataObject,
+  MdEdit,
+  MdCheck
 } from 'react-icons/md';
 import { saveAs } from 'file-saver';
 import { toast } from 'react-toastify';
@@ -27,13 +29,17 @@ const PreviewStep = () => {
   const { 
     generatePreviewItems, previewItems, filteredPreviewItems, generateIsLoading, 
     sortBy, setSortBy, project, purgeDeletedTraitAssets,
-    addTraitRule, deleteTraitRule
+    addTraitRule, deleteTraitRule, updatePreviewItemTraitName
   } = useProject();
 
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(24);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedItem, setSelectedItem] = useState<PreviewItemT | null>(null);
+
+  // In-modal trait editing state
+  const [editingItemTraitLayer, setEditingItemTraitLayer] = useState<string | null>(null);
+  const [editingItemTraitVal, setEditingItemTraitVal] = useState<string>('');
 
   // Previews export state
   const [exportingZip, setExportingZip] = useState(false);
@@ -237,12 +243,13 @@ const PreviewStep = () => {
         const targetTrait = targetLayer?.traits.find(
           (t) => t.id === rule.trait || t.name === rule.trait
         );
+        const isCategoryBlock = rule.type === 'block_layer' || rule.trait === '*' || rule.trait === 'ALL';
         rulesList.push({
           sourceLayer: { id: layer.id, name: layer.name },
           sourceTrait: { id: traitDetails.id, name: traitDetails.name },
           rule,
           targetLayerName: targetLayer?.name || rule.layer,
-          targetTraitName: targetTrait?.name || rule.trait,
+          targetTraitName: isCategoryBlock ? 'Entire Category' : (targetTrait?.name || rule.trait),
           ruleIndex,
         });
       });
@@ -253,10 +260,8 @@ const PreviewStep = () => {
 
   // Open rule creator from a trait row in the modal
   const handleOpenRuleCreator = (layerName: string, traitName: string, layerId: string, traitId: string) => {
-    // Find another layer on this item to pre-select
     const otherLayers = (project.layers || []).filter((l) => l.id !== layerId && l.name !== layerName);
     const defaultTargetLayer = otherLayers.find((l) => Boolean(selectedItem?.traits[l.name])) || otherLayers[0];
-    const defaultTargetTrait = defaultTargetLayer?.traits.find((t) => t.name === selectedItem?.traits[defaultTargetLayer.name]?.value) || defaultTargetLayer?.traits[0];
 
     setRuleCreator({
       sourceLayerId: layerId,
@@ -265,20 +270,26 @@ const PreviewStep = () => {
       sourceTraitName: traitName,
       ruleType: 'block', // Default to Never Use with
       targetLayerId: defaultTargetLayer?.id || '',
-      targetTraitId: defaultTargetTrait?.id || '',
+      targetTraitId: '*', // Default to blocking entire category
     });
   };
 
   const handleSaveRule = () => {
-    if (!ruleCreator || !ruleCreator.targetLayerId || !ruleCreator.targetTraitId) {
-      toast.error('Please select target layer and trait');
+    if (!ruleCreator || !ruleCreator.targetLayerId) {
+      toast.error('Please select target layer');
+      return;
+    }
+
+    const isCategoryBlock = ruleCreator.ruleType === 'block' && (ruleCreator.targetTraitId === '*' || !ruleCreator.targetTraitId);
+    if (!isCategoryBlock && !ruleCreator.targetTraitId) {
+      toast.error('Please select target trait');
       return;
     }
 
     addTraitRule(ruleCreator.sourceLayerId, ruleCreator.sourceTraitId, {
-      type: ruleCreator.ruleType,
+      type: isCategoryBlock ? 'block_layer' : ruleCreator.ruleType,
       layer: ruleCreator.targetLayerId,
-      trait: ruleCreator.targetTraitId,
+      trait: isCategoryBlock ? '*' : ruleCreator.targetTraitId,
     });
 
     setRuleCreator(null);
@@ -312,6 +323,25 @@ const PreviewStep = () => {
       setCurrentPage(newPage);
       window.scrollTo({ top: 300, behavior: 'smooth' });
     }
+  };
+
+  const handleSaveItemTraitName = (layerName: string) => {
+    if (!selectedItem) return;
+    const trimmed = editingItemTraitVal.trim();
+    if (trimmed && trimmed !== selectedItem.traits[layerName]?.value) {
+      updatePreviewItemTraitName(selectedItem.index, layerName, trimmed);
+      setSelectedItem({
+        ...selectedItem,
+        traits: {
+          ...selectedItem.traits,
+          [layerName]: {
+            ...selectedItem.traits[layerName],
+            value: trimmed,
+          },
+        },
+      });
+    }
+    setEditingItemTraitLayer(null);
   };
 
   return (
@@ -799,15 +829,61 @@ const PreviewStep = () => {
                     const layer = project.layers?.find(l => l.name === layerName || l.id === trait.layerId);
                     const traitDetails = layer?.traits?.find(t => t.name === trait.value || t.id === trait.traitId);
                     const traitRulesCount = traitDetails?.rules?.length || 0;
+                    const isEditingThis = editingItemTraitLayer === layerName;
 
                     return (
                       <div 
                         key={layerName} 
                         className="flex justify-between items-center p-2.5 bg-gray-900/60 rounded-xl border border-gray-800 text-xs hover:border-gray-700 transition-colors"
                       >
-                        <div className="truncate mr-2">
+                        <div className="truncate mr-2 flex-1">
                           <span className="text-gray-500 uppercase tracking-wide font-semibold text-[10px] block">{layerName}</span>
-                          <span className="font-bold text-gray-200 truncate">{trait.value}</span>
+                          {isEditingThis ? (
+                            <div className="flex items-center gap-1.5 mt-1">
+                              <input
+                                type="text"
+                                value={editingItemTraitVal}
+                                onChange={(e) => setEditingItemTraitVal(e.target.value)}
+                                autoFocus
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') handleSaveItemTraitName(layerName);
+                                  if (e.key === 'Escape') setEditingItemTraitLayer(null);
+                                }}
+                                className="bg-black border border-primary-orange text-white text-xs font-bold rounded px-2 py-0.5 w-full focus:outline-none"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => handleSaveItemTraitName(layerName)}
+                                className="p-1 bg-primary-orange text-black rounded hover:bg-primary-orange/80 cursor-pointer"
+                                title="Save"
+                              >
+                                <MdCheck size={14} />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setEditingItemTraitLayer(null)}
+                                className="p-1 bg-gray-800 text-gray-400 hover:text-white rounded cursor-pointer"
+                                title="Cancel"
+                              >
+                                <MdClose size={14} />
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-1.5 group/val">
+                              <span className="font-bold text-gray-200 truncate">{trait.value}</span>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setEditingItemTraitLayer(layerName);
+                                  setEditingItemTraitVal(trait.value);
+                                }}
+                                className="text-gray-500 hover:text-primary-orange opacity-0 group-hover/val:opacity-100 transition-opacity p-0.5 cursor-pointer"
+                                title="Edit trait name for this NFT"
+                              >
+                                <MdEdit size={12} />
+                              </button>
+                            </div>
+                          )}
                         </div>
 
                         <div className="flex items-center gap-1.5 shrink-0">
@@ -867,7 +943,14 @@ const PreviewStep = () => {
                       </button>
                       <button
                         type="button"
-                        onClick={() => setRuleCreator({ ...ruleCreator, ruleType: 'force' })}
+                        onClick={() => {
+                          const targetL = project.layers.find(l => l.id === ruleCreator.targetLayerId);
+                          setRuleCreator({ 
+                            ...ruleCreator, 
+                            ruleType: 'force',
+                            targetTraitId: targetL?.traits[0]?.id || ''
+                          });
+                        }}
                         className={`py-2 px-2.5 rounded-xl border flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
                           ruleCreator.ruleType === 'force'
                             ? 'bg-blue-500/20 text-blue-300 border-blue-500/60 shadow-md'
@@ -881,7 +964,7 @@ const PreviewStep = () => {
                     {/* Target Layer & Trait Selectors */}
                     <div className="grid grid-cols-2 gap-2">
                       <div>
-                        <label className="text-[10px] font-semibold text-gray-400 block mb-1">Target Layer</label>
+                        <label className="text-[10px] font-semibold text-gray-400 block mb-1">Target Layer (Category)</label>
                         <select
                           value={ruleCreator.targetLayerId}
                           onChange={(e) => {
@@ -890,7 +973,7 @@ const PreviewStep = () => {
                             setRuleCreator({
                               ...ruleCreator,
                               targetLayerId: newLayerId,
-                              targetTraitId: targetL?.traits[0]?.id || '',
+                              targetTraitId: ruleCreator.ruleType === 'block' ? '*' : (targetL?.traits[0]?.id || ''),
                             });
                           }}
                           className="w-full bg-gray-900 border border-gray-700 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-primary-orange"
@@ -910,6 +993,9 @@ const PreviewStep = () => {
                           onChange={(e) => setRuleCreator({ ...ruleCreator, targetTraitId: e.target.value })}
                           className="w-full bg-gray-900 border border-gray-700 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-primary-orange"
                         >
+                          {ruleCreator.ruleType === 'block' && (
+                            <option value="*">⛔ Entire Category (All traits)</option>
+                          )}
                           {project.layers
                             .find(l => l.id === ruleCreator.targetLayerId)
                             ?.traits.map(t => (
@@ -924,7 +1010,9 @@ const PreviewStep = () => {
                       Rule: If <strong className="text-white">{ruleCreator.sourceTraitName}</strong> ({ruleCreator.sourceLayerName}) is selected ➔ <strong className={ruleCreator.ruleType === 'block' ? 'text-red-400' : 'text-blue-400'}>
                         {ruleCreator.ruleType === 'block' ? 'NEVER use with' : 'ALWAYS use with'}
                       </strong> <strong className="text-primary-orange">
-                        {project.layers.find(l => l.id === ruleCreator.targetLayerId)?.traits.find(t => t.id === ruleCreator.targetTraitId)?.name || 'target trait'}
+                        {ruleCreator.targetTraitId === '*'
+                          ? `Entire Category (${project.layers.find(l => l.id === ruleCreator.targetLayerId)?.name || 'target layer'})`
+                          : (project.layers.find(l => l.id === ruleCreator.targetLayerId)?.traits.find(t => t.id === ruleCreator.targetTraitId)?.name || 'target trait')}
                       </strong>.
                     </div>
 

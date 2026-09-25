@@ -37,13 +37,20 @@ const CustomizeStep = () => {
             
             <div className="grid grid-cols-2 gap-2">
               {layers.map(layer => (
-                <div key={layer.id} className="space-y-1">
-                  <label className="text-[10px] uppercase text-gray-500">{layer.name}</label>
+                <div key={layer.id} className="space-y-1.5 bg-gray-900/60 p-2.5 rounded-xl border border-gray-700/60">
+                  <div className="flex items-center justify-between">
+                    <label className="text-[10px] font-bold uppercase text-gray-400">{layer.name}</label>
+                    {custom.traits[layer.name] && (
+                      <span className="text-[9px] font-black uppercase px-1.5 py-0.2 rounded bg-primary-orange/20 text-primary-orange border border-primary-orange/30">
+                        1/1 Custom
+                      </span>
+                    )}
+                  </div>
                   <select 
-                    className="w-full bg-gray-900 border border-gray-700 rounded px-2 py-1 text-xs focus:outline-none focus:border-primary-orange"
+                    className="w-full bg-gray-900 border border-gray-700 rounded-lg px-2 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-primary-orange"
                     value={
-                      layer.traits.some(t => t.name === custom.traits[layer.name]?.value)
-                        ? custom.traits[layer.name]?.value
+                      layer.traits.some(t => t.id === custom.traits[layer.name]?.traitId || t.name === custom.traits[layer.name]?.value)
+                        ? (layer.traits.find(t => t.id === custom.traits[layer.name]?.traitId)?.name || custom.traits[layer.name]?.value)
                         : ''
                     }
                     onChange={(e) => {
@@ -86,6 +93,38 @@ const CustomizeStep = () => {
                       <option key={t.id} value={t.name}>{t.name}</option>
                     ))}
                   </select>
+
+                  {/* 1/1 Trait Name Override */}
+                  {custom.traits[layer.name] && (
+                    <div className="space-y-0.5 pt-1">
+                      <label className="text-[9px] text-gray-500 font-semibold block">1/1 Trait Name Override:</label>
+                      <input
+                        type="text"
+                        placeholder="Custom trait name for this 1/1"
+                        value={custom.traits[layer.name]?.value || ''}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          const updatedCustoms = [...customs];
+                          const cIdx = updatedCustoms.findIndex(c => c.id === custom.id);
+                          if (cIdx === -1 || !updatedCustoms[cIdx].traits[layer.name]) return;
+                          updatedCustoms[cIdx] = {
+                            ...updatedCustoms[cIdx],
+                            traits: {
+                              ...updatedCustoms[cIdx].traits,
+                              [layer.name]: {
+                                ...updatedCustoms[cIdx].traits[layer.name],
+                                value: val,
+                              },
+                            },
+                          };
+                          form.setValue('customs', updatedCustoms, { shouldDirty: true });
+                          resetOriginalProject();
+                        }}
+                        className="w-full bg-black/70 border border-primary-orange/40 rounded-lg px-2 py-1 text-xs text-primary-orange font-bold focus:outline-none focus:border-primary-orange placeholder:text-gray-600"
+                        title="Give this trait an exclusive name for this 1/1 NFT"
+                      />
+                    </div>
+                  )}
                 </div>
               ))}
             </div>

@@ -10,7 +10,8 @@ import {
   MdRule,
   MdBlock,
   MdElectricBolt,
-  MdAdd 
+  MdAdd,
+  MdEdit
 } from 'react-icons/md';
 import { RarityType, TraitT } from '../WenPadTypes';
 import { toast } from 'react-toastify';
@@ -38,6 +39,75 @@ export const getTraitImageUrl = (trait: TraitT) => {
   const url = URL.createObjectURL(blob);
   traitBlobUrlCache.set(trait.id, url);
   return url;
+};
+
+// Inline editable trait name component
+const EditableTraitName = ({
+  initialName,
+  onSave,
+}: {
+  initialName: string;
+  onSave: (newName: string) => void;
+}) => {
+  const [isEditing, setIsEditing] = useState(false);
+  const [name, setName] = useState(initialName);
+
+  useEffect(() => {
+    setName(initialName);
+  }, [initialName]);
+
+  const handleSubmit = () => {
+    const trimmed = name.trim();
+    if (trimmed && trimmed !== initialName) {
+      onSave(trimmed);
+    } else {
+      setName(initialName);
+    }
+    setIsEditing(false);
+  };
+
+  if (isEditing) {
+    return (
+      <div className="flex items-center gap-1 w-full" onClick={(e) => e.stopPropagation()}>
+        <input
+          type="text"
+          value={name}
+          autoFocus
+          onChange={(e) => setName(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') handleSubmit();
+            if (e.key === 'Escape') {
+              setName(initialName);
+              setIsEditing(false);
+            }
+          }}
+          onBlur={handleSubmit}
+          className="w-full bg-gray-950 border border-primary-orange text-xs text-white font-bold rounded px-1.5 py-0.5 focus:outline-none"
+        />
+        <button
+          type="button"
+          onClick={handleSubmit}
+          className="text-primary-orange hover:text-white p-0.5 shrink-0"
+          title="Save trait name"
+        >
+          <MdCheckCircle size={15} />
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div 
+      className="flex items-center justify-between group/name cursor-pointer py-0.5 hover:bg-gray-700/30 px-1 rounded transition-colors"
+      onClick={() => setIsEditing(true)}
+      title="Click to rename trait"
+    >
+      <p className="text-xs font-bold truncate text-gray-200 group-hover/name:text-primary-orange transition-colors">
+        {name}
+      </p>
+      <MdEdit size={12} className="text-gray-500 opacity-0 group-hover/name:opacity-100 hover:text-primary-orange transition-opacity shrink-0 ml-1" />
+    </div>
+  );
 };
 
 // Isolated input so user can backspace, clear, and type decimals without snapping back to 0
@@ -94,7 +164,7 @@ const TraitRarityInput = ({
 const TraitPreviewGrid = () => {
   const { 
     activeLayerDetails, activeLayerIndex, form, deleteTrait, autofillRarity, 
-    resetOriginalProject, layers, addTraitRule, deleteTraitRule 
+    resetOriginalProject, layers, addTraitRule, deleteTraitRule, updateTraitName 
   } = useProject();
   const traits = activeLayerDetails?.traits || [];
   const [layerFilter, setLayerFilter] = useState('');
@@ -122,20 +192,26 @@ const TraitPreviewGrid = () => {
     setNewRuleType('block');
     const firstOther = otherLayers[0];
     setTargetLayerId(firstOther?.id || '');
-    setTargetTraitId(firstOther?.traits[0]?.id || '');
+    setTargetTraitId('*'); // Default to blocking entire category for convenience
   };
 
   const handleAddRuleSubmit = () => {
     if (!rulesTrait || !activeLayerDetails) return;
-    if (!targetLayerId || !targetTraitId) {
-      toast.error('Please select target layer and trait');
+    if (!targetLayerId) {
+      toast.error('Please select target layer');
+      return;
+    }
+
+    const isCategoryBlock = newRuleType === 'block' && (targetTraitId === '*' || !targetTraitId);
+    if (!isCategoryBlock && !targetTraitId) {
+      toast.error('Please select target trait');
       return;
     }
 
     addTraitRule(activeLayerDetails.id, rulesTrait.id, {
-      type: newRuleType,
+      type: isCategoryBlock ? 'block_layer' : newRuleType,
       layer: targetLayerId,
-      trait: targetTraitId,
+      trait: isCategoryBlock ? '*' : targetTraitId,
     });
 
     // Update modal view
@@ -320,9 +396,10 @@ const TraitPreviewGrid = () => {
               </div>
 
               <div className="p-3 space-y-2 bg-gray-800">
-                <p className="text-xs font-bold truncate text-gray-200" title={trait.name}>
-                  {trait.name}
-                </p>
+                <EditableTraitName
+                  initialName={trait.name}
+                  onSave={(newName) => updateTraitName(activeLayerDetails!.id, trait.id, newName)}
+                />
 
                 <div className="flex items-center gap-1.5">
                   <div className="flex-1">
@@ -422,6 +499,7 @@ const TraitPreviewGrid = () => {
                   {rulesTrait.rules?.map((rule, rIdx) => {
                     const targetL = layers.find(l => l.id === rule.layer || l.name === rule.layer);
                     const targetT = targetL?.traits.find(t => t.id === rule.trait || t.name === rule.trait);
+                    const isCategoryBlock = rule.type === 'block_layer' || rule.trait === '*' || rule.trait === 'ALL';
 
                     return (
                       <div 
@@ -430,14 +508,27 @@ const TraitPreviewGrid = () => {
                       >
                         <div className="flex items-center gap-2 text-gray-300">
                           <span className={`text-[9px] font-black px-1.5 py-0.5 rounded uppercase ${
-                            rule.type === 'block' ? 'bg-red-500/20 text-red-400' : 'bg-blue-500/20 text-blue-400'
+                            isCategoryBlock
+                              ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30'
+                              : rule.type === 'block' 
+                                ? 'bg-red-500/20 text-red-400' 
+                                : 'bg-blue-500/20 text-blue-400'
                           }`}>
-                            {rule.type === 'block' ? 'Never' : 'Always'}
+                            {isCategoryBlock ? 'Block Category' : rule.type === 'block' ? 'Never' : 'Always'}
                           </span>
                           <span>
-                            {rule.type === 'block' ? 'Never with' : 'Always with'}{' '}
-                            <strong className="text-primary-orange">{targetT?.name || rule.trait}</strong>{' '}
-                            <span className="text-gray-500">({targetL?.name || rule.layer})</span>
+                            {isCategoryBlock ? (
+                              <>
+                                Never with Entire Category:{' '}
+                                <strong className="text-red-400 font-bold">{targetL?.name || rule.layer}</strong>
+                              </>
+                            ) : (
+                              <>
+                                {rule.type === 'block' ? 'Never with' : 'Always with'}{' '}
+                                <strong className="text-primary-orange">{targetT?.name || rule.trait}</strong>{' '}
+                                <span className="text-gray-500">({targetL?.name || rule.layer})</span>
+                              </>
+                            )}
                           </span>
                         </div>
                         <button
@@ -465,7 +556,10 @@ const TraitPreviewGrid = () => {
                 <div className="grid grid-cols-2 gap-2 text-xs font-bold">
                   <button
                     type="button"
-                    onClick={() => setNewRuleType('block')}
+                    onClick={() => {
+                      setNewRuleType('block');
+                      if (!targetTraitId) setTargetTraitId('*');
+                    }}
                     className={`py-1.5 px-2 rounded-xl border flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
                       newRuleType === 'block'
                         ? 'bg-red-500/20 text-red-300 border-red-500/60'
@@ -476,7 +570,11 @@ const TraitPreviewGrid = () => {
                   </button>
                   <button
                     type="button"
-                    onClick={() => setNewRuleType('force')}
+                    onClick={() => {
+                      setNewRuleType('force');
+                      const targetL = otherLayers.find(l => l.id === targetLayerId);
+                      setTargetTraitId(targetL?.traits[0]?.id || '');
+                    }}
                     className={`py-1.5 px-2 rounded-xl border flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
                       newRuleType === 'force'
                         ? 'bg-blue-500/20 text-blue-300 border-blue-500/60'
@@ -489,14 +587,14 @@ const TraitPreviewGrid = () => {
 
                 <div className="grid grid-cols-2 gap-2">
                   <div>
-                    <label className="text-[10px] font-semibold text-gray-400 block mb-1">Target Layer</label>
+                    <label className="text-[10px] font-semibold text-gray-400 block mb-1">Target Layer (Category)</label>
                     <select
                       value={targetLayerId}
                       onChange={(e) => {
                         const newLayerId = e.target.value;
                         const targetL = otherLayers.find(l => l.id === newLayerId);
                         setTargetLayerId(newLayerId);
-                        setTargetTraitId(targetL?.traits[0]?.id || '');
+                        setTargetTraitId(newRuleType === 'block' ? '*' : (targetL?.traits[0]?.id || ''));
                       }}
                       className="w-full bg-gray-800 border border-gray-700 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-primary-orange"
                     >
@@ -513,6 +611,9 @@ const TraitPreviewGrid = () => {
                       onChange={(e) => setTargetTraitId(e.target.value)}
                       className="w-full bg-gray-800 border border-gray-700 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-primary-orange"
                     >
+                      {newRuleType === 'block' && (
+                        <option value="*">⛔ Entire Category (All traits)</option>
+                      )}
                       {otherLayers
                         .find(l => l.id === targetLayerId)
                         ?.traits.map(t => (

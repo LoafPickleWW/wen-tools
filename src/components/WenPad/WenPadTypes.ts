@@ -24,6 +24,7 @@ export type LayerT = {
   traits: TraitT[];
   sameAs?: string;
   excludeFromMetadata: boolean;
+  rules?: RuleT[];
 };
 
 export type TraitT = {
@@ -41,7 +42,7 @@ export type TraitT = {
 };
 
 export type RuleT = {
-  type: 'force' | 'block';
+  type: 'force' | 'block' | 'block_layer';
   layer: string;
   trait: string;
 };

@@ -299,6 +299,157 @@ export const ProjectProvider = ({ children }: Props) => {
     toast.success('Rule removed');
   };
 
+  const addLayerRule = (layerId: string, rule: RuleT) => {
+    const currentValues = form.getValues();
+    const updatedLayers = currentValues.layers.map((layer) => {
+      if (layer.id !== layerId && layer.name !== layerId) return layer;
+      const existingRules = layer.rules || [];
+      return {
+        ...layer,
+        rules: [...existingRules, rule],
+      };
+    });
+    form.setValue('layers', updatedLayers, { shouldDirty: true });
+    resetOriginalProject();
+    toast.success('Category rule added');
+  };
+
+  const deleteLayerRule = (layerId: string, ruleIndex: number) => {
+    const currentValues = form.getValues();
+    const updatedLayers = currentValues.layers.map((layer) => {
+      if (layer.id !== layerId && layer.name !== layerId) return layer;
+      const existingRules = [...(layer.rules || [])];
+      existingRules.splice(ruleIndex, 1);
+      return {
+        ...layer,
+        rules: existingRules,
+      };
+    });
+    form.setValue('layers', updatedLayers, { shouldDirty: true });
+    resetOriginalProject();
+    toast.success('Category rule removed');
+  };
+
+  const updateTraitName = (layerId: string, traitId: string, newName: string) => {
+    const trimmed = newName.trim();
+    if (!trimmed) {
+      toast.error('Trait name cannot be empty');
+      return;
+    }
+    const currentValues = form.getValues();
+    let oldName = '';
+    let targetLayerName = '';
+
+    const updatedLayers = currentValues.layers.map((layer) => {
+      if (layer.id !== layerId && layer.name !== layerId) return layer;
+      targetLayerName = layer.name;
+      return {
+        ...layer,
+        traits: layer.traits.map((t) => {
+          if (t.id !== traitId && t.name !== traitId) return t;
+          oldName = t.name;
+          return { ...t, name: trimmed };
+        }),
+      };
+    });
+
+    const currentPreviews = currentValues.previewItems || [];
+    const updatedPreviews = currentPreviews.map((item) => {
+      if (!item.traits || !item.traits[targetLayerName]) return item;
+      const currentTrait = item.traits[targetLayerName];
+      if (currentTrait.traitId === traitId || currentTrait.value === oldName) {
+        return {
+          ...item,
+          traits: {
+            ...item.traits,
+            [targetLayerName]: {
+              ...currentTrait,
+              value: trimmed,
+            },
+          },
+        };
+      }
+      return item;
+    });
+
+    const currentCustoms = currentValues.customs || [];
+    const updatedCustoms = currentCustoms.map((custom) => {
+      if (!custom.traits || !custom.traits[targetLayerName]) return custom;
+      const currentTrait = custom.traits[targetLayerName];
+      if (currentTrait.traitId === traitId || currentTrait.value === oldName) {
+        return {
+          ...custom,
+          traits: {
+            ...custom.traits,
+            [targetLayerName]: {
+              ...currentTrait,
+              value: trimmed,
+            },
+          },
+        };
+      }
+      return custom;
+    });
+
+    form.setValue('layers', updatedLayers, { shouldDirty: true });
+    form.setValue('previewItems', updatedPreviews, { shouldDirty: true });
+    form.setValue('customs', updatedCustoms, { shouldDirty: true });
+    resetOriginalProject();
+    toast.success(`Renamed trait to "${trimmed}"`);
+  };
+
+  const updatePreviewItemTraitName = (itemIndex: number, layerName: string, newValue: string) => {
+    const currentPreviews = form.getValues('previewItems') || [];
+    const idx = currentPreviews.findIndex((item) => item.index === itemIndex);
+    if (idx === -1) return;
+
+    const item = currentPreviews[idx];
+    if (!item.traits || !item.traits[layerName]) return;
+
+    const updatedItem = {
+      ...item,
+      traits: {
+        ...item.traits,
+        [layerName]: {
+          ...item.traits[layerName],
+          value: newValue,
+        },
+      },
+    };
+
+    const newPreviews = [...currentPreviews];
+    newPreviews[idx] = updatedItem;
+    form.setValue('previewItems', newPreviews, { shouldDirty: true });
+    resetOriginalProject();
+    toast.success(`Updated trait on #${itemIndex}`);
+  };
+
+  const updateCustomTraitName = (customId: string, layerName: string, newValue: string) => {
+    const currentCustoms = form.getValues('customs') || [];
+    const idx = currentCustoms.findIndex((c) => c.id === customId);
+    if (idx === -1) return;
+
+    const custom = currentCustoms[idx];
+    if (!custom.traits || !custom.traits[layerName]) return;
+
+    const updatedCustom = {
+      ...custom,
+      traits: {
+        ...custom.traits,
+        [layerName]: {
+          ...custom.traits[layerName],
+          value: newValue,
+        },
+      },
+    };
+
+    const newCustoms = [...currentCustoms];
+    newCustoms[idx] = updatedCustom;
+    form.setValue('customs', newCustoms, { shouldDirty: true });
+    resetOriginalProject();
+    toast.success(`Updated trait on Custom #${custom.index}`);
+  };
+
   const formatTrait = (file: any): TraitT => {
     return {
       id: uuid(),
@@ -520,6 +671,8 @@ export const ProjectProvider = ({ children }: Props) => {
         generatePreviewItems, autofillRarity, filterPreviewItems,
         addCustom, deleteCustom, downloadBackup, resetOriginalProject,
         purgeDeletedTraitAssets, addTraitRule, deleteTraitRule,
+        addLayerRule, deleteLayerRule, updateTraitName,
+        updatePreviewItemTraitName, updateCustomTraitName,
       }}
     >
       {children}

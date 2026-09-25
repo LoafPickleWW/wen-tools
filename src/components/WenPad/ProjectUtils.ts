@@ -155,20 +155,31 @@ export function handleForceTraits(previewItem: PreviewItemT, layers: LayerT[]) {
 }
 
 export function handleBlockTraits(previewItem: PreviewItemT, layers: LayerT[]) {
+  // 1. Process trait-level rules
   Object.values(previewItem.traits).forEach((trait) => {
     const layer = layers.find((f) => f.name === trait.trait_type || f.id === trait.layerId);
     const traitDetails = layer?.traits.find((f) => f.name === trait.value || f.id === trait.traitId);
     const traitRules = traitDetails?.rules || [];
+
     for (const rule of traitRules) {
       const ruleLayerDetails = layers.find((f) => f.id === rule.layer || f.name === rule.layer);
-      const ruleTraitDetails = ruleLayerDetails?.traits.find((f) => f.id === rule.trait || f.name === rule.trait);
-      if (!ruleLayerDetails || !ruleTraitDetails) continue;
-      if (rule.type === 'block') {
-        const targetLayer = layers.find((f) => f.name === ruleLayerDetails.name || f.id === ruleLayerDetails.id);
+      if (!ruleLayerDetails) continue;
+
+      // Check if blocking entire category (layer)
+      const isBlockingEntireCategory = rule.type === 'block_layer' || rule.trait === '*' || rule.trait === 'ALL' || !rule.trait;
+
+      if (isBlockingEntireCategory) {
+        // Remove target layer completely from this preview item
+        delete previewItem.traits[ruleLayerDetails.name];
+      } else if (rule.type === 'block') {
+        const ruleTraitDetails = ruleLayerDetails.traits.find((f) => f.id === rule.trait || f.name === rule.trait);
+        if (!ruleTraitDetails) continue;
+
         const hasTargetTrait = Object.values(previewItem.traits).find(
-          (f) => (f.trait_type === targetLayer?.name || f.layerId === targetLayer?.id) &&
+          (f) => (f.trait_type === ruleLayerDetails.name || f.layerId === ruleLayerDetails.id) &&
                  (f.value === ruleTraitDetails.name || f.traitId === ruleTraitDetails.id)
         );
+
         if (hasTargetTrait) {
           const availableTraits = ruleLayerDetails.traits
             .filter((t) => !t.sameAs && t.excludeTraitFromRandomGenerations !== true)
@@ -183,6 +194,45 @@ export function handleBlockTraits(previewItem: PreviewItemT, layers: LayerT[]) {
               layerId: ruleLayerDetails.id,
               traitId: newTrait.id,
             };
+          } else {
+            delete previewItem.traits[ruleLayerDetails.name];
+          }
+        }
+      }
+    }
+  });
+
+  // 2. Process layer-level category rules (e.g. if Hat layer is present, block entire Necklace category)
+  layers.forEach((layer) => {
+    if (previewItem.traits[layer.name] && layer.rules && layer.rules.length > 0) {
+      for (const rule of layer.rules) {
+        const ruleLayerDetails = layers.find((f) => f.id === rule.layer || f.name === rule.layer);
+        if (!ruleLayerDetails) continue;
+
+        const isBlockingEntireCategory = rule.type === 'block_layer' || rule.trait === '*' || rule.trait === 'ALL' || !rule.trait;
+        if (isBlockingEntireCategory) {
+          delete previewItem.traits[ruleLayerDetails.name];
+        } else if (rule.type === 'block') {
+          const ruleTraitDetails = ruleLayerDetails.traits.find((f) => f.id === rule.trait || f.name === rule.trait);
+          if (!ruleTraitDetails) continue;
+
+          if (previewItem.traits[ruleLayerDetails.name]?.value === ruleTraitDetails.name) {
+            const availableTraits = ruleLayerDetails.traits
+              .filter((t) => !t.sameAs && t.excludeTraitFromRandomGenerations !== true)
+              .filter((f) => f.name !== ruleTraitDetails.name && f.id !== ruleTraitDetails.id);
+            const newTrait = getRandomTrait(availableTraits);
+            if (newTrait) {
+              previewItem.traits[ruleLayerDetails.name] = {
+                trait_type: ruleLayerDetails.name,
+                value: newTrait.name,
+                image: newTrait.data,
+                excludeFromMetadata: ruleLayerDetails.excludeFromMetadata,
+                layerId: ruleLayerDetails.id,
+                traitId: newTrait.id,
+              };
+            } else {
+              delete previewItem.traits[ruleLayerDetails.name];
+            }
           }
         }
       }
@@ -323,7 +373,6 @@ export function purgeInvalidPreviewItems(project: ProjectT): {
 
     for (const [layerName, traitObj] of Object.entries(item.traits)) {
       const validNames = validTraitsByLayer.get(layerName);
-      // If the layer or the trait value no longer exists, asset was minted with deleted traits
       if (!validNames || !validNames.has(traitObj.value)) {
         hasDeletedTrait = true;
         break;
@@ -334,7 +383,6 @@ export function purgeInvalidPreviewItems(project: ProjectT): {
     if (hasDeletedTrait) continue;
     if (Object.keys(cleanedTraits).length === 0) continue;
 
-    // Asset must have at least one layer image matching current layers
     const hasAtLeastOneImage = project.layers.some(
       (layer) => Boolean(cleanedTraits[layer.name]?.image)
     );
@@ -346,18 +394,15 @@ export function purgeInvalidPreviewItems(project: ProjectT): {
     });
   }
 
-  // Renumber remaining items sequentially starting from 1
   validPreviewItems.forEach((item, index) => {
     item.index = index + 1;
   });
 
-  // Re-calculate ratings and rankings for remaining items
   if (validPreviewItems.length > 0) {
     addRatings(validPreviewItems, project.layers);
     addRankings(validPreviewItems);
   }
 
-  // Sanitize customs as well
   const validCustoms: PreviewItemT[] = [];
   for (const custom of project.customs || []) {
     if (!custom.traits || Object.keys(custom.traits).length === 0) continue;
@@ -397,19 +442,29 @@ export function sanitizeProject(project: ProjectT): ProjectT {
   if (!project || !project.layers) return project;
 
   const validTraitIds = new Set<string>();
+  const validLayerIds = new Set<string>();
   for (const layer of project.layers) {
+    validLayerIds.add(layer.id);
     for (const trait of layer.traits || []) {
       validTraitIds.add(trait.id);
     }
   }
 
-  // Sanitize layers: clean orphaned sameAs and rules
   const sanitizedLayers = project.layers.map((layer) => ({
     ...layer,
+    rules: (layer.rules || []).filter((rule) => {
+      if (!validLayerIds.has(rule.layer)) return false;
+      if (rule.type === 'block_layer' || rule.trait === '*' || rule.trait === 'ALL' || !rule.trait) return true;
+      return validTraitIds.has(rule.trait);
+    }),
     traits: (layer.traits || []).map((trait) => ({
       ...trait,
       sameAs: validTraitIds.has(trait.sameAs || '') ? trait.sameAs : '',
-      rules: (trait.rules || []).filter((rule) => validTraitIds.has(rule.trait)),
+      rules: (trait.rules || []).filter((rule) => {
+        if (!validLayerIds.has(rule.layer)) return false;
+        if (rule.type === 'block_layer' || rule.trait === '*' || rule.trait === 'ALL' || !rule.trait) return true;
+        return validTraitIds.has(rule.trait);
+      }),
     })),
   }));
 
@@ -419,6 +474,32 @@ export function sanitizeProject(project: ProjectT): ProjectT {
   });
 
   return cleanedProject;
+}
+
+export function buildMintMetadata(
+  item: PreviewItemT,
+  project: ProjectT,
+  imageCid: string,
+  standard: string = 'ARC3'
+) {
+  const imageUri = imageCid.startsWith('ipfs://') ? imageCid : `ipfs://${imageCid}`;
+  const base = buildItemMetadata(item, project, imageUri);
+
+  if (standard === 'ARC69') {
+    return {
+      standard: 'arc69',
+      name: base.name,
+      image: base.image,
+      description: project.description || '',
+      external_url: project.website || undefined,
+      properties: base.properties,
+      attributes: base.attributes,
+      ranking: item.ranking,
+      rarity_score: item.rating,
+    };
+  }
+
+  return base;
 }
 
 export function buildItemMetadata(

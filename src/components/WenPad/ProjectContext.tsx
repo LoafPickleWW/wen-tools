@@ -41,6 +41,11 @@ export type ContextT = {
   purgeDeletedTraitAssets: () => number;
   addTraitRule: (sourceLayerId: string, sourceTraitId: string, rule: RuleT) => void;
   deleteTraitRule: (sourceLayerId: string, sourceTraitId: string, ruleIndex: number) => void;
+  addLayerRule: (layerId: string, rule: RuleT) => void;
+  deleteLayerRule: (layerId: string, ruleIndex: number) => void;
+  updateTraitName: (layerId: string, traitId: string, newName: string) => void;
+  updatePreviewItemTraitName: (itemIndex: number, layerName: string, newValue: string) => void;
+  updateCustomTraitName: (customId: string, layerName: string, newValue: string) => void;
 };
 
 export const ProjectContext = createContext<ContextT>({} as ContextT);

@@ -11,7 +11,8 @@ import {
   MdSearch,
   MdClose,
   MdSearchOff,
-  MdOpenInNew
+  MdOpenInNew,
+  MdBlock
 } from 'react-icons/md';
 import { v4 as uuid } from 'uuid';
 import TraitPreviewGrid, { getTraitImageUrl } from './TraitPreviewGrid';
@@ -22,13 +23,15 @@ const LayersStep = () => {
     form, layers, activeLayer, selectLayer, 
     deleteLayer, deleteTrait, moveLayer, resetProject, saveProject,
     activeLayerDetails, activeLayerIndex, formatTrait,
-    resetOriginalProject
+    resetOriginalProject, addLayerRule, deleteLayerRule
   } = useProject();
 
   const [newLayerName, setNewLayerName] = useState('');
   const [draggedIdx, setDraggedIdx] = useState<number | null>(null);
   const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [blockingCategoryOpen, setBlockingCategoryOpen] = useState(false);
+  const [selectedBlockLayerId, setSelectedBlockLayerId] = useState('');
 
   const totalTraitsCount = useMemo(() => {
     return layers.reduce((acc, l) => acc + (l.traits?.length || 0), 0);
@@ -428,6 +431,98 @@ const LayersStep = () => {
                   onChange={handleFileUpload}
                 />
               </label>
+            </div>
+
+            {/* Layer-Level Category Rules Bar */}
+            <div className="bg-gray-900/60 border border-gray-800 rounded-2xl p-3.5 space-y-2">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold text-gray-300 flex items-center gap-1.5">
+                    <MdBlock size={15} className="text-red-400" />
+                    Category Rules:
+                  </span>
+                  <span className="text-[11px] text-gray-400">
+                    When <strong className="text-primary-orange">{activeLayerDetails?.name}</strong> is present, block entire categories:
+                  </span>
+                </div>
+
+                {!blockingCategoryOpen ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const firstOther = layers.find(l => l.id !== activeLayerDetails?.id);
+                      setSelectedBlockLayerId(firstOther?.id || '');
+                      setBlockingCategoryOpen(true);
+                    }}
+                    className="px-2.5 py-1 bg-red-500/10 hover:bg-red-500/20 text-red-300 border border-red-500/30 rounded-lg text-xs font-bold transition-all flex items-center gap-1 cursor-pointer"
+                  >
+                    <MdAdd size={14} /> Block Category
+                  </button>
+                ) : (
+                  <div className="flex items-center gap-1.5">
+                    <select
+                      value={selectedBlockLayerId}
+                      onChange={(e) => setSelectedBlockLayerId(e.target.value)}
+                      className="bg-gray-800 border border-gray-700 text-xs text-white rounded-lg px-2 py-1 focus:outline-none focus:border-primary-orange"
+                    >
+                      {layers
+                        .filter(l => l.id !== activeLayerDetails?.id)
+                        .map(l => (
+                          <option key={l.id} value={l.id}>{l.name}</option>
+                        ))}
+                    </select>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (!selectedBlockLayerId || !activeLayerDetails) return;
+                        addLayerRule(activeLayerDetails.id, {
+                          type: 'block_layer',
+                          layer: selectedBlockLayerId,
+                          trait: '*',
+                        });
+                        setBlockingCategoryOpen(false);
+                      }}
+                      className="px-2.5 py-1 bg-red-500 hover:bg-red-600 text-white rounded-lg text-xs font-bold transition-all cursor-pointer"
+                    >
+                      Block
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setBlockingCategoryOpen(false)}
+                      className="p-1 text-gray-400 hover:text-white"
+                    >
+                      <MdClose size={16} />
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Active Category Rules Badges */}
+              {activeLayerDetails?.rules && activeLayerDetails.rules.length > 0 ? (
+                <div className="flex flex-wrap items-center gap-2 pt-1">
+                  {activeLayerDetails.rules.map((rule, rIdx) => {
+                    const targetL = layers.find(l => l.id === rule.layer || l.name === rule.layer);
+                    return (
+                      <span 
+                        key={rIdx}
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-red-500/15 border border-red-500/30 text-xs font-bold text-red-300"
+                      >
+                        <span>⛔ Blocks entire <strong>{targetL?.name || rule.layer}</strong></span>
+                        <button
+                          type="button"
+                          onClick={() => deleteLayerRule(activeLayerDetails.id, rIdx)}
+                          className="text-red-400 hover:text-white ml-0.5"
+                          title="Remove rule"
+                        >
+                          <MdClose size={14} />
+                        </button>
+                      </span>
+                    );
+                  })}
+                </div>
+              ) : (
+                <p className="text-[11px] text-gray-500 italic">No category rules active for this layer.</p>
+              )}
             </div>
 
             <TraitPreviewGrid />
