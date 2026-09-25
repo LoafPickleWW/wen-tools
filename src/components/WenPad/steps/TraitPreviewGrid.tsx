@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useProject } from '../ProjectContext';
-import { MdDelete, MdAutoFixHigh, MdCheckCircle, MdWarning } from 'react-icons/md';
+import { MdDelete, MdAutoFixHigh, MdCheckCircle, MdWarning, MdSearch, MdClose } from 'react-icons/md';
 import { RarityType, TraitT } from '../WenPadTypes';
 
 // Cache blob URLs by trait ID to avoid recreating object URLs and causing image flickers
 const traitBlobUrlCache = new Map<string, string>();
 
-const getTraitImageUrl = (trait: TraitT) => {
+export const getTraitImageUrl = (trait: TraitT) => {
   if (!trait.data) return '';
   if (traitBlobUrlCache.has(trait.id)) {
     return traitBlobUrlCache.get(trait.id)!;
@@ -82,6 +82,13 @@ const TraitRarityInput = ({
 const TraitPreviewGrid = () => {
   const { activeLayerDetails, activeLayerIndex, form, deleteTrait, autofillRarity, resetOriginalProject } = useProject();
   const traits = activeLayerDetails?.traits || [];
+  const [layerFilter, setLayerFilter] = useState('');
+
+  const filteredTraits = useMemo(() => {
+    if (!layerFilter.trim()) return traits;
+    const q = layerFilter.trim().toLowerCase();
+    return traits.filter(t => t.name.toLowerCase().includes(q));
+  }, [traits, layerFilter]);
 
   const handleRarityChange = (traitIndex: number, newRarity: number) => {
     const currentLayers = form.getValues('layers');
@@ -145,7 +152,7 @@ const TraitPreviewGrid = () => {
     <div className="space-y-4">
       {/* Layer Stats & Quick Actions Toolbar */}
       <div className="flex flex-wrap justify-between items-center bg-[#010002]/40 p-4 rounded-2xl border border-gray-800/80 gap-3">
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <span className="text-xs font-black uppercase tracking-widest text-gray-400">
             {traits.length} {traits.length === 1 ? 'Trait' : 'Traits'}
           </span>
@@ -165,6 +172,28 @@ const TraitPreviewGrid = () => {
                     : ` (exceeds by +${(totalPercent - 100).toFixed(1)}%)`
                 )}
               </span>
+            </div>
+          )}
+
+          {/* In-layer search input */}
+          {traits.length > 3 && (
+            <div className="relative w-36 sm:w-44">
+              <MdSearch className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-500" size={14} />
+              <input
+                value={layerFilter}
+                onChange={(e) => setLayerFilter(e.target.value)}
+                placeholder="Filter traits..."
+                className="w-full bg-gray-900 border border-gray-700/80 rounded-xl pl-7 pr-6 py-1 text-xs focus:outline-none focus:border-primary-orange text-gray-200 placeholder:text-gray-600"
+              />
+              {layerFilter && (
+                <button 
+                  type="button"
+                  onClick={() => setLayerFilter('')} 
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white"
+                >
+                  <MdClose size={12} />
+                </button>
+              )}
             </div>
           )}
         </div>
@@ -200,57 +229,72 @@ const TraitPreviewGrid = () => {
 
       {/* Grid of Traits */}
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-4">
-        {traits.map((trait, idx) => (
-          <div 
-            key={trait.id} 
-            className="bg-gray-800/90 rounded-2xl border border-gray-700 overflow-hidden group hover:border-primary-orange/50 transition-all flex flex-col justify-between"
-          >
-            <div className="aspect-square bg-gray-900/80 relative flex items-center justify-center p-2">
-              <img 
-                src={getTraitImageUrl(trait)} 
-                alt={trait.name} 
-                className="w-full h-full object-contain"
-                loading="lazy"
-              />
-              <button 
-                type="button"
-                onClick={() => deleteTrait(activeLayerDetails!, trait)}
-                className="absolute top-2 right-2 p-1.5 bg-red-500/80 hover:bg-red-600 text-white rounded-lg opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
-                title="Delete trait"
-              >
-                <MdDelete size={14} />
-              </button>
-            </div>
-
-            <div className="p-3 space-y-2 bg-gray-800">
-              <p className="text-xs font-bold truncate text-gray-200" title={trait.name}>
-                {trait.name}
-              </p>
-
-              <div className="flex items-center gap-1.5">
-                <div className="flex-1">
-                  <TraitRarityInput
-                    rarity={trait.rarity}
-                    onChange={(val) => handleRarityChange(idx, val)}
-                  />
-                </div>
-
-                <button
+        {filteredTraits.map((trait) => {
+          const originalIndex = traits.findIndex(t => t.id === trait.id);
+          return (
+            <div 
+              key={trait.id} 
+              className="bg-gray-800/90 rounded-2xl border border-gray-700 overflow-hidden group hover:border-primary-orange/50 transition-all flex flex-col justify-between"
+            >
+              <div className="aspect-square bg-gray-900/80 relative flex items-center justify-center p-2">
+                <img 
+                  src={getTraitImageUrl(trait)} 
+                  alt={trait.name} 
+                  className="w-full h-full object-contain"
+                  loading="lazy"
+                />
+                <button 
                   type="button"
-                  onClick={() => handleRarityTypeToggle(idx)}
-                  className={`px-2 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all border ${
-                    trait.rarityType === RarityType.PERCENT
-                      ? 'bg-primary-orange/20 text-primary-orange border-primary-orange/40 hover:bg-primary-orange/30'
-                      : 'bg-blue-500/20 text-blue-400 border-blue-500/40 hover:bg-blue-500/30'
-                  }`}
-                  title="Click to switch between % and Qty"
+                  onClick={() => deleteTrait(activeLayerDetails!, trait)}
+                  className="absolute top-2 right-2 p-1.5 bg-red-500/80 hover:bg-red-600 text-white rounded-lg opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
+                  title="Delete trait"
                 >
-                  {trait.rarityType === RarityType.PERCENT ? '%' : 'Qty'}
+                  <MdDelete size={14} />
                 </button>
               </div>
+
+              <div className="p-3 space-y-2 bg-gray-800">
+                <p className="text-xs font-bold truncate text-gray-200" title={trait.name}>
+                  {trait.name}
+                </p>
+
+                <div className="flex items-center gap-1.5">
+                  <div className="flex-1">
+                    <TraitRarityInput
+                      rarity={trait.rarity}
+                      onChange={(val) => handleRarityChange(originalIndex, val)}
+                    />
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => handleRarityTypeToggle(originalIndex)}
+                    className={`px-2 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all border ${
+                      trait.rarityType === RarityType.PERCENT
+                        ? 'bg-primary-orange/20 text-primary-orange border-primary-orange/40 hover:bg-primary-orange/30'
+                        : 'bg-blue-500/20 text-blue-400 border-blue-500/40 hover:bg-blue-500/30'
+                    }`}
+                    title="Click to switch between % and Qty"
+                  >
+                    {trait.rarityType === RarityType.PERCENT ? '%' : 'Qty'}
+                  </button>
+                </div>
+              </div>
             </div>
+          );
+        })}
+
+        {traits.length > 0 && filteredTraits.length === 0 && (
+          <div className="col-span-full py-12 flex flex-col items-center justify-center text-gray-500 bg-gray-900/20 rounded-2xl border border-gray-800">
+            <p className="text-sm">No traits matching "{layerFilter}"</p>
+            <button 
+              onClick={() => setLayerFilter('')} 
+              className="mt-2 text-xs text-primary-orange hover:underline font-bold"
+            >
+              Clear filter
+            </button>
           </div>
-        ))}
+        )}
       </div>
     </div>
   );
