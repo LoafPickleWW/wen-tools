@@ -1,19 +1,62 @@
 import { useState, useMemo } from 'react';
 import { useProject } from '../ProjectContext';
-import { MdRefresh, MdNavigateBefore, MdNavigateNext, MdSearch, MdClose, MdInfoOutline } from 'react-icons/md';
+import { 
+  MdRefresh, 
+  MdNavigateBefore, 
+  MdNavigateNext, 
+  MdSearch, 
+  MdClose, 
+  MdInfoOutline, 
+  MdDeleteSweep, 
+  MdWarning 
+} from 'react-icons/md';
 import PreviewImage from '../PreviewImage';
 import { PreviewItemT } from '../WenPadTypes';
 
 const PreviewStep = () => {
   const { 
     generatePreviewItems, previewItems, filteredPreviewItems, generateIsLoading, 
-    sortBy, setSortBy, project 
+    sortBy, setSortBy, project, purgeDeletedTraitAssets
   } = useProject();
 
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(24);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedItem, setSelectedItem] = useState<PreviewItemT | null>(null);
+
+  // Check how many preview items are corrupted (have deleted traits or no valid traits)
+  const corruptedItemsCount = useMemo(() => {
+    if (!previewItems || previewItems.length === 0) return 0;
+    const validTraitsByLayer = new Map<string, Set<string>>();
+    for (const layer of project.layers || []) {
+      validTraitsByLayer.set(layer.name, new Set((layer.traits || []).map((t) => t.name)));
+    }
+
+    let count = 0;
+    for (const item of previewItems) {
+      if (!item.traits || Object.keys(item.traits).length === 0) {
+        count++;
+        continue;
+      }
+      let invalid = false;
+      for (const [layerName, traitObj] of Object.entries(item.traits)) {
+        const validNames = validTraitsByLayer.get(layerName);
+        if (!validNames || !validNames.has(traitObj.value)) {
+          invalid = true;
+          break;
+        }
+      }
+      if (invalid) {
+        count++;
+        continue;
+      }
+      const hasImages = (project.layers || []).some((l) => Boolean(item.traits[l.name]?.image));
+      if (!hasImages) {
+        count++;
+      }
+    }
+    return count;
+  }, [previewItems, project.layers]);
 
   // Apply search query by index/number or trait value
   const displayedItems = useMemo(() => {
@@ -98,6 +141,23 @@ const PreviewStep = () => {
             <option value={96}>96 / page</option>
           </select>
           
+          {/* Purge / Clean button */}
+          {previewItems.length > 0 && (
+            <button
+              type="button"
+              onClick={purgeDeletedTraitAssets}
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all border ${
+                corruptedItemsCount > 0
+                  ? 'bg-amber-500/20 text-amber-300 border-amber-500/50 hover:bg-amber-500/30 shadow-md animate-pulse'
+                  : 'bg-gray-800 text-gray-400 border-gray-700 hover:bg-gray-700 hover:text-white'
+              }`}
+              title="Purge assets minted with deleted traits and renumber remaining collection 1..N"
+            >
+              <MdDeleteSweep size={16} className={corruptedItemsCount > 0 ? "text-amber-400" : "text-gray-400"} />
+              {corruptedItemsCount > 0 ? `Purge Deleted (${corruptedItemsCount})` : 'Clean Traits'}
+            </button>
+          )}
+
           {/* Regenerate / Generate button */}
           <button 
             onClick={generatePreviewItems}
@@ -109,6 +169,32 @@ const PreviewStep = () => {
           </button>
         </div>
       </div>
+
+      {/* Corrupted / Deleted Traits Alert Banner */}
+      {corruptedItemsCount > 0 && (
+        <div className="flex flex-wrap items-center justify-between gap-4 p-4 bg-amber-500/10 border border-amber-500/30 rounded-2xl text-amber-300">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-xl bg-amber-500/20 text-amber-400 shrink-0">
+              <MdWarning size={22} />
+            </div>
+            <div>
+              <p className="text-xs font-black text-gray-100">
+                Found {corruptedItemsCount} {corruptedItemsCount === 1 ? 'asset' : 'assets'} minted with deleted traits (e.g. #1).
+              </p>
+              <p className="text-[11px] text-gray-400 mt-0.5">
+                Click below to purge these assets, renumber the remaining collection sequentially from #1 to #{previewItems.length - corruptedItemsCount}, and refresh rarity scores.
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={purgeDeletedTraitAssets}
+            className="px-4 py-2.5 bg-amber-500 hover:bg-amber-400 text-black text-xs font-black uppercase tracking-wider rounded-xl transition-all shadow-md flex items-center gap-2 shrink-0 cursor-pointer"
+          >
+            <MdDeleteSweep size={18} /> Purge & Renumber ({corruptedItemsCount})
+          </button>
+        </div>
+      )}
 
       {/* Pagination Bar (Top) */}
       {displayedItems.length > 0 && (
@@ -159,34 +245,74 @@ const PreviewStep = () => {
 
       {/* Grid of Preview Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-6 gap-4">
-        {paginatedItems.map((item) => (
-          <div 
-            key={item.id} 
-            onClick={() => setSelectedItem(item)}
-            className="bg-gray-800/90 rounded-2xl border border-gray-700/80 overflow-hidden hover:border-primary-orange/60 hover:shadow-xl hover:scale-[1.01] transition-all group shadow-md cursor-pointer flex flex-col"
-          >
-            <div className="aspect-square relative w-full bg-gray-900/60">
-              <PreviewImage 
-                item={item} 
-                layers={project.layers}
-                width={project.imageWidth || 1000} 
-                height={project.imageHeight || 1000} 
-              />
-              <div className="absolute top-2 left-2 bg-black/70 backdrop-blur-md text-[10px] font-bold px-2 py-0.5 rounded-full text-primary-orange border border-primary-orange/30">
-                Rank #{item.ranking}
+        {paginatedItems.map((item) => {
+          const isTopTier = item.ranking <= Math.max(5, Math.round(previewItems.length * 0.05));
+          const hasNoTraits = !item.traits || Object.keys(item.traits).length === 0;
+
+          return (
+            <div 
+              key={item.id} 
+              onClick={() => setSelectedItem(item)}
+              className={`bg-gray-800/90 rounded-2xl border overflow-hidden hover:shadow-xl hover:scale-[1.01] transition-all group shadow-md cursor-pointer flex flex-col ${
+                hasNoTraits 
+                  ? 'border-red-500/40 hover:border-red-500/80 bg-red-950/10' 
+                  : 'border-gray-700/80 hover:border-primary-orange/60'
+              }`}
+            >
+              {/* Artwork - 100% clean and unobstructed */}
+              <div className="aspect-square relative w-full bg-gray-900/60 overflow-hidden">
+                <PreviewImage 
+                  item={item} 
+                  layers={project.layers}
+                  width={project.imageWidth || 1000} 
+                  height={project.imageHeight || 1000} 
+                />
+                
+                {/* Subtle hover inspect badge */}
+                <div className="absolute inset-0 bg-black/25 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
+                  <span className="bg-black/80 backdrop-blur-sm text-white text-[10px] font-bold px-2.5 py-1 rounded-full border border-white/20 flex items-center gap-1 shadow-lg">
+                    <MdInfoOutline size={12} /> Inspect
+                  </span>
+                </div>
+              </div>
+
+              {/* Card Footer - Structured & Clean Rarity */}
+              <div className="p-3 flex-1 flex flex-col justify-between bg-gray-800/90 gap-2">
+                <div>
+                  <div className="flex items-center justify-between gap-1.5">
+                    <p className="text-xs font-bold text-gray-200 truncate flex-1" title={`#${item.index} ${project.name || 'NFT'}`}>
+                      #{item.index} <span className="text-gray-400 font-normal">{project.name || ''}</span>
+                    </p>
+                    <span 
+                      className={`shrink-0 text-[10px] font-black px-2 py-0.5 rounded-md border ${
+                        hasNoTraits 
+                          ? 'bg-red-500/20 text-red-400 border-red-500/40'
+                          : isTopTier
+                            ? 'bg-amber-500/15 text-amber-300 border-amber-500/40'
+                            : 'bg-primary-orange/15 text-primary-orange border-primary-orange/30'
+                      }`}
+                      title={`Rarity Rank #${item.ranking}`}
+                    >
+                      Rank #{item.ranking}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between text-[11px] mt-1.5">
+                    <span className="text-gray-500 text-[10px] uppercase font-bold tracking-wider">Rarity Score</span>
+                    <span className="font-bold text-gray-200 text-xs">{item.rating}</span>
+                  </div>
+                </div>
+
+                <div className="pt-2 border-t border-gray-700/50 flex items-center justify-between text-[10px] text-gray-500">
+                  <span>{Object.keys(item.traits || {}).length} traits</span>
+                  <span className="text-primary-orange group-hover:text-primary-orange/80 flex items-center gap-1 font-semibold">
+                    Inspect →
+                  </span>
+                </div>
               </div>
             </div>
-            <div className="p-3 flex-1 flex flex-col justify-between">
-              <div>
-                <p className="text-xs font-bold text-gray-200 truncate">#{item.index} {project.name || 'NFT'}</p>
-                <p className="text-[10px] text-gray-500 mt-0.5">Score: <span className="font-semibold text-gray-300">{item.rating}</span></p>
-              </div>
-              <div className="mt-2 text-[10px] text-primary-orange/80 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 font-semibold">
-                <MdInfoOutline size={12} /> Click to inspect
-              </div>
-            </div>
-          </div>
-        ))}
+          );
+        })}
 
         {/* Empty State */}
         {previewItems.length === 0 && !generateIsLoading && (

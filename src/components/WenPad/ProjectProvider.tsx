@@ -20,6 +20,7 @@ import {
   handleBlockTraits,
   handleForceTraits,
   sanitizeProject,
+  purgeInvalidPreviewItems,
 } from './ProjectUtils';
 import { clearPreviewCaches } from './PreviewImage';
 
@@ -202,26 +203,52 @@ export const ProjectProvider = ({ children }: Props) => {
     if (!window.confirm('Are you sure you want to delete this layer?')) return;
     setActiveLayer('');
     const currentValues = form.getValues();
+    const initialItemsCount = (currentValues.previewItems || []).length;
     currentValues.layers.splice(index, 1);
     const cleaned = sanitizeProject(currentValues);
+    const purgedCount = initialItemsCount - (cleaned.previewItems || []).length;
     form.reset(cleaned);
     resetOriginalProject();
     clearPreviewCaches();
-    toast.success('Layer deleted');
+    if (purgedCount > 0) {
+      toast.success(`Layer deleted & purged ${purgedCount} affected assets`);
+    } else {
+      toast.success('Layer deleted');
+    }
   };
 
   const deleteTrait = (layer: LayerT, trait: TraitT) => {
     if (!window.confirm('Are you sure you want to delete this trait?')) return;
     const currentValues = form.getValues();
+    const initialItemsCount = (currentValues.previewItems || []).length;
     const layerIndex = currentValues.layers.findIndex((f) => f.id === layer.id);
     if (layerIndex !== -1) {
       currentValues.layers[layerIndex].traits = currentValues.layers[layerIndex].traits.filter((f) => f.id !== trait.id);
     }
     const cleaned = sanitizeProject(currentValues);
+    const purgedCount = initialItemsCount - (cleaned.previewItems || []).length;
     form.reset(cleaned);
     resetOriginalProject();
     clearPreviewCaches();
-    toast.success('Trait deleted');
+    if (purgedCount > 0) {
+      toast.success(`Trait deleted & purged ${purgedCount} affected assets`);
+    } else {
+      toast.success('Trait deleted');
+    }
+  };
+
+  const purgeDeletedTraitAssets = () => {
+    const currentValues = form.getValues();
+    const { project: cleaned, purgedCount } = purgeInvalidPreviewItems(currentValues);
+    if (purgedCount > 0) {
+      form.reset(cleaned);
+      resetOriginalProject();
+      clearPreviewCaches();
+      toast.success(`Purged ${purgedCount} assets with deleted traits and renumbered collection`);
+    } else {
+      toast.info('All assets are clean! No assets contain deleted traits.');
+    }
+    return purgedCount;
   };
 
   const formatTrait = (file: any): TraitT => {
@@ -444,6 +471,7 @@ export const ProjectProvider = ({ children }: Props) => {
         resetProject, formatTrait, deleteTrait, deleteLayer, moveLayer,
         generatePreviewItems, autofillRarity, filterPreviewItems,
         addCustom, deleteCustom, downloadBackup, resetOriginalProject,
+        purgeDeletedTraitAssets,
       }}
     >
       {children}

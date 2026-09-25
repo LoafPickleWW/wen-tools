@@ -249,8 +249,11 @@ export const loadImage = (src: any, imageCache?: any): Promise<HTMLImageElement>
   });
 };
 
-export function sanitizeProject(project: ProjectT): ProjectT {
-  if (!project || !project.layers) return project;
+export function purgeInvalidPreviewItems(project: ProjectT): {
+  project: ProjectT;
+  purgedCount: number;
+} {
+  if (!project || !project.layers) return { project, purgedCount: 0 };
 
   const validTraitsByLayer = new Map<string, Set<string>>();
   const validTraitIds = new Set<string>();
@@ -264,37 +267,98 @@ export function sanitizeProject(project: ProjectT): ProjectT {
     validTraitsByLayer.set(layer.name, names);
   }
 
-  // 1. Sanitize customs: remove any traits whose layer or trait no longer exists
-  const sanitizedCustoms = (project.customs || []).map((custom) => {
-    const cleanedTraits: typeof custom.traits = {};
-    for (const [layerName, traitObj] of Object.entries(custom.traits || {})) {
-      const validNames = validTraitsByLayer.get(layerName);
-      if (validNames && validNames.has(traitObj.value)) {
-        cleanedTraits[layerName] = traitObj;
-      }
-    }
-    return {
-      ...custom,
-      traits: cleanedTraits,
-    };
-  });
+  const initialItemsCount = (project.previewItems || []).length;
+  const validPreviewItems: PreviewItemT[] = [];
 
-  // 2. Sanitize previewItems: remove any traits whose layer or trait no longer exists
-  const sanitizedPreviewItems = (project.previewItems || []).map((item) => {
+  for (const item of project.previewItems || []) {
+    if (!item.traits || Object.keys(item.traits).length === 0) continue;
+
+    let hasDeletedTrait = false;
     const cleanedTraits: typeof item.traits = {};
-    for (const [layerName, traitObj] of Object.entries(item.traits || {})) {
+
+    for (const [layerName, traitObj] of Object.entries(item.traits)) {
       const validNames = validTraitsByLayer.get(layerName);
-      if (validNames && validNames.has(traitObj.value)) {
-        cleanedTraits[layerName] = traitObj;
+      // If the layer or the trait value no longer exists, asset was minted with deleted traits
+      if (!validNames || !validNames.has(traitObj.value)) {
+        hasDeletedTrait = true;
+        break;
       }
+      cleanedTraits[layerName] = traitObj;
     }
-    return {
+
+    if (hasDeletedTrait) continue;
+    if (Object.keys(cleanedTraits).length === 0) continue;
+
+    // Asset must have at least one layer image matching current layers
+    const hasAtLeastOneImage = project.layers.some(
+      (layer) => Boolean(cleanedTraits[layer.name]?.image)
+    );
+    if (!hasAtLeastOneImage) continue;
+
+    validPreviewItems.push({
       ...item,
       traits: cleanedTraits,
-    };
+    });
+  }
+
+  // Renumber remaining items sequentially starting from 1
+  validPreviewItems.forEach((item, index) => {
+    item.index = index + 1;
   });
 
-  // 3. Sanitize layers: clean orphaned sameAs and rules
+  // Re-calculate ratings and rankings for remaining items
+  if (validPreviewItems.length > 0) {
+    addRatings(validPreviewItems, project.layers);
+    addRankings(validPreviewItems);
+  }
+
+  // Sanitize customs as well
+  const validCustoms: PreviewItemT[] = [];
+  for (const custom of project.customs || []) {
+    if (!custom.traits || Object.keys(custom.traits).length === 0) continue;
+    let hasDeletedTrait = false;
+    const cleanedTraits: typeof custom.traits = {};
+    for (const [layerName, traitObj] of Object.entries(custom.traits)) {
+      const validNames = validTraitsByLayer.get(layerName);
+      if (!validNames || !validNames.has(traitObj.value)) {
+        hasDeletedTrait = true;
+        break;
+      }
+      cleanedTraits[layerName] = traitObj;
+    }
+    if (hasDeletedTrait || Object.keys(cleanedTraits).length === 0) continue;
+    validCustoms.push({
+      ...custom,
+      traits: cleanedTraits,
+    });
+  }
+
+  const purgedCount = initialItemsCount - validPreviewItems.length;
+
+  const updatedProject: ProjectT = {
+    ...project,
+    customs: validCustoms,
+    previewItems: validPreviewItems,
+    size: validPreviewItems.length > 0 ? validPreviewItems.length : project.size,
+  };
+
+  return {
+    project: updatedProject,
+    purgedCount,
+  };
+}
+
+export function sanitizeProject(project: ProjectT): ProjectT {
+  if (!project || !project.layers) return project;
+
+  const validTraitIds = new Set<string>();
+  for (const layer of project.layers) {
+    for (const trait of layer.traits || []) {
+      validTraitIds.add(trait.id);
+    }
+  }
+
+  // Sanitize layers: clean orphaned sameAs and rules
   const sanitizedLayers = project.layers.map((layer) => ({
     ...layer,
     traits: (layer.traits || []).map((trait) => ({
@@ -304,10 +368,10 @@ export function sanitizeProject(project: ProjectT): ProjectT {
     })),
   }));
 
-  return {
+  const { project: cleanedProject } = purgeInvalidPreviewItems({
     ...project,
     layers: sanitizedLayers,
-    customs: sanitizedCustoms,
-    previewItems: sanitizedPreviewItems,
-  };
+  });
+
+  return cleanedProject;
 }

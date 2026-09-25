@@ -38,6 +38,7 @@ export type ContextT = {
   deleteCustom: (index: string) => void;
   downloadBackup: () => void;
   resetOriginalProject: () => void;
+  purgeDeletedTraitAssets: () => number;
 };
 
 export const ProjectContext = createContext<ContextT>({} as ContextT);
