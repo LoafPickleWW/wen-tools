@@ -13,6 +13,9 @@
     "lint": "eslint .",
     "preview": "vite preview"
   },
+  "engines": {
+    "node": ">=22.0.0"
+  },
   "dependencies": {
     "@algorandfoundation/liquid-client": "1.0.0-canary.5",
     "@blockshake/defly-connect": "1.1.6",
