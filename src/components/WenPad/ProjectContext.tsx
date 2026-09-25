@@ -28,6 +28,7 @@ export type ContextT = {
   setSortBy: (sortBy: string) => void;
   resetProject: () => void;
   formatTrait: (file: any) => TraitT;
+  moveLayer: (fromIndex: number, toIndex: number) => void;
   deleteLayer: (index: number) => void;
   deleteTrait: (layer: LayerT, trait: TraitT) => void;
   generatePreviewItems: () => void;

@@ -1,32 +1,73 @@
 import { useState } from 'react';
 import { useProject } from '../ProjectContext';
-import { MdAdd, MdDelete, MdSave, MdRefresh } from 'react-icons/md';
+import { 
+  MdAdd, 
+  MdDelete, 
+  MdSave, 
+  MdRefresh, 
+  MdDragIndicator, 
+  MdKeyboardArrowUp, 
+  MdKeyboardArrowDown 
+} from 'react-icons/md';
 import { v4 as uuid } from 'uuid';
 import TraitPreviewGrid from './TraitPreviewGrid';
 
 const LayersStep = () => {
   const { 
     form, layers, activeLayer, selectLayer, 
-    deleteLayer, resetProject, saveProject,
+    deleteLayer, moveLayer, resetProject, saveProject,
     activeLayerDetails, activeLayerIndex, formatTrait,
     resetOriginalProject
   } = useProject();
 
   const [newLayerName, setNewLayerName] = useState('');
+  const [draggedIdx, setDraggedIdx] = useState<number | null>(null);
+  const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
 
   const handleAddLayer = () => {
-    if (!newLayerName) return;
+    if (!newLayerName.trim()) return;
     const newLayer = {
       id: uuid(),
-      name: newLayerName,
+      name: newLayerName.trim(),
       traits: [],
       excludeFromMetadata: false
     };
     const updatedLayers = [...layers, newLayer];
-    form.setValue('layers', updatedLayers);
+    form.setValue('layers', updatedLayers, { shouldDirty: true });
     resetOriginalProject();
     setNewLayerName('');
     selectLayer(newLayer.id);
+  };
+
+  const handleDragStart = (e: React.DragEvent, index: number) => {
+    setDraggedIdx(index);
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', index.toString());
+  };
+
+  const handleDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    if (dragOverIdx !== index) {
+      setDragOverIdx(index);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent, targetIndex: number) => {
+    e.preventDefault();
+    if (draggedIdx === null || draggedIdx === targetIndex) {
+      setDraggedIdx(null);
+      setDragOverIdx(null);
+      return;
+    }
+    moveLayer(draggedIdx, targetIndex);
+    setDraggedIdx(null);
+    setDragOverIdx(null);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedIdx(null);
+    setDragOverIdx(null);
   };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -52,7 +93,7 @@ const LayersStep = () => {
     Promise.all(newTraitsPromises).then((newTraits: any) => {
       const updatedLayers = [...layers];
       updatedLayers[activeLayerIndex].traits = [...currentTraits, ...newTraits];
-      form.setValue('layers', updatedLayers);
+      form.setValue('layers', updatedLayers, { shouldDirty: true });
       resetOriginalProject();
     });
   };
@@ -84,17 +125,23 @@ const LayersStep = () => {
           </div>
 
           <div className="space-y-4 mt-4">
-            <h3 className="text-lg font-bold text-gray-200">Layers</h3>
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-bold text-gray-200">Layers</h3>
+              <span className="text-[10px] text-gray-500 font-semibold">1 = Background</span>
+            </div>
+
             <div className="flex gap-2">
               <input 
                 value={newLayerName}
                 onChange={(e) => setNewLayerName(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleAddLayer()}
                 placeholder="Layer Name"
                 className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-primary-orange"
               />
               <button 
                 onClick={handleAddLayer}
                 className="p-2 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors"
+                title="Add Layer"
               >
                 <MdAdd size={20} />
               </button>
@@ -104,16 +151,70 @@ const LayersStep = () => {
               {layers.map((layer, idx) => (
                 <div 
                   key={layer.id}
+                  draggable
+                  onDragStart={(e) => handleDragStart(e, idx)}
+                  onDragOver={(e) => handleDragOver(e, idx)}
+                  onDragLeave={() => setDragOverIdx(null)}
+                  onDrop={(e) => handleDrop(e, idx)}
+                  onDragEnd={handleDragEnd}
                   onClick={() => selectLayer(layer.id)}
-                  className={`flex items-center justify-between p-3 rounded-lg cursor-pointer transition-all ${
-                    activeLayer === layer.id ? 'bg-primary-orange/20 border border-primary-orange/50' : 'bg-gray-800 hover:bg-gray-700'
+                  className={`flex items-center justify-between p-2.5 rounded-xl cursor-pointer transition-all border select-none ${
+                    activeLayer === layer.id 
+                      ? 'bg-primary-orange/20 border-primary-orange/60 text-white' 
+                      : 'bg-gray-800/90 border-gray-700/60 hover:bg-gray-700/80 text-gray-300'
+                  } ${dragOverIdx === idx ? 'border-t-2 border-t-primary-orange bg-gray-700/60' : ''} ${
+                    draggedIdx === idx ? 'opacity-40' : 'opacity-100'
                   }`}
                 >
-                  <span className="text-sm font-medium">{layer.name}</span>
-                  <div className="flex gap-1">
+                  <div className="flex items-center gap-2 overflow-hidden flex-1 mr-2">
+                    <span 
+                      className="cursor-grab active:cursor-grabbing text-gray-500 hover:text-gray-300 p-0.5 transition-colors" 
+                      title="Drag to reorder layer"
+                      onMouseDown={(e) => e.stopPropagation()}
+                    >
+                      <MdDragIndicator size={18} />
+                    </span>
+                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-black/40 text-gray-400">
+                      {idx + 1}
+                    </span>
+                    <span className="text-sm font-medium truncate" title={layer.name}>
+                      {layer.name}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-0.5">
                     <button 
-                      onClick={(e) => { e.stopPropagation(); deleteLayer(idx); }}
-                      className="p-1 text-gray-400 hover:text-red-500 transition-colors"
+                      type="button"
+                      onClick={(e) => { 
+                        e.stopPropagation(); 
+                        moveLayer(idx, idx - 1); 
+                      }}
+                      disabled={idx === 0}
+                      className="p-1 text-gray-400 hover:text-white disabled:opacity-20 disabled:hover:text-gray-400 rounded hover:bg-gray-700 transition-colors"
+                      title="Move Up (toward background)"
+                    >
+                      <MdKeyboardArrowUp size={18} />
+                    </button>
+                    <button 
+                      type="button"
+                      onClick={(e) => { 
+                        e.stopPropagation(); 
+                        moveLayer(idx, idx + 1); 
+                      }}
+                      disabled={idx === layers.length - 1}
+                      className="p-1 text-gray-400 hover:text-white disabled:opacity-20 disabled:hover:text-gray-400 rounded hover:bg-gray-700 transition-colors"
+                      title="Move Down (toward foreground)"
+                    >
+                      <MdKeyboardArrowDown size={18} />
+                    </button>
+                    <button 
+                      type="button"
+                      onClick={(e) => { 
+                        e.stopPropagation(); 
+                        deleteLayer(idx); 
+                      }}
+                      className="p-1 text-gray-400 hover:text-red-400 rounded hover:bg-red-500/10 transition-colors ml-1"
+                      title="Delete Layer"
                     >
                       <MdDelete size={16} />
                     </button>

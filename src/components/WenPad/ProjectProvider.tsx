@@ -186,13 +186,25 @@ export const ProjectProvider = ({ children }: Props) => {
     toast.success('Custom deleted');
   };
 
+  const moveLayer = (fromIndex: number, toIndex: number) => {
+    const currentLayers = form.getValues('layers');
+    if (toIndex < 0 || toIndex >= currentLayers.length) return;
+    const updated = [...currentLayers];
+    const [moved] = updated.splice(fromIndex, 1);
+    updated.splice(toIndex, 0, moved);
+    form.setValue('layers', updated, { shouldDirty: true });
+    resetOriginalProject();
+    clearPreviewCaches();
+  };
+
   const deleteLayer = (index: number) => {
     if (!window.confirm('Are you sure you want to delete this layer?')) return;
     setActiveLayer('');
     const layers = form.getValues('layers');
     layers.splice(index, 1);
-    form.setValue('layers', layers);
+    form.setValue('layers', layers, { shouldDirty: true });
     resetOriginalProject();
+    clearPreviewCaches();
     toast.success('Layer deleted');
   };
 
@@ -395,7 +407,7 @@ export const ProjectProvider = ({ children }: Props) => {
         activeStep, activeFilters, sortBy, setOriginalProject,
         localSaving, localSaved, localError, localDataFetched,
         hasChanges, customs, saveProject, selectStep, setSortBy,
-        resetProject, formatTrait, deleteTrait, deleteLayer,
+        resetProject, formatTrait, deleteTrait, deleteLayer, moveLayer,
         generatePreviewItems, autofillRarity, filterPreviewItems,
         addCustom, deleteCustom, downloadBackup, resetOriginalProject,
       }}
