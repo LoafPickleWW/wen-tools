@@ -1,6 +1,6 @@
 import { createContext, useContext } from 'react';
 import { UseFormReturn } from 'react-hook-form';
-import { ProjectT, LayerT, PreviewItemT, TraitT } from './WenPadTypes';
+import { ProjectT, LayerT, PreviewItemT, TraitT, RuleT } from './WenPadTypes';
 
 export type ContextT = {
   form: UseFormReturn<ProjectT, any, any>;
@@ -36,9 +36,10 @@ export type ContextT = {
   filterPreviewItems: (e: any, traitType: string, traitValue: string) => void;
   addCustom: () => void;
   deleteCustom: (index: string) => void;
-  downloadBackup: () => void;
   resetOriginalProject: () => void;
   purgeDeletedTraitAssets: () => number;
+  addTraitRule: (sourceLayerId: string, sourceTraitId: string, rule: RuleT) => void;
+  deleteTraitRule: (sourceLayerId: string, sourceTraitId: string, ruleIndex: number) => void;
 };
 
 export const ProjectContext = createContext<ContextT>({} as ContextT);

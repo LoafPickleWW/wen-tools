@@ -9,7 +9,8 @@ import {
   ProjectT, 
   LayerT, 
   PreviewItemT, 
-  TraitT 
+  TraitT,
+  RuleT 
 } from './WenPadTypes';
 import {
   addRankings,
@@ -251,6 +252,53 @@ export const ProjectProvider = ({ children }: Props) => {
     return purgedCount;
   };
 
+  const addTraitRule = (sourceLayerId: string, sourceTraitId: string, rule: RuleT) => {
+    const currentValues = form.getValues();
+    const updatedLayers = currentValues.layers.map((layer) => {
+      if (layer.id !== sourceLayerId && layer.name !== sourceLayerId) return layer;
+      return {
+        ...layer,
+        traits: layer.traits.map((t) => {
+          if (t.id !== sourceTraitId && t.name !== sourceTraitId) return t;
+          const existingRules = t.rules || [];
+          const alreadyExists = existingRules.some(
+            (r) => r.type === rule.type && r.layer === rule.layer && r.trait === rule.trait
+          );
+          if (alreadyExists) return t;
+          return {
+            ...t,
+            rules: [...existingRules, rule],
+          };
+        }),
+      };
+    });
+    form.setValue('layers', updatedLayers, { shouldDirty: true });
+    resetOriginalProject();
+    toast.success(`Rule saved: ${rule.type === 'block' ? 'Never use with' : 'Always use with'}`);
+  };
+
+  const deleteTraitRule = (sourceLayerId: string, sourceTraitId: string, ruleIndex: number) => {
+    const currentValues = form.getValues();
+    const updatedLayers = currentValues.layers.map((layer) => {
+      if (layer.id !== sourceLayerId && layer.name !== sourceLayerId) return layer;
+      return {
+        ...layer,
+        traits: layer.traits.map((t) => {
+          if (t.id !== sourceTraitId && t.name !== sourceTraitId) return t;
+          const existingRules = [...(t.rules || [])];
+          existingRules.splice(ruleIndex, 1);
+          return {
+            ...t,
+            rules: existingRules,
+          };
+        }),
+      };
+    });
+    form.setValue('layers', updatedLayers, { shouldDirty: true });
+    resetOriginalProject();
+    toast.success('Rule removed');
+  };
+
   const formatTrait = (file: any): TraitT => {
     return {
       id: uuid(),
@@ -471,7 +519,7 @@ export const ProjectProvider = ({ children }: Props) => {
         resetProject, formatTrait, deleteTrait, deleteLayer, moveLayer,
         generatePreviewItems, autofillRarity, filterPreviewItems,
         addCustom, deleteCustom, downloadBackup, resetOriginalProject,
-        purgeDeletedTraitAssets,
+        purgeDeletedTraitAssets, addTraitRule, deleteTraitRule,
       }}
     >
       {children}

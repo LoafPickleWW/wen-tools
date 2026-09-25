@@ -131,12 +131,12 @@ export function getRandomTrait(traits: TraitT[]) {
 
 export function handleForceTraits(previewItem: PreviewItemT, layers: LayerT[]) {
   Object.values(previewItem.traits).forEach((trait) => {
-    const layer = layers.find((f) => f.name === trait.trait_type);
-    const traitDetails = layer?.traits.find((f) => f.name === trait.value);
+    const layer = layers.find((f) => f.name === trait.trait_type || f.id === trait.layerId);
+    const traitDetails = layer?.traits.find((f) => f.name === trait.value || f.id === trait.traitId);
     const traitRules = traitDetails?.rules || [];
     for (const rule of traitRules) {
-      const ruleLayerDetails = layers.find((f) => f.id === rule.layer);
-      const ruleTraitDetails = ruleLayerDetails?.traits.find((f) => f.id === rule.trait);
+      const ruleLayerDetails = layers.find((f) => f.id === rule.layer || f.name === rule.layer);
+      const ruleTraitDetails = ruleLayerDetails?.traits.find((f) => f.id === rule.trait || f.name === rule.trait);
       if (!ruleLayerDetails || !ruleTraitDetails) continue;
       if (rule.type === 'force') {
         previewItem.traits[ruleLayerDetails.name] = {
@@ -156,29 +156,34 @@ export function handleForceTraits(previewItem: PreviewItemT, layers: LayerT[]) {
 
 export function handleBlockTraits(previewItem: PreviewItemT, layers: LayerT[]) {
   Object.values(previewItem.traits).forEach((trait) => {
-    const layer = layers.find((f) => f.name === trait.trait_type);
-    const traitDetails = layer?.traits.find((f) => f.name === trait.value);
+    const layer = layers.find((f) => f.name === trait.trait_type || f.id === trait.layerId);
+    const traitDetails = layer?.traits.find((f) => f.name === trait.value || f.id === trait.traitId);
     const traitRules = traitDetails?.rules || [];
     for (const rule of traitRules) {
-      const ruleLayerDetails = layers.find((f) => f.id === rule.layer);
-      const ruleTraitDetails = ruleLayerDetails?.traits.find((f) => f.id === rule.trait);
+      const ruleLayerDetails = layers.find((f) => f.id === rule.layer || f.name === rule.layer);
+      const ruleTraitDetails = ruleLayerDetails?.traits.find((f) => f.id === rule.trait || f.name === rule.trait);
       if (!ruleLayerDetails || !ruleTraitDetails) continue;
       if (rule.type === 'block') {
-        const targetLayer = layers.find((f) => f.name === ruleLayerDetails.name);
-        const hasTargetTrait = Object.values(previewItem.traits).find((f) => f.trait_type === targetLayer?.name && f.value === ruleTraitDetails.name);
+        const targetLayer = layers.find((f) => f.name === ruleLayerDetails.name || f.id === ruleLayerDetails.id);
+        const hasTargetTrait = Object.values(previewItem.traits).find(
+          (f) => (f.trait_type === targetLayer?.name || f.layerId === targetLayer?.id) &&
+                 (f.value === ruleTraitDetails.name || f.traitId === ruleTraitDetails.id)
+        );
         if (hasTargetTrait) {
           const availableTraits = ruleLayerDetails.traits
-            .filter((trait) => !trait.sameAs && trait.excludeTraitFromRandomGenerations !== true)
-            .filter((f) => f.name !== ruleTraitDetails.name);
+            .filter((t) => !t.sameAs && t.excludeTraitFromRandomGenerations !== true)
+            .filter((f) => f.name !== ruleTraitDetails.name && f.id !== ruleTraitDetails.id);
           const newTrait = getRandomTrait(availableTraits);
-          previewItem.traits[ruleLayerDetails.name] = {
-            trait_type: ruleLayerDetails.name,
-            value: newTrait.name,
-            image: newTrait.data,
-            excludeFromMetadata: ruleLayerDetails.excludeFromMetadata,
-            layerId: ruleLayerDetails.id,
-            traitId: newTrait.id,
-          };
+          if (newTrait) {
+            previewItem.traits[ruleLayerDetails.name] = {
+              trait_type: ruleLayerDetails.name,
+              value: newTrait.name,
+              image: newTrait.data,
+              excludeFromMetadata: ruleLayerDetails.excludeFromMetadata,
+              layerId: ruleLayerDetails.id,
+              traitId: newTrait.id,
+            };
+          }
         }
       }
     }
@@ -186,6 +191,46 @@ export function handleBlockTraits(previewItem: PreviewItemT, layers: LayerT[]) {
 
   return previewItem;
 }
+
+export const renderPreviewToBlob = async (
+  item: PreviewItemT,
+  layers: LayerT[],
+  width?: number,
+  height?: number
+): Promise<Blob> => {
+  const canvas = document.createElement('canvas');
+  canvas.width = width || 1000;
+  canvas.height = height || 1000;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) throw new Error('Failed to get canvas 2d context');
+
+  let traitsToDraw: any[] = [];
+  if (layers && layers.length > 0) {
+    traitsToDraw = layers
+      .map((layer) => item.traits[layer.name]?.image)
+      .filter(Boolean);
+  } else {
+    traitsToDraw = Object.values(item.traits)
+      .filter((t) => t.image)
+      .map((t) => t.image);
+  }
+
+  for (const traitData of traitsToDraw) {
+    try {
+      const img = await loadImage(traitData);
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    } catch (e) {
+      console.warn('Error loading trait image for export:', e);
+    }
+  }
+
+  return new Promise((resolve, reject) => {
+    canvas.toBlob((blob) => {
+      if (blob) resolve(blob);
+      else reject(new Error('Failed to generate image blob'));
+    }, 'image/png');
+  });
+};
 
 export const loadImage = (src: any, imageCache?: any): Promise<HTMLImageElement> => {
   if (!src) return Promise.reject(new Error('No image source provided'));
@@ -375,3 +420,112 @@ export function sanitizeProject(project: ProjectT): ProjectT {
 
   return cleanedProject;
 }
+
+export function buildItemMetadata(
+  item: PreviewItemT,
+  project: ProjectT,
+  imageFileName?: string
+) {
+  const safeProjectName = (project.name || 'NFT').replace(/[^a-zA-Z0-9_-]/g, '_');
+  const imgName = imageFileName || `${String(item.index).padStart(4, '0')}_${safeProjectName}.png`;
+
+  const properties: { [key: string]: string } = {};
+  const attributes: { trait_type: string; value: string }[] = [];
+
+  const allLayers = project.layers || [];
+  const layerOrderMap = new Map<string, number>();
+  allLayers.forEach((layer, idx) => {
+    layerOrderMap.set(layer.name, idx);
+    layerOrderMap.set(layer.id, idx);
+  });
+
+  const sortedTraitEntries = Object.entries(item.traits || {}).sort(([aName, aTrait], [bName, bTrait]) => {
+    const aIdx = layerOrderMap.has(aTrait.layerId)
+      ? layerOrderMap.get(aTrait.layerId)!
+      : (layerOrderMap.has(aName) ? layerOrderMap.get(aName)! : 999);
+    const bIdx = layerOrderMap.has(bTrait.layerId)
+      ? layerOrderMap.get(bTrait.layerId)!
+      : (layerOrderMap.has(bName) ? layerOrderMap.get(bName)! : 999);
+    return aIdx - bIdx;
+  });
+
+  for (const [layerName, trait] of sortedTraitEntries) {
+    if (trait.excludeFromMetadata) continue;
+
+    const layer = allLayers.find((l) => l.id === trait.layerId || l.name === layerName);
+    if (layer?.excludeFromMetadata) continue;
+
+    const traitDetails = layer?.traits?.find((t) => t.name === trait.value || t.id === trait.traitId);
+    let finalValue = trait.value;
+    if (traitDetails?.sameAs) {
+      const sameAsDetails = layer?.traits?.find((t) => t.id === traitDetails.sameAs);
+      if (sameAsDetails) {
+        finalValue = sameAsDetails.name;
+      }
+    }
+
+    const traitType = trait.trait_type || layer?.name || layerName;
+    properties[traitType] = finalValue;
+    attributes.push({
+      trait_type: traitType,
+      value: finalValue,
+    });
+  }
+
+  return {
+    name: `${project.name ? project.name + ' ' : ''}#${item.index}`,
+    description: project.description || '',
+    image: imgName,
+    external_url: project.website || '',
+    edition: item.index,
+    date: Date.now(),
+    attributes,
+    properties,
+    ranking: item.ranking,
+    rarity_score: item.rating,
+    compiler: 'Wen Tools Generator',
+  };
+}
+
+export function buildCollectionTraitSummary(items: PreviewItemT[], project: ProjectT) {
+  const total = items.length;
+  const layersSummary: {
+    [layerName: string]: {
+      [traitValue: string]: {
+        count: number;
+        percentage: string;
+      };
+    };
+  } = {};
+
+  items.forEach((item) => {
+    Object.entries(item.traits || {}).forEach(([layerName, trait]) => {
+      if (trait.excludeFromMetadata) return;
+      if (!layersSummary[layerName]) {
+        layersSummary[layerName] = {};
+      }
+      const val = trait.value;
+      if (!layersSummary[layerName][val]) {
+        layersSummary[layerName][val] = { count: 0, percentage: '0%' };
+      }
+      layersSummary[layerName][val].count++;
+    });
+  });
+
+  // Calculate percentages
+  Object.keys(layersSummary).forEach((layerName) => {
+    Object.keys(layersSummary[layerName]).forEach((traitVal) => {
+      const count = layersSummary[layerName][traitVal].count;
+      layersSummary[layerName][traitVal].percentage = total > 0 ? `${((count / total) * 100).toFixed(2)}%` : '0%';
+    });
+  });
+
+  return {
+    collection_name: project.name || 'NFT Collection',
+    description: project.description || '',
+    total_supply: total,
+    generated_at: new Date().toISOString(),
+    traits_distribution: layersSummary,
+  };
+}
+
