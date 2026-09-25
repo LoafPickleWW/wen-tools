@@ -19,6 +19,7 @@ import {
   getTraitsFromTraitStore,
   handleBlockTraits,
   handleForceTraits,
+  sanitizeProject,
 } from './ProjectUtils';
 import { clearPreviewCaches } from './PreviewImage';
 
@@ -200,9 +201,10 @@ export const ProjectProvider = ({ children }: Props) => {
   const deleteLayer = (index: number) => {
     if (!window.confirm('Are you sure you want to delete this layer?')) return;
     setActiveLayer('');
-    const layers = form.getValues('layers');
-    layers.splice(index, 1);
-    form.setValue('layers', layers, { shouldDirty: true });
+    const currentValues = form.getValues();
+    currentValues.layers.splice(index, 1);
+    const cleaned = sanitizeProject(currentValues);
+    form.reset(cleaned);
     resetOriginalProject();
     clearPreviewCaches();
     toast.success('Layer deleted');
@@ -210,10 +212,15 @@ export const ProjectProvider = ({ children }: Props) => {
 
   const deleteTrait = (layer: LayerT, trait: TraitT) => {
     if (!window.confirm('Are you sure you want to delete this trait?')) return;
-    const traits = layer.traits.filter((f) => f.id !== trait.id);
-    const layerIndex = layers.findIndex((f) => f.id === layer.id);
-    form.setValue(`layers.${layerIndex}.traits`, traits, { shouldDirty: true });
+    const currentValues = form.getValues();
+    const layerIndex = currentValues.layers.findIndex((f) => f.id === layer.id);
+    if (layerIndex !== -1) {
+      currentValues.layers[layerIndex].traits = currentValues.layers[layerIndex].traits.filter((f) => f.id !== trait.id);
+    }
+    const cleaned = sanitizeProject(currentValues);
+    form.reset(cleaned);
     resetOriginalProject();
+    clearPreviewCaches();
     toast.success('Trait deleted');
   };
 
@@ -243,9 +250,14 @@ export const ProjectProvider = ({ children }: Props) => {
     if (!window.confirm('Are you sure you want to generate new images?')) return;
 
     clearPreviewCaches();
+    
+    // Sanitize any orphaned traits from customs or previews
+    const cleanedProject = sanitizeProject(form.getValues());
+    form.setValue('customs', cleanedProject.customs, { shouldDirty: true });
+    
     form.setValue('previewItems', []);
     setOriginalProject({
-      ...form.getValues(),
+      ...cleanedProject,
       previewItems: [],
     });
     setActiveFilters([]);
@@ -253,8 +265,8 @@ export const ProjectProvider = ({ children }: Props) => {
 
     await new Promise((resolve) => setTimeout(resolve, 500));
 
-    const customs = form.getValues('customs');
-    const size = form.getValues('size');
+    const customs = cleanedProject.customs || [];
+    const size = cleanedProject.size;
     const items: PreviewItemT[] = [];
     const traitStore = createTraitStore(layers, size);
     const allErrors: string[] = [];
@@ -263,7 +275,28 @@ export const ProjectProvider = ({ children }: Props) => {
       try {
         const custom = customs.find((f) => f.index === i + 1);
         if (custom) {
-          items.push(custom);
+          const customItem: PreviewItemT = {
+            ...custom,
+            traits: { ...custom.traits },
+          };
+          // Fill in any layer left on "Random" with a random trait
+          for (const layer of layers) {
+            if (!customItem.traits[layer.name]) {
+              const available = getTraitsFromTraitStore(traitStore, layer);
+              const picked = getRandomTrait(available);
+              if (picked) {
+                customItem.traits[layer.name] = {
+                  trait_type: layer.name,
+                  value: picked.name,
+                  image: picked.data,
+                  excludeFromMetadata: layer.excludeFromMetadata,
+                  layerId: layer.id,
+                  traitId: picked.id,
+                };
+              }
+            }
+          }
+          items.push(customItem);
         } else {
           const { item, errors } = generatePreviewItem(items);
           allErrors.push(...errors);
@@ -376,9 +409,10 @@ export const ProjectProvider = ({ children }: Props) => {
     try {
       const projects = await db.projects.toArray();
       if (projects[0]) {
-        form.reset(projects[0]);
-        setOriginalProject(projects[0]);
-        setActiveLayer(projects[0].layers[0]?.id || '');
+        const cleaned = sanitizeProject(projects[0]);
+        form.reset(cleaned);
+        setOriginalProject(cleaned);
+        setActiveLayer(cleaned.layers[0]?.id || '');
       }
       setLocalDataFetched(true);
     } catch (error) {

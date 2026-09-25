@@ -41,23 +41,44 @@ const CustomizeStep = () => {
                   <label className="text-[10px] uppercase text-gray-500">{layer.name}</label>
                   <select 
                     className="w-full bg-gray-900 border border-gray-700 rounded px-2 py-1 text-xs focus:outline-none focus:border-primary-orange"
-                    value={custom.traits[layer.name]?.value || ''}
+                    value={
+                      layer.traits.some(t => t.name === custom.traits[layer.name]?.value)
+                        ? custom.traits[layer.name]?.value
+                        : ''
+                    }
                     onChange={(e) => {
-                      const trait = layer.traits.find(t => t.name === e.target.value);
-                      if (trait) {
-                        const updatedCustoms = [...customs];
-                        const cIdx = updatedCustoms.findIndex(c => c.id === custom.id);
-                        updatedCustoms[cIdx].traits[layer.name] = {
-                          layerId: layer.id,
-                          traitId: trait.id,
-                          trait_type: layer.name,
-                          value: trait.name,
-                          image: trait.data,
-                          excludeFromMetadata: layer.excludeFromMetadata
+                      const updatedCustoms = [...customs];
+                      const cIdx = updatedCustoms.findIndex(c => c.id === custom.id);
+                      if (cIdx === -1) return;
+
+                      if (!e.target.value) {
+                        const newTraits = { ...updatedCustoms[cIdx].traits };
+                        delete newTraits[layer.name];
+                        updatedCustoms[cIdx] = {
+                          ...updatedCustoms[cIdx],
+                          traits: newTraits,
                         };
-                        form.setValue('customs', updatedCustoms, { shouldDirty: true });
-                        resetOriginalProject();
+                      } else {
+                        const trait = layer.traits.find(t => t.name === e.target.value);
+                        if (trait) {
+                          updatedCustoms[cIdx] = {
+                            ...updatedCustoms[cIdx],
+                            traits: {
+                              ...updatedCustoms[cIdx].traits,
+                              [layer.name]: {
+                                layerId: layer.id,
+                                traitId: trait.id,
+                                trait_type: layer.name,
+                                value: trait.name,
+                                image: trait.data,
+                                excludeFromMetadata: layer.excludeFromMetadata
+                              }
+                            }
+                          };
+                        }
                       }
+                      form.setValue('customs', updatedCustoms, { shouldDirty: true });
+                      resetOriginalProject();
                     }}
                   >
                     <option value="">Random</option>

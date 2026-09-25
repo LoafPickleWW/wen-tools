@@ -1,4 +1,4 @@
-import { RarityType, LayerT, PreviewItemT, TraitT } from './WenPadTypes';
+import { RarityType, LayerT, PreviewItemT, TraitT, ProjectT } from './WenPadTypes';
 
 
 export function calculateNftRating(nft: any, allNfts: any[]) {
@@ -205,7 +205,7 @@ export const loadImage = (src: any, imageCache?: any): Promise<HTMLImageElement>
         objectUrlToRevoke = URL.createObjectURL(src);
         img.src = objectUrlToRevoke;
       } else if (src instanceof ArrayBuffer || ArrayBuffer.isView(src)) {
-        const blob = new Blob([src], { type: 'image/png' });
+        const blob = new Blob([src as BlobPart], { type: 'image/png' });
         objectUrlToRevoke = URL.createObjectURL(blob);
         img.src = objectUrlToRevoke;
       } else if (src && typeof src === 'object' && src.data) {
@@ -214,18 +214,18 @@ export const loadImage = (src: any, imageCache?: any): Promise<HTMLImageElement>
           objectUrlToRevoke = URL.createObjectURL(data);
           img.src = objectUrlToRevoke;
         } else if (data instanceof ArrayBuffer || ArrayBuffer.isView(data)) {
-          const blob = new Blob([data], { type: src.type || 'image/png' });
+          const blob = new Blob([data as BlobPart], { type: src.type || 'image/png' });
           objectUrlToRevoke = URL.createObjectURL(blob);
           img.src = objectUrlToRevoke;
         } else if (typeof data === 'string') {
           img.src = data;
         } else {
-          const blob = new Blob([data], { type: src.type || 'image/png' });
+          const blob = new Blob([data as BlobPart], { type: src.type || 'image/png' });
           objectUrlToRevoke = URL.createObjectURL(blob);
           img.src = objectUrlToRevoke;
         }
       } else {
-        const blob = new Blob([src], { type: 'image/png' });
+        const blob = new Blob([src as BlobPart], { type: 'image/png' });
         objectUrlToRevoke = URL.createObjectURL(blob);
         img.src = objectUrlToRevoke;
       }
@@ -248,3 +248,66 @@ export const loadImage = (src: any, imageCache?: any): Promise<HTMLImageElement>
     };
   });
 };
+
+export function sanitizeProject(project: ProjectT): ProjectT {
+  if (!project || !project.layers) return project;
+
+  const validTraitsByLayer = new Map<string, Set<string>>();
+  const validTraitIds = new Set<string>();
+
+  for (const layer of project.layers) {
+    const names = new Set<string>();
+    for (const trait of layer.traits || []) {
+      names.add(trait.name);
+      validTraitIds.add(trait.id);
+    }
+    validTraitsByLayer.set(layer.name, names);
+  }
+
+  // 1. Sanitize customs: remove any traits whose layer or trait no longer exists
+  const sanitizedCustoms = (project.customs || []).map((custom) => {
+    const cleanedTraits: typeof custom.traits = {};
+    for (const [layerName, traitObj] of Object.entries(custom.traits || {})) {
+      const validNames = validTraitsByLayer.get(layerName);
+      if (validNames && validNames.has(traitObj.value)) {
+        cleanedTraits[layerName] = traitObj;
+      }
+    }
+    return {
+      ...custom,
+      traits: cleanedTraits,
+    };
+  });
+
+  // 2. Sanitize previewItems: remove any traits whose layer or trait no longer exists
+  const sanitizedPreviewItems = (project.previewItems || []).map((item) => {
+    const cleanedTraits: typeof item.traits = {};
+    for (const [layerName, traitObj] of Object.entries(item.traits || {})) {
+      const validNames = validTraitsByLayer.get(layerName);
+      if (validNames && validNames.has(traitObj.value)) {
+        cleanedTraits[layerName] = traitObj;
+      }
+    }
+    return {
+      ...item,
+      traits: cleanedTraits,
+    };
+  });
+
+  // 3. Sanitize layers: clean orphaned sameAs and rules
+  const sanitizedLayers = project.layers.map((layer) => ({
+    ...layer,
+    traits: (layer.traits || []).map((trait) => ({
+      ...trait,
+      sameAs: validTraitIds.has(trait.sameAs || '') ? trait.sameAs : '',
+      rules: (trait.rules || []).filter((rule) => validTraitIds.has(rule.trait)),
+    })),
+  }));
+
+  return {
+    ...project,
+    layers: sanitizedLayers,
+    customs: sanitizedCustoms,
+    previewItems: sanitizedPreviewItems,
+  };
+}

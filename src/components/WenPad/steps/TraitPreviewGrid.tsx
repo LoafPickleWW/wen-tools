@@ -15,10 +15,10 @@ const getTraitImageUrl = (trait: TraitT) => {
   if (trait.data instanceof Blob) {
     blob = trait.data;
   } else if (trait.data instanceof ArrayBuffer || ArrayBuffer.isView(trait.data)) {
-    blob = new Blob([trait.data], { type: trait.type || 'image/png' });
+    blob = new Blob([trait.data as BlobPart], { type: trait.type || 'image/png' });
   } else {
     try {
-      blob = new Blob([trait.data], { type: trait.type || 'image/png' });
+      blob = new Blob([trait.data as BlobPart], { type: trait.type || 'image/png' });
     } catch {
       return '';
     }
