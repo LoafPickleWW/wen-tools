@@ -45,6 +45,7 @@ export type ContextT = {
   deleteLayerRule: (layerId: string, ruleIndex: number) => void;
   updateTraitName: (layerId: string, traitId: string, newName: string) => void;
   updatePreviewItemTraitName: (itemIndex: number, layerName: string, newValue: string) => void;
+  updatePreviewItemTrait: (itemIndex: number, layerName: string, traitId: string | null) => PreviewItemT | undefined;
   updateCustomTraitName: (customId: string, layerName: string, newValue: string) => void;
 };
 

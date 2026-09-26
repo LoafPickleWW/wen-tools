@@ -29,7 +29,7 @@ const PreviewStep = () => {
   const { 
     generatePreviewItems, previewItems, filteredPreviewItems, generateIsLoading, 
     sortBy, setSortBy, project, purgeDeletedTraitAssets,
-    addTraitRule, deleteTraitRule, updatePreviewItemTraitName
+    addTraitRule, deleteTraitRule, updatePreviewItemTraitName, updatePreviewItemTrait
   } = useProject();
 
   const [currentPage, setCurrentPage] = useState(1);
@@ -343,6 +343,52 @@ const PreviewStep = () => {
     }
     setEditingItemTraitLayer(null);
   };
+
+  const handleTraitChange = (layerName: string, newTraitId: string) => {
+    if (!selectedItem) return;
+    const updated = updatePreviewItemTrait(selectedItem.index, layerName, newTraitId || null);
+    if (updated) {
+      setSelectedItem(updated);
+    }
+  };
+
+  const currentItemIndex = useMemo(() => {
+    if (!selectedItem) return -1;
+    return previewItems.findIndex((it) => it.index === selectedItem.index);
+  }, [previewItems, selectedItem]);
+
+  const hasPrevItem = currentItemIndex > 0;
+  const hasNextItem = currentItemIndex !== -1 && currentItemIndex < previewItems.length - 1;
+
+  const handlePrevItem = () => {
+    if (hasPrevItem) {
+      setSelectedItem(previewItems[currentItemIndex - 1]);
+      setRuleCreator(null);
+      setEditingItemTraitLayer(null);
+    }
+  };
+
+  const handleNextItem = () => {
+    if (hasNextItem) {
+      setSelectedItem(previewItems[currentItemIndex + 1]);
+      setRuleCreator(null);
+      setEditingItemTraitLayer(null);
+    }
+  };
+
+  const displayedLayers = useMemo(() => {
+    if (!selectedItem) return [];
+    const list: { name: string; layer?: (typeof project.layers)[0] }[] = (project.layers || []).map((l) => ({
+      name: l.name,
+      layer: l,
+    }));
+    Object.keys(selectedItem.traits || {}).forEach((layerName) => {
+      if (!list.some((item) => item.name === layerName)) {
+        list.push({ name: layerName });
+      }
+    });
+    return list;
+  }, [project.layers, selectedItem]);
 
   return (
     <div className="space-y-6">
@@ -764,20 +810,43 @@ const PreviewStep = () => {
                   #{selectedItem.index} {project.name || 'NFT'}
                 </h3>
                 <div className="flex items-center gap-3 mt-1 text-xs">
-                  <span className="text-primary-orange font-bold">Rank #{selectedItem.ranking}</span>
+                  <span className="text-primary-orange font-bold">Rank #{selectedItem.ranking || '-'}</span>
                   <span className="text-gray-500">•</span>
-                  <span className="text-gray-400">Rarity Score: <strong className="text-gray-200">{selectedItem.rating}</strong></span>
+                  <span className="text-gray-400">Rarity Score: <strong className="text-gray-200">{Math.round(selectedItem.rating || 0)}</strong></span>
                 </div>
               </div>
-              <button 
-                onClick={() => {
-                  setSelectedItem(null);
-                  setRuleCreator(null);
-                }}
-                className="p-2 rounded-full bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-white transition-colors"
-              >
-                <MdClose size={20} />
-              </button>
+              <div className="flex items-center gap-2">
+                <div className="flex items-center bg-gray-900 border border-gray-800 rounded-xl p-0.5">
+                  <button
+                    type="button"
+                    disabled={!hasPrevItem}
+                    onClick={handlePrevItem}
+                    className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-gray-800 disabled:opacity-30 disabled:hover:bg-transparent transition-colors cursor-pointer"
+                    title="Previous NFT"
+                  >
+                    <MdNavigateBefore size={18} />
+                  </button>
+                  <button
+                    type="button"
+                    disabled={!hasNextItem}
+                    onClick={handleNextItem}
+                    className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-gray-800 disabled:opacity-30 disabled:hover:bg-transparent transition-colors cursor-pointer"
+                    title="Next NFT"
+                  >
+                    <MdNavigateNext size={18} />
+                  </button>
+                </div>
+                <button 
+                  onClick={() => {
+                    setSelectedItem(null);
+                    setRuleCreator(null);
+                    setEditingItemTraitLayer(null);
+                  }}
+                  className="p-2 rounded-full bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-white transition-colors cursor-pointer"
+                >
+                  <MdClose size={20} />
+                </button>
+              </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
@@ -816,95 +885,133 @@ const PreviewStep = () => {
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <h4 className="text-xs font-black uppercase tracking-wider text-gray-400 flex items-center gap-1.5">
-                    Traits <span className="text-[10px] text-gray-500 font-normal">({Object.keys(selectedItem.traits).length})</span>
+                    Traits <span className="text-[10px] text-gray-500 font-normal">({Object.keys(selectedItem.traits).length}/{project.layers?.length || 0})</span>
                   </h4>
                   <span className="text-[10px] text-gray-500">
-                    Click <strong>+ Rule</strong> to block/require traits
+                    Select trait via dropdown or click <strong>+ Rule</strong>
                   </span>
                 </div>
 
                 {/* Traits list */}
-                <div className="space-y-2 max-h-[260px] overflow-y-auto pr-1">
-                  {Object.entries(selectedItem.traits).map(([layerName, trait]) => {
-                    const layer = project.layers?.find(l => l.name === layerName || l.id === trait.layerId);
-                    const traitDetails = layer?.traits?.find(t => t.name === trait.value || t.id === trait.traitId);
+                <div className="space-y-2.5 max-h-[380px] overflow-y-auto pr-1.5">
+                  {displayedLayers.map(({ name: layerName, layer }) => {
+                    const trait = selectedItem.traits[layerName];
+                    const traitDetails = layer?.traits?.find((t) => t.id === trait?.traitId || t.name === trait?.value);
+                    const currentTraitId = trait?.traitId || traitDetails?.id || '';
+                    const hasTrait = Boolean(trait && trait.value && trait.value !== 'None' && trait.value !== 'empty' && trait.image);
                     const traitRulesCount = traitDetails?.rules?.length || 0;
                     const isEditingThis = editingItemTraitLayer === layerName;
 
                     return (
                       <div 
                         key={layerName} 
-                        className="flex justify-between items-center p-2.5 bg-gray-900/60 rounded-xl border border-gray-800 text-xs hover:border-gray-700 transition-colors"
+                        className="p-2.5 bg-gray-900/60 rounded-xl border border-gray-800 text-xs hover:border-gray-700 transition-colors space-y-2"
                       >
-                        <div className="truncate mr-2 flex-1">
-                          <span className="text-gray-500 uppercase tracking-wide font-semibold text-[10px] block">{layerName}</span>
-                          {isEditingThis ? (
-                            <div className="flex items-center gap-1.5 mt-1">
-                              <input
-                                type="text"
-                                value={editingItemTraitVal}
-                                onChange={(e) => setEditingItemTraitVal(e.target.value)}
-                                autoFocus
-                                onKeyDown={(e) => {
-                                  if (e.key === 'Enter') handleSaveItemTraitName(layerName);
-                                  if (e.key === 'Escape') setEditingItemTraitLayer(null);
-                                }}
-                                className="bg-black border border-primary-orange text-white text-xs font-bold rounded px-2 py-0.5 w-full focus:outline-none"
-                              />
+                        <div className="flex justify-between items-center">
+                          <div className="flex items-center gap-1.5 truncate">
+                            <span className="text-gray-400 uppercase tracking-wide font-black text-[10px]">{layerName}</span>
+                            {!hasTrait && (
+                              <span className="text-[9px] font-semibold text-gray-500 bg-gray-800/80 px-1.5 py-0.5 rounded">
+                                Empty
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            {traitRulesCount > 0 && (
+                              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-primary-orange/20 text-primary-orange border border-primary-orange/40">
+                                {traitRulesCount} {traitRulesCount === 1 ? 'rule' : 'rules'}
+                              </span>
+                            )}
+                            {hasTrait && (
                               <button
                                 type="button"
-                                onClick={() => handleSaveItemTraitName(layerName)}
-                                className="p-1 bg-primary-orange text-black rounded hover:bg-primary-orange/80 cursor-pointer"
-                                title="Save"
+                                onClick={() => handleOpenRuleCreator(
+                                  layerName, 
+                                  trait.value, 
+                                  trait.layerId || layer?.id || '', 
+                                  trait.traitId || traitDetails?.id || ''
+                                )}
+                                className="px-2 py-0.5 bg-gray-800 hover:bg-primary-orange hover:text-black text-gray-300 rounded-lg text-[10px] font-bold transition-all border border-gray-700 flex items-center gap-1 cursor-pointer"
+                                title={`Add rule for ${layerName}: ${trait.value}`}
                               >
-                                <MdCheck size={14} />
+                                <MdAdd size={12} /> Rule
                               </button>
-                              <button
-                                type="button"
-                                onClick={() => setEditingItemTraitLayer(null)}
-                                className="p-1 bg-gray-800 text-gray-400 hover:text-white rounded cursor-pointer"
-                                title="Cancel"
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Trait Selection Dropdown + Custom Name Editor */}
+                        <div className="flex items-center gap-2">
+                          {layer && layer.traits && layer.traits.length > 0 ? (
+                            <div className="flex-1 min-w-0">
+                              <select
+                                value={currentTraitId}
+                                onChange={(e) => handleTraitChange(layerName, e.target.value)}
+                                className="w-full bg-black/60 border border-gray-800 hover:border-primary-orange/60 focus:border-primary-orange text-gray-200 text-xs font-bold rounded-lg px-2.5 py-1.5 focus:outline-none transition-colors cursor-pointer truncate"
+                                title={`Change trait for ${layerName}`}
                               >
-                                <MdClose size={14} />
-                              </button>
+                                <option value="" className="text-gray-500">🚫 None (Empty)</option>
+                                {layer.traits.map((t) => (
+                                  <option key={t.id} value={t.id} className="bg-gray-900 text-white">
+                                    {t.name} {t.rarity ? `(${t.rarity}%)` : ''}
+                                  </option>
+                                ))}
+                              </select>
                             </div>
                           ) : (
-                            <div className="flex items-center gap-1.5 group/val">
-                              <span className="font-bold text-gray-200 truncate">{trait.value}</span>
+                            <div className="flex-1 text-gray-400 font-bold truncate">
+                              {trait?.value || 'No traits in layer'}
+                            </div>
+                          )}
+
+                          {/* Trait Name Override Pencil for this NFT */}
+                          {hasTrait && (
+                            isEditingThis ? (
+                              <div className="flex items-center gap-1 shrink-0">
+                                <input
+                                  type="text"
+                                  value={editingItemTraitVal}
+                                  onChange={(e) => setEditingItemTraitVal(e.target.value)}
+                                  autoFocus
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter') handleSaveItemTraitName(layerName);
+                                    if (e.key === 'Escape') setEditingItemTraitLayer(null);
+                                  }}
+                                  placeholder="Custom label"
+                                  className="bg-black border border-primary-orange text-white text-xs font-bold rounded px-2 py-1 w-28 focus:outline-none"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => handleSaveItemTraitName(layerName)}
+                                  className="p-1 bg-primary-orange text-black rounded hover:bg-primary-orange/80 cursor-pointer"
+                                  title="Save label"
+                                >
+                                  <MdCheck size={14} />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setEditingItemTraitLayer(null)}
+                                  className="p-1 bg-gray-800 text-gray-400 hover:text-white rounded cursor-pointer"
+                                  title="Cancel"
+                                >
+                                  <MdClose size={14} />
+                                </button>
+                              </div>
+                            ) : (
                               <button
                                 type="button"
                                 onClick={() => {
                                   setEditingItemTraitLayer(layerName);
                                   setEditingItemTraitVal(trait.value);
                                 }}
-                                className="text-gray-500 hover:text-primary-orange opacity-0 group-hover/val:opacity-100 transition-opacity p-0.5 cursor-pointer"
-                                title="Edit trait name for this NFT"
+                                className="p-1.5 text-gray-400 hover:text-primary-orange hover:bg-gray-800/80 rounded-lg transition-colors cursor-pointer shrink-0"
+                                title="Edit display name for this trait"
                               >
-                                <MdEdit size={12} />
+                                <MdEdit size={13} />
                               </button>
-                            </div>
+                            )
                           )}
-                        </div>
-
-                        <div className="flex items-center gap-1.5 shrink-0">
-                          {traitRulesCount > 0 && (
-                            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-primary-orange/20 text-primary-orange border border-primary-orange/40">
-                              {traitRulesCount} {traitRulesCount === 1 ? 'rule' : 'rules'}
-                            </span>
-                          )}
-                          <button
-                            type="button"
-                            onClick={() => handleOpenRuleCreator(
-                              layerName, 
-                              trait.value, 
-                              trait.layerId || layer?.id || '', 
-                              trait.traitId || traitDetails?.id || ''
-                            )}
-                            className="px-2.5 py-1 bg-gray-800 hover:bg-primary-orange hover:text-black text-gray-300 rounded-lg text-[10px] font-bold transition-all border border-gray-700 flex items-center gap-1 cursor-pointer"
-                            title={`Add rule for ${layerName}: ${trait.value}`}
-                          >
-                            <MdAdd size={12} /> Rule
-                          </button>
                         </div>
                       </div>
                     );
