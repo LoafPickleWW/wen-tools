@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { MdLayers, MdLoop } from 'react-icons/md';
 import { PreviewItemT, LayerT } from './WenPadTypes';
-import { loadImage } from './ProjectUtils';
+import { loadImage, traitImageCache, compositePreviewCache } from './ProjectUtils';
 
 type Props = {
   item: PreviewItemT;
@@ -10,14 +10,7 @@ type Props = {
   height: number;
 };
 
-// Global caches for trait HTMLImageElements and composite preview data URLs
-export const traitImageCache = new Map<any, HTMLImageElement>();
-export const compositePreviewCache = new Map<string, string>();
-
-export const clearPreviewCaches = () => {
-  traitImageCache.clear();
-  compositePreviewCache.clear();
-};
+// Trait and preview caches are managed in ProjectUtils.ts
 
 const PreviewImage = ({ item, layers, width, height }: Props) => {
   const [image, setImage] = useState<string>(() => compositePreviewCache.get(item.id) || '');
@@ -38,9 +31,18 @@ const PreviewImage = ({ item, layers, width, height }: Props) => {
     let traits: any[] = [];
     if (layers && layers.length > 0) {
       traits = layers
-        .map((layer) => item.traits[layer.name]?.image)
+        .map((layer) => {
+          const itemTrait = item?.traits?.[layer.name];
+          if (!itemTrait) return null;
+          if (itemTrait.image) return itemTrait.image;
+          // Fallback to finding trait data from layer definitions
+          const traitObj = layer.traits?.find(
+            (t) => t.id === itemTrait.traitId || t.name === itemTrait.value
+          );
+          return traitObj?.data || null;
+        })
         .filter(Boolean);
-    } else {
+    } else if (item?.traits) {
       traits = Object.values(item.traits)
         .filter((trait) => trait.image)
         .map((trait) => trait.image);

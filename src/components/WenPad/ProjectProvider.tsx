@@ -1,8 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { useForm, useFieldArray } from 'react-hook-form';
+import { useForm, useFieldArray, useWatch } from 'react-hook-form';
 import { v4 as uuid } from 'uuid';
 import { toast } from 'react-toastify';
-import { saveAs } from 'file-saver';
 import { db } from './db';
 import { 
   RarityType, 
@@ -22,8 +21,10 @@ import {
   handleForceTraits,
   sanitizeProject,
   purgeInvalidPreviewItems,
+  downloadBlob,
+  clearPreviewCaches,
+  compositePreviewCache,
 } from './ProjectUtils';
-import { clearPreviewCaches, compositePreviewCache } from './PreviewImage';
 
 import { ProjectContext } from './ProjectContext';
 
@@ -66,9 +67,9 @@ export const ProjectProvider = ({ children }: Props) => {
 
   const hasChanges = form.formState.isDirty;
   const project = form.watch();
-  const layers = project.layers || [];
-  const previewItems = project.previewItems || [];
-  const customs = project.customs || [];
+  const layers = useWatch({ control: form.control, name: 'layers' }) || project.layers || [];
+  const previewItems = useWatch({ control: form.control, name: 'previewItems' }) || project.previewItems || [];
+  const customs = useWatch({ control: form.control, name: 'customs' }) || project.customs || [];
 
   const activeLayerDetails = layers.find((f) => f.id === activeLayer);
   const activeLayerIndex = layers.findIndex((f) => f.id === activeLayer) !== -1 ? layers.findIndex((f) => f.id === activeLayer) : 0;
@@ -559,10 +560,28 @@ export const ProjectProvider = ({ children }: Props) => {
     const projectSize = Number(form.getValues('size')) || 0;
     const layers = form.getValues('layers') || [];
 
-    if (layers.length === 0) return toast.error('Please add at least one layer');
-    if (projectSize <= 0) return toast.error('Please enter a collection size');
+    if (layers.length === 0) {
+      toast.error('Please add at least one layer in the Layers step');
+      return;
+    }
 
-    if (!window.confirm('Are you sure you want to generate new images?')) return;
+    const totalTraits = layers.reduce((acc, l) => acc + (l.traits?.length || 0), 0);
+    if (totalTraits === 0) {
+      toast.error('Please upload trait images to your layers before generating artwork');
+      return;
+    }
+
+    if (projectSize <= 0) {
+      toast.error('Please enter a collection size (e.g. 10 or 100) in the Setup step');
+      return;
+    }
+
+    const currentPreviews = form.getValues('previewItems') || [];
+    if (currentPreviews.length > 0) {
+      if (!window.confirm('Regenerate all collection images? This will overwrite your existing preview items.')) {
+        return;
+      }
+    }
 
     clearPreviewCaches();
     
@@ -578,151 +597,163 @@ export const ProjectProvider = ({ children }: Props) => {
     setActiveFilters([]);
     setGenerateIsLoading(true);
 
-    await new Promise((resolve) => setTimeout(resolve, 50));
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 50));
 
-    const customs = cleanedProject.customs || [];
-    const size = projectSize;
-    const items: PreviewItemT[] = [];
-    const traitStore = createTraitStore(layers, size);
-    const existingFingerprints = new Set<string>();
+      const customs = cleanedProject.customs || [];
+      const size = projectSize;
+      const items: PreviewItemT[] = [];
+      const traitStore = createTraitStore(layers, size);
+      const existingFingerprints = new Set<string>();
 
-    const getFingerprint = (traits: PreviewItemT['traits']) => {
-      return layers.map((l) => `${l.name}=${traits[l.name]?.value || 'none'}`).join('|');
-    };
+      const getFingerprint = (traits: PreviewItemT['traits']) => {
+        return layers.map((l) => `${l.name}=${traits[l.name]?.value || 'none'}`).join('|');
+      };
 
-    // 1. Process custom 1/1s first
-    for (let i = 0; i < size; i++) {
-      const custom = customs.find((f) => f.index === i + 1);
-      if (custom) {
-        const customItem: PreviewItemT = {
-          ...custom,
-          traits: { ...custom.traits },
-        };
-        for (const layer of layers) {
-          if (!customItem.traits[layer.name]) {
-            const available = getTraitsFromTraitStore(traitStore, layer);
-            const picked = getRandomTrait(available.length > 0 ? available : layer.traits);
-            if (picked) {
-              customItem.traits[layer.name] = {
+      // 1. Process custom 1/1s first
+      for (let i = 0; i < size; i++) {
+        const custom = customs.find((f) => f.index === i + 1);
+        if (custom) {
+          const customItem: PreviewItemT = {
+            ...custom,
+            traits: { ...custom.traits },
+          };
+          for (const layer of layers) {
+            if (!customItem.traits[layer.name]) {
+              const available = getTraitsFromTraitStore(traitStore, layer);
+              const picked = getRandomTrait(available.length > 0 ? available : layer.traits);
+              if (picked) {
+                customItem.traits[layer.name] = {
+                  trait_type: layer.name,
+                  value: picked.name,
+                  image: picked.data,
+                  excludeFromMetadata: layer.excludeFromMetadata,
+                  layerId: layer.id,
+                  traitId: picked.id,
+                };
+              }
+            }
+          }
+          items.push(customItem);
+          existingFingerprints.add(getFingerprint(customItem.traits));
+        }
+      }
+
+      // 2. Generate random items iteratively (never recursive, preventing stack overflow)
+      let consecutiveFails = 0;
+      for (let i = items.length; i < size; i++) {
+        if (i % 50 === 0) {
+          // Yield to event loop to keep the UI smooth and prevent freezing
+          await new Promise((r) => setTimeout(r, 0));
+        }
+
+        let foundUnique = false;
+        let previewItem: PreviewItemT | null = null;
+        const MAX_ATTEMPTS = 500;
+
+        for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+          const candidate: PreviewItemT = {
+            index: i + 1,
+            traits: {},
+            rating: 0,
+            ranking: 0,
+            id: uuid(),
+          };
+
+          for (let j = 0; j < layers.length; j++) {
+            const layer = layers[j];
+            let availableTraits: TraitT[] = [];
+
+            // Try traitStore pool first to respect rarity counts.
+            // If after 5 attempts it collides, draw from the full valid trait pool for that layer.
+            if (attempt < 5) {
+              availableTraits = getTraitsFromTraitStore(traitStore, layer);
+            }
+            if (availableTraits.length === 0) {
+              availableTraits = layer.traits.filter(
+                (t) => !t.sameAs && t.excludeTraitFromRandomGenerations !== true
+              );
+            }
+
+            const trait = getRandomTrait(availableTraits.length > 0 ? availableTraits : layer.traits);
+            if (trait) {
+              candidate.traits[layer.name] = {
                 trait_type: layer.name,
-                value: picked.name,
-                image: picked.data,
+                value: trait.name,
+                image: trait.data,
                 excludeFromMetadata: layer.excludeFromMetadata,
                 layerId: layer.id,
-                traitId: picked.id,
+                traitId: trait.id,
               };
             }
           }
-        }
-        items.push(customItem);
-        existingFingerprints.add(getFingerprint(customItem.traits));
-      }
-    }
 
-    // 2. Generate random items iteratively (never recursive, preventing stack overflow)
-    let consecutiveFails = 0;
-    for (let i = items.length; i < size; i++) {
-      if (i % 50 === 0) {
-        // Yield to event loop to keep the UI smooth and prevent freezing
-        await new Promise((r) => setTimeout(r, 0));
-      }
+          let processed = handleForceTraits(candidate, layers);
+          processed = handleBlockTraits(processed, layers);
 
-      let foundUnique = false;
-      let previewItem: PreviewItemT | null = null;
-      const MAX_ATTEMPTS = 500;
+          const fp = getFingerprint(processed.traits);
+          if (!existingFingerprints.has(fp)) {
+            foundUnique = true;
+            previewItem = processed;
+            existingFingerprints.add(fp);
 
-      for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
-        const candidate: PreviewItemT = {
-          index: i + 1,
-          traits: {},
-          rating: 0,
-          ranking: 0,
-          id: uuid(),
-        };
+            // Deduct from traitStore pool
+            Object.keys(processed.traits).forEach((key) => {
+              const trait = processed.traits[key];
+              if (traitStore[key]) {
+                const traitIndex = traitStore[key].findIndex((f) => f === trait.value);
+                if (traitIndex !== -1) traitStore[key].splice(traitIndex, 1);
+              }
+            });
 
-        for (let j = 0; j < layers.length; j++) {
-          const layer = layers[j];
-          let availableTraits: TraitT[] = [];
-
-          // Try traitStore pool first to respect rarity counts.
-          // If after 5 attempts it collides, draw from the full valid trait pool for that layer.
-          if (attempt < 5) {
-            availableTraits = getTraitsFromTraitStore(traitStore, layer);
-          }
-          if (availableTraits.length === 0) {
-            availableTraits = layer.traits.filter(
-              (t) => !t.sameAs && t.excludeTraitFromRandomGenerations !== true
-            );
-          }
-
-          const trait = getRandomTrait(availableTraits.length > 0 ? availableTraits : layer.traits);
-          if (trait) {
-            candidate.traits[layer.name] = {
-              trait_type: layer.name,
-              value: trait.name,
-              image: trait.data,
-              excludeFromMetadata: layer.excludeFromMetadata,
-              layerId: layer.id,
-              traitId: trait.id,
-            };
+            break;
           }
         }
 
-        let processed = handleForceTraits(candidate, layers);
-        processed = handleBlockTraits(processed, layers);
-
-        const fp = getFingerprint(processed.traits);
-        if (!existingFingerprints.has(fp)) {
-          foundUnique = true;
-          previewItem = processed;
-          existingFingerprints.add(fp);
-
-          // Deduct from traitStore pool
-          Object.keys(processed.traits).forEach((key) => {
-            const trait = processed.traits[key];
-            if (traitStore[key]) {
-              const traitIndex = traitStore[key].findIndex((f) => f === trait.value);
-              if (traitIndex !== -1) traitStore[key].splice(traitIndex, 1);
-            }
-          });
-
-          break;
+        if (foundUnique && previewItem) {
+          previewItem.index = i + 1;
+          items.push(previewItem);
+          consecutiveFails = 0;
+        } else {
+          consecutiveFails++;
+          if (consecutiveFails >= 15) {
+            // Reached theoretical maximum combinations
+            console.warn(`Reached maximum possible unique combinations at ${items.length} items.`);
+            break;
+          }
         }
       }
 
-      if (foundUnique && previewItem) {
-        previewItem.index = i + 1;
-        items.push(previewItem);
-        consecutiveFails = 0;
+      // Renumber to ensure strictly sequential 1..N indices
+      items.forEach((item, index) => {
+        item.index = index + 1;
+      });
+
+      addRatings(items, layers);
+      addRankings(items);
+
+      form.setValue('previewItems', items, { shouldDirty: true, shouldTouch: true });
+      resetOriginalProject();
+
+      const updatedProject = {
+        ...form.getValues(),
+        previewItems: items,
+      };
+      saveProjectLocally(updatedProject);
+
+      if (items.length < size) {
+        toast.warn(
+          `Generated ${items.length} unique items. You have reached the maximum unique combinations possible with your current traits and rules.`,
+          { autoClose: 6000 }
+        );
       } else {
-        consecutiveFails++;
-        if (consecutiveFails >= 15) {
-          // Reached theoretical maximum combinations
-          console.warn(`Reached maximum possible unique combinations at ${items.length} items.`);
-          break;
-        }
+        toast.success(`Successfully generated all ${items.length} items!`);
       }
-    }
-
-    // Renumber to ensure strictly sequential 1..N indices
-    items.forEach((item, index) => {
-      item.index = index + 1;
-    });
-
-    addRatings(items, layers);
-    addRankings(items);
-
-    form.setValue('previewItems', items, { shouldDirty: true });
-    resetOriginalProject();
-    setGenerateIsLoading(false);
-
-    if (items.length < size) {
-      toast.warn(
-        `Generated ${items.length} unique items. You have reached the maximum unique combinations possible with your current traits and rules.`,
-        { autoClose: 6000 }
-      );
-    } else {
-      toast.success(`Successfully generated all ${items.length} items!`);
+    } catch (err) {
+      console.error('Error generating preview items:', err);
+      toast.error('An error occurred while generating preview items');
+    } finally {
+      setGenerateIsLoading(false);
     }
   };
 
@@ -782,7 +813,7 @@ export const ProjectProvider = ({ children }: Props) => {
 
   const downloadBackup = () => {
     const data = new Blob([JSON.stringify(form.getValues(), null, 2)], { type: 'application/json' });
-    saveAs(data, 'wenpad-project.json');
+    downloadBlob(data, 'wenpad-project.json');
   };
 
   useEffect(() => {

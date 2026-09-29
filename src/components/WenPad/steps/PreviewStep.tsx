@@ -19,18 +19,29 @@ import {
   MdEdit,
   MdCheck
 } from 'react-icons/md';
-import { saveAs } from 'file-saver';
 import { toast } from 'react-toastify';
 import PreviewImage from '../PreviewImage';
 import { PreviewItemT, RuleT } from '../WenPadTypes';
-import { renderPreviewToBlob, buildItemMetadata, buildCollectionTraitSummary } from '../ProjectUtils';
+import { 
+  renderPreviewToBlob, 
+  buildItemMetadata, 
+  buildCollectionTraitSummary, 
+  downloadBlob 
+} from '../ProjectUtils';
 
 const PreviewStep = () => {
   const { 
     generatePreviewItems, previewItems, filteredPreviewItems, generateIsLoading, 
     sortBy, setSortBy, project, purgeDeletedTraitAssets,
-    addTraitRule, deleteTraitRule, updatePreviewItemTraitName, updatePreviewItemTrait
+    addTraitRule, deleteTraitRule, updatePreviewItemTraitName, updatePreviewItemTrait,
+    selectStep
   } = useProject();
+
+  const layersCount = project.layers?.length || 0;
+  const traitsCount = useMemo(() => {
+    return (project.layers || []).reduce((acc, l) => acc + (l.traits?.length || 0), 0);
+  }, [project.layers]);
+  const collectionSize = Number(project.size) || 0;
 
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(24);
@@ -62,7 +73,8 @@ const PreviewStep = () => {
     try {
       const blob = await renderPreviewToBlob(item, project.layers, project.imageWidth, project.imageHeight);
       const safeProjectName = (project.name || 'NFT').replace(/[^a-zA-Z0-9_-]/g, '_');
-      saveAs(blob, `#${item.index}_${safeProjectName}.png`);
+      const paddedIndex = String(item.index).padStart(4, '0');
+      downloadBlob(blob, `${paddedIndex}_${safeProjectName}.png`);
       toast.success(`Downloaded preview #${item.index}`);
     } catch (err) {
       console.error('Download error:', err);
@@ -74,9 +86,10 @@ const PreviewStep = () => {
   const handleDownloadSingleJson = (item: PreviewItemT) => {
     try {
       const safeProjectName = (project.name || 'NFT').replace(/[^a-zA-Z0-9_-]/g, '_');
-      const itemMetadata = buildItemMetadata(item, project, `#${item.index}_${safeProjectName}.png`);
+      const paddedIndex = String(item.index).padStart(4, '0');
+      const itemMetadata = buildItemMetadata(item, project, `images/${paddedIndex}_${safeProjectName}.png`);
       const blob = new Blob([JSON.stringify(itemMetadata, null, 2)], { type: 'application/json' });
-      saveAs(blob, `#${item.index}_${safeProjectName}.json`);
+      downloadBlob(blob, `${paddedIndex}_${safeProjectName}.json`);
       toast.success(`Downloaded metadata for #${item.index}`);
     } catch (err) {
       console.error('Download metadata error:', err);
@@ -99,7 +112,7 @@ const PreviewStep = () => {
 
       const jsonStr = JSON.stringify(allMetadataList, null, 2);
       const blob = new Blob([jsonStr], { type: 'application/json' });
-      saveAs(blob, `${safeProjectName}_metadata_${label}.json`);
+      downloadBlob(blob, `${safeProjectName}_metadata_${label}.json`);
       toast.success(`Exported metadata JSON for ${itemsToExport.length} items!`);
       setDownloadMenuOpen(false);
     } catch (err) {
@@ -148,6 +161,11 @@ const PreviewStep = () => {
         // Save individual metadata files into metadata/ folder
         zipData[`metadata/${paddedIndex}_${safeProjectName}.json`] = itemJsonBytes;
         zipData[`metadata/${item.index}.json`] = itemJsonBytes;
+
+        // Yield to event loop periodically to prevent UI locking during large exports
+        if (i % 10 === 0) {
+          await new Promise((resolve) => setTimeout(resolve, 0));
+        }
       }
 
       // Add master collection metadata files at root of ZIP
@@ -161,22 +179,20 @@ const PreviewStep = () => {
       zipData['trait_summary.json'] = encoder.encode(JSON.stringify(traitSummary, null, 2));
 
       const { zip } = await import('fflate');
-      zip(zipData, (err, out) => {
-        if (err) {
-          toast.error('Failed to compress ZIP');
-          setExportingZip(false);
-          setExportProgress(null);
-          return;
-        }
-        const zipBlob = new Blob([out as any], { type: 'application/zip' });
-        saveAs(zipBlob, `${safeProjectName}_previews_${label}.zip`);
-        toast.success(`Exported ${itemsToExport.length} preview images & metadata!`);
-        setExportingZip(false);
-        setExportProgress(null);
+      const zipBytes = await new Promise<Uint8Array>((resolve, reject) => {
+        zip(zipData, (err, out) => {
+          if (err) reject(err);
+          else resolve(out);
+        });
       });
+
+      const zipBlob = new Blob([zipBytes as any], { type: 'application/zip' });
+      downloadBlob(zipBlob, `${safeProjectName}_previews_${label}.zip`);
+      toast.success(`Exported ${itemsToExport.length} preview images & metadata!`);
     } catch (err) {
-      console.error(err);
+      console.error('Error exporting previews:', err);
       toast.error('Error exporting previews');
+    } finally {
       setExportingZip(false);
       setExportProgress(null);
     }
@@ -741,15 +757,64 @@ const PreviewStep = () => {
 
         {/* Empty State */}
         {previewItems.length === 0 && !generateIsLoading && (
-          <div className="col-span-full py-32 flex flex-col items-center justify-center text-gray-500 bg-gray-900/20 rounded-3xl border-2 border-dashed border-gray-800">
-             <MdRefresh size={64} className="opacity-10 mb-4" />
-             <p className="text-lg">Ready to generate your collection?</p>
-             <button 
-               onClick={generatePreviewItems}
-               className="mt-4 text-primary-orange hover:underline font-bold"
-             >
-               Click here to start
-             </button>
+          <div className="col-span-full py-20 px-6 flex flex-col items-center justify-center text-center bg-gray-900/30 rounded-3xl border-2 border-dashed border-gray-800 space-y-4">
+            <div className="p-4 bg-primary-orange/10 rounded-full text-primary-orange">
+              <MdRefresh size={44} className="opacity-80" />
+            </div>
+
+            {layersCount === 0 ? (
+              <div className="space-y-3 max-w-md">
+                <p className="text-base font-bold text-gray-200">No Layers Configured Yet</p>
+                <p className="text-xs text-gray-400">
+                  Set up your artwork categories (e.g. Background, Character, Eyes) before generating collection items.
+                </p>
+                <button 
+                  onClick={() => selectStep(1)}
+                  className="px-5 py-2.5 bg-primary-orange hover:bg-primary-orange/80 text-black font-black text-xs uppercase tracking-wider rounded-xl transition-all cursor-pointer shadow-md"
+                >
+                  Go to Step 2: Configure Layers →
+                </button>
+              </div>
+            ) : traitsCount === 0 ? (
+              <div className="space-y-3 max-w-md">
+                <p className="text-base font-bold text-gray-200">No Traits Uploaded Yet</p>
+                <p className="text-xs text-gray-400">
+                  You have {layersCount} {layersCount === 1 ? 'layer' : 'layers'}, but haven't uploaded trait PNGs yet. Upload trait images for each layer to start generating.
+                </p>
+                <button 
+                  onClick={() => selectStep(1)}
+                  className="px-5 py-2.5 bg-primary-orange hover:bg-primary-orange/80 text-black font-black text-xs uppercase tracking-wider rounded-xl transition-all cursor-pointer shadow-md"
+                >
+                  Upload Traits in Step 2 →
+                </button>
+              </div>
+            ) : collectionSize <= 0 ? (
+              <div className="space-y-3 max-w-md">
+                <p className="text-base font-bold text-gray-200">Collection Size Is Missing</p>
+                <p className="text-xs text-gray-400">
+                  Specify how many NFTs you want to generate (e.g. 10, 50, 100) in the Setup step.
+                </p>
+                <button 
+                  onClick={() => selectStep(0)}
+                  className="px-5 py-2.5 bg-primary-orange hover:bg-primary-orange/80 text-black font-black text-xs uppercase tracking-wider rounded-xl transition-all cursor-pointer shadow-md"
+                >
+                  Set Collection Size in Step 1 →
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-3 max-w-md">
+                <p className="text-base font-bold text-gray-200">Ready to Generate Your Collection</p>
+                <p className="text-xs text-gray-400">
+                  {collectionSize} items will be generated using {layersCount} layers and {traitsCount} traits.
+                </p>
+                <button 
+                  onClick={generatePreviewItems}
+                  className="px-6 py-3 bg-primary-orange hover:bg-primary-orange/80 text-black font-black text-xs uppercase tracking-wider rounded-xl transition-all cursor-pointer shadow-lg shadow-primary-orange/20 hover:scale-105 active:scale-95"
+                >
+                  ✨ Generate {collectionSize} Collection Items
+                </button>
+              </div>
+            )}
           </div>
         )}
 

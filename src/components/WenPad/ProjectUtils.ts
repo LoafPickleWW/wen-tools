@@ -242,32 +242,206 @@ export function handleBlockTraits(previewItem: PreviewItemT, layers: LayerT[]) {
   return previewItem;
 }
 
+// Global caches for trait HTMLImageElements and composite preview data URLs
+export const traitImageCache = new Map<any, HTMLImageElement>();
+export const compositePreviewCache = new Map<string, string>();
+
+export const clearPreviewCaches = () => {
+  traitImageCache.clear();
+  compositePreviewCache.clear();
+};
+
+/**
+ * Prepare a save file handle BEFORE any async work so the user-gesture context
+ * is preserved. Call this synchronously inside the click handler, then later
+ * write to the returned handle after the async work (e.g. canvas rendering).
+ * Returns null if the File System Access API is unavailable or the user cancels.
+ */
+export const requestSaveHandle = async (filename: string, mimeType: string, ext: string): Promise<FileSystemFileHandle | null> => {
+  if (!('showSaveFilePicker' in window)) return null;
+  try {
+    const handle = await (window as any).showSaveFilePicker({
+      suggestedName: filename,
+      types: [{
+        description: `${ext.toUpperCase()} file`,
+        accept: { [mimeType]: [`.${ext}`] },
+      }],
+    });
+    return handle;
+  } catch (e: any) {
+    if (e?.name === 'AbortError') return null; // User cancelled
+    console.warn('showSaveFilePicker failed:', e);
+    return null;
+  }
+};
+
+/**
+ * Write a Blob to a previously-obtained FileSystemFileHandle.
+ */
+export const writeToHandle = async (handle: FileSystemFileHandle, blob: Blob): Promise<void> => {
+  const writable = await (handle as any).createWritable();
+  await writable.write(blob);
+  await writable.close();
+};
+
+export const downloadBlob = async (blobOrUrl: Blob | string, rawFilename: string) => {
+  // Strip any characters that can break file naming in Windows / browsers: #, %, /, \, :, *, ?, ", <, >, |
+  let filename = rawFilename.replace(/[#%\\/:*?"<>|]/g, '_').trim();
+  if (!filename) filename = 'download';
+
+  // Resolve the blob first
+  let blob: Blob;
+  if (typeof blobOrUrl === 'string') {
+    // Data URL or regular URL string – convert to blob
+    try {
+      const resp = await fetch(blobOrUrl);
+      blob = await resp.blob();
+    } catch {
+      // If fetch fails on data URL, create blob manually
+      blob = new Blob([blobOrUrl], { type: 'application/octet-stream' });
+    }
+  } else {
+    blob = blobOrUrl;
+  }
+
+  // Determine correct MIME type from the filename extension
+  const ext = (filename.split('.').pop() || '').toLowerCase();
+  const mimeMap: Record<string, string> = {
+    'png': 'image/png',
+    'jpg': 'image/jpeg',
+    'jpeg': 'image/jpeg',
+    'json': 'application/json',
+    'zip': 'application/zip',
+  };
+  const mimeType = mimeMap[ext] || blob.type || 'application/octet-stream';
+
+  // Ensure blob has correct MIME type
+  if (blob.type !== mimeType) {
+    blob = new Blob([blob], { type: mimeType });
+  }
+
+  // Strategy 1: File System Access API (Chrome 86+) – gives 100% filename control
+  if ('showSaveFilePicker' in window) {
+    try {
+      const handle = await (window as any).showSaveFilePicker({
+        suggestedName: filename,
+        types: [{
+          description: `${ext.toUpperCase()} file`,
+          accept: { [mimeType]: [`.${ext}`] },
+        }],
+      });
+      const writable = await handle.createWritable();
+      await writable.write(blob);
+      await writable.close();
+      return;
+    } catch (e: any) {
+      if (e?.name === 'AbortError') return; // User cancelled the save dialog
+      console.warn('showSaveFilePicker failed, falling back to anchor:', e);
+    }
+  }
+
+  // Strategy 2: Anchor + blob URL fallback (for browsers without File System Access API)
+  const file = new File([blob], filename, { type: mimeType });
+  const url = URL.createObjectURL(file);
+
+  const a = document.createElement('a');
+  a.style.position = 'fixed';
+  a.style.top = '-9999px';
+  a.style.left = '-9999px';
+  a.style.opacity = '0';
+  a.style.pointerEvents = 'none';
+  a.style.width = '1px';
+  a.style.height = '1px';
+  a.href = url;
+  a.download = filename;
+  a.setAttribute('download', filename);
+  a.rel = 'noopener';
+
+  document.body.appendChild(a);
+  a.click();
+
+  setTimeout(() => {
+    try {
+      if (a.parentNode) {
+        a.parentNode.removeChild(a);
+      }
+    } catch {
+      // Ignore
+    }
+  }, 1000);
+
+  setTimeout(() => {
+    try {
+      URL.revokeObjectURL(url);
+    } catch {
+      // Ignore
+    }
+  }, 60000);
+};
+
 export const renderPreviewToBlob = async (
   item: PreviewItemT,
   layers: LayerT[],
   width?: number,
   height?: number
 ): Promise<Blob> => {
-  const canvas = document.createElement('canvas');
-  canvas.width = width || 1000;
-  canvas.height = height || 1000;
-  const ctx = canvas.getContext('2d');
-  if (!ctx) throw new Error('Failed to get canvas 2d context');
+  const targetWidth = width || 1000;
+  const targetHeight = height || 1000;
 
   let traitsToDraw: any[] = [];
   if (layers && layers.length > 0) {
     traitsToDraw = layers
-      .map((layer) => item.traits[layer.name]?.image)
+      .map((layer) => {
+        const itemTrait = item?.traits?.[layer.name];
+        if (!itemTrait) return null;
+        if (itemTrait.image) return itemTrait.image;
+        // Fallback to finding trait data from layer definitions
+        const traitObj = layer.traits?.find(
+          (t) => t.id === itemTrait.traitId || t.name === itemTrait.value
+        );
+        return traitObj?.data || null;
+      })
       .filter(Boolean);
-  } else {
+  } else if (item?.traits) {
     traitsToDraw = Object.values(item.traits)
       .filter((t) => t.image)
       .map((t) => t.image);
   }
 
+  // If no trait images could be resolved, check compositePreviewCache!
+  if (traitsToDraw.length === 0 && item?.id) {
+    const cachedDataUrl = compositePreviewCache.get(item.id);
+    if (cachedDataUrl) {
+      try {
+        const img = await loadImage(cachedDataUrl);
+        const fallbackCanvas = document.createElement('canvas');
+        fallbackCanvas.width = img.naturalWidth || targetWidth;
+        fallbackCanvas.height = img.naturalHeight || targetHeight;
+        const fallbackCtx = fallbackCanvas.getContext('2d');
+        if (fallbackCtx) {
+          fallbackCtx.drawImage(img, 0, 0, fallbackCanvas.width, fallbackCanvas.height);
+          return new Promise<Blob>((resolve, reject) => {
+            fallbackCanvas.toBlob((blob) => {
+              if (blob) resolve(blob);
+              else reject(new Error('Failed to generate PNG blob from cache'));
+            }, 'image/png');
+          });
+        }
+      } catch (e) {
+        console.warn('Failed to convert cached image to PNG blob:', e);
+      }
+    }
+  }
+
+  const canvas = document.createElement('canvas');
+  canvas.width = targetWidth;
+  canvas.height = targetHeight;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) throw new Error('Failed to get canvas 2d context');
+
   for (const traitData of traitsToDraw) {
     try {
-      const img = await loadImage(traitData);
+      const img = await loadImage(traitData, traitImageCache);
       ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
     } catch (e) {
       console.warn('Error loading trait image for export:', e);
@@ -276,8 +450,19 @@ export const renderPreviewToBlob = async (
 
   return new Promise((resolve, reject) => {
     canvas.toBlob((blob) => {
-      if (blob) resolve(blob);
-      else reject(new Error('Failed to generate image blob'));
+      if (blob) {
+        resolve(blob);
+      } else {
+        try {
+          const dataUrl = canvas.toDataURL('image/png');
+          fetch(dataUrl)
+            .then((r) => r.blob())
+            .then(resolve)
+            .catch(reject);
+        } catch (e) {
+          reject(new Error('Failed to generate image blob'));
+        }
+      }
     }, 'image/png');
   });
 };
@@ -285,8 +470,9 @@ export const renderPreviewToBlob = async (
 export const loadImage = (src: any, imageCache?: any): Promise<HTMLImageElement> => {
   if (!src) return Promise.reject(new Error('No image source provided'));
 
-  if (imageCache && imageCache.has(src)) {
-    return Promise.resolve(imageCache.get(src));
+  const cache = imageCache !== undefined ? imageCache : traitImageCache;
+  if (cache && cache.has(src)) {
+    return Promise.resolve(cache.get(src)!);
   }
 
   return new Promise((resolve, reject) => {
@@ -314,8 +500,32 @@ export const loadImage = (src: any, imageCache?: any): Promise<HTMLImageElement>
           img.src = objectUrlToRevoke;
         } else if (typeof data === 'string') {
           img.src = data;
+        } else if (typeof data === 'object') {
+          const vals = Object.values(data);
+          if (vals.length > 0 && typeof vals[0] === 'number') {
+            const u8 = new Uint8Array(vals as number[]);
+            const blob = new Blob([u8], { type: src.type || 'image/png' });
+            objectUrlToRevoke = URL.createObjectURL(blob);
+            img.src = objectUrlToRevoke;
+          } else {
+            const blob = new Blob([data as BlobPart], { type: src.type || 'image/png' });
+            objectUrlToRevoke = URL.createObjectURL(blob);
+            img.src = objectUrlToRevoke;
+          }
         } else {
           const blob = new Blob([data as BlobPart], { type: src.type || 'image/png' });
+          objectUrlToRevoke = URL.createObjectURL(blob);
+          img.src = objectUrlToRevoke;
+        }
+      } else if (src && typeof src === 'object') {
+        const vals = Object.values(src);
+        if (vals.length > 0 && typeof vals[0] === 'number') {
+          const u8 = new Uint8Array(vals as number[]);
+          const blob = new Blob([u8], { type: 'image/png' });
+          objectUrlToRevoke = URL.createObjectURL(blob);
+          img.src = objectUrlToRevoke;
+        } else {
+          const blob = new Blob([src as BlobPart], { type: 'image/png' });
           objectUrlToRevoke = URL.createObjectURL(blob);
           img.src = objectUrlToRevoke;
         }
@@ -329,8 +539,8 @@ export const loadImage = (src: any, imageCache?: any): Promise<HTMLImageElement>
     }
 
     img.onload = () => {
-      if (imageCache) {
-        imageCache.set(src, img);
+      if (cache) {
+        cache.set(src, img);
       }
       resolve(img);
     };

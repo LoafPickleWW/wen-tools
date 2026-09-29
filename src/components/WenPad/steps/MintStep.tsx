@@ -26,8 +26,7 @@ import {
   confirmAlgoFileBatch
 } from '../../../utils/algofile';
 import algosdk from 'algosdk';
-import { loadImage, buildMintMetadata } from '../ProjectUtils';
-import { traitImageCache } from '../PreviewImage';
+import { buildMintMetadata, renderPreviewToBlob } from '../ProjectUtils';
 
 const MintStep = () => {
   const { project, previewItems } = useProject();
@@ -49,30 +48,7 @@ const MintStep = () => {
   const effectiveProvider = isTestnet && provider === 'Crust' ? 'Pinata' : provider;
 
   const generateBlob = async (item: any) => {
-    const canvas = document.createElement('canvas');
-    canvas.width = project.imageWidth || 1000;
-    canvas.height = project.imageHeight || 1000;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) throw new Error('Could not get canvas context');
-
-    // Draw traits according to project layer order
-    let traits: any[] = [];
-    if (project.layers && project.layers.length > 0) {
-      traits = project.layers
-        .map((layer: any) => item.traits[layer.name]?.image)
-        .filter(Boolean);
-    } else {
-      traits = Object.values(item.traits)
-        .filter((trait: any) => trait.image)
-        .map((trait: any) => trait.image);
-    }
-
-    for (const traitData of traits) {
-      const img: any = await loadImage(traitData, traitImageCache);
-      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-    }
-
-    return new Promise<Blob>((resolve) => canvas.toBlob((b) => resolve(b!), 'image/png'));
+    return await renderPreviewToBlob(item, project.layers, project.imageWidth, project.imageHeight);
   };
 
   const handleMint = async () => {
