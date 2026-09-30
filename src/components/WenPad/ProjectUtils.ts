@@ -462,7 +462,7 @@ export const renderPreviewToBlob = async (
             .then((r) => r.blob())
             .then(resolve)
             .catch(reject);
-        } catch (e) {
+        } catch {
           reject(new Error('Failed to generate image blob'));
         }
       }

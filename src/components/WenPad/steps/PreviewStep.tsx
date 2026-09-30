@@ -21,7 +21,7 @@ import {
 } from 'react-icons/md';
 import { toast } from 'react-toastify';
 import PreviewImage from '../PreviewImage';
-import { PreviewItemT, RuleT } from '../WenPadTypes';
+import { PreviewItemT, RuleT, LayerT } from '../WenPadTypes';
 import { 
   renderPreviewToBlob, 
   buildItemMetadata, 
@@ -498,7 +498,7 @@ const PreviewStep = () => {
 
   const displayedLayers = useMemo(() => {
     if (!selectedItem) return [];
-    const list: { name: string; layer?: (typeof project.layers)[0] }[] = (project.layers || []).map((l) => ({
+    const list: { name: string; layer?: LayerT }[] = (project.layers || []).map((l) => ({
       name: l.name,
       layer: l,
     }));
