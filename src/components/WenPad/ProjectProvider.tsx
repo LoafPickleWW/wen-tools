@@ -2,6 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { useForm, useFieldArray, useWatch } from 'react-hook-form';
 import { v4 as uuid } from 'uuid';
 import { toast } from 'react-toastify';
+import { useWallet } from '@txnlab/use-wallet-react';
 import { db } from './db';
 import { 
   RarityType, 
@@ -28,14 +29,21 @@ import {
 
 import { ProjectContext } from './ProjectContext';
 
+const STEP_NAMES = ['Setup', 'Layers', 'Customs', 'Preview', 'Launch'];
+
 type Props = {
   children: React.ReactNode;
 };
 
 export const ProjectProvider = ({ children }: Props) => {
+  const { activeAddress } = useWallet();
   const [, setOriginalProject] = useState<ProjectT>();
   const [activeLayer, setActiveLayer] = useState<string>('');
-  const [activeStep, setActiveStep] = useState<number>(0);
+  const [activeStep, setActiveStep] = useState<number>(() => {
+    const saved = localStorage.getItem('wenpad_active_step');
+    const num = Number(saved);
+    return !isNaN(num) && num >= 0 && num <= 4 ? num : 0;
+  });
   const [sortBy, setSortBy] = useState('name');
   const [activeFilters, setActiveFilters] = useState<{ traitType: string; traitValue: string }[]>([]);
   const [localSaving, setLocalSaving] = useState<boolean>(false);
@@ -43,6 +51,14 @@ export const ProjectProvider = ({ children }: Props) => {
   const [localDataFetched, setLocalDataFetched] = useState<boolean>();
   const [localError, setLocalError] = useState<string>('');
   const [generateIsLoading, setGenerateIsLoading] = useState<boolean>(false);
+  const [resumePrompt, setResumePrompt] = useState<{
+    projectName: string;
+    layersCount: number;
+    itemsCount: number;
+    step: number;
+    stepName: string;
+    projectData: ProjectT;
+  } | null>(null);
 
   const form = useForm<ProjectT>({
     defaultValues: {
@@ -107,6 +123,7 @@ export const ProjectProvider = ({ children }: Props) => {
   const selectStep = (index: number) => {
     setActiveStep(index);
     setGenerateIsLoading(false);
+    localStorage.setItem('wenpad_active_step', String(index));
   };
 
   const saveProjectLocally = async (input: ProjectT) => {
@@ -116,16 +133,39 @@ export const ProjectProvider = ({ children }: Props) => {
       setLocalError('');
 
       input.layers = input.layers.filter((f) => f.name && f.id);
+      input.lastModified = Date.now();
+      input.lastStep = activeStep;
+      if (activeAddress) {
+        input.owner = activeAddress;
+      }
 
       const projects = await db.projects.toArray();
-      if (projects.length > 0) {
+      const existingProject = input.id 
+        ? projects.find((p) => p.id === input.id)
+        : (activeAddress ? projects.find((p) => p.owner === activeAddress) : projects[0]);
+
+      if (existingProject && existingProject.id) {
+        await db.projects.update(existingProject.id, input);
+        input.id = existingProject.id;
+      } else if (projects.length > 0 && !input.owner) {
         await db.projects.update(projects[0].id!, input);
+        input.id = projects[0].id;
       } else {
-        await db.projects.add(input);
+        const newId = await db.projects.add(input);
+        input.id = Number(newId);
       }
+
       setOriginalProject(input);
       setLocalSaved(true);
       form.reset(input);
+
+      localStorage.setItem('wenpad_active_step', String(activeStep));
+      if (activeAddress) {
+        localStorage.setItem('wenpad_last_wallet', activeAddress);
+      }
+      if (input.id) {
+        localStorage.setItem('wenpad_active_project_id', String(input.id));
+      }
 
       setTimeout(() => {
         setLocalSaved(false);
@@ -149,6 +189,9 @@ export const ProjectProvider = ({ children }: Props) => {
   const resetProject = async () => {
     if (!window.confirm('Are you sure you want to reset the project?')) return;
     await db.projects.clear();
+    localStorage.removeItem('wenpad_active_step');
+    localStorage.removeItem('wenpad_active_project_id');
+    setResumePrompt(null);
     form.reset({
       name: '',
       unitName: '',
@@ -158,12 +201,16 @@ export const ProjectProvider = ({ children }: Props) => {
       imageWidth: 1000,
       imageHeight: 1000,
       layers: [],
+      customs: [],
       previewItems: [],
     });
     setActiveLayer('');
+    setActiveStep(0);
     setLocalDataFetched(false);
     setLocalSaved(false);
     setLocalError('');
+    resetOriginalProject();
+    toast.info('Project reset to blank template');
   };
 
   const addCustom = () => {
@@ -794,18 +841,110 @@ export const ProjectProvider = ({ children }: Props) => {
 
   const getProjectFromLocalDb = useCallback(async () => {
     try {
-      const projects = await db.projects.toArray();
-      if (projects[0]) {
-        const cleaned = sanitizeProject(projects[0]);
-        form.reset(cleaned);
-        setOriginalProject(cleaned);
-        setActiveLayer(cleaned.layers[0]?.id || '');
+      const allProjects = await db.projects.toArray();
+      if (allProjects.length > 0) {
+        const sorted = [...allProjects].sort((a, b) => (b.lastModified || 0) - (a.lastModified || 0));
+        const matched = (activeAddress && sorted.find((p) => p.owner === activeAddress)) || sorted[0];
+
+        if (matched) {
+          const cleaned = sanitizeProject(matched);
+          form.reset(cleaned);
+          setOriginalProject(cleaned);
+          setActiveLayer(cleaned.layers[0]?.id || '');
+
+          const savedStep = localStorage.getItem('wenpad_active_step');
+          if (savedStep !== null) {
+            const stepNum = Number(savedStep);
+            if (!isNaN(stepNum) && stepNum >= 0 && stepNum <= 4) {
+              setActiveStep(stepNum);
+            }
+          } else if (typeof matched.lastStep === 'number') {
+            setActiveStep(matched.lastStep);
+          }
+        }
       }
       setLocalDataFetched(true);
     } catch (error) {
       console.error(error);
     }
-  }, [form]);
+  }, [form, activeAddress]);
+
+  // Wallet login / switch detection to resume unfinished project
+  useEffect(() => {
+    if (!localDataFetched) return;
+    if (!activeAddress) return;
+
+    const checkResume = async () => {
+      try {
+        const lastWallet = localStorage.getItem('wenpad_last_wallet');
+        if (lastWallet === activeAddress) return;
+
+        localStorage.setItem('wenpad_last_wallet', activeAddress);
+
+        const allProjects = await db.projects.toArray();
+        if (allProjects.length === 0) return;
+
+        const walletProject = allProjects.find((p) => p.owner === activeAddress);
+        const sorted = [...allProjects].sort((a, b) => (b.lastModified || 0) - (a.lastModified || 0));
+        const draftProject = sorted[0];
+
+        const targetProject = walletProject || draftProject;
+        if (!targetProject) return;
+
+        const hasContent = Boolean(
+          targetProject.name ||
+          (targetProject.layers && targetProject.layers.length > 0) ||
+          (targetProject.previewItems && targetProject.previewItems.length > 0)
+        );
+
+        if (hasContent) {
+          const step = typeof targetProject.lastStep === 'number'
+            ? targetProject.lastStep
+            : (targetProject.previewItems && targetProject.previewItems.length > 0
+                ? 3
+                : (targetProject.layers && targetProject.layers.length > 0 ? 1 : 0));
+
+          setResumePrompt({
+            projectName: targetProject.name || 'Untitled Collection',
+            layersCount: targetProject.layers?.length || 0,
+            itemsCount: targetProject.previewItems?.length || 0,
+            step,
+            stepName: STEP_NAMES[step] || 'Setup',
+            projectData: targetProject,
+          });
+        }
+      } catch (err) {
+        console.error('Error checking wallet resume:', err);
+      }
+    };
+
+    checkResume();
+  }, [activeAddress, localDataFetched]);
+
+  const acceptResume = () => {
+    if (!resumePrompt) return;
+    const projectToLoad = resumePrompt.projectData;
+    const cleaned = sanitizeProject(projectToLoad);
+
+    if (activeAddress) {
+      cleaned.owner = activeAddress;
+    }
+    cleaned.lastModified = Date.now();
+    cleaned.lastStep = resumePrompt.step;
+
+    form.reset(cleaned);
+    setOriginalProject(cleaned);
+    setActiveLayer(cleaned.layers[0]?.id || '');
+    selectStep(resumePrompt.step);
+
+    saveProjectLocally(cleaned);
+    toast.success(`Resumed "${resumePrompt.projectName}" on Step: ${resumePrompt.stepName}!`);
+    setResumePrompt(null);
+  };
+
+  const dismissResume = () => {
+    setResumePrompt(null);
+  };
 
   const resetOriginalProject = () => {
     setOriginalProject(form.getValues());
@@ -834,6 +973,7 @@ export const ProjectProvider = ({ children }: Props) => {
         purgeDeletedTraitAssets, addTraitRule, deleteTraitRule,
         addLayerRule, deleteLayerRule, updateTraitName,
         updatePreviewItemTraitName, updatePreviewItemTrait, updateCustomTraitName,
+        resumePrompt, acceptResume, dismissResume,
       }}
     >
       {children}

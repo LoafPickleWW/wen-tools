@@ -16,6 +16,8 @@ export type ProjectT = {
   layers: LayerT[];
   customs: PreviewItemT[];
   previewItems: PreviewItemT[];
+  lastStep?: number;
+  lastModified?: number;
 };
 
 export type LayerT = {

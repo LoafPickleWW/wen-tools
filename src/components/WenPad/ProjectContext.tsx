@@ -47,6 +47,16 @@ export type ContextT = {
   updatePreviewItemTraitName: (itemIndex: number, layerName: string, newValue: string) => void;
   updatePreviewItemTrait: (itemIndex: number, layerName: string, traitId: string | null) => PreviewItemT | undefined;
   updateCustomTraitName: (customId: string, layerName: string, newValue: string) => void;
+  resumePrompt?: {
+    projectName: string;
+    layersCount: number;
+    itemsCount: number;
+    step: number;
+    stepName: string;
+    projectData: ProjectT;
+  } | null;
+  acceptResume: () => void;
+  dismissResume: () => void;
 };
 
 export const ProjectContext = createContext<ContextT>({} as ContextT);

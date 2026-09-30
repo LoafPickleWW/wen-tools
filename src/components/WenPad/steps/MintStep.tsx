@@ -6,7 +6,6 @@ import { toast } from 'react-toastify';
 import confetti from 'canvas-confetti';
 import { 
   pinImageToPinata, 
-  pinJSONToPinata,
   createARC3AssetMintArrayV2Batch,
   createARC19AssetMintArrayV2Batch,
   createAssetMintArray,
@@ -16,8 +15,10 @@ import {
 } from '../../../utils';
 import { 
   pinImageToCrust, 
-  pinJSONToCrust, 
 } from '../../../crust';
+import { 
+  pinImageToFilebase, 
+} from '../../../filebase';
 import { 
   completeAlgoFileUpload,
   getAlgoFileBatchPaymentRequirements,
@@ -32,8 +33,16 @@ const MintStep = () => {
   const { project, previewItems } = useProject();
   const { activeAccount, activeNetwork, transactionSigner } = useWallet();
   const [standard, setStandard] = useState<'ARC3' | 'ARC69' | 'ARC19'>('ARC19');
-  const [provider, setProvider] = useState<'AlgoFile' | 'Crust' | 'Pinata'>('AlgoFile');
-  const [ipfsToken, setIpfsToken] = useState(localStorage.getItem('authBasic') || '');
+  const [provider, setProvider] = useState<'Filebase' | 'AlgoFile' | 'Crust' | 'Pinata'>('Filebase');
+  const [filebaseToken, setFilebaseToken] = useState(
+    localStorage.getItem('filebaseToken') || localStorage.getItem('authBasic') || ''
+  );
+  const [pinataToken, setPinataToken] = useState(
+    localStorage.getItem('pinataToken') || ''
+  );
+  const [ipfsToken, setIpfsToken] = useState(
+    localStorage.getItem('authBasic') || ''
+  );
   const [isMinting, setIsMinting] = useState(false);
   const [progress, setProgress] = useState({ current: 0, total: previewItems.length, status: '' });
   const [showMetadataPreview, setShowMetadataPreview] = useState(false);
@@ -45,7 +54,13 @@ const MintStep = () => {
     : null;
 
   const isTestnet = activeNetwork === 'testnet';
-  const effectiveProvider = isTestnet && provider === 'Crust' ? 'Pinata' : provider;
+  const effectiveProvider = isTestnet && provider === 'Crust' ? 'Filebase' : provider;
+
+  const activeToken = effectiveProvider === 'Filebase'
+    ? filebaseToken
+    : effectiveProvider === 'Pinata'
+    ? pinataToken
+    : ipfsToken;
 
   const generateBlob = async (item: any) => {
     return await renderPreviewToBlob(item, project.layers, project.imageWidth, project.imageHeight);
@@ -53,7 +68,9 @@ const MintStep = () => {
 
   const handleMint = async () => {
     if (!activeAccount) return toast.error('Please connect your wallet');
-    if (effectiveProvider !== 'AlgoFile' && !ipfsToken) return toast.error('Please provide an IPFS token');
+    if (effectiveProvider !== 'AlgoFile' && !activeToken) {
+      return toast.error(`Please provide your ${effectiveProvider} API token`);
+    }
     if (previewItems.length === 0) return toast.error('No items to mint');
 
     setIsMinting(true);
@@ -244,15 +261,18 @@ const MintStep = () => {
       } else {
         for (let i = 0; i < previewItems.length; i++) {
           const item = previewItems[i];
-          setProgress({ current: i + 1, total: previewItems.length, status: `Preparing NFT #${item.index}...` });
+          setProgress({ current: i + 1, total: previewItems.length, status: `Uploading image #${item.index} to ${effectiveProvider}...` });
           
           const blob = await generateBlob(item);
+          const imageFile = new File([blob], `image_${item.index}.png`, { type: 'image/png' });
           
           let imageCid = '';
-          if (effectiveProvider === 'Crust') {
+          if (effectiveProvider === 'Filebase') {
+            imageCid = await pinImageToFilebase(filebaseToken, imageFile);
+          } else if (effectiveProvider === 'Crust') {
             imageCid = await pinImageToCrust(ipfsToken, blob);
           } else {
-            imageCid = await pinImageToPinata(ipfsToken, blob);
+            imageCid = await pinImageToPinata(pinataToken, blob);
           }
 
           const metadata = buildMintMetadata(item, project, imageCid, standard);
@@ -268,19 +288,11 @@ const MintStep = () => {
           if (standard === 'ARC69') {
              assetData.asset_note = metadata;
           } else {
-             setProgress({ current: i + 1, total: previewItems.length, status: `Pinning metadata #${item.index}...` });
-             let jsonCid = '';
-             if (effectiveProvider === 'Crust') {
-               jsonCid = await pinJSONToCrust(ipfsToken, JSON.stringify(metadata));
-             } else {
-               jsonCid = await pinJSONToPinata(ipfsToken, JSON.stringify(metadata));
-             }
-             assetData.cid = jsonCid;
              assetData.ipfs_data = metadata;
           }
 
           mintedData.push(assetData);
-          toast.info(`Uploaded ${i + 1}/${previewItems.length}`, { autoClose: 500 });
+          toast.info(`Uploaded image ${i + 1}/${previewItems.length}`, { autoClose: 500 });
         }
       }
 
@@ -289,6 +301,9 @@ const MintStep = () => {
       
       let txnsGroups: algosdk.Transaction[][] = [];
       let localAlgofileUploads: any[] = [];
+
+      const batchProvider: any = effectiveProvider === 'AlgoFile' ? 'none' : effectiveProvider.toLowerCase();
+      const batchToken = effectiveProvider === 'Filebase' ? filebaseToken : effectiveProvider === 'Pinata' ? pinataToken : ipfsToken;
       
       if (standard === 'ARC3') {
         const result = await createARC3AssetMintArrayV2Batch(
@@ -296,8 +311,8 @@ const MintStep = () => {
           activeAccount.address,
           algodClient,
           transactionSigner,
-          effectiveProvider === 'AlgoFile' ? 'none' : (effectiveProvider as any),
-          ipfsToken
+          batchProvider,
+          batchToken
         );
         txnsGroups = result.txnsArray;
         localAlgofileUploads = [];
@@ -307,8 +322,8 @@ const MintStep = () => {
           activeAccount.address,
           algodClient,
           transactionSigner,
-          effectiveProvider === 'AlgoFile' ? 'none' : (effectiveProvider as any),
-          ipfsToken
+          batchProvider,
+          batchToken
         );
         txnsGroups = result.txnsArray;
         localAlgofileUploads = [];
@@ -425,26 +440,26 @@ const MintStep = () => {
 
           <div className="space-y-3">
             <label className="text-[10px] font-black text-primary-orange uppercase tracking-[0.2em] ml-1">IPFS Provider</label>
-            <div className="grid grid-cols-3 gap-2">
-              {['AlgoFile', 'Crust', 'Pinata'].map((p) => {
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              {(['Filebase', 'AlgoFile', 'Crust', 'Pinata'] as const).map((p) => {
                 const disabled = isTestnet && p === 'Crust';
                 return (
                   <button
                     key={p}
                     disabled={disabled}
-                    onClick={() => setProvider(p as any)}
+                    onClick={() => setProvider(p)}
                     className={`py-3 rounded-2xl border text-xs font-black transition-all ${
                       effectiveProvider === p ? 'bg-primary-orange text-black border-primary-orange shadow-lg shadow-primary-orange/20' : 'bg-gray-900/50 border-gray-800 text-gray-500 hover:border-gray-700'
                     } ${disabled ? 'opacity-40 cursor-not-allowed' : ''}`}
                   >
-                    {p === 'AlgoFile' ? 'AlgoFile (USDC)' : p === 'Crust' ? 'Crust' : 'Pinata'}
+                    {p === 'Filebase' ? 'Filebase' : p === 'AlgoFile' ? 'AlgoFile (USDC)' : p === 'Crust' ? 'Crust' : 'Pinata'}
                   </button>
                 );
               })}
             </div>
             {isTestnet && provider === 'Crust' && (
               <p className="mt-2 text-xs text-amber-500 font-medium">
-                ⚠️ Crust pinning is disabled on Testnet. Pinata or AlgoFile can be used instead.
+                ⚠️ Crust pinning is disabled on Testnet. Filebase, Pinata, or AlgoFile can be used instead.
               </p>
             )}
           </div>
@@ -454,9 +469,63 @@ const MintStep = () => {
           <div className="bg-gray-900/40 p-5 border border-gray-800/80 rounded-3xl text-xs text-gray-400 font-medium leading-relaxed">
             ℹ️ AlgoFile utilizes on-chain x402 pay-per-use payments. No API token or signup is required. You will be prompted to approve a USDC/ALGO storage fee transaction for each upload.
           </div>
+        ) : effectiveProvider === 'Filebase' ? (
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <label className="text-[10px] font-black text-primary-orange uppercase tracking-[0.2em] ml-1">Filebase API Token</label>
+              <a
+                href="https://console.filebase.com/keys"
+                target="_blank"
+                rel="noreferrer"
+                className="text-[11px] text-primary-orange hover:underline font-bold"
+              >
+                Get Filebase Key →
+              </a>
+            </div>
+            <input 
+              type="password"
+              value={filebaseToken}
+              onChange={(e) => {
+                 setFilebaseToken(e.target.value);
+                 localStorage.setItem('filebaseToken', e.target.value);
+              }}
+              placeholder="Paste your Filebase API Token here..."
+              className="w-full bg-gray-900/50 border border-gray-800 rounded-2xl px-5 py-4 text-sm focus:outline-none focus:border-primary-orange/50 transition-all placeholder:text-gray-700"
+            />
+            <p className="text-[11px] text-gray-500 ml-1">
+              Filebase offers 5 GB free IPFS storage. Grab your IPFS RPC token from the{' '}
+              <a href="https://console.filebase.com/keys" target="_blank" rel="noreferrer" className="text-gray-400 hover:text-primary-orange underline">
+                Filebase console
+              </a>.
+            </p>
+          </div>
+        ) : effectiveProvider === 'Pinata' ? (
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <label className="text-[10px] font-black text-primary-orange uppercase tracking-[0.2em] ml-1">Pinata JWT Token</label>
+              <a
+                href="https://app.pinata.cloud/developers/api-keys"
+                target="_blank"
+                rel="noreferrer"
+                className="text-[11px] text-primary-orange hover:underline font-bold"
+              >
+                Get Pinata Key →
+              </a>
+            </div>
+            <input 
+              type="password"
+              value={pinataToken}
+              onChange={(e) => {
+                 setPinataToken(e.target.value);
+                 localStorage.setItem('pinataToken', e.target.value);
+              }}
+              placeholder="Paste your Pinata JWT here..."
+              className="w-full bg-gray-900/50 border border-gray-800 rounded-2xl px-5 py-4 text-sm focus:outline-none focus:border-primary-orange/50 transition-all placeholder:text-gray-700"
+            />
+          </div>
         ) : (
           <div className="space-y-3">
-            <label className="text-[10px] font-black text-primary-orange uppercase tracking-[0.2em] ml-1">{effectiveProvider} API Token</label>
+            <label className="text-[10px] font-black text-primary-orange uppercase tracking-[0.2em] ml-1">Crust API Token</label>
             <input 
               type="password"
               value={ipfsToken}
@@ -464,7 +533,7 @@ const MintStep = () => {
                  setIpfsToken(e.target.value);
                  localStorage.setItem('authBasic', e.target.value);
               }}
-              placeholder={`Paste your ${effectiveProvider} API Key here...`}
+              placeholder="Paste your Crust API Key here..."
               className="w-full bg-gray-900/50 border border-gray-800 rounded-2xl px-5 py-4 text-sm focus:outline-none focus:border-primary-orange/50 transition-all placeholder:text-gray-700"
             />
           </div>

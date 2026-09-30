@@ -9,6 +9,9 @@ export class WenPadDexie extends Dexie {
     this.version(1).stores({
       projects: '++id, name, layers',
     });
+    this.version(2).stores({
+      projects: '++id, name, owner, lastModified',
+    });
   }
 }
 

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useProject } from './ProjectContext';
-import { MdEdit, MdCheck, MdClose } from 'react-icons/md';
+import { MdEdit, MdCheck, MdClose, MdRestorePage, MdArrowForward } from 'react-icons/md';
 import WenPadStepper from './WenPadStepper';
 import SetupStep from './steps/SetupStep';
 import LayersStep from './steps/LayersStep';
@@ -9,7 +9,7 @@ import PreviewStep from './steps/PreviewStep';
 import MintStep from './steps/MintStep';
 
 const WenPadGenerator = () => {
-  const { activeStep, form, project } = useProject();
+  const { activeStep, form, project, resumePrompt, acceptResume, dismissResume } = useProject();
   const [isEditing, setIsEditing] = useState(false);
 
   return (
@@ -86,6 +86,55 @@ const WenPadGenerator = () => {
                <span>{project.size || 0} NFTs</span>
              </div>
           )}
+        </div>
+      )}
+
+      {/* Resume Prompt Banner */}
+      {resumePrompt && (
+        <div className="relative overflow-hidden rounded-2xl border border-primary-orange/40 bg-gradient-to-r from-primary-orange/20 via-[#1A171A] to-primary-orange/10 p-4 sm:p-5 shadow-2xl backdrop-blur-xl animate-in fade-in slide-in-from-top-3 duration-500">
+          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+            <div className="flex items-start sm:items-center gap-4">
+              <div className="p-3 rounded-2xl bg-primary-orange/20 text-primary-orange border border-primary-orange/30 shadow-inner shrink-0">
+                <MdRestorePage size={28} />
+              </div>
+              <div className="space-y-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider bg-primary-orange/20 text-primary-orange rounded-full border border-primary-orange/30">
+                    Previous Session Found
+                  </span>
+                  <span className="text-xs font-semibold text-gray-400">
+                    Last active on Step {resumePrompt.step + 1}: <span className="text-white font-bold">{resumePrompt.stepName}</span>
+                  </span>
+                </div>
+                <h3 className="text-base sm:text-lg font-bold text-white">
+                  Pick up where you left off with <span className="text-primary-orange">&ldquo;{resumePrompt.projectName}&rdquo;</span>?
+                </h3>
+                <p className="text-xs text-gray-400">
+                  {resumePrompt.layersCount > 0 ? `${resumePrompt.layersCount} layer${resumePrompt.layersCount === 1 ? '' : 's'}` : 'No layers'}
+                  {resumePrompt.itemsCount > 0 ? ` • ${resumePrompt.itemsCount} generated preview items` : ''}
+                  {' '}• Reconnect and associate this draft with your current wallet.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2.5 w-full md:w-auto justify-end shrink-0 pt-2 md:pt-0">
+              <button
+                type="button"
+                onClick={dismissResume}
+                className="px-3.5 py-2 text-xs font-semibold text-gray-400 hover:text-white rounded-xl hover:bg-white/5 transition-all"
+              >
+                Dismiss
+              </button>
+              <button
+                type="button"
+                onClick={acceptResume}
+                className="flex items-center gap-2 px-5 py-2.5 text-xs font-black uppercase tracking-wider bg-gradient-to-r from-primary-orange to-secondary-orange text-black rounded-xl hover:brightness-110 shadow-lg shadow-primary-orange/20 transition-all cursor-pointer"
+              >
+                <span>Resume Session</span>
+                <MdArrowForward size={16} />
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
