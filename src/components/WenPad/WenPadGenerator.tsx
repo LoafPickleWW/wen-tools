@@ -89,50 +89,66 @@ const WenPadGenerator = () => {
         </div>
       )}
 
-      {/* Resume Prompt Banner */}
+      {/* Resume Prompt Card */}
       {resumePrompt && (
-        <div className="relative overflow-hidden rounded-2xl border border-primary-orange/40 bg-gradient-to-r from-primary-orange/20 via-[#1A171A] to-primary-orange/10 p-4 sm:p-5 shadow-2xl backdrop-blur-xl animate-in fade-in slide-in-from-top-3 duration-500">
-          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-            <div className="flex items-start sm:items-center gap-4">
-              <div className="p-3 rounded-2xl bg-primary-orange/20 text-primary-orange border border-primary-orange/30 shadow-inner shrink-0">
-                <MdRestorePage size={28} />
+        <div className="relative mx-auto max-w-2xl overflow-hidden rounded-2xl border border-primary-orange/30 bg-[#161318]/95 p-5 sm:p-6 shadow-[0_10px_40px_rgba(0,0,0,0.5)] backdrop-blur-xl animate-in fade-in slide-in-from-top-3 duration-400">
+          {/* Ambient decorative glow */}
+          <div className="pointer-events-none absolute -left-10 -top-10 h-32 w-32 rounded-full bg-primary-orange/15 blur-2xl" />
+
+          {/* Quick dismiss button */}
+          <button
+            type="button"
+            onClick={dismissResume}
+            className="absolute right-3.5 top-3.5 rounded-lg p-1.5 text-gray-500 hover:bg-white/5 hover:text-white transition-colors cursor-pointer"
+            title="Dismiss notification"
+          >
+            <MdClose size={18} />
+          </button>
+
+          <div className="flex items-start gap-4 pr-6">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary-orange/10 border border-primary-orange/30 text-primary-orange shadow-inner">
+              <MdRestorePage size={26} />
+            </div>
+
+            <div className="flex-1 space-y-2">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-primary-orange/15 px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wider text-primary-orange border border-primary-orange/30">
+                  <span className="h-1.5 w-1.5 rounded-full bg-primary-orange animate-pulse" />
+                  Saved Draft Found
+                </span>
+                <span className="text-xs text-gray-400">
+                  Last active on <span className="font-semibold text-gray-200">Step {resumePrompt.step + 1}: {resumePrompt.stepName}</span>
+                </span>
               </div>
-              <div className="space-y-1">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wider bg-primary-orange/20 text-primary-orange rounded-full border border-primary-orange/30">
-                    Previous Session Found
-                  </span>
-                  <span className="text-xs font-semibold text-gray-400">
-                    Last active on Step {resumePrompt.step + 1}: <span className="text-white font-bold">{resumePrompt.stepName}</span>
-                  </span>
-                </div>
+
+              <div>
                 <h3 className="text-base sm:text-lg font-bold text-white">
-                  Pick up where you left off with <span className="text-primary-orange">&ldquo;{resumePrompt.projectName}&rdquo;</span>?
+                  Pick up where you left off with <span className="text-primary-orange font-black">&ldquo;{resumePrompt.projectName}&rdquo;</span>?
                 </h3>
-                <p className="text-xs text-gray-400">
-                  {resumePrompt.layersCount > 0 ? `${resumePrompt.layersCount} layer${resumePrompt.layersCount === 1 ? '' : 's'}` : 'No layers'}
+                <p className="mt-1 text-xs text-gray-400 leading-relaxed">
+                  {resumePrompt.layersCount > 0 ? `${resumePrompt.layersCount} layer${resumePrompt.layersCount === 1 ? '' : 's'}` : '0 layers'}
                   {resumePrompt.itemsCount > 0 ? ` • ${resumePrompt.itemsCount} generated preview items` : ''}
                   {' '}• Reconnect and associate this draft with your current wallet.
                 </p>
               </div>
-            </div>
 
-            <div className="flex items-center gap-2.5 w-full md:w-auto justify-end shrink-0 pt-2 md:pt-0">
-              <button
-                type="button"
-                onClick={dismissResume}
-                className="px-3.5 py-2 text-xs font-semibold text-gray-400 hover:text-white rounded-xl hover:bg-white/5 transition-all"
-              >
-                Dismiss
-              </button>
-              <button
-                type="button"
-                onClick={acceptResume}
-                className="flex items-center gap-2 px-5 py-2.5 text-xs font-black uppercase tracking-wider bg-gradient-to-r from-primary-orange to-secondary-orange text-black rounded-xl hover:brightness-110 shadow-lg shadow-primary-orange/20 transition-all cursor-pointer"
-              >
-                <span>Resume Session</span>
-                <MdArrowForward size={16} />
-              </button>
+              <div className="flex items-center gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={acceptResume}
+                  className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-primary-orange to-secondary-orange px-5 py-2.5 text-xs font-black uppercase tracking-wider text-black shadow-lg shadow-primary-orange/25 hover:brightness-110 active:scale-95 transition-all cursor-pointer"
+                >
+                  <span>Resume Session</span>
+                  <MdArrowForward size={15} />
+                </button>
+                <button
+                  type="button"
+                  onClick={dismissResume}
+                  className="rounded-xl px-4 py-2 text-xs font-semibold text-gray-400 hover:text-white hover:bg-white/5 transition-all cursor-pointer"
+                >
+                  Start Fresh
+                </button>
+              </div>
             </div>
           </div>
         </div>

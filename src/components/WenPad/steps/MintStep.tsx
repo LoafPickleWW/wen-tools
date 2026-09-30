@@ -1,6 +1,17 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useProject } from '../ProjectContext';
-import { MdRocketLaunch, MdCheckCircle, MdError, MdHourglassEmpty, MdCode, MdExpandMore, MdExpandLess } from 'react-icons/md';
+import { 
+  MdRocketLaunch, 
+  MdCheckCircle, 
+  MdError, 
+  MdHourglassEmpty, 
+  MdCode, 
+  MdExpandMore, 
+  MdExpandLess,
+  MdWarning,
+  MdArrowForward,
+  MdArrowBack
+} from 'react-icons/md';
 import { useWallet } from '@txnlab/use-wallet-react';
 import { toast } from 'react-toastify';
 import confetti from 'canvas-confetti';
@@ -48,6 +59,50 @@ const MintStep = () => {
   const [showMetadataPreview, setShowMetadataPreview] = useState(false);
   const [showRawJson, setShowRawJson] = useState(false);
 
+  // Batch minting range states
+  const maxItems = previewItems.length;
+  const [startItem, setStartItem] = useState<number>(1);
+  const [endItem, setEndItem] = useState<number>(() => (previewItems.length > 0 ? Math.min(previewItems.length, 500) : 1));
+
+  useEffect(() => {
+    if (previewItems.length > 0) {
+      setEndItem((prev) => (prev === 1 && previewItems.length > 1 ? Math.min(previewItems.length, 500) : prev));
+    }
+  }, [previewItems.length]);
+
+  const effectiveStart = Math.max(1, Math.min(startItem, maxItems || 1));
+  const effectiveEnd = Math.max(effectiveStart, Math.min(endItem, maxItems || 1));
+  const selectedCount = maxItems > 0 ? (effectiveEnd - effectiveStart + 1) : 0;
+
+  const selectPreset = (start: number, end: number) => {
+    setStartItem(Math.max(1, start));
+    setEndItem(Math.min(maxItems, end));
+  };
+
+  const handleNextBatch = () => {
+    const batchSize = Math.max(1, effectiveEnd - effectiveStart + 1);
+    const nextStart = effectiveEnd + 1;
+    if (nextStart > maxItems) {
+      toast.info('Already reached the end of the collection');
+      return;
+    }
+    const nextEnd = Math.min(maxItems, nextStart + batchSize - 1);
+    setStartItem(nextStart);
+    setEndItem(nextEnd);
+  };
+
+  const handlePrevBatch = () => {
+    const batchSize = Math.max(1, effectiveEnd - effectiveStart + 1);
+    if (effectiveStart <= 1) {
+      toast.info('Already at the beginning of the collection');
+      return;
+    }
+    const prevStart = Math.max(1, effectiveStart - batchSize);
+    const prevEnd = prevStart + batchSize - 1;
+    setStartItem(prevStart);
+    setEndItem(prevEnd);
+  };
+
   const sampleItem = previewItems.length > 0 ? previewItems[0] : null;
   const sampleMetadata = sampleItem
     ? buildMintMetadata(sampleItem, project, 'QmSampleCIDHashForDemonstration11111111111111', standard)
@@ -73,8 +128,12 @@ const MintStep = () => {
     }
     if (previewItems.length === 0) return toast.error('No items to mint');
 
+    const itemsToMint = previewItems.slice(effectiveStart - 1, effectiveEnd);
+    if (itemsToMint.length === 0) return toast.error('Selected mint range is empty');
+
+    const totalToMint = itemsToMint.length;
     setIsMinting(true);
-    setProgress({ current: 0, total: previewItems.length, status: 'Starting collection launch...' });
+    setProgress({ current: 0, total: totalToMint, status: `Starting batch launch (${totalToMint} NFTs)...` });
 
     try {
       const mintedData = [];
@@ -82,17 +141,18 @@ const MintStep = () => {
       
       // 1. Pinning Step
       if (effectiveProvider === 'AlgoFile') {
-        setProgress({ current: 0, total: previewItems.length, status: 'Generating image assets...' });
+        setProgress({ current: 0, total: totalToMint, status: 'Generating image assets...' });
         const imageBlobs: Blob[] = [];
-        for (let i = 0; i < previewItems.length; i++) {
-          const blob = await generateBlob(previewItems[i]);
+        for (let i = 0; i < itemsToMint.length; i++) {
+          const blob = await generateBlob(itemsToMint[i]);
           imageBlobs.push(blob);
+          setProgress({ current: i + 1, total: totalToMint, status: `Generating image #${itemsToMint[i].index} (${i + 1}/${totalToMint})...` });
         }
 
         // 1. Image Bucket Quote
-        setProgress({ current: 0, total: previewItems.length, status: 'Requesting image storage quote...' });
+        setProgress({ current: 0, total: totalToMint, status: 'Requesting image storage quote...' });
         const imgItems = imageBlobs.map((blob, idx) => ({
-          fileName: `image_${previewItems[idx].index}.png`,
+          fileName: `image_${itemsToMint[idx].index}.png`,
           sizeBytes: blob.size,
           contentType: 'image/png'
         }));
@@ -119,7 +179,7 @@ const MintStep = () => {
           });
         }
 
-        setProgress({ current: 0, total: previewItems.length, status: 'Sign image storage payment in wallet...' });
+        setProgress({ current: 0, total: totalToMint, status: 'Sign image storage payment in wallet...' });
         const imgSigned = await walletSign([imgPaymentTxn], transactionSigner);
         if (!imgSigned || imgSigned.length === 0) throw new Error('Image storage payment rejected.');
         
@@ -129,7 +189,7 @@ const MintStep = () => {
         }
         const imgSignedB64 = window.btoa(imgBinary);
 
-        setProgress({ current: 0, total: previewItems.length, status: 'Uploading images...' });
+        setProgress({ current: 0, total: totalToMint, status: 'Uploading images...' });
         const imgBatchRes = await completeAlgoFileBatchUpload(imgItems, [imgSignedB64], 0, imgRequirements);
 
         const imgUploadItems = imgBatchRes.items.map((item, idx) => ({
@@ -139,7 +199,7 @@ const MintStep = () => {
         }));
         await uploadFilesToS3(imgUploadItems);
 
-        setProgress({ current: 0, total: previewItems.length, status: 'Confirming images...' });
+        setProgress({ current: 0, total: totalToMint, status: 'Confirming images...' });
         const imgConfirmRes = await confirmAlgoFileBatch(imgBatchRes.bucketName, imgBatchRes.items.map((it, idx) => ({
           key: it.key,
           originalName: it.fileName,
@@ -152,11 +212,11 @@ const MintStep = () => {
         });
 
         // 2. Build metadata JSONs
-        setProgress({ current: 0, total: previewItems.length, status: 'Preparing metadata JSONs...' });
+        setProgress({ current: 0, total: totalToMint, status: 'Preparing metadata JSONs...' });
         const metadataList: any[] = [];
         const metadataStrings: string[] = [];
-        for (let i = 0; i < previewItems.length; i++) {
-          const item = previewItems[i];
+        for (let i = 0; i < itemsToMint.length; i++) {
+          const item = itemsToMint[i];
           const imgFileName = `image_${item.index}.png`;
           const imageCid = imageCidsMap.get(imgFileName) || '';
 
@@ -166,8 +226,8 @@ const MintStep = () => {
         }
 
         if (standard === 'ARC69') {
-          for (let i = 0; i < previewItems.length; i++) {
-            const item = previewItems[i];
+          for (let i = 0; i < itemsToMint.length; i++) {
+            const item = itemsToMint[i];
             const imgFileName = `image_${item.index}.png`;
             const imageCid = imageCidsMap.get(imgFileName) || '';
             const assetData: any = {
@@ -181,9 +241,9 @@ const MintStep = () => {
             mintedData.push(assetData);
           }
         } else {
-          setProgress({ current: 0, total: previewItems.length, status: 'Requesting metadata storage quote...' });
+          setProgress({ current: 0, total: totalToMint, status: 'Requesting metadata storage quote...' });
           const jsonItems = metadataStrings.map((jsonStr, idx) => ({
-            fileName: `metadata_${previewItems[idx].index}.json`,
+            fileName: `metadata_${itemsToMint[idx].index}.json`,
             sizeBytes: new TextEncoder().encode(jsonStr).length,
             contentType: 'application/json'
           }));
@@ -209,7 +269,7 @@ const MintStep = () => {
             });
           }
 
-          setProgress({ current: 0, total: previewItems.length, status: 'Sign metadata storage payment in wallet...' });
+          setProgress({ current: 0, total: totalToMint, status: 'Sign metadata storage payment in wallet...' });
           const jsonSigned = await walletSign([jsonPaymentTxn], transactionSigner);
           if (!jsonSigned || jsonSigned.length === 0) throw new Error('Metadata storage payment rejected.');
 
@@ -219,7 +279,7 @@ const MintStep = () => {
           }
           const jsonSignedB64 = window.btoa(jsonBinary);
 
-          setProgress({ current: 0, total: previewItems.length, status: 'Uploading metadata files...' });
+          setProgress({ current: 0, total: totalToMint, status: 'Uploading metadata files...' });
           const jsonBatchRes = await completeAlgoFileBatchUpload(jsonItems, [jsonSignedB64], 0, jsonRequirements);
 
           const jsonUploadItems = jsonBatchRes.items.map((item, idx) => ({
@@ -229,7 +289,7 @@ const MintStep = () => {
           }));
           await uploadFilesToS3(jsonUploadItems);
 
-          setProgress({ current: 0, total: previewItems.length, status: 'Confirming metadata...' });
+          setProgress({ current: 0, total: totalToMint, status: 'Confirming metadata...' });
           const jsonConfirmRes = await confirmAlgoFileBatch(jsonBatchRes.bucketName, jsonBatchRes.items.map((it, idx) => ({
             key: it.key,
             originalName: it.fileName,
@@ -241,8 +301,8 @@ const MintStep = () => {
             jsonCidsMap.set(it.fileName, it.cid);
           });
 
-          for (let i = 0; i < previewItems.length; i++) {
-            const item = previewItems[i];
+          for (let i = 0; i < itemsToMint.length; i++) {
+            const item = itemsToMint[i];
             const jsonFileName = `metadata_${item.index}.json`;
             const jsonCid = jsonCidsMap.get(jsonFileName) || '';
 
@@ -259,9 +319,9 @@ const MintStep = () => {
           }
         }
       } else {
-        for (let i = 0; i < previewItems.length; i++) {
-          const item = previewItems[i];
-          setProgress({ current: i + 1, total: previewItems.length, status: `Uploading image #${item.index} to ${effectiveProvider}...` });
+        for (let i = 0; i < itemsToMint.length; i++) {
+          const item = itemsToMint[i];
+          setProgress({ current: i + 1, total: totalToMint, status: `Uploading image #${item.index} (${i + 1}/${totalToMint}) to ${effectiveProvider}...` });
           
           const blob = await generateBlob(item);
           const imageFile = new File([blob], `image_${item.index}.png`, { type: 'image/png' });
@@ -292,12 +352,12 @@ const MintStep = () => {
           }
 
           mintedData.push(assetData);
-          toast.info(`Uploaded image ${i + 1}/${previewItems.length}`, { autoClose: 500 });
+          toast.info(`Uploaded image ${i + 1}/${totalToMint}`, { autoClose: 500 });
         }
       }
 
       // 2. Minting Step
-      setProgress({ current: previewItems.length, total: previewItems.length, status: 'Creating transactions...' });
+      setProgress({ current: totalToMint, total: totalToMint, status: 'Creating transactions...' });
       
       let txnsGroups: algosdk.Transaction[][] = [];
       let localAlgofileUploads: any[] = [];
@@ -339,15 +399,15 @@ const MintStep = () => {
       }
 
       // 3. Signing Loop
-      setProgress({ current: previewItems.length, total: previewItems.length, status: 'Awaiting signatures...' });
+      setProgress({ current: totalToMint, total: totalToMint, status: 'Awaiting signatures...' });
       
       const chunks = sliceIntoChunks(txnsGroups, 16); // Sign in groups of 16
 
       for (let i = 0; i < chunks.length; i++) {
         const chunk = chunks[i];
         setProgress({ 
-          current: previewItems.length, 
-          total: previewItems.length, 
+          current: Math.round(((i + 1) / chunks.length) * totalToMint), 
+          total: totalToMint, 
           status: `Signing batch ${i + 1} of ${chunks.length}...` 
         });
         const signedTxns = await walletSign(chunk, transactionSigner);
@@ -387,16 +447,16 @@ const MintStep = () => {
           }
         }
         
-        toast.success(`Batch ${i + 1} sent!`);
+        toast.success(`Batch ${i + 1} of ${chunks.length} sent!`);
       }
 
-      setProgress({ current: previewItems.length, total: previewItems.length, status: 'Collection Minted!' });
+      setProgress({ current: totalToMint, total: totalToMint, status: 'Batch Minted!' });
       confetti({
         particleCount: 200,
         spread: 100,
         origin: { y: 0.6 }
       });
-      toast.success('Collection successfully launched!');
+      toast.success(`Successfully launched ${totalToMint} NFTs (Items #${effectiveStart}–#${effectiveEnd})!`);
 
     } catch (error: any) {
       console.error(error);
@@ -420,6 +480,153 @@ const MintStep = () => {
       </div>
 
       <div className="bg-gray-800/30 border border-gray-700/50 p-6 rounded-3xl backdrop-blur-md space-y-6">
+        {/* Mint Batch Range Selector */}
+        <div className="p-5 rounded-2xl bg-[#121013]/70 border border-gray-800/80 space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div>
+              <div className="flex items-center gap-2">
+                <label className="text-[10px] font-black text-primary-orange uppercase tracking-[0.2em]">
+                  Mint Batch Range
+                </label>
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-primary-orange/15 text-primary-orange border border-primary-orange/20">
+                  {selectedCount} of {maxItems} selected
+                </span>
+              </div>
+              <p className="text-[11px] text-gray-400 mt-0.5">
+                Mint in batches to stay within wallet transaction limits (Pera &le; 750) or free IPFS quotas.
+              </p>
+            </div>
+
+            {/* Batch Navigation Buttons */}
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={handlePrevBatch}
+                disabled={effectiveStart <= 1}
+                className="flex items-center gap-1 px-3 py-1.5 rounded-xl border border-gray-800 bg-gray-900/60 hover:bg-gray-800 text-xs font-bold text-gray-300 disabled:opacity-30 disabled:cursor-not-allowed transition-all cursor-pointer"
+                title="Shift to previous batch"
+              >
+                <MdArrowBack size={14} />
+                <span>Prev Batch</span>
+              </button>
+              <button
+                type="button"
+                onClick={handleNextBatch}
+                disabled={effectiveEnd >= maxItems}
+                className="flex items-center gap-1 px-3 py-1.5 rounded-xl border border-gray-800 bg-gray-900/60 hover:bg-gray-800 text-xs font-bold text-gray-300 disabled:opacity-30 disabled:cursor-not-allowed transition-all cursor-pointer"
+                title="Shift to next batch"
+              >
+                <span>Next Batch</span>
+                <MdArrowForward size={14} />
+              </button>
+            </div>
+          </div>
+
+          {/* Quick Presets */}
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-gray-500 mr-1">Presets:</span>
+            <button
+              type="button"
+              onClick={() => selectPreset(1, maxItems)}
+              className={`px-3 py-1 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+                effectiveStart === 1 && effectiveEnd === maxItems
+                  ? 'bg-primary-orange/20 border-primary-orange text-primary-orange'
+                  : 'bg-gray-900/50 border-gray-800 text-gray-400 hover:text-white hover:border-gray-700'
+              }`}
+            >
+              All ({maxItems})
+            </button>
+            {maxItems > 100 && (
+              <button
+                type="button"
+                onClick={() => selectPreset(1, 100)}
+                className={`px-3 py-1 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+                  effectiveStart === 1 && effectiveEnd === 100
+                    ? 'bg-primary-orange/20 border-primary-orange text-primary-orange'
+                    : 'bg-gray-900/50 border-gray-800 text-gray-400 hover:text-white hover:border-gray-700'
+                }`}
+              >
+                1 – 100 (Free Tier)
+              </button>
+            )}
+            {maxItems > 250 && (
+              <button
+                type="button"
+                onClick={() => selectPreset(1, 250)}
+                className={`px-3 py-1 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+                  effectiveStart === 1 && effectiveEnd === 250
+                    ? 'bg-primary-orange/20 border-primary-orange text-primary-orange'
+                    : 'bg-gray-900/50 border-gray-800 text-gray-400 hover:text-white hover:border-gray-700'
+                }`}
+              >
+                1 – 250 (Safe Batch)
+              </button>
+            )}
+            {maxItems > 500 && (
+              <button
+                type="button"
+                onClick={() => selectPreset(1, 500)}
+                className={`px-3 py-1 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+                  effectiveStart === 1 && effectiveEnd === 500
+                    ? 'bg-primary-orange/20 border-primary-orange text-primary-orange'
+                    : 'bg-gray-900/50 border-gray-800 text-gray-400 hover:text-white hover:border-gray-700'
+                }`}
+              >
+                1 – 500 (Max Recommended)
+              </button>
+            )}
+          </div>
+
+          {/* Inputs for Start and End Index */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+            <div className="flex flex-col gap-1.5">
+              <label className="text-[10px] font-black uppercase tracking-wider text-gray-400 ml-1">
+                From Item # (1 to {maxItems})
+              </label>
+              <input
+                type="number"
+                min={1}
+                max={maxItems}
+                value={startItem}
+                onChange={(e) => setStartItem(Math.max(1, parseInt(e.target.value) || 1))}
+                className="w-full bg-gray-900/70 border border-gray-800 rounded-xl px-4 py-2.5 text-sm text-white font-bold focus:border-primary-orange/50 outline-none"
+              />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-[10px] font-black uppercase tracking-wider text-gray-400 ml-1">
+                To Item # ({effectiveStart} to {maxItems})
+              </label>
+              <input
+                type="number"
+                min={effectiveStart}
+                max={maxItems}
+                value={endItem}
+                onChange={(e) => setEndItem(Math.max(effectiveStart, parseInt(e.target.value) || effectiveStart))}
+                className="w-full bg-gray-900/70 border border-gray-800 rounded-xl px-4 py-2.5 text-sm text-white font-bold focus:border-primary-orange/50 outline-none"
+              />
+            </div>
+          </div>
+
+          {/* Pera Wallet Limit Alert */}
+          {selectedCount > 750 && (
+            <div className="flex items-start gap-3 p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs">
+              <MdWarning size={18} className="shrink-0 mt-0.5 text-amber-400" />
+              <div>
+                <span className="font-bold">Pera Wallet Warning:</span> Signing more than 750 items ({selectedCount} selected) often times out or crashes mobile wallets like Pera. We strongly recommend reducing your batch to 250–500 items at a time.
+              </div>
+            </div>
+          )}
+
+          {/* Pinata Free Tier Alert */}
+          {effectiveProvider === 'Pinata' && selectedCount > 100 && (
+            <div className="flex items-start gap-3 p-3.5 rounded-xl bg-blue-500/10 border border-blue-500/30 text-blue-300 text-xs">
+              <MdCheckCircle size={18} className="shrink-0 mt-0.5 text-blue-400" />
+              <div>
+                <span className="font-bold">Pinata Free Tier Notice:</span> Free Pinata accounts allow 100 pins. If using multiple free accounts, mint up to 100 items at a time, then update your Pinata JWT below before clicking &ldquo;Next Batch&rdquo;.
+              </div>
+            </div>
+          )}
+        </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="space-y-3">
             <label className="text-[10px] font-black text-primary-orange uppercase tracking-[0.2em] ml-1">NFT Standard</label>
@@ -428,7 +635,7 @@ const MintStep = () => {
                 <button
                   key={s}
                   onClick={() => setStandard(s as any)}
-                  className={`py-3 rounded-2xl border text-xs font-black transition-all ${
+                  className={`h-11 px-3 rounded-2xl border text-xs font-black transition-all flex items-center justify-center whitespace-nowrap ${
                     standard === s ? 'bg-primary-orange text-black border-primary-orange shadow-lg shadow-primary-orange/20' : 'bg-gray-900/50 border-gray-800 text-gray-500 hover:border-gray-700'
                   }`}
                 >
@@ -448,11 +655,11 @@ const MintStep = () => {
                     key={p}
                     disabled={disabled}
                     onClick={() => setProvider(p)}
-                    className={`py-3 rounded-2xl border text-xs font-black transition-all ${
+                    className={`h-11 px-2 rounded-2xl border text-xs font-black transition-all flex items-center justify-center whitespace-nowrap ${
                       effectiveProvider === p ? 'bg-primary-orange text-black border-primary-orange shadow-lg shadow-primary-orange/20' : 'bg-gray-900/50 border-gray-800 text-gray-500 hover:border-gray-700'
                     } ${disabled ? 'opacity-40 cursor-not-allowed' : ''}`}
                   >
-                    {p === 'Filebase' ? 'Filebase' : p === 'AlgoFile' ? 'AlgoFile (USDC)' : p === 'Crust' ? 'Crust' : 'Pinata'}
+                    {p}
                   </button>
                 );
               })}
@@ -603,7 +810,7 @@ const MintStep = () => {
               )}
 
               <p className="text-[11px] text-gray-500 leading-normal">
-                ✓ Validated: All {previewItems.length} items will have these ARC-compliant trait structures embedded directly into their metadata and on-chain records.
+                ✓ Validated: All {selectedCount} selected items ({effectiveStart} to {effectiveEnd}) will have these ARC-compliant trait structures embedded directly into their metadata and on-chain records.
               </p>
             </div>
           )}
@@ -613,8 +820,8 @@ const MintStep = () => {
       <div className="flex flex-col gap-4">
         <button 
           onClick={handleMint}
-          disabled={isMinting || !activeAccount}
-          className="group relative w-full overflow-hidden bg-white text-black font-black py-5 rounded-3xl shadow-2xl transition-all hover:scale-[1.01] active:scale-[0.99] disabled:opacity-30 disabled:grayscale disabled:hover:scale-100"
+          disabled={isMinting || !activeAccount || selectedCount === 0}
+          className="group relative w-full overflow-hidden bg-white text-black font-black py-5 rounded-3xl shadow-2xl transition-all hover:scale-[1.01] active:scale-[0.99] disabled:opacity-30 disabled:grayscale disabled:hover:scale-100 cursor-pointer"
         >
           <div className="absolute inset-0 bg-gradient-to-r from-primary-orange to-secondary-orange opacity-0 group-hover:opacity-100 transition-opacity" />
           <span className="relative flex items-center justify-center gap-3 text-lg tracking-tight group-hover:text-black">
@@ -623,7 +830,11 @@ const MintStep = () => {
             ) : (
                <MdRocketLaunch size={24} />
             )}
-            {isMinting ? 'PREPARING LAUNCH...' : 'LAUNCH COLLECTION'}
+            {isMinting
+              ? `LAUNCHING BATCH (${progress.current}/${progress.total})...`
+              : selectedCount === maxItems
+              ? `LAUNCH ALL ${maxItems} NFTS`
+              : `LAUNCH BATCH (${selectedCount} NFTS: #${effectiveStart}–#${effectiveEnd})`}
           </span>
         </button>
 
@@ -654,7 +865,12 @@ const MintStep = () => {
         <div className="space-y-1">
           <p className="text-[10px] font-black uppercase tracking-widest text-yellow-500/80">Pro Tip</p>
           <p className="text-xs text-yellow-200/60 leading-relaxed font-medium">
-            Standard minting costs approximately 0.101 ALGO per item. Ensure your balance covers the total ({(previewItems.length * 0.101).toFixed(2)} ALGO) plus network fees.
+            Standard minting costs approximately 0.101 ALGO per item. Ensure your wallet balance covers this batch (~{(selectedCount * 0.101).toFixed(2)} ALGO for {selectedCount} items) plus network fees.
+            {maxItems > selectedCount && (
+              <span className="block mt-1 text-yellow-300/80">
+                Total collection ({maxItems} items): ~{(maxItems * 0.101).toFixed(2)} ALGO.
+              </span>
+            )}
           </p>
         </div>
       </div>
