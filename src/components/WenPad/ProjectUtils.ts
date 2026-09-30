@@ -450,6 +450,9 @@ export const renderPreviewToBlob = async (
 
   return new Promise((resolve, reject) => {
     canvas.toBlob((blob) => {
+      // Clear canvas buffer to free GPU/RAM memory immediately
+      canvas.width = 0;
+      canvas.height = 0;
       if (blob) {
         resolve(blob);
       } else {
@@ -539,6 +542,9 @@ export const loadImage = (src: any, imageCache?: any): Promise<HTMLImageElement>
     }
 
     img.onload = () => {
+      if (objectUrlToRevoke) {
+        URL.revokeObjectURL(objectUrlToRevoke);
+      }
       if (cache) {
         cache.set(src, img);
       }

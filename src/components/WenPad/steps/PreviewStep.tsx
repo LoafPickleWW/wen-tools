@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import { useProject } from '../ProjectContext';
 import { 
   MdRefresh, 
@@ -56,6 +56,11 @@ const PreviewStep = () => {
   const [exportingZip, setExportingZip] = useState(false);
   const [exportProgress, setExportProgress] = useState<{ current: number; total: number } | null>(null);
   const [downloadMenuOpen, setDownloadMenuOpen] = useState(false);
+  const cancelExportRef = useRef(false);
+
+  const handleCancelExport = () => {
+    cancelExportRef.current = true;
+  };
 
   // In-modal rule creator state
   const [ruleCreator, setRuleCreator] = useState<{
@@ -128,71 +133,170 @@ const PreviewStep = () => {
       return;
     }
     setDownloadMenuOpen(false);
+
+    const safeProjectName = (project.name || 'NFT').replace(/[^a-zA-Z0-9_-]/g, '_');
+    const zipFilename = `${safeProjectName}_previews_${label}.zip`;
+
+    // 1. Prompt for save location synchronously inside the user gesture if File System Access API is supported
+    let writable: any = null;
+    let userCancelled = false;
+
+    if ('showSaveFilePicker' in window) {
+      try {
+        const fileHandle = await (window as any).showSaveFilePicker({
+          suggestedName: zipFilename,
+          types: [{
+            description: 'ZIP archive',
+            accept: { 'application/zip': ['.zip'] },
+          }],
+        });
+        if (fileHandle) {
+          writable = await fileHandle.createWritable();
+        }
+      } catch (e: any) {
+        if (e?.name === 'AbortError') {
+          // User clicked "Cancel" on the native Save dialog
+          userCancelled = true;
+          return;
+        }
+        console.warn('showSaveFilePicker failed, falling back to in-memory chunks:', e);
+      }
+    }
+
+    if (userCancelled) return;
+
+    cancelExportRef.current = false;
     setExportingZip(true);
     setExportProgress({ current: 0, total: itemsToExport.length });
 
     try {
-      const zipData: { [filename: string]: Uint8Array } = {};
-      const safeProjectName = (project.name || 'NFT').replace(/[^a-zA-Z0-9_-]/g, '_');
+      const { Zip, ZipPassThrough } = await import('fflate');
       const encoder = new TextEncoder();
       const allMetadataList: any[] = [];
+      const memoryChunks: Uint8Array[] = [];
+
+      let writeChain = Promise.resolve();
+      let zipError: any = null;
+
+      const zipArchive = new Zip((err, chunk) => {
+        if (err) {
+          zipError = err;
+          console.error('fflate zip error:', err);
+          return;
+        }
+        if (chunk && chunk.length > 0) {
+          if (writable) {
+            writeChain = writeChain.then(async () => {
+              await writable.write(chunk);
+            }).catch((writeErr) => {
+              zipError = writeErr;
+            });
+          } else {
+            memoryChunks.push(chunk);
+          }
+        }
+      });
+
+      const padLength = Math.max(4, String(itemsToExport.length).length);
 
       for (let i = 0; i < itemsToExport.length; i++) {
+        if (cancelExportRef.current) {
+          throw new Error('Export cancelled by user');
+        }
+        if (zipError) throw zipError;
+
         const item = itemsToExport[i];
         setExportProgress({ current: i + 1, total: itemsToExport.length });
 
-        const paddedIndex = String(item.index).padStart(4, '0');
+        const paddedIndex = String(item.index).padStart(padLength, '0');
         const imgFileName = `${paddedIndex}_${safeProjectName}.png`;
 
         // Render preview image
         const blob = await renderPreviewToBlob(item, project.layers, project.imageWidth || 1000, project.imageHeight || 1000);
         const arrayBuffer = await blob.arrayBuffer();
 
-        // Save image into images/ folder
-        zipData[`images/${imgFileName}`] = new Uint8Array(arrayBuffer);
+        // Stream image into images/ folder using ZipPassThrough (PNG is already deflated, Level 0 store is instant and saves CPU/RAM)
+        const imgStream = new ZipPassThrough(`images/${imgFileName}`);
+        zipArchive.add(imgStream);
+        imgStream.push(new Uint8Array(arrayBuffer), true);
 
         // Build item metadata JSON
         const itemMetadata = buildItemMetadata(item, project, `images/${imgFileName}`);
         allMetadataList.push(itemMetadata);
 
-        const itemJsonStr = JSON.stringify(itemMetadata, null, 2);
-        const itemJsonBytes = encoder.encode(itemJsonStr);
+        const itemJsonBytes = encoder.encode(JSON.stringify(itemMetadata, null, 2));
 
         // Save individual metadata files into metadata/ folder
-        zipData[`metadata/${paddedIndex}_${safeProjectName}.json`] = itemJsonBytes;
-        zipData[`metadata/${item.index}.json`] = itemJsonBytes;
+        const jsonStream1 = new ZipPassThrough(`metadata/${paddedIndex}_${safeProjectName}.json`);
+        zipArchive.add(jsonStream1);
+        jsonStream1.push(itemJsonBytes, true);
 
-        // Yield to event loop periodically to prevent UI locking during large exports
-        if (i % 10 === 0) {
+        const jsonStream2 = new ZipPassThrough(`metadata/${item.index}.json`);
+        zipArchive.add(jsonStream2);
+        jsonStream2.push(itemJsonBytes, true);
+
+        // Apply backpressure if streaming to disk so chunks don't buffer in RAM
+        if (writable) {
+          await writeChain;
+          if (zipError) throw zipError;
+        }
+
+        // Periodically yield to event loop to allow garbage collection and keep browser UI smooth
+        if (i % 5 === 0) {
           await new Promise((resolve) => setTimeout(resolve, 0));
         }
       }
 
+      if (cancelExportRef.current) {
+        throw new Error('Export cancelled by user');
+      }
+
       // Add master collection metadata files at root of ZIP
-      const masterMetadataStr = JSON.stringify(allMetadataList, null, 2);
-      const masterMetadataBytes = encoder.encode(masterMetadataStr);
-      zipData['_metadata.json'] = masterMetadataBytes;
-      zipData['metadata.json'] = masterMetadataBytes;
+      const masterMetadataBytes = encoder.encode(JSON.stringify(allMetadataList, null, 2));
+      const masterMetaStream1 = new ZipPassThrough('_metadata.json');
+      zipArchive.add(masterMetaStream1);
+      masterMetaStream1.push(masterMetadataBytes, true);
+
+      const masterMetaStream2 = new ZipPassThrough('metadata.json');
+      zipArchive.add(masterMetaStream2);
+      masterMetaStream2.push(masterMetadataBytes, true);
 
       // Add collection trait summary distribution report
       const traitSummary = buildCollectionTraitSummary(itemsToExport, project);
-      zipData['trait_summary.json'] = encoder.encode(JSON.stringify(traitSummary, null, 2));
+      const summaryStream = new ZipPassThrough('trait_summary.json');
+      zipArchive.add(summaryStream);
+      summaryStream.push(encoder.encode(JSON.stringify(traitSummary, null, 2)), true);
 
-      const { zip } = await import('fflate');
-      const zipBytes = await new Promise<Uint8Array>((resolve, reject) => {
-        zip(zipData, (err, out) => {
-          if (err) reject(err);
-          else resolve(out);
-        });
-      });
+      // Finalize ZIP archive
+      zipArchive.end();
 
-      const zipBlob = new Blob([zipBytes as any], { type: 'application/zip' });
-      downloadBlob(zipBlob, `${safeProjectName}_previews_${label}.zip`);
+      if (writable) {
+        await writeChain;
+        if (zipError) throw zipError;
+        await writable.close();
+        writable = null;
+      } else {
+        const zipBlob = new Blob(memoryChunks as any, { type: 'application/zip' });
+        await downloadBlob(zipBlob, zipFilename);
+      }
+
       toast.success(`Exported ${itemsToExport.length} preview images & metadata!`);
-    } catch (err) {
-      console.error('Error exporting previews:', err);
-      toast.error('Error exporting previews');
+    } catch (err: any) {
+      if (writable) {
+        try {
+          await writable.abort();
+        } catch {
+          // ignore
+        }
+      }
+      if (err?.message === 'Export cancelled by user') {
+        toast.info('Export cancelled');
+      } else {
+        console.error('Error exporting previews:', err);
+        toast.error('Error exporting previews: ' + (err?.message || 'Export failed'));
+      }
     } finally {
+      cancelExportRef.current = false;
       setExportingZip(false);
       setExportProgress(null);
     }
@@ -583,8 +687,15 @@ const PreviewStep = () => {
               />
             </div>
             <p className="text-[10px] text-gray-500">
-              Rendering composites, generating trait metadata JSON, and packing ZIP...
+              Streaming PNG images and trait metadata into ZIP...
             </p>
+            <button
+              type="button"
+              onClick={handleCancelExport}
+              className="mt-1 px-4 py-1.5 bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-white text-xs font-semibold rounded-xl border border-gray-700 transition-colors"
+            >
+              Cancel Export
+            </button>
           </div>
         </div>
       )}
