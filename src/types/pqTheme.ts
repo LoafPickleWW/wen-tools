@@ -1,6 +1,7 @@
 import confetti from "canvas-confetti";
 
-export type QuantumTheme = "cyan" | "violet" | "emerald" | "amber";
+/** "classic" is the standard wen.tools look and is always available. */
+export type QuantumTheme = "classic" | "cyan" | "violet" | "emerald" | "amber";
 
 export interface ThemeTierInfo {
   id: QuantumTheme;
@@ -8,15 +9,28 @@ export interface ThemeTierInfo {
   title: string;
   requiredTx: number;
   color: string;
+  /** Second gradient stop, used for swatch previews */
+  color2: string;
   badge: string;
 }
 
 export const THEME_TIERS: ThemeTierInfo[] = [
-  { id: "cyan", name: "Cyan Pulse", title: "Quantum Initiate", requiredTx: 1, color: "#00f0ff", badge: "1+ Tx" },
-  { id: "violet", name: "Antimatter Violet", title: "Quantum Archon", requiredTx: 100, color: "#c084fc", badge: "100+ Tx" },
-  { id: "emerald", name: "Zero-Point Mint", title: "Subatomic Sovereign", requiredTx: 1000, color: "#34d399", badge: "1,000+ Tx" },
-  { id: "amber", name: "Solar Fusion", title: "Singularity Deity", requiredTx: 10000, color: "#fbbf24", badge: "10,000+ Tx" },
+  { id: "cyan", name: "Cyan Pulse", title: "Quantum Initiate", requiredTx: 1, color: "#00f0ff", color2: "#7dd3fc", badge: "1+ Tx" },
+  { id: "violet", name: "Antimatter Violet", title: "Quantum Archon", requiredTx: 100, color: "#c084fc", color2: "#f0abfc", badge: "100+ Tx" },
+  { id: "emerald", name: "Zero-Point Mint", title: "Subatomic Sovereign", requiredTx: 1000, color: "#34d399", color2: "#5eead4", badge: "1,000+ Tx" },
+  { id: "amber", name: "Solar Fusion", title: "Singularity Deity", requiredTx: 10000, color: "#fbbf24", color2: "#fde047", badge: "10,000+ Tx" },
 ];
+
+/** The always-available standard theme, shown alongside the unlockable tiers. */
+export const CLASSIC_THEME: ThemeTierInfo = {
+  id: "classic",
+  name: "Classic",
+  title: "wen.tools",
+  requiredTx: 0,
+  color: "#f57b14",
+  color2: "#ffc000",
+  badge: "Default",
+};
 
 export interface PQThemeContextType {
   isPQAccount: boolean;

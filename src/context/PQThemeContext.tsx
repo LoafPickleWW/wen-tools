@@ -18,7 +18,11 @@ const PQThemeContext = createContext<PQThemeContextType | undefined>(undefined);
 
 export const PQThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { activeAddress } = useWallet();
-  const [isPQAccount, setIsPQAccount] = useState<boolean>(false);
+  // Start from the last known result so the theme is applied immediately on
+  // reload; the scan below confirms or clears it.
+  const [isPQAccount, setIsPQAccount] = useState<boolean>(
+    () => localStorage.getItem("wentools_pq_active") === "true"
+  );
   const [pqTxCount, setPqTxCount] = useState<number>(0);
   const [isScanning, setIsScanning] = useState<boolean>(false);
   const [scanReason, setScanReason] = useState<string | undefined>(undefined);
@@ -90,15 +94,26 @@ export const PQThemeProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   }, [activeAddress, performScan]);
 
-  const isThemeActive = isPQAccount || forceTheme;
+  // Eligible for Quantum themes; the user may still pick "classic".
+  const isThemeEligible = isPQAccount || forceTheme;
+  const isThemeActive = isThemeEligible && quantumTheme !== "classic";
   const unlockedThemes = getUnlockedThemes(pqTxCount, forceTheme);
+
+  useEffect(() => {
+    localStorage.setItem("wentools_pq_active", String(isPQAccount));
+  }, [isPQAccount]);
 
   // Auto-switch to highest unlocked theme if current selection is locked
   useEffect(() => {
-    if (isThemeActive && unlockedThemes.length > 0 && !unlockedThemes.includes(quantumTheme)) {
+    if (
+      isThemeEligible &&
+      quantumTheme !== "classic" &&
+      unlockedThemes.length > 0 &&
+      !unlockedThemes.includes(quantumTheme)
+    ) {
       setQuantumThemeState(unlockedThemes[unlockedThemes.length - 1]);
     }
-  }, [isThemeActive, unlockedThemes, quantumTheme]);
+  }, [isThemeEligible, unlockedThemes, quantumTheme]);
 
   // Apply theme dataset attribute to root document element for CSS styling
   useEffect(() => {
@@ -108,6 +123,13 @@ export const PQThemeProvider: React.FC<{ children: React.ReactNode }> = ({ child
     } else {
       document.documentElement.removeAttribute("data-quantum-theme");
       document.documentElement.classList.remove("quantum-mode");
+    }
+    // Match the mobile browser chrome to the theme background
+    const bg = getComputedStyle(document.documentElement).getPropertyValue("--bg").trim();
+    if (bg) {
+      document
+        .querySelector('meta[name="theme-color"]')
+        ?.setAttribute("content", `rgb(${bg.split(/\s+/).join(", ")})`);
     }
   }, [isThemeActive, quantumTheme]);
 

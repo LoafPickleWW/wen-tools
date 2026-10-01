@@ -1,4 +1,5 @@
 {
+  "cleanUrls": true,
   "rewrites": [
     { "source": "/api/xrpl-mainnet", "destination": "https://s2-clio.ripple.com:51234/" },
     { "source": "/api/xrpl-testnet", "destination": "https://clio.altnet.rippletest.net:51234/" },

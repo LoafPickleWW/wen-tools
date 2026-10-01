@@ -1,3 +1,4 @@
+import { ToolHero , ToolTabs } from "../components/cypher/ToolKit";
 import { useEffect, useState, useMemo, useCallback } from 'react';
 import algosdk from 'algosdk';
 import { useWallet } from '@txnlab/use-wallet-react';
@@ -31,6 +32,7 @@ import {
   MdContentCopy
 } from 'react-icons/md';
 import { getNfDomainsInBulk } from '../utils';
+import { Meta } from "../components/Meta";
 
 export function XGov() {
   const { activeAddress, transactionSigner } = useWallet();
@@ -404,15 +406,16 @@ export function XGov() {
   }, [activeAddress, proposals]);
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-white p-4 md:p-8">
-      <div className="max-w-6xl mx-auto mt-20">
+    <div className="min-h-screen bg-primary-black text-white p-4 md:p-8">
+      <Meta />
+      <div className="max-w-6xl mx-auto">
         <div className="mb-12 text-center relative">
-          <h1 className="text-5xl md:text-6xl font-black mb-4 bg-gradient-to-r from-amber-300 via-amber-400 to-orange-500 bg-clip-text text-transparent italic tracking-tighter">
-            xGov Command Center <span className="text-xs align-top opacity-30">v2.1</span>
-          </h1>
-          <p className="text-secondary-gray text-lg font-light tracking-wide">
-            Elite governance interface for the Algorand Ecosystem.
-          </p>
+          <ToolHero
+            tag="xgov"
+            title="xGov Command Center"
+            description="Governance interface for the Algorand ecosystem."
+            meta={["proposals", "bulk voting", "v2.1"]}
+          />
 
           {activeAddress && isXGov === false && (
             <div className="mt-8 bg-red-500/10 border border-red-500/20 p-6 rounded-[2rem] max-w-2xl mx-auto backdrop-blur-md animate-pulse">
@@ -459,21 +462,16 @@ export function XGov() {
 
         {/* Navigation & Search */}
         <div className="flex flex-col md:flex-row justify-between items-center gap-6 mb-10">
-          <div className="flex bg-banner-grey/50 backdrop-blur-md rounded-2xl p-1.5 border border-white/5">
-            <button 
-              onClick={() => setActiveTab('active')}
-              className={`flex items-center gap-2 px-8 py-3 rounded-xl transition-all ${activeTab === 'active' ? 'bg-amber-400 text-black font-black shadow-[0_0_20px_rgba(251,191,36,0.2)]' : 'text-gray-400 hover:text-white'}`}
-            >
-              <MdHowToVote size={22} />
-              VOTING
-            </button>
-            <button 
-              onClick={() => setActiveTab('history')}
-              className={`flex items-center gap-2 px-8 py-3 rounded-xl transition-all ${activeTab === 'history' ? 'bg-amber-400 text-black font-black shadow-[0_0_20px_rgba(251,191,36,0.2)]' : 'text-gray-400 hover:text-white'}`}
-            >
-              <MdHistory size={22} />
-              ARCHIVE
-            </button>
+          <div className="w-full md:w-auto">
+            <ToolTabs
+              className="!mb-0 md:min-w-[20rem]"
+              active={activeTab}
+              onChange={setActiveTab}
+              tabs={[
+                { id: "active", label: "Voting", icon: <MdHowToVote /> },
+                { id: "history", label: "Archive", icon: <MdHistory /> },
+              ]}
+            />
           </div>
 
           <div className="flex gap-4 w-full md:w-auto">
@@ -811,7 +809,7 @@ export function XGov() {
       {/* Vote Confirmation Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-xl animate-fadeIn">
-          <div className="bg-[#111] border border-white/10 w-full max-w-2xl rounded-[3rem] overflow-hidden shadow-[0_0_100px_rgba(0,0,0,0.5)] animate-slideUp">
+          <div className="bg-primary-black border border-white/10 w-full max-w-2xl rounded-[3rem] overflow-hidden shadow-[0_0_100px_rgba(0,0,0,0.5)] animate-slideUp">
             <div className="p-8 md:p-12">
               <div className="mb-10">
                 <div className="inline-block px-4 py-1 rounded-full bg-amber-400/10 text-amber-400 text-[10px] font-black tracking-widest uppercase border border-amber-400/20 mb-4">

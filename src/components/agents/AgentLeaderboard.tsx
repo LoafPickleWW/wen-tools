@@ -460,7 +460,7 @@ export function AgentLeaderboard({ network }: AgentLeaderboardProps) {
               className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all ${
                 timeFilter === t
                   ? "bg-orange-500 text-black shadow-md shadow-orange-500/20"
-                  : "bg-neutral-800/80 text-neutral-500 hover:text-neutral-300 border border-secondary-gray/50 hover:border-neutral-600"
+                  : "bg-banner-grey/80 text-neutral-500 hover:text-neutral-300 border border-secondary-gray/50 hover:border-white/15"
               }`}
             >
               {t === "all" ? "All Time" : t}
@@ -470,7 +470,7 @@ export function AgentLeaderboard({ network }: AgentLeaderboardProps) {
           {/* Sort toggle */}
           <button
             onClick={() => setSortBy(sortBy === "volume" ? "transactions" : "volume")}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-neutral-800/80 text-neutral-400 hover:text-white border border-secondary-gray/50 hover:border-neutral-600 text-[10px] font-bold uppercase tracking-wider transition-all"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-banner-grey/80 text-neutral-400 hover:text-white border border-secondary-gray/50 hover:border-white/15 text-[10px] font-bold uppercase tracking-wider transition-all"
           >
             <IoSwapVertical className="text-xs" />
             {sortBy === "volume" ? "By Volume" : "By Txns"}
@@ -518,7 +518,7 @@ export function AgentLeaderboard({ network }: AgentLeaderboardProps) {
                 <span>Indexing agent wallets...</span>
                 <span>{loadingProgress.current}/{loadingProgress.total}</span>
               </div>
-              <div className="w-full h-1 bg-neutral-800 rounded-full overflow-hidden">
+              <div className="w-full h-1 bg-banner-grey rounded-full overflow-hidden">
                 <div
                   className="h-full bg-gradient-to-r from-orange-500 to-orange-400 rounded-full transition-all duration-500 ease-out"
                   style={{
@@ -536,12 +536,12 @@ export function AgentLeaderboard({ network }: AgentLeaderboardProps) {
                 key={i}
                 className="bg-banner-grey/30 border border-secondary-gray/20 rounded-xl p-4 animate-pulse flex items-center gap-4"
               >
-                <div className="w-8 h-8 bg-neutral-800 rounded-lg" />
+                <div className="w-8 h-8 bg-banner-grey rounded-lg" />
                 <div className="flex-1 space-y-2">
-                  <div className="h-3 bg-neutral-800 rounded w-1/3" />
-                  <div className="h-2 bg-neutral-800/50 rounded w-1/5" />
+                  <div className="h-3 bg-banner-grey rounded w-1/3" />
+                  <div className="h-2 bg-banner-grey/50 rounded w-1/5" />
                 </div>
-                <div className="h-4 bg-neutral-800 rounded w-20" />
+                <div className="h-4 bg-banner-grey rounded w-20" />
               </div>
             ))}
           </div>
@@ -648,7 +648,7 @@ export function AgentLeaderboard({ network }: AgentLeaderboardProps) {
                       return (
                         <div 
                           key={agent.appId} 
-                          className="flex items-center gap-1 bg-neutral-900/60 border border-secondary-gray/20 px-1.5 py-0.5 rounded"
+                          className="flex items-center gap-1 bg-asset-detail-bg/60 border border-secondary-gray/20 px-1.5 py-0.5 rounded"
                         >
                           <span className="text-[9px] sm:text-[10px] font-bold text-neutral-300 max-w-[90px] xs:max-w-[120px] sm:max-w-none truncate">
                             {agent.name}

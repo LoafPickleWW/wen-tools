@@ -1,0 +1,247 @@
+{
+  "/": {
+    "title": "Free Algorand Tools: Mint, Airdrop & Manage ASAs | wen.tools",
+    "description": "Free, open-source Algorand tools. Mass-mint ARC-3/19/69 NFTs, airdrop to thousands of wallets, bulk opt-in and opt-out, P2P atomic swaps and more. No accounts, no platform fees."
+  },
+  "/distribution-suite": {
+    "title": "Algorand Airdrop & Bulk Send Suite | wen.tools",
+    "description": "Send Algos and ASAs to many wallets at once: manual sends, CSV mass airdrops, creator-wallet holder drops and NFD vault transfers, all signed in your own wallet."
+  },
+  "/airdrop": {
+    "title": "Algorand Airdrop Tool: CSV Mass Airdrops | wen.tools",
+    "description": "Airdrop Algos or any ASA to thousands of Algorand addresses from a CSV. Supports ARC-59 asset inboxes so recipients don't need to opt in first."
+  },
+  "/simple-airdrop": {
+    "title": "Airdrop to NFT Holders on Algorand | wen.tools",
+    "description": "Snapshot the holders of a creator wallet's collection and airdrop tokens to them in one flow."
+  },
+  "/simple-send": {
+    "title": "Bulk Send Algorand Assets (ASAs) | wen.tools",
+    "description": "Send one asset to many receivers, or many assets to one receiver, in grouped Algorand transactions."
+  },
+  "/vault-send": {
+    "title": "Send ASAs to NFD Vaults | wen.tools",
+    "description": "Send assets directly to NFD (Non-Fungible Domain) vaults without needing the recipient to opt in."
+  },
+  "/bulk-asset-manager": {
+    "title": "Algorand Bulk Asset Manager: Opt-in, Opt-out, Destroy | wen.tools",
+    "description": "Opt in, opt out, destroy, freeze and claw back Algorand assets in bulk. Reclaim locked minimum-balance Algos in a few clicks."
+  },
+  "/batch-optin": {
+    "title": "Bulk Opt-in to Algorand Assets | wen.tools",
+    "description": "Opt in to hundreds of Algorand Standard Assets in grouped transactions instead of one at a time."
+  },
+  "/batch-optout": {
+    "title": "Bulk Opt-out & Reclaim ALGO | wen.tools",
+    "description": "Opt out of unwanted Algorand assets in bulk and reclaim the 0.1 ALGO minimum balance locked by each one."
+  },
+  "/batch-destroy": {
+    "title": "Bulk Destroy Algorand Assets | wen.tools",
+    "description": "Destroy empty Algorand assets you created, in bulk, and recover their state costs."
+  },
+  "/batch-clawback": {
+    "title": "Bulk Clawback Algorand Assets | wen.tools",
+    "description": "Administrative clawback for permissioned Algorand assets across many accounts at once."
+  },
+  "/batch-freeze": {
+    "title": "Bulk Freeze & Unfreeze Algorand Assets | wen.tools",
+    "description": "Freeze or unfreeze holdings of permissioned Algorand assets across many accounts at once."
+  },
+  "/bulk-claim": {
+    "title": "Bulk Claim ARC-59 Inbox & NFD Vault Assets | wen.tools",
+    "description": "Claim your Algorand assets from ARC-59 asset inboxes and NFD vaults in a single session."
+  },
+  "/token-manager": {
+    "title": "ARC-62 Token Supply Manager | wen.tools",
+    "description": "Set and manage the circulating supply of your Algorand token using the ARC-62 standard."
+  },
+  "/minting-journey": {
+    "title": "Algorand NFT Creator Suite | wen.tools",
+    "description": "One workspace for Algorand creators: generate layered art with WenPad, mint ARC-3/19/69 collections, update metadata and export collection data."
+  },
+  "/creator-suite": {
+    "canonical": "/minting-journey"
+  },
+  "/creator-suite/bulk-mint": {
+    "title": "Creator Suite: Bulk Mint | wen.tools",
+    "description": "Mint an entire Algorand NFT collection in bulk from the Creator Suite."
+  },
+  "/creator-suite/bulk-update": {
+    "title": "Creator Suite: Bulk Metadata Update | wen.tools",
+    "description": "Update metadata for a whole Algorand NFT collection from the Creator Suite."
+  },
+  "/creator-suite/downloader": {
+    "title": "Creator Suite: Collection Downloader | wen.tools",
+    "description": "Export an Algorand collection's assets and metadata to CSV."
+  },
+  "/creator-suite/nft-import": {
+    "title": "Creator Suite: Import NFTs | wen.tools",
+    "description": "Bring NFTs from other chains into an Algorand collection."
+  },
+  "/creator-suite/simple-mint": {
+    "title": "Creator Suite: Simple Mint | wen.tools",
+    "description": "Mint a single Algorand NFT from the Creator Suite."
+  },
+  "/creator-suite/simple-update": {
+    "title": "Creator Suite: Simple Update | wen.tools",
+    "description": "Update a single Algorand NFT's metadata from the Creator Suite."
+  },
+  "/creator-suite/snapshot": {
+    "title": "Creator Suite: Holder Snapshot | wen.tools",
+    "description": "Snapshot the holders of an Algorand collection and export them to CSV."
+  },
+  "/creator-suite/wenpad": {
+    "title": "Creator Suite: WenPad Art Generator | wen.tools",
+    "description": "Generate layered NFT artwork and metadata with WenPad, then mint it on Algorand."
+  },
+  "/simple-batch-mint": {
+    "title": "Bulk NFT Minter for Algorand | wen.tools",
+    "description": "Mass-mint hundreds of Algorand NFTs in minutes with automated IPFS pinning."
+  },
+  "/batch-collection-mint": {
+    "canonical": "/simple-batch-mint"
+  },
+  "/arc69-collection-mint": {
+    "title": "ARC-69 NFT Collection Minter for Algorand | wen.tools",
+    "description": "Mint ARC-69 NFT collections, with metadata stored in transaction notes. Ideal for high-volume collections."
+  },
+  "/arc3-collection-mint": {
+    "title": "ARC-3 NFT Collection Minter for Algorand | wen.tools",
+    "description": "Mint immutable ARC-3 NFT collections with permanent IPFS metadata links."
+  },
+  "/arc19-collection-mint": {
+    "title": "ARC-19 NFT Collection Minter for Algorand | wen.tools",
+    "description": "Mint evolvable ARC-19 NFT collections whose metadata can be updated via the reserve address."
+  },
+  "/arc69-metadata-update": {
+    "title": "ARC-69 Bulk Metadata Updater | wen.tools",
+    "description": "Update ARC-69 metadata for an entire Algorand collection in bulk."
+  },
+  "/arc19-metadata-update": {
+    "title": "ARC-19 Bulk Metadata Updater | wen.tools",
+    "description": "Update ARC-19 metadata for an entire Algorand collection in bulk."
+  },
+  "/bulk-metadata-update": {
+    "title": "Bulk NFT Metadata Updater for Algorand | wen.tools",
+    "description": "Update metadata across an Algorand NFT collection, individually or from a CSV."
+  },
+  "/simple-mint": {
+    "title": "Mint an Algorand NFT in One Click | wen.tools",
+    "description": "Mint a single Algorand NFT with automatic IPFS upload. No code required."
+  },
+  "/really-simple-mint": {
+    "canonical": "/simple-mint"
+  },
+  "/simple-mint-classic": {
+    "canonical": "/simple-mint"
+  },
+  "/simple-update": {
+    "title": "Update Algorand NFT Metadata | wen.tools",
+    "description": "Update the metadata of a mutable Algorand NFT."
+  },
+  "/simple-update-classic": {
+    "canonical": "/simple-update"
+  },
+  "/find-collection-holders": {
+    "title": "Algorand NFT Holder Snapshot Tool | wen.tools",
+    "description": "Capture real-time holder data for any creator wallet or asset list and export it to CSV for airdrops or governance."
+  },
+  "/download-collection-data": {
+    "title": "Download Algorand Collection Data (CSV) | wen.tools",
+    "description": "Export ARC-19 and ARC-69 collection data and metadata to CSV."
+  },
+  "/download-arc69-collection-data": {
+    "canonical": "/download-collection-data"
+  },
+  "/download-arc19-collection-data": {
+    "canonical": "/download-collection-data"
+  },
+  "/holdings-auditor": {
+    "title": "Algorand Holdings Auditor | wen.tools",
+    "description": "Audit wallet holdings and asset distribution on Algorand, and export the results to CSV."
+  },
+  "/wallet-holdings": {
+    "title": "Export Algorand Wallet Holdings (CSV) | wen.tools",
+    "description": "Audit and export the full asset profile of any Algorand address."
+  },
+  "/multimint-asset-holders": {
+    "title": "Find Holders of Multiple Algorand Assets | wen.tools",
+    "description": "Find who holds a list of Algorand assets and export the holder data."
+  },
+  "/nft-import": {
+    "title": "Import NFTs to Algorand from Other Chains | wen.tools",
+    "description": "Import NFTs from other chains, such as the XRP Ledger, into Algorand collections."
+  },
+  "/stablecoin-studio": {
+    "title": "Stablecoin Studio on Algorand | wen.tools",
+    "description": "Configure, mint and manage fiat-backed stablecoins on Algorand via Brale."
+  },
+  "/wen-pad": {
+    "title": "WenPad: Generative NFT Art Generator | wen.tools",
+    "description": "Build layered generative NFT artwork and metadata, then mint it on Algorand."
+  },
+  "/xgov": {
+    "title": "xGov Proposal Voting Tracker | wen.tools",
+    "description": "Track Algorand xGov governance proposals and vote on them in bulk."
+  },
+  "/jukebox": {
+    "title": "Algorand Music NFT Jukebox | wen.tools",
+    "description": "Play music NFTs from the Algorand blockchain."
+  },
+  "/p2p-chat": {
+    "title": "Encrypted Peer-to-Peer Chat | wen.tools",
+    "description": "End-to-end encrypted peer-to-peer chat between Algorand wallets."
+  },
+  "/beacon-chat": {
+    "title": "BEACON: Serverless Encrypted Chat on Algorand | wen.tools",
+    "description": "Zero-infrastructure, encrypted peer-to-peer signaling and chat built on Algorand."
+  },
+  "/beacon-drop": {
+    "title": "BEACON Drop: On-chain Dead Drops | wen.tools",
+    "description": "Leave and retrieve encrypted dead drops on the Algorand ledger."
+  },
+  "/post-quantum": {
+    "title": "Post-Quantum Algorand Wallet (Falcon-1024) | wen.tools",
+    "description": "Secure Algorand assets with Falcon-1024 post-quantum signatures."
+  },
+  "/deploy": {
+    "title": "WEN.DEPLOY: Host Static Sites on IPFS from GitHub | wen.tools",
+    "description": "Decentralized hosting for static sites. Build and deploy from GitHub to IPFS and ARC-19."
+  },
+  "/anchor-setup": {
+    "title": "ANCHOR: Software Supply Chain Provenance on Algorand | wen.tools",
+    "description": "Anchor package hashes and metadata to the Algorand ledger for tamper-evident software provenance."
+  },
+  "/vanity": {
+    "title": "Algorand Vanity Address Generator | wen.tools",
+    "description": "Generate a custom Algorand wallet address with your own prefix, right in your browser."
+  },
+  "/encyclopedia": {
+    "title": "Algorand Encyclopedia for Developers & Creators | wen.tools",
+    "description": "A knowledge base for the Algorand blockchain: ARC standards, the AVM, box storage, rekeying, minting and airdrops."
+  },
+  "/wen-swap": {
+    "title": "WEN.SWAP: Trustless P2P Atomic Swaps on Algorand | wen.tools",
+    "description": "Trade any combination of Algos and ASAs peer to peer with Algorand atomic transfers. No intermediary."
+  },
+  "/agents": {
+    "title": "AI Agent Marketplace on Algorand | wen.tools",
+    "description": "Discover and register AI agents on Algorand: an on-chain registry for the agent economy."
+  },
+  "/wallet": {
+    "title": "Wen Wallet: Algorand Asset Explorer & Bulk Tools | wen.tools",
+    "description": "Browse any Algorand wallet visually, then send, opt in, opt out or destroy assets in bulk."
+  },
+  "/cluster-map": {
+    "title": "Algorand Wallet Cluster Map | wen.tools",
+    "description": "Investigate connected Algorand wallets, spot bot networks and trace transaction flows visually."
+  },
+  "/terms": {
+    "title": "Terms of Use | wen.tools",
+    "description": "Terms of use for wen.tools."
+  },
+  "/privacy": {
+    "title": "Privacy Policy | wen.tools",
+    "description": "Privacy policy for wen.tools."
+  }
+}

@@ -82,7 +82,7 @@ const EditableTraitName = ({
             }
           }}
           onBlur={handleSubmit}
-          className="w-full bg-gray-950 border border-primary-orange text-xs text-white font-bold rounded px-1.5 py-0.5 focus:outline-none"
+          className="w-full bg-primary-black border border-primary-orange text-xs text-white font-bold rounded px-1.5 py-0.5 focus:outline-none"
         />
         <button
           type="button"
@@ -98,7 +98,7 @@ const EditableTraitName = ({
 
   return (
     <div 
-      className="flex items-center justify-between group/name cursor-pointer py-0.5 hover:bg-gray-700/30 px-1 rounded transition-colors"
+      className="flex items-center justify-between group/name cursor-pointer py-0.5 hover:bg-secondary-gray/30 px-1 rounded transition-colors"
       onClick={() => setIsEditing(true)}
       title="Click to rename trait"
     >
@@ -156,7 +156,7 @@ const TraitRarityInput = ({
       value={text}
       onChange={handleChange}
       onBlur={handleBlur}
-      className="w-full bg-gray-900 border border-gray-700 rounded-lg px-2 py-1.5 text-xs font-semibold focus:outline-none focus:border-primary-orange text-center text-gray-200"
+      className="w-full bg-asset-detail-bg border border-white/[0.12] rounded-lg px-2 py-1.5 text-xs font-semibold focus:outline-none focus:border-primary-orange text-center text-gray-200"
     />
   );
 };
@@ -293,7 +293,7 @@ const TraitPreviewGrid = () => {
   return (
     <div className="space-y-4">
       {/* Layer Stats & Quick Actions Toolbar */}
-      <div className="flex flex-wrap justify-between items-center bg-[#010002]/40 p-4 rounded-2xl border border-gray-800/80 gap-3">
+      <div className="flex flex-wrap justify-between items-center bg-primary-black/40 p-4 rounded-2xl border border-white/[0.08] gap-3">
         <div className="flex flex-wrap items-center gap-3">
           <span className="text-xs font-black uppercase tracking-widest text-gray-400">
             {traits.length} {traits.length === 1 ? 'Trait' : 'Traits'}
@@ -325,7 +325,7 @@ const TraitPreviewGrid = () => {
                 value={layerFilter}
                 onChange={(e) => setLayerFilter(e.target.value)}
                 placeholder="Filter traits..."
-                className="w-full bg-gray-900 border border-gray-700/80 rounded-xl pl-7 pr-6 py-1 text-xs focus:outline-none focus:border-primary-orange text-gray-200 placeholder:text-gray-600"
+                className="w-full bg-asset-detail-bg border border-white/[0.12] rounded-xl pl-7 pr-6 py-1 text-xs focus:outline-none focus:border-primary-orange text-gray-200 placeholder:text-gray-600"
               />
               {layerFilter && (
                 <button 
@@ -342,18 +342,18 @@ const TraitPreviewGrid = () => {
 
         <div className="flex flex-wrap items-center gap-2">
           {/* Quick toggle all units */}
-          <div className="flex items-center bg-gray-900 border border-gray-700/80 rounded-xl p-0.5 text-[10px] font-bold">
+          <div className="flex items-center bg-asset-detail-bg border border-white/[0.12] rounded-xl p-0.5 text-[10px] font-bold">
             <button
               type="button"
               onClick={() => handleSetAllRarityType(RarityType.PERCENT)}
-              className="px-2.5 py-1 rounded-lg hover:text-white transition-colors text-gray-400 hover:bg-gray-800"
+              className="px-2.5 py-1 rounded-lg hover:text-white transition-colors text-gray-400 hover:bg-banner-grey"
             >
               All %
             </button>
             <button
               type="button"
               onClick={() => handleSetAllRarityType(RarityType.NUMBER)}
-              className="px-2.5 py-1 rounded-lg hover:text-white transition-colors text-gray-400 hover:bg-gray-800"
+              className="px-2.5 py-1 rounded-lg hover:text-white transition-colors text-gray-400 hover:bg-banner-grey"
             >
               All Qty
             </button>
@@ -376,9 +376,9 @@ const TraitPreviewGrid = () => {
           return (
             <div 
               key={trait.id} 
-              className="bg-gray-800/90 rounded-2xl border border-gray-700 overflow-hidden group hover:border-primary-orange/50 transition-all flex flex-col justify-between"
+              className="bg-banner-grey/90 rounded-2xl border border-white/[0.12] overflow-hidden group hover:border-primary-orange/50 transition-all flex flex-col justify-between"
             >
-              <div className="aspect-square bg-gray-900/80 relative flex items-center justify-center p-2">
+              <div className="aspect-square bg-asset-detail-bg/80 relative flex items-center justify-center p-2">
                 <img 
                   src={getTraitImageUrl(trait)} 
                   alt={trait.name} 
@@ -395,7 +395,7 @@ const TraitPreviewGrid = () => {
                 </button>
               </div>
 
-              <div className="p-3 space-y-2 bg-gray-800">
+              <div className="p-3 space-y-2 bg-banner-grey">
                 <EditableTraitName
                   initialName={trait.name}
                   onSave={(newName) => updateTraitName(activeLayerDetails!.id, trait.id, newName)}
@@ -430,7 +430,7 @@ const TraitPreviewGrid = () => {
                   className={`w-full py-1.5 px-2 rounded-lg text-[10px] font-bold transition-all border flex items-center justify-center gap-1.5 cursor-pointer ${
                     (trait.rules?.length || 0) > 0
                       ? 'bg-primary-orange/20 text-primary-orange border-primary-orange/40 hover:bg-primary-orange/30'
-                      : 'bg-gray-700/40 text-gray-400 border-gray-700 hover:text-white hover:bg-gray-700'
+                      : 'bg-secondary-gray/40 text-gray-400 border-white/[0.12] hover:text-white hover:bg-secondary-gray'
                   }`}
                   title="Configure compatibility rules"
                 >
@@ -443,7 +443,7 @@ const TraitPreviewGrid = () => {
         })}
 
         {traits.length > 0 && filteredTraits.length === 0 && (
-          <div className="col-span-full py-12 flex flex-col items-center justify-center text-gray-500 bg-gray-900/20 rounded-2xl border border-gray-800">
+          <div className="col-span-full py-12 flex flex-col items-center justify-center text-gray-500 bg-asset-detail-bg/20 rounded-2xl border border-white/[0.08]">
             <p className="text-sm">No traits matching "{layerFilter}"</p>
             <button 
               onClick={() => setLayerFilter('')} 
@@ -462,10 +462,10 @@ const TraitPreviewGrid = () => {
           onClick={() => setRulesTrait(null)}
         >
           <div 
-            className="bg-[#1A171A] border border-gray-700 rounded-3xl max-w-lg w-full p-6 space-y-5 shadow-2xl relative"
+            className="bg-asset-detail-bg border border-white/[0.12] rounded-3xl max-w-lg w-full p-6 space-y-5 shadow-2xl relative"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex justify-between items-center pb-3 border-b border-gray-800">
+            <div className="flex justify-between items-center pb-3 border-b border-white/[0.08]">
               <div>
                 <h3 className="text-base font-black text-gray-100 flex items-center gap-2">
                   <MdRule size={18} className="text-primary-orange" />
@@ -478,7 +478,7 @@ const TraitPreviewGrid = () => {
               <button 
                 type="button"
                 onClick={() => setRulesTrait(null)}
-                className="p-1.5 rounded-full bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-white transition-colors"
+                className="p-1.5 rounded-full bg-banner-grey hover:bg-secondary-gray text-gray-400 hover:text-white transition-colors"
               >
                 <MdClose size={18} />
               </button>
@@ -491,7 +491,7 @@ const TraitPreviewGrid = () => {
               </h5>
 
               {(rulesTrait.rules?.length || 0) === 0 ? (
-                <div className="p-3 text-center text-xs text-gray-500 bg-gray-900/40 rounded-xl border border-gray-800">
+                <div className="p-3 text-center text-xs text-gray-500 bg-asset-detail-bg/40 rounded-xl border border-white/[0.08]">
                   No rules set for this trait yet.
                 </div>
               ) : (
@@ -504,7 +504,7 @@ const TraitPreviewGrid = () => {
                     return (
                       <div 
                         key={rIdx}
-                        className="flex items-center justify-between p-2.5 rounded-xl bg-gray-900 border border-gray-800 text-xs"
+                        className="flex items-center justify-between p-2.5 rounded-xl bg-asset-detail-bg border border-white/[0.08] text-xs"
                       >
                         <div className="flex items-center gap-2 text-gray-300">
                           <span className={`text-[9px] font-black px-1.5 py-0.5 rounded uppercase ${
@@ -548,7 +548,7 @@ const TraitPreviewGrid = () => {
 
             {/* Add New Rule Card */}
             {otherLayers.length > 0 ? (
-              <div className="p-4 bg-gray-900/90 border border-gray-800 rounded-2xl space-y-3">
+              <div className="p-4 bg-asset-detail-bg/90 border border-white/[0.08] rounded-2xl space-y-3">
                 <h5 className="text-[10px] font-black uppercase tracking-wider text-primary-orange flex items-center gap-1.5">
                   <MdAdd size={14} /> Add New Rule
                 </h5>
@@ -563,7 +563,7 @@ const TraitPreviewGrid = () => {
                     className={`py-1.5 px-2 rounded-xl border flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
                       newRuleType === 'block'
                         ? 'bg-red-500/20 text-red-300 border-red-500/60'
-                        : 'bg-gray-800 text-gray-400 border-gray-700 hover:text-white'
+                        : 'bg-banner-grey text-gray-400 border-white/[0.12] hover:text-white'
                     }`}
                   >
                     <MdBlock size={14} /> Never Use With
@@ -578,7 +578,7 @@ const TraitPreviewGrid = () => {
                     className={`py-1.5 px-2 rounded-xl border flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
                       newRuleType === 'force'
                         ? 'bg-blue-500/20 text-blue-300 border-blue-500/60'
-                        : 'bg-gray-800 text-gray-400 border-gray-700 hover:text-white'
+                        : 'bg-banner-grey text-gray-400 border-white/[0.12] hover:text-white'
                     }`}
                   >
                     <MdElectricBolt size={14} /> Always Use With
@@ -596,7 +596,7 @@ const TraitPreviewGrid = () => {
                         setTargetLayerId(newLayerId);
                         setTargetTraitId(newRuleType === 'block' ? '*' : (targetL?.traits[0]?.id || ''));
                       }}
-                      className="w-full bg-gray-800 border border-gray-700 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-primary-orange"
+                      className="w-full bg-banner-grey border border-white/[0.12] rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-primary-orange"
                     >
                       {otherLayers.map(l => (
                         <option key={l.id} value={l.id}>{l.name}</option>
@@ -609,7 +609,7 @@ const TraitPreviewGrid = () => {
                     <select
                       value={targetTraitId}
                       onChange={(e) => setTargetTraitId(e.target.value)}
-                      className="w-full bg-gray-800 border border-gray-700 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-primary-orange"
+                      className="w-full bg-banner-grey border border-white/[0.12] rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-primary-orange"
                     >
                       {newRuleType === 'block' && (
                         <option value="*">⛔ Entire Category (All traits)</option>

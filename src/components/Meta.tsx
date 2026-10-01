@@ -1,28 +1,66 @@
 import { useEffect } from "react";
+import { useLocation } from "react-router-dom";
+import SEO_ROUTES from "../seo/routes.json";
+
+/** The production host. Must match the primary domain configured in Vercel. */
+const SITE_URL = "https://www.wen.tools";
+
+const DEFAULT_TITLE = "Free Algorand Tools: Mint, Airdrop & Manage ASAs | wen.tools";
+const DEFAULT_DESC =
+  "Free, open-source Algorand tools. Mass-mint ARC-3/19/69 NFTs, airdrop to thousands of wallets, bulk opt-in and opt-out, P2P atomic swaps and more. No accounts, no platform fees.";
+
+interface RouteSeo {
+  title?: string;
+  description?: string;
+  canonical?: string;
+}
 
 interface MetaProps {
   title?: string;
   description?: string;
   image?: string;
   canonical?: string;
+  /** Keep this page out of search results (e.g. 404s, private views) */
+  noindex?: boolean;
 }
 
-export function Meta({ title, description, image, canonical }: MetaProps) {
+const normalize = (path: string) => (path.length > 1 ? path.replace(/\/+$/, "") : path);
+
+/**
+ * Sets the document head for a page. Entries in src/seo/routes.json take
+ * priority so the runtime head always matches the prerendered HTML that
+ * scripts/prerender-seo.mjs writes at build time.
+ */
+export function Meta({ title, description, image, canonical, noindex }: MetaProps) {
+  const { pathname } = useLocation();
+
   useEffect(() => {
-    const baseTitle = "wen.tools";
-    const fullTitle = title ? `${title} | ${baseTitle}` : `${baseTitle} | The Definitive Algorand Utility Suite`;
-    const fullDesc = description || "The definitive power-user suite for Algorand. High-performance tools for mass-minting (ARC-3/19/69), mass-airdrops, P2P atomic swaps, supply chain provenance (ANCHOR), decentralized hosting (WEN.DEPLOY), post-quantum security, and x402 on-chain agentic payments.";
-    
-    const defaultImage = "https://wen.tools/banner-large.png";
+    const path = normalize(pathname);
+    const table = SEO_ROUTES as Record<string, RouteSeo>;
+    const entry = table[path];
+    // Alias routes borrow their canonical target's copy (same as the build)
+    const route = entry?.canonical
+      ? { ...table[entry.canonical], canonical: entry.canonical }
+      : entry;
+
+    const fullTitle = route?.title ?? (title ? `${title} | wen.tools` : DEFAULT_TITLE);
+    const fullDesc = route?.description ?? description ?? DEFAULT_DESC;
+
+    const defaultImage = `${SITE_URL}/banner-large.png`;
     let fullImage = defaultImage;
     if (image) {
       if (image.startsWith("http://") || image.startsWith("https://")) {
         fullImage = image;
       } else {
         const cleanedPath = image.startsWith("/") ? image.slice(1) : image;
-        fullImage = `https://wen.tools/${cleanedPath}`;
+        fullImage = `${SITE_URL}/${cleanedPath}`;
       }
     }
+
+    const canonicalPath = canonical ?? route?.canonical ?? path;
+    const canonicalUrl = canonicalPath.startsWith("http")
+      ? canonicalPath
+      : `${SITE_URL}${canonicalPath === "/" ? "/" : canonicalPath}`;
 
     document.title = fullTitle;
 
@@ -50,27 +88,24 @@ export function Meta({ title, description, image, canonical }: MetaProps) {
     updateTag('meta[name="description"]', fullDesc);
     updateTag('meta[property="og:title"]', fullTitle);
     updateTag('meta[property="og:description"]', fullDesc);
-    updateTag('meta[property="og:url"]', window.location.href);
+    updateTag('meta[property="og:url"]', canonicalUrl);
     updateTag('meta[property="og:image"]', fullImage);
-    
+
     updateTag('meta[name="twitter:title"]', fullTitle);
     updateTag('meta[name="twitter:description"]', fullDesc);
-    updateTag('meta[name="twitter:url"]', window.location.href);
+    updateTag('meta[name="twitter:url"]', canonicalUrl);
     updateTag('meta[name="twitter:image"]', fullImage);
 
-    // Handle canonical link
-    let canonicalTag = document.querySelector('link[rel="canonical"]');
-    const canonicalUrl = canonical || window.location.href.split('?')[0]; // Default to current URL without query params
+    updateTag('meta[name="robots"]', noindex ? "noindex, follow" : "index, follow");
 
-    if (canonicalTag) {
-      canonicalTag.setAttribute("href", canonicalUrl);
-    } else {
+    let canonicalTag = document.querySelector('link[rel="canonical"]');
+    if (!canonicalTag) {
       canonicalTag = document.createElement("link");
       canonicalTag.setAttribute("rel", "canonical");
-      canonicalTag.setAttribute("href", canonicalUrl);
       document.head.appendChild(canonicalTag);
     }
-  }, [title, description, image, canonical]);
+    canonicalTag.setAttribute("href", canonicalUrl);
+  }, [pathname, title, description, image, canonical, noindex]);
 
   return null;
 }

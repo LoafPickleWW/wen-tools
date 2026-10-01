@@ -1,3 +1,4 @@
+import { ToolHero } from "../components/cypher/ToolKit";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useWallet } from "@txnlab/use-wallet-react";
 import { 
@@ -21,6 +22,7 @@ import {
   VolumeUp,
   Search
 } from "@mui/icons-material";
+import { Meta } from "../components/Meta";
 
 interface MusicNFT {
   assetId: number;
@@ -274,15 +276,18 @@ export function Jukebox() {
 
   return (
     <div className="mx-auto text-white mb-4 flex flex-col items-center max-w-6xl w-full px-4 min-h-screen">
-      <h1 className="text-4xl font-black mt-8 mb-2 bg-gradient-to-r from-primary-yellow to-secondary-orange bg-clip-text text-transparent">
-        JUKEBOX
-      </h1>
-      <p className="text-slate-400 mb-6 italic">The ultimate player for your Algorand Music NFTs</p>
+      <Meta />
+      <ToolHero
+        tag="jukebox"
+        title="Jukebox"
+        description="The ultimate player for your Algorand music NFTs."
+        meta={["music NFTs"]}
+      />
       
       <ConnectButton inmain={true} />
 
       {!activeAddress ? (
-        <div className="mt-20 p-10 bg-primary-black/60 border border-slate-800 rounded-2xl text-center backdrop-blur-xl">
+        <div className="mt-20 p-10 bg-primary-black/60 border border-white/[0.08] rounded-2xl text-center backdrop-blur-xl">
            <MusicNote className="text-6xl text-slate-700 mb-4" />
            <p className="text-xl font-bold text-slate-300">Connect your wallet to start the show</p>
         </div>
@@ -291,17 +296,17 @@ export function Jukebox() {
           
           {/* Left Column: Player View */}
           <div className="lg:col-span-2 flex flex-col gap-6">
-            <div className="bg-gradient-to-br from-slate-900 to-black p-8 rounded-3xl border border-slate-800 shadow-2xl relative overflow-hidden group">
+            <div className="bg-gradient-to-br from-slate-900 to-black p-8 rounded-3xl border border-white/[0.08] shadow-2xl relative overflow-hidden group">
               {/* Background Glow */}
               <div className="absolute -top-20 -right-20 w-64 h-64 bg-primary-yellow/10 rounded-full blur-3xl group-hover:bg-primary-yellow/20 transition-all duration-700"></div>
               
               <div className="relative z-10 flex flex-col md:flex-row items-center gap-8">
                 {/* Album Art */}
-                <div className="w-64 h-64 bg-slate-800 rounded-2xl shadow-2xl overflow-hidden flex-shrink-0 border-2 border-slate-700">
+                <div className="w-64 h-64 bg-banner-grey rounded-2xl shadow-2xl overflow-hidden flex-shrink-0 border-2 border-white/[0.12]">
                   {currentSong?.image ? (
                     <img src={currentSong.image} alt={currentSong.name} className="w-full h-full object-cover" />
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center bg-slate-900">
+                    <div className="w-full h-full flex items-center justify-center bg-asset-detail-bg">
                       <MusicNote className="text-6xl text-slate-700" />
                     </div>
                   )}
@@ -324,7 +329,7 @@ export function Jukebox() {
                       max={duration || 0} 
                       value={progress} 
                       onChange={handleProgressChange}
-                      className="w-full h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-primary-yellow"
+                      className="w-full h-1.5 bg-secondary-gray rounded-lg appearance-none cursor-pointer accent-primary-yellow"
                     />
                     <div className="flex justify-between text-xs text-slate-500 mt-2 font-mono">
                       <span>{formatTime(progress)}</span>
@@ -351,7 +356,7 @@ export function Jukebox() {
               </div>
 
               {/* Extra Controls Footer */}
-              <div className="mt-8 pt-6 border-t border-slate-800 flex items-center justify-between">
+              <div className="mt-8 pt-6 border-t border-white/[0.08] flex items-center justify-between">
                 <div className="flex items-center gap-4">
                   <button 
                     onClick={() => setShuffle(!shuffle)} 
@@ -376,7 +381,7 @@ export function Jukebox() {
                     step="0.01" 
                     value={volume} 
                     onChange={(e) => setVolume(parseFloat(e.target.value))}
-                    className="w-full h-1 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-slate-400"
+                    className="w-full h-1 bg-secondary-gray rounded-lg appearance-none cursor-pointer accent-slate-400"
                   />
                 </div>
               </div>
@@ -413,12 +418,12 @@ export function Jukebox() {
           </div>
 
           {/* Right Column: Playlist */}
-          <div className="bg-primary-black/40 border border-slate-800 rounded-3xl p-6 flex flex-col max-h-[600px]">
+          <div className="bg-primary-black/40 border border-white/[0.08] rounded-3xl p-6 flex flex-col max-h-[600px]">
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-xl font-bold flex items-center gap-2">
                 <List className="text-primary-yellow" /> PLAYLIST
               </h3>
-              <span className="text-xs bg-slate-800 px-2 py-1 rounded text-slate-400 font-mono">
+              <span className="text-xs bg-banner-grey px-2 py-1 rounded text-slate-400 font-mono">
                 {songs.length} TRACKS
               </span>
             </div>
@@ -434,9 +439,9 @@ export function Jukebox() {
                   <button 
                     key={song.assetId}
                     onClick={() => playSong(index)}
-                    className={`w-full text-left p-3 rounded-xl flex items-center gap-4 transition group ${currentSongIndex === index ? 'bg-primary-yellow/10 border border-primary-yellow/20' : 'hover:bg-slate-800/50 border border-transparent'}`}
+                    className={`w-full text-left p-3 rounded-xl flex items-center gap-4 transition group ${currentSongIndex === index ? 'bg-primary-yellow/10 border border-primary-yellow/20' : 'hover:bg-banner-grey/50 border border-transparent'}`}
                   >
-                    <div className="w-12 h-12 rounded-lg bg-slate-800 overflow-hidden flex-shrink-0">
+                    <div className="w-12 h-12 rounded-lg bg-banner-grey overflow-hidden flex-shrink-0">
                       {song.image ? (
                         <img src={song.image} alt="" className="w-full h-full object-cover" />
                       ) : (

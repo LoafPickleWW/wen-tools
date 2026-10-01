@@ -1,3 +1,5 @@
+import { Reticle } from "../components/cypher/Reticle";
+import { ToolHero, ToolTabs } from "../components/cypher/ToolKit";
 import { showDonationToast } from "../utils";
 import { useState, useEffect, useRef } from "react";
 import algosdk from "algosdk";
@@ -1209,110 +1211,40 @@ export function BulkAssetManager({ defaultTab = "optin" }: BulkAssetManagerProps
 
       <article className="mx-auto text-white mb-16 flex flex-col items-center max-w-3xl w-full px-4">
         {/* Header Section */}
-        <header className="w-full flex flex-col items-center mt-10 mb-8 text-center">
-          <div className="flex items-center gap-3 justify-center">
-            <div className="p-2.5 bg-gradient-to-br from-orange-500 to-amber-600 rounded-2xl shadow-lg shadow-orange-500/20">
-              <IoSparkles className="text-2xl text-black" aria-hidden="true" />
-            </div>
-            <h1 className="text-3xl md:text-5xl font-black tracking-tight bg-gradient-to-r from-orange-300 via-orange-500 to-amber-500 bg-clip-text text-transparent py-1 uppercase">
-              Bulk Asset Manager
-            </h1>
-          </div>
-          <p className="text-slate-400 mt-4 text-sm md:text-base font-medium max-w-xl leading-relaxed">
-            Unified command center to add, remove, and destroy Algorand assets in bulk. Reclaim locked Algos and optimize your wallet lifecycle.
-          </p>
-        </header>
+        <ToolHero
+          icon={<IoSparkles aria-hidden="true" />}
+          tag="asset manager"
+          title="Bulk Asset Manager"
+          description="Unified command center to add, remove, and destroy Algorand assets in bulk. Reclaim locked Algos and optimize your wallet lifecycle."
+          meta={["opt-in / opt-out","destroy & burn","freeze & clawback","MBR reclaim"]}
+        />
 
         {/* Tab Selector - Glassmorphism */}
-        <div className="flex flex-wrap gap-2 p-1.5 bg-[#121214] border border-white/5 rounded-2xl w-full max-w-2xl mx-auto mb-8 shadow-xl justify-center">
-          <button
-            onClick={() => handleTabChange("optin")}
-            className={`flex-1 min-w-[90px] max-w-[140px] py-2.5 px-3 rounded-xl font-extrabold flex items-center justify-center gap-2 transition-all duration-300 text-xs md:text-sm ${
-              activeTab === "optin"
-                ? "bg-gradient-to-r from-orange-500 to-amber-500 text-black shadow-lg shadow-orange-500/10"
-                : "text-slate-400 hover:text-white hover:bg-white/[0.03]"
-            }`}
-          >
-            <IoAddCircle className="text-lg" />
-            <span>Opt-in</span>
-          </button>
-          <button
-            onClick={() => handleTabChange("optout")}
-            className={`flex-1 min-w-[90px] max-w-[140px] py-2.5 px-3 rounded-xl font-extrabold flex items-center justify-center gap-2 transition-all duration-300 text-xs md:text-sm ${
-              activeTab === "optout"
-                ? "bg-gradient-to-r from-orange-500 to-amber-500 text-black shadow-lg shadow-orange-500/10"
-                : "text-slate-400 hover:text-white hover:bg-white/[0.03]"
-            }`}
-          >
-            <IoRemoveCircle className="text-lg" />
-            <span>Opt-out</span>
-          </button>
-          <button
-            onClick={() => handleTabChange("destroy")}
-            className={`flex-1 min-w-[90px] max-w-[140px] py-2.5 px-3 rounded-xl font-extrabold flex items-center justify-center gap-2 transition-all duration-300 text-xs md:text-sm ${
-              activeTab === "destroy"
-                ? "bg-gradient-to-r from-orange-500 to-amber-500 text-black shadow-lg shadow-orange-500/10"
-                : "text-slate-400 hover:text-white hover:bg-white/[0.03]"
-            }`}
-          >
-            <IoTrash className="text-lg" />
-            <span>Destroy</span>
-          </button>
-          <button
-            onClick={() => handleTabChange("burn")}
-            className={`flex-1 min-w-[90px] max-w-[140px] py-2.5 px-3 rounded-xl font-extrabold flex items-center justify-center gap-2 transition-all duration-300 text-xs md:text-sm ${
-              activeTab === "burn"
-                ? "bg-gradient-to-r from-orange-500 to-amber-500 text-black shadow-lg shadow-orange-500/10"
-                : "text-slate-400 hover:text-white hover:bg-white/[0.03]"
-            }`}
-          >
-            <IoFlame className="text-lg" />
-            <span>Burn</span>
-          </button>
-          <button
-            onClick={() => handleTabChange("freeze")}
-            className={`flex-1 min-w-[90px] max-w-[140px] py-2.5 px-3 rounded-xl font-extrabold flex items-center justify-center gap-2 transition-all duration-300 text-xs md:text-sm ${
-              activeTab === "freeze"
-                ? "bg-gradient-to-r from-orange-500 to-amber-500 text-black shadow-lg shadow-orange-500/10"
-                : "text-slate-400 hover:text-white hover:bg-white/[0.03]"
-            }`}
-          >
-            <IoSnow className="text-lg" />
-            <span>Freeze</span>
-          </button>
-          <button
-            onClick={() => handleTabChange("clawback")}
-            className={`flex-1 min-w-[90px] max-w-[140px] py-2.5 px-3 rounded-xl font-extrabold flex items-center justify-center gap-2 transition-all duration-300 text-xs md:text-sm ${
-              activeTab === "clawback"
-                ? "bg-gradient-to-r from-orange-500 to-amber-500 text-black shadow-lg shadow-orange-500/10"
-                : "text-slate-400 hover:text-white hover:bg-white/[0.03]"
-            }`}
-          >
-            <GiClaws className="text-lg shrink-0" />
-            <span>Clawback</span>
-          </button>
-          <button
-            onClick={() => handleTabChange("dust")}
-            className={`flex-1 min-w-[90px] max-w-[140px] py-2.5 px-3 rounded-xl font-extrabold flex items-center justify-center gap-2 transition-all duration-300 text-xs md:text-sm ${
-              activeTab === "dust"
-                ? "bg-gradient-to-r from-orange-500 to-amber-500 text-black shadow-lg shadow-orange-500/10"
-                : "text-slate-400 hover:text-white hover:bg-white/[0.03]"
-            }`}
-          >
-            <GiBroom className="text-lg shrink-0" />
-            <span>Dust Tool</span>
-          </button>
-        </div>
+        <ToolTabs
+          className="max-w-3xl"
+          active={activeTab}
+          onChange={handleTabChange}
+          tabs={[
+            { id: "optin", label: "Opt-in", icon: <IoAddCircle /> },
+            { id: "optout", label: "Opt-out", icon: <IoRemoveCircle /> },
+            { id: "destroy", label: "Destroy", icon: <IoTrash /> },
+            { id: "burn", label: "Burn", icon: <IoFlame /> },
+            { id: "freeze", label: "Freeze", icon: <IoSnow /> },
+            { id: "clawback", label: "Clawback", icon: <GiClaws /> },
+            { id: "dust", label: "Dust Tool", icon: <GiBroom /> },
+          ]}
+        />
 
         {/* Main Action Box */}
-        <div className="w-full bg-[#18181c]/90 border border-white/5 rounded-[32px] p-6 md:p-10 backdrop-blur-xl shadow-2xl relative overflow-hidden">
+        <div className="w-full bg-asset-detail-bg/90 border border-white/5 rounded-[32px] p-6 md:p-10 backdrop-blur-xl shadow-2xl relative overflow-hidden wt-frame [--wt-r:32px] [--wt-in:12px]">
+          <Reticle />
           <div className="relative z-10 flex flex-col items-center gap-6">
             <ConnectButton inmain={true} />
 
             {/* Context Warning Banner */}
             {activeTab === "optin" && (
-              <div className="w-full bg-blue-500/5 border border-blue-500/20 rounded-2xl p-4 flex gap-3 text-sm text-blue-200 items-start text-left leading-relaxed">
-                <IoInformationCircle className="text-xl text-blue-400 shrink-0 mt-0.5" />
+              <div className="w-full bg-primary-black/40 border border-white/[0.08] rounded-2xl p-4 flex gap-3 text-sm text-slate-300 items-start text-left leading-relaxed">
+                <IoInformationCircle className="text-xl text-primary-orange shrink-0 mt-0.5" />
                 <div>
                   <span className="font-bold text-white">Minimum Balance Requirement (MBR):</span> Each asset opt-in locks <span className="font-bold text-blue-300">0.1 ALGO</span> in your wallet. This MBR is fully reclaimed once you opt out.
                 </div>
@@ -1415,7 +1347,7 @@ export function BulkAssetManager({ defaultTab = "optin" }: BulkAssetManagerProps
                         type="number"
                         step="0.01"
                         min="0"
-                        className="w-full bg-[#0f0f11] border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:border-orange-500/50 outline-none transition-all font-mono"
+                        className="w-full bg-primary-black border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:border-orange-500/50 outline-none transition-all font-mono"
                         value={dustThresholdInput}
                         onChange={(e) => {
                           const rawVal = e.target.value;
@@ -1441,7 +1373,7 @@ export function BulkAssetManager({ defaultTab = "optin" }: BulkAssetManagerProps
                         Target Asset
                       </label>
                       <select
-                        className="w-full bg-[#0f0f11] border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:border-orange-500/50 outline-none transition-all"
+                        className="w-full bg-primary-black border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:border-orange-500/50 outline-none transition-all"
                         value={dustTargetToken}
                         onChange={(e) => {
                           setDustTargetToken(parseInt(e.target.value));
@@ -1456,7 +1388,7 @@ export function BulkAssetManager({ defaultTab = "optin" }: BulkAssetManagerProps
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2 bg-[#0f0f11] border border-white/5 p-3.5 rounded-xl mt-2">
+                  <div className="flex items-center gap-2 bg-primary-black border border-white/5 p-3.5 rounded-xl mt-2">
                     <input
                       type="checkbox"
                       id="optout_checkbox"
@@ -1522,7 +1454,7 @@ export function BulkAssetManager({ defaultTab = "optin" }: BulkAssetManagerProps
                           return (
                             <div
                               key={asset.id}
-                              className={`flex flex-col bg-[#0f0f11] p-3.5 rounded-xl border border-white/5 transition-colors ${!txSendingInProgress ? 'cursor-pointer hover:bg-white/[0.03]' : ''}`}
+                              className={`flex flex-col bg-primary-black p-3.5 rounded-xl border border-white/5 transition-colors ${!txSendingInProgress ? 'cursor-pointer hover:bg-white/[0.03]' : ''}`}
                               onClick={() => {
                                 if (txSendingInProgress) return;
                                 const next = [...dustCandidates];
@@ -1619,7 +1551,7 @@ export function BulkAssetManager({ defaultTab = "optin" }: BulkAssetManagerProps
                   <div className="flex flex-col items-center w-full gap-5">
                     <label
                       htmlFor="dropzone-file"
-                      className="flex flex-col justify-center items-center w-full max-w-md h-40 px-4 rounded-2xl border-2 border-dashed cursor-pointer bg-[#0f0f11] border-slate-800 hover:border-orange-500/50 hover:bg-white/[0.02] transition duration-300"
+                      className="flex flex-col justify-center items-center w-full max-w-md h-40 px-4 rounded-2xl border-2 border-dashed cursor-pointer bg-primary-black border-white/[0.08] hover:border-orange-500/50 hover:bg-white/[0.02] transition duration-300"
                     >
                       <div className="flex flex-col justify-center items-center pt-5 pb-6 text-center">
                         <IoAddCircle className="text-3xl text-slate-400 mb-2" />
@@ -1660,7 +1592,7 @@ export function BulkAssetManager({ defaultTab = "optin" }: BulkAssetManagerProps
                         <div className="relative">
                           <input
                             type="text"
-                            className="w-full bg-[#0f0f11] border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder:text-slate-600 focus:border-orange-500/50 focus:ring-1 focus:ring-orange-500/30 outline-none transition-all"
+                            className="w-full bg-primary-black border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder:text-slate-600 focus:border-orange-500/50 focus:ring-1 focus:ring-orange-500/30 outline-none transition-all"
                             placeholder={
                               assetsLoading
                                 ? "Loading assets from wallet..."
@@ -1695,7 +1627,7 @@ export function BulkAssetManager({ defaultTab = "optin" }: BulkAssetManagerProps
                         </div>
 
                         {showDropdown && walletAssets.length > 0 && (
-                          <div className="absolute z-50 left-0 right-0 top-full mt-1.5 max-h-48 overflow-y-auto bg-[#0f0f11] border border-white/10 rounded-xl shadow-2xl shadow-black/80 backdrop-blur-md">
+                          <div className="absolute z-50 left-0 right-0 top-full mt-1.5 max-h-48 overflow-y-auto bg-primary-black border border-white/10 rounded-xl shadow-2xl shadow-black/80 backdrop-blur-md">
                             {walletAssets.filter((a) => {
                               if (!assetSearch) return true;
                               const q = assetSearch.toLowerCase();
@@ -1755,7 +1687,7 @@ export function BulkAssetManager({ defaultTab = "optin" }: BulkAssetManagerProps
                       <textarea
                         id="asset_id_list"
                         placeholder="Asset IDs (one per line, space, or comma separated)"
-                        className="w-full bg-[#0f0f11] text-white border border-white/10 rounded-2xl p-4 text-sm font-mono focus:border-orange-500/50 outline-none transition-all placeholder:text-slate-600 focus:ring-1 focus:ring-orange-500/30"
+                        className="w-full bg-primary-black text-white border border-white/10 rounded-2xl p-4 text-sm font-mono focus:border-orange-500/50 outline-none transition-all placeholder:text-slate-600 focus:ring-1 focus:ring-orange-500/30"
                         style={{ height: "10rem" }}
                         value={assetIds}
                         onChange={(e) => setAssetIds(e.target.value)}
@@ -1799,7 +1731,7 @@ export function BulkAssetManager({ defaultTab = "optin" }: BulkAssetManagerProps
                   ) : (
                     <div className="w-full space-y-3">
                       {burnAssetsInfo.map((asset, idx) => (
-                        <div key={idx} className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-[#0f0f11] p-3 rounded-2xl border border-white/5">
+                        <div key={idx} className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-primary-black p-3 rounded-2xl border border-white/5">
                           <div className="flex items-center gap-3 w-full sm:w-1/2">
                             {asset.imageUrl ? (
                               <img 
@@ -1891,7 +1823,7 @@ export function BulkAssetManager({ defaultTab = "optin" }: BulkAssetManagerProps
                     </div>
                   ) : (
                     <>
-                      <div className="text-sm font-bold text-slate-300 bg-[#0f0f11] px-5 py-3 rounded-xl border border-white/5">
+                      <div className="text-sm font-bold text-slate-300 bg-primary-black px-5 py-3 rounded-xl border border-white/5">
                         {activeTab === "freeze" || activeTab === "clawback"
                           ? `${csvData.length - 1} records detected`
                           : `${csvData.length - 1} assets detected`}

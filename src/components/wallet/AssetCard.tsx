@@ -140,14 +140,14 @@ const AssetImageCard = ({
                     handleRowOptionsClose();
                     handleDialog();
                   }}
-                  sx={{ "& svg": { mr: 2 }, ":hover": { backgroundColor: "#f57b14", color: "white" } }}
+                  sx={{ "& svg": { mr: 2 }, ":hover": { backgroundColor: "rgb(var(--brand))", color: "#0c0a08" } }}
                 >
                   Send
                 </MenuItem>
               )}
               {assetData.params.creator === activeAddress && (
                 <MenuItem
-                  sx={{ "& svg": { mr: 2 }, ":hover": { backgroundColor: "#f57b14", color: "white" } }}
+                  sx={{ "& svg": { mr: 2 }, ":hover": { backgroundColor: "rgb(var(--brand))", color: "#0c0a08" } }}
                   onClick={async () =>
                     await itemOnClick(
                       "Asset destroying...",
@@ -162,7 +162,7 @@ const AssetImageCard = ({
               {assetData.params.creator !== activeAddress &&
                 !assetData.deleted && (
                   <MenuItem
-                    sx={{ "& svg": { mr: 2 }, ":hover": { backgroundColor: "#f57b14", color: "white" } }}
+                    sx={{ "& svg": { mr: 2 }, ":hover": { backgroundColor: "rgb(var(--brand))", color: "#0c0a08" } }}
                     onClick={async () =>
                       await itemOnClick(
                         "Opting-out...",
@@ -177,7 +177,7 @@ const AssetImageCard = ({
             </div>
           ) : (
             <MenuItem
-              sx={{ "& svg": { mr: 2 }, ":hover": { backgroundColor: "#f57b14", color: "white" } }}
+              sx={{ "& svg": { mr: 2 }, ":hover": { backgroundColor: "rgb(var(--brand))", color: "#0c0a08" } }}
               onClick={async () => {
                 await itemOnClick(
                   "Opting-in...",
@@ -190,7 +190,7 @@ const AssetImageCard = ({
             </MenuItem>
           )}
           <MenuItem
-            sx={{ "& svg": { mr: 2 }, ":hover": { backgroundColor: "#f57b14", color: "white" } }}
+            sx={{ "& svg": { mr: 2 }, ":hover": { backgroundColor: "rgb(var(--brand))", color: "#0c0a08" } }}
             onClick={() => {
               copyAssetIds([assetData.index]);
               handleRowOptionsClose();

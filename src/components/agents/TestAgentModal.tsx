@@ -465,10 +465,10 @@ const modeOptions: VRFMode[] = _vrfInfo && _vrfInfo.capabilities && Array.isArra
 
   return (
     <div className="fixed inset-0 z-[1200] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md overflow-y-auto">
-      <div className="relative w-full max-w-2xl bg-neutral-900 border border-neutral-800 rounded-3xl overflow-hidden shadow-2xl animate-fadeIn my-8">
+      <div className="relative w-full max-w-2xl bg-asset-detail-bg border border-white/[0.08] rounded-3xl overflow-hidden shadow-2xl animate-fadeIn my-8">
         
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-neutral-800 bg-neutral-900/50">
+        <div className="flex items-center justify-between p-6 border-b border-white/[0.08] bg-asset-detail-bg/50">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-orange-500/10 rounded-xl">
               <IoTerminal className="text-xl text-orange-500" />
@@ -480,7 +480,7 @@ const modeOptions: VRFMode[] = _vrfInfo && _vrfInfo.capabilities && Array.isArra
           </div>
           <button
             onClick={onClose}
-            className="p-1 rounded-lg hover:bg-neutral-800 text-neutral-400 hover:text-white transition-colors"
+            className="p-1 rounded-lg hover:bg-banner-grey text-neutral-400 hover:text-white transition-colors"
           >
             <IoClose className="text-2xl" />
           </button>
@@ -489,14 +489,14 @@ const modeOptions: VRFMode[] = _vrfInfo && _vrfInfo.capabilities && Array.isArra
         {/* Content */}
         <div className="p-6 space-y-6 max-h-[70vh] overflow-y-auto">
           {/* Metadata Grid */}
-          <div className="grid grid-cols-2 gap-4 bg-neutral-950 p-4 rounded-2xl border border-neutral-800/50 text-xs">
+          <div className="grid grid-cols-2 gap-4 bg-primary-black p-4 rounded-2xl border border-white/[0.08] text-xs">
             <div>
               <span className="text-neutral-500 block uppercase tracking-wider font-bold mb-1">Target Endpoint</span>
               <input
                 type="text"
                 value={endpointUrl}
                 onChange={(e) => setEndpointUrl(e.target.value)}
-                className="w-full bg-neutral-900 border border-neutral-800 rounded-xl px-2 py-1 mt-0.5 font-mono text-xs text-neutral-300 focus:outline-none focus:border-orange-500 transition-all"
+                className="w-full bg-asset-detail-bg border border-white/[0.08] rounded-xl px-2 py-1 mt-0.5 font-mono text-xs text-neutral-300 focus:outline-none focus:border-orange-500 transition-all"
                 disabled={step !== "idle"}
               />
             </div>
@@ -515,7 +515,7 @@ const modeOptions: VRFMode[] = _vrfInfo && _vrfInfo.capabilities && Array.isArra
             <div className="space-y-4">
               <div className="flex flex-col gap-1.5">
                 <label className="text-sm font-bold text-neutral-300">HTTP Request Method</label>
-                <div className="flex gap-2 bg-neutral-950 p-1.5 rounded-xl border border-neutral-800 w-fit">
+                <div className="flex gap-2 bg-primary-black p-1.5 rounded-xl border border-white/[0.08] w-fit">
                   <button
                     type="button"
                     onClick={() => setMethod("GET")}
@@ -554,7 +554,7 @@ const modeOptions: VRFMode[] = _vrfInfo && _vrfInfo.capabilities && Array.isArra
                     value={customAmount}
                     onChange={(e) => setCustomAmount(e.target.value)}
                     placeholder="e.g. 1.0"
-                    className="w-full bg-neutral-950 border border-neutral-800 focus:border-orange-500 rounded-xl p-3 font-mono text-sm text-neutral-300 focus:outline-none transition-all pr-24"
+                    className="w-full bg-primary-black border border-white/[0.08] focus:border-orange-500 rounded-xl p-3 font-mono text-sm text-neutral-300 focus:outline-none transition-all pr-24"
                   />
                   <div className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-neutral-500 font-mono">
                     USDC / ALGO
@@ -569,7 +569,7 @@ const modeOptions: VRFMode[] = _vrfInfo && _vrfInfo.capabilities && Array.isArra
                       <select
                         value={vrfMode}
                         onChange={e => setVrfMode(e.target.value)}
-                        className="w-full rounded-md border border-neutral-700 bg-neutral-800 p-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full rounded-md border border-white/[0.12] bg-banner-grey p-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                       >
                       {modeOptions.map(opt => (
                         <option key={opt.value} value={opt.value}>{opt.name}</option>
@@ -589,7 +589,7 @@ const modeOptions: VRFMode[] = _vrfInfo && _vrfInfo.capabilities && Array.isArra
                                 type="text"
                                 value={vrfParams[param.name] || ""}
                                 onChange={e => setVrfParams(prev => ({ ...prev, [param.name]: e.target.value }))}
-                                className="w-full rounded-md border border-neutral-700 bg-neutral-800 p-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                className="w-full rounded-md border border-white/[0.12] bg-banner-grey p-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 placeholder={param.placeholder}
                               />
                             </div>
@@ -617,7 +617,7 @@ const modeOptions: VRFMode[] = _vrfInfo && _vrfInfo.capabilities && Array.isArra
       value={payloadText}
       onChange={(e) => setPayloadText(e.target.value)}
       rows={4}
-      className="w-full bg-neutral-950 border border-neutral-800 focus:border-orange-500 rounded-xl p-3 font-mono text-sm text-neutral-300 focus:outline-none transition-all"
+      className="w-full bg-primary-black border border-white/[0.08] focus:border-orange-500 rounded-xl p-3 font-mono text-sm text-neutral-300 focus:outline-none transition-all"
       placeholder="{}"
     />
   </div>
@@ -665,14 +665,14 @@ const modeOptions: VRFMode[] = _vrfInfo && _vrfInfo.capabilities && Array.isArra
                 <span>Test Completed Successfully!</span>
               </div>
 
-              <div className="bg-neutral-950 p-4 rounded-2xl border border-neutral-800 text-xs space-y-2">
-                <div className="flex justify-between border-b border-neutral-900 pb-2">
+              <div className="bg-primary-black p-4 rounded-2xl border border-white/[0.08] text-xs space-y-2">
+                <div className="flex justify-between border-b border-white/[0.08] pb-2">
                   <span className="text-neutral-500">HTTP Status</span>
                   <span className="text-green-400 font-bold font-mono">200 OK</span>
                 </div>
                 
                 {settleTxId && (
-                  <div className="flex justify-between border-b border-neutral-900 pb-2">
+                  <div className="flex justify-between border-b border-white/[0.08] pb-2">
                     <span className="text-neutral-500">Settle Transaction ID</span>
                     <span className="text-neutral-300 font-mono">
                       <a
@@ -688,7 +688,7 @@ const modeOptions: VRFMode[] = _vrfInfo && _vrfInfo.capabilities && Array.isArra
                 )}
 
                 {(refundTxId || refundObj) && (
-                  <div className="flex justify-between border-b border-neutral-900 pb-2">
+                  <div className="flex justify-between border-b border-white/[0.08] pb-2">
                     <span className="text-neutral-500">Refund Transaction ID</span>
                     <span className="text-neutral-300 font-mono">
                       {(() => {
@@ -720,7 +720,7 @@ const modeOptions: VRFMode[] = _vrfInfo && _vrfInfo.capabilities && Array.isArra
 
               <div>
                 <label className="text-xs font-bold text-neutral-500 block uppercase tracking-wider mb-2">Response JSON Payload</label>
-                <pre className="bg-neutral-950 border border-neutral-800 rounded-xl p-4 font-mono text-xs text-neutral-300 overflow-x-auto max-h-60 leading-relaxed">
+                <pre className="bg-primary-black border border-white/[0.08] rounded-xl p-4 font-mono text-xs text-neutral-300 overflow-x-auto max-h-60 leading-relaxed">
                   {JSON.stringify(testResult, null, 2)}
                 </pre>
               </div>
@@ -737,7 +737,7 @@ const modeOptions: VRFMode[] = _vrfInfo && _vrfInfo.capabilities && Array.isArra
 
               <button
                 onClick={() => setStep("idle")}
-                className="w-full py-3 bg-neutral-800 hover:bg-neutral-700 text-white font-bold rounded-xl transition-colors uppercase tracking-wider text-sm"
+                className="w-full py-3 bg-banner-grey hover:bg-secondary-gray text-white font-bold rounded-xl transition-colors uppercase tracking-wider text-sm"
               >
                 Reset Test Call
               </button>
@@ -751,7 +751,7 @@ const modeOptions: VRFMode[] = _vrfInfo && _vrfInfo.capabilities && Array.isArra
                 <IoAlertCircle className="text-2xl" />
                 <span>Test Failed</span>
               </div>
-              <p className="text-sm text-neutral-400 leading-relaxed bg-neutral-950 p-4 rounded-xl border border-neutral-800 font-mono text-red-300">
+              <p className="text-sm text-neutral-400 leading-relaxed bg-primary-black p-4 rounded-xl border border-white/[0.08] font-mono text-red-300">
                 {errorDetails}
               </p>
               

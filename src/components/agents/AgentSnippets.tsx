@@ -146,14 +146,14 @@ export function AgentSnippets() {
         </p>
       </div>
 
-      <div className="border border-neutral-800 rounded-2xl overflow-hidden bg-primary-black">
+      <div className="border border-white/[0.08] rounded-2xl overflow-hidden bg-primary-black">
         {/* Tabs */}
-        <div className="flex border-b border-neutral-800 bg-neutral-900/50 flex-wrap">
+        <div className="flex border-b border-white/[0.08] bg-asset-detail-bg/50 flex-wrap">
           <button
             onClick={() => setActiveTab('test')}
             className={`px-6 py-4 text-xs font-bold tracking-wider uppercase transition-colors flex-grow md:flex-grow-0 ${
               activeTab === 'test' 
-                ? 'text-orange-500 border-b-2 border-orange-500 bg-neutral-900' 
+                ? 'text-orange-500 border-b-2 border-orange-500 bg-asset-detail-bg' 
                 : 'text-neutral-500 hover:text-neutral-300'
             }`}
           >
@@ -163,7 +163,7 @@ export function AgentSnippets() {
             onClick={() => setActiveTab('ts')}
             className={`px-6 py-4 text-xs font-bold tracking-wider uppercase transition-colors flex-grow md:flex-grow-0 ${
               activeTab === 'ts' 
-                ? 'text-orange-500 border-b-2 border-orange-500 bg-neutral-900' 
+                ? 'text-orange-500 border-b-2 border-orange-500 bg-asset-detail-bg' 
                 : 'text-neutral-500 hover:text-neutral-300'
             }`}
           >
@@ -173,7 +173,7 @@ export function AgentSnippets() {
             onClick={() => setActiveTab('prompt')}
             className={`px-6 py-4 text-xs font-bold tracking-wider uppercase transition-colors flex-grow md:flex-grow-0 ${
               activeTab === 'prompt' 
-                ? 'text-orange-500 border-b-2 border-orange-500 bg-neutral-900' 
+                ? 'text-orange-500 border-b-2 border-orange-500 bg-asset-detail-bg' 
                 : 'text-neutral-500 hover:text-neutral-300'
             }`}
           >
@@ -183,7 +183,7 @@ export function AgentSnippets() {
             onClick={() => setActiveTab('rest')}
             className={`px-6 py-4 text-xs font-bold tracking-wider uppercase transition-colors flex-grow md:flex-grow-0 ${
               activeTab === 'rest' 
-                ? 'text-orange-500 border-b-2 border-orange-500 bg-neutral-900' 
+                ? 'text-orange-500 border-b-2 border-orange-500 bg-asset-detail-bg' 
                 : 'text-neutral-500 hover:text-neutral-300'
             }`}
           >
@@ -193,7 +193,7 @@ export function AgentSnippets() {
             onClick={() => setActiveTab('x402')}
             className={`px-6 py-4 text-xs font-bold tracking-wider uppercase transition-colors flex-grow md:flex-grow-0 ${
               activeTab === 'x402' 
-                ? 'text-orange-500 border-b-2 border-orange-500 bg-neutral-900' 
+                ? 'text-orange-500 border-b-2 border-orange-500 bg-asset-detail-bg' 
                 : 'text-neutral-500 hover:text-neutral-300'
             }`}
           >
@@ -206,7 +206,7 @@ export function AgentSnippets() {
           {activeTab !== 'test' && (
             <button
               onClick={handleCopy}
-              className="absolute top-6 right-6 p-2 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 rounded-lg transition-colors flex items-center gap-2 text-xs font-bold uppercase tracking-wider"
+              className="absolute top-6 right-6 p-2 bg-banner-grey hover:bg-secondary-gray text-neutral-300 rounded-lg transition-colors flex items-center gap-2 text-xs font-bold uppercase tracking-wider"
             >
               {copied ? <IoCheckmark className="text-green-400 text-lg" /> : <IoCopy className="text-lg" />}
               {copied ? "Copied" : "Copy"}

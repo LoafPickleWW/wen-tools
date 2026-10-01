@@ -471,7 +471,7 @@ const MintStep = () => {
       <div className="text-center space-y-2">
         <div className="relative inline-block">
           <MdRocketLaunch size={64} className="mx-auto text-primary-orange animate-bounce" />
-          <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-gray-900 shadow-lg shadow-green-500/50" />
+          <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-white/[0.08] shadow-lg shadow-green-500/50" />
         </div>
         <h2 className="text-4xl font-black bg-gradient-to-b from-white to-gray-500 bg-clip-text text-transparent uppercase tracking-tighter">
           Final Launch
@@ -479,9 +479,9 @@ const MintStep = () => {
         <p className="text-gray-400 font-medium">Your collection is ready. Let's send it to the blockchain.</p>
       </div>
 
-      <div className="bg-gray-800/30 border border-gray-700/50 p-6 rounded-3xl backdrop-blur-md space-y-6">
+      <div className="bg-banner-grey/30 border border-white/[0.12] p-6 rounded-3xl backdrop-blur-md space-y-6">
         {/* Mint Batch Range Selector */}
-        <div className="p-5 rounded-2xl bg-[#121013]/70 border border-gray-800/80 space-y-4">
+        <div className="p-5 rounded-2xl bg-primary-black/70 border border-white/[0.08] space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <div>
               <div className="flex items-center gap-2">
@@ -503,7 +503,7 @@ const MintStep = () => {
                 type="button"
                 onClick={handlePrevBatch}
                 disabled={effectiveStart <= 1}
-                className="flex items-center gap-1 px-3 py-1.5 rounded-xl border border-gray-800 bg-gray-900/60 hover:bg-gray-800 text-xs font-bold text-gray-300 disabled:opacity-30 disabled:cursor-not-allowed transition-all cursor-pointer"
+                className="flex items-center gap-1 px-3 py-1.5 rounded-xl border border-white/[0.08] bg-asset-detail-bg/60 hover:bg-banner-grey text-xs font-bold text-gray-300 disabled:opacity-30 disabled:cursor-not-allowed transition-all cursor-pointer"
                 title="Shift to previous batch"
               >
                 <MdArrowBack size={14} />
@@ -513,7 +513,7 @@ const MintStep = () => {
                 type="button"
                 onClick={handleNextBatch}
                 disabled={effectiveEnd >= maxItems}
-                className="flex items-center gap-1 px-3 py-1.5 rounded-xl border border-gray-800 bg-gray-900/60 hover:bg-gray-800 text-xs font-bold text-gray-300 disabled:opacity-30 disabled:cursor-not-allowed transition-all cursor-pointer"
+                className="flex items-center gap-1 px-3 py-1.5 rounded-xl border border-white/[0.08] bg-asset-detail-bg/60 hover:bg-banner-grey text-xs font-bold text-gray-300 disabled:opacity-30 disabled:cursor-not-allowed transition-all cursor-pointer"
                 title="Shift to next batch"
               >
                 <span>Next Batch</span>
@@ -531,7 +531,7 @@ const MintStep = () => {
               className={`px-3 py-1 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
                 effectiveStart === 1 && effectiveEnd === maxItems
                   ? 'bg-primary-orange/20 border-primary-orange text-primary-orange'
-                  : 'bg-gray-900/50 border-gray-800 text-gray-400 hover:text-white hover:border-gray-700'
+                  : 'bg-asset-detail-bg/50 border-white/[0.08] text-gray-400 hover:text-white hover:border-white/[0.12]'
               }`}
             >
               All ({maxItems})
@@ -543,7 +543,7 @@ const MintStep = () => {
                 className={`px-3 py-1 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
                   effectiveStart === 1 && effectiveEnd === 100
                     ? 'bg-primary-orange/20 border-primary-orange text-primary-orange'
-                    : 'bg-gray-900/50 border-gray-800 text-gray-400 hover:text-white hover:border-gray-700'
+                    : 'bg-asset-detail-bg/50 border-white/[0.08] text-gray-400 hover:text-white hover:border-white/[0.12]'
                 }`}
               >
                 1 – 100 (Free Tier)
@@ -556,7 +556,7 @@ const MintStep = () => {
                 className={`px-3 py-1 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
                   effectiveStart === 1 && effectiveEnd === 250
                     ? 'bg-primary-orange/20 border-primary-orange text-primary-orange'
-                    : 'bg-gray-900/50 border-gray-800 text-gray-400 hover:text-white hover:border-gray-700'
+                    : 'bg-asset-detail-bg/50 border-white/[0.08] text-gray-400 hover:text-white hover:border-white/[0.12]'
                 }`}
               >
                 1 – 250 (Safe Batch)
@@ -569,7 +569,7 @@ const MintStep = () => {
                 className={`px-3 py-1 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
                   effectiveStart === 1 && effectiveEnd === 500
                     ? 'bg-primary-orange/20 border-primary-orange text-primary-orange'
-                    : 'bg-gray-900/50 border-gray-800 text-gray-400 hover:text-white hover:border-gray-700'
+                    : 'bg-asset-detail-bg/50 border-white/[0.08] text-gray-400 hover:text-white hover:border-white/[0.12]'
                 }`}
               >
                 1 – 500 (Max Recommended)
@@ -589,7 +589,7 @@ const MintStep = () => {
                 max={maxItems}
                 value={startItem}
                 onChange={(e) => setStartItem(Math.max(1, parseInt(e.target.value) || 1))}
-                className="w-full bg-gray-900/70 border border-gray-800 rounded-xl px-4 py-2.5 text-sm text-white font-bold focus:border-primary-orange/50 outline-none"
+                className="w-full bg-asset-detail-bg/70 border border-white/[0.08] rounded-xl px-4 py-2.5 text-sm text-white font-bold focus:border-primary-orange/50 outline-none"
               />
             </div>
             <div className="flex flex-col gap-1.5">
@@ -602,7 +602,7 @@ const MintStep = () => {
                 max={maxItems}
                 value={endItem}
                 onChange={(e) => setEndItem(Math.max(effectiveStart, parseInt(e.target.value) || effectiveStart))}
-                className="w-full bg-gray-900/70 border border-gray-800 rounded-xl px-4 py-2.5 text-sm text-white font-bold focus:border-primary-orange/50 outline-none"
+                className="w-full bg-asset-detail-bg/70 border border-white/[0.08] rounded-xl px-4 py-2.5 text-sm text-white font-bold focus:border-primary-orange/50 outline-none"
               />
             </div>
           </div>
@@ -636,7 +636,7 @@ const MintStep = () => {
                   key={s}
                   onClick={() => setStandard(s as any)}
                   className={`h-11 px-3 rounded-2xl border text-xs font-black transition-all flex items-center justify-center whitespace-nowrap ${
-                    standard === s ? 'bg-primary-orange text-black border-primary-orange shadow-lg shadow-primary-orange/20' : 'bg-gray-900/50 border-gray-800 text-gray-500 hover:border-gray-700'
+                    standard === s ? 'bg-primary-orange text-black border-primary-orange shadow-lg shadow-primary-orange/20' : 'bg-asset-detail-bg/50 border-white/[0.08] text-gray-500 hover:border-white/[0.12]'
                   }`}
                 >
                   {s}
@@ -656,7 +656,7 @@ const MintStep = () => {
                     disabled={disabled}
                     onClick={() => setProvider(p)}
                     className={`h-11 px-2 rounded-2xl border text-xs font-black transition-all flex items-center justify-center whitespace-nowrap ${
-                      effectiveProvider === p ? 'bg-primary-orange text-black border-primary-orange shadow-lg shadow-primary-orange/20' : 'bg-gray-900/50 border-gray-800 text-gray-500 hover:border-gray-700'
+                      effectiveProvider === p ? 'bg-primary-orange text-black border-primary-orange shadow-lg shadow-primary-orange/20' : 'bg-asset-detail-bg/50 border-white/[0.08] text-gray-500 hover:border-white/[0.12]'
                     } ${disabled ? 'opacity-40 cursor-not-allowed' : ''}`}
                   >
                     {p}
@@ -673,7 +673,7 @@ const MintStep = () => {
         </div>
 
         {effectiveProvider === 'AlgoFile' ? (
-          <div className="bg-gray-900/40 p-5 border border-gray-800/80 rounded-3xl text-xs text-gray-400 font-medium leading-relaxed">
+          <div className="bg-asset-detail-bg/40 p-5 border border-white/[0.08] rounded-3xl text-xs text-gray-400 font-medium leading-relaxed">
             ℹ️ AlgoFile utilizes on-chain x402 pay-per-use payments. No API token or signup is required. You will be prompted to approve a USDC/ALGO storage fee transaction for each upload.
           </div>
         ) : effectiveProvider === 'Filebase' ? (
@@ -697,7 +697,7 @@ const MintStep = () => {
                  localStorage.setItem('filebaseToken', e.target.value);
               }}
               placeholder="Paste your Filebase API Token here..."
-              className="w-full bg-gray-900/50 border border-gray-800 rounded-2xl px-5 py-4 text-sm focus:outline-none focus:border-primary-orange/50 transition-all placeholder:text-gray-700"
+              className="w-full bg-asset-detail-bg/50 border border-white/[0.08] rounded-2xl px-5 py-4 text-sm focus:outline-none focus:border-primary-orange/50 transition-all placeholder:text-gray-700"
             />
             <p className="text-[11px] text-gray-500 ml-1">
               Filebase offers 5 GB free IPFS storage. Grab your IPFS RPC token from the{' '}
@@ -727,7 +727,7 @@ const MintStep = () => {
                  localStorage.setItem('pinataToken', e.target.value);
               }}
               placeholder="Paste your Pinata JWT here..."
-              className="w-full bg-gray-900/50 border border-gray-800 rounded-2xl px-5 py-4 text-sm focus:outline-none focus:border-primary-orange/50 transition-all placeholder:text-gray-700"
+              className="w-full bg-asset-detail-bg/50 border border-white/[0.08] rounded-2xl px-5 py-4 text-sm focus:outline-none focus:border-primary-orange/50 transition-all placeholder:text-gray-700"
             />
           </div>
         ) : (
@@ -741,14 +741,14 @@ const MintStep = () => {
                  localStorage.setItem('authBasic', e.target.value);
               }}
               placeholder="Paste your Crust API Key here..."
-              className="w-full bg-gray-900/50 border border-gray-800 rounded-2xl px-5 py-4 text-sm focus:outline-none focus:border-primary-orange/50 transition-all placeholder:text-gray-700"
+              className="w-full bg-asset-detail-bg/50 border border-white/[0.08] rounded-2xl px-5 py-4 text-sm focus:outline-none focus:border-primary-orange/50 transition-all placeholder:text-gray-700"
             />
           </div>
         )}
       </div>
 
       {sampleMetadata && (
-        <div className="bg-gray-800/30 border border-gray-700/50 rounded-3xl backdrop-blur-md overflow-hidden transition-all">
+        <div className="bg-banner-grey/30 border border-white/[0.12] rounded-3xl backdrop-blur-md overflow-hidden transition-all">
           <div 
             onClick={() => setShowMetadataPreview(!showMetadataPreview)}
             className="p-5 flex items-center justify-between cursor-pointer hover:bg-white/[0.02] transition-colors"
@@ -778,13 +778,13 @@ const MintStep = () => {
           </div>
 
           {showMetadataPreview && (
-            <div className="p-5 pt-0 border-t border-gray-800/80 space-y-4">
+            <div className="p-5 pt-0 border-t border-white/[0.08] space-y-4">
               <div className="flex items-center justify-between text-xs pt-4">
                 <span className="text-gray-400 font-medium">Sample Preview: <span className="text-white font-bold">{sampleMetadata.name || `#${sampleItem?.index}`}</span></span>
                 <button
                   type="button"
                   onClick={() => setShowRawJson(!showRawJson)}
-                  className="px-3 py-1 rounded-xl bg-gray-900 border border-gray-700 text-gray-300 hover:text-white text-xs font-semibold transition-colors"
+                  className="px-3 py-1 rounded-xl bg-asset-detail-bg border border-white/[0.12] text-gray-300 hover:text-white text-xs font-semibold transition-colors"
                 >
                   {showRawJson ? 'View Visual Traits' : 'View Raw JSON'}
                 </button>
@@ -793,7 +793,7 @@ const MintStep = () => {
               {!showRawJson ? (
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
                   {sampleMetadata.attributes?.map((attr: any, idx: number) => (
-                    <div key={idx} className="bg-gray-900/70 border border-gray-800/90 rounded-2xl p-3 flex flex-col">
+                    <div key={idx} className="bg-asset-detail-bg/70 border border-white/[0.08] rounded-2xl p-3 flex flex-col">
                       <span className="text-[10px] font-black uppercase tracking-wider text-primary-orange/80 truncate">
                         {attr.trait_type}
                       </span>
@@ -804,7 +804,7 @@ const MintStep = () => {
                   ))}
                 </div>
               ) : (
-                <pre className="bg-black/60 border border-gray-800 rounded-2xl p-4 text-[11px] font-mono text-emerald-400 max-h-60 overflow-y-auto whitespace-pre-wrap leading-relaxed">
+                <pre className="bg-black/60 border border-white/[0.08] rounded-2xl p-4 text-[11px] font-mono text-emerald-400 max-h-60 overflow-y-auto whitespace-pre-wrap leading-relaxed">
                   {JSON.stringify(sampleMetadata, null, 2)}
                 </pre>
               )}
@@ -844,7 +844,7 @@ const MintStep = () => {
               <span>{progress.status}</span>
               <span>{Math.round((progress.current / progress.total) * 100)}%</span>
             </div>
-            <div className="w-full h-1.5 bg-gray-800 rounded-full overflow-hidden">
+            <div className="w-full h-1.5 bg-banner-grey rounded-full overflow-hidden">
                <div 
                  className="h-full bg-primary-orange shadow-[0_0_10px_rgba(255,120,43,0.5)] transition-all duration-700 ease-out" 
                  style={{ width: `${(progress.current / progress.total) * 100}%` }}

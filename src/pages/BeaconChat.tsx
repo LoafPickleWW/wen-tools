@@ -1,3 +1,4 @@
+import { ToolHero } from "../components/cypher/ToolKit";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useWallet } from "@txnlab/use-wallet-react";
 import { Meta } from "../components/Meta";
@@ -935,21 +936,21 @@ export function BeaconChat() {
   // ═══════════════════════════════════════════════════════════════════
 
   return (
-    <div className="flex flex-col items-center justify-center w-full px-4 py-8 min-h-[80vh]">
+    <div className="flex flex-col items-center justify-start w-full px-4 pb-8 min-h-[80vh]">
       <Meta 
         title="BEACON Chat" 
         description="Zero-infrastructure, serverless p2p chat on Algorand. BEACON uses on-chain signaling and WebRTC for secure, decentralized communication."
       />
+      <ToolHero
+        tag="beacon"
+        title="BEACON Chat"
+        description="Zero-infrastructure, serverless peer-to-peer chat on Algorand, using on-chain signaling and WebRTC."
+        meta={["no servers", "no brokers", "WebRTC"]}
+      />
       <div className="w-full max-w-2xl">
         {phase === "home" && (
-          <div className="bg-[#111] rounded-2xl p-8 border border-[#222] shadow-2xl">
-            <div className="flex items-center gap-3 mb-8">
-              <div className="w-10 h-10 rounded-xl bg-primary-orange/20 flex items-center justify-center"><span className="text-xl">📡</span></div>
-              <div>
-                <h1 className="text-2xl font-bold text-white tracking-tight">BEACON Chat</h1>
-                <p className="text-[10px] text-green-500 uppercase tracking-[0.2em] font-bold">Zero-Infrastructure Signaling — No Servers, No Brokers</p>
-              </div>
-            </div>
+          <div className="bg-primary-black rounded-2xl p-8 border border-white/[0.06] shadow-2xl">
+            <p className="wt-label mb-6">( home )</p>
 
             {!activeAddress ? (
               <div className="p-6 rounded-xl bg-red-500/5 border border-red-500/20 text-center text-red-400 text-sm">Connect your wallet to continue</div>
@@ -977,8 +978,8 @@ export function BeaconChat() {
                   <button onClick={scanBeacon} disabled={scanning || !isAnnounced} className="py-3 rounded-xl border border-primary-orange/30 text-primary-orange font-bold flex items-center justify-center gap-2 transition-all disabled:opacity-30">
                     <MdRefresh size={18} className={scanning ? "animate-spin" : ""} /> {scanning ? "Scanning..." : "Scan Messages"}
                   </button>
-                  <button onClick={() => setPhase("bond-requests")} className="relative py-3 rounded-xl bg-[#1a1a1a] border border-[#222] text-white font-bold flex items-center justify-center gap-2">
-                    <MdPersonAdd size={18} /> Requests {bondRequests.length > 0 && <span className="absolute -top-2 -right-2 w-5 h-5 bg-primary-orange text-white text-[10px] flex items-center justify-center rounded-full border-2 border-[#111] animate-bounce">{bondRequests.length}</span>}
+                  <button onClick={() => setPhase("bond-requests")} className="relative py-3 rounded-xl bg-asset-detail-bg border border-white/[0.06] text-white font-bold flex items-center justify-center gap-2">
+                    <MdPersonAdd size={18} /> Requests {bondRequests.length > 0 && <span className="absolute -top-2 -right-2 w-5 h-5 bg-primary-orange text-white text-[10px] flex items-center justify-center rounded-full border-2 border-white/[0.06] animate-bounce">{bondRequests.length}</span>}
                   </button>
                 </div>
 
@@ -988,7 +989,7 @@ export function BeaconChat() {
                     <p className="text-gray-400 text-xs mb-3">{displayName(pendingOffer.fromAddress, pendingOffer.nfd)} wants to connect</p>
                     <div className="flex gap-2">
                       <button onClick={() => answerOffer(pendingOffer)} className="flex-1 py-2 bg-primary-orange text-white rounded-lg text-sm font-bold">Accept</button>
-                      <button onClick={() => setPendingOffer(null)} className="px-4 py-2 bg-[#222] text-gray-400 rounded-lg text-sm">Dismiss</button>
+                      <button onClick={() => setPendingOffer(null)} className="px-4 py-2 bg-banner-grey text-gray-400 rounded-lg text-sm">Dismiss</button>
                     </div>
                   </div>
                 )}
@@ -999,11 +1000,11 @@ export function BeaconChat() {
                     <button onClick={() => setPhase("contacts")} className="text-primary-orange text-xs font-bold">+ Add</button>
                   </div>
                   {contacts.length === 0 ? (
-                    <div className="p-6 rounded-xl bg-[#1a1a1a] border border-[#222] text-center text-gray-500 text-sm">No contacts yet. Add one to start chatting!</div>
+                    <div className="p-6 rounded-xl bg-asset-detail-bg border border-white/[0.06] text-center text-gray-500 text-sm">No contacts yet. Add one to start chatting!</div>
                   ) : (
                     <div className="space-y-2">
                       {contacts.map(c => (
-                        <button key={c.address} onClick={() => initiateChat(c)} className="w-full flex items-center gap-3 p-4 rounded-xl bg-[#1a1a1a] border border-[#222] hover:border-primary-orange/30 transition-all text-left group">
+                        <button key={c.address} onClick={() => initiateChat(c)} className="w-full flex items-center gap-3 p-4 rounded-xl bg-asset-detail-bg border border-white/[0.06] hover:border-primary-orange/30 transition-all text-left group">
                           <div className="w-10 h-10 rounded-full bg-primary-orange/10 flex items-center justify-center shrink-0"><MdPerson size={18} className="text-primary-orange" /></div>
                           <div className="flex-1 min-w-0"><p className="text-white text-sm font-medium truncate">{displayName(c.address, c.nfd)}</p><p className="text-gray-600 text-[10px] font-mono truncate">{c.address}</p></div>
                           <MdSend size={16} className="text-gray-600 group-hover:text-primary-orange transition-colors" />
@@ -1018,14 +1019,14 @@ export function BeaconChat() {
         )}
 
         {phase === "bond-requests" && (
-          <div className="bg-[#111] rounded-2xl p-8 border border-[#222] shadow-2xl">
+          <div className="bg-primary-black rounded-2xl p-8 border border-white/[0.06] shadow-2xl">
             <div className="flex items-center justify-between mb-8"><h2 className="text-xl font-bold text-white">Contact Requests</h2><button onClick={() => setPhase("home")} className="text-gray-500 hover:text-white"><MdClose size={24} /></button></div>
             {bondRequests.length === 0 ? (
               <div className="p-12 text-center text-gray-500 text-sm">No pending requests</div>
             ) : (
               <div className="space-y-3">
                 {bondRequests.map(req => (
-                  <div key={req.fromAddress} className="flex items-center justify-between p-4 rounded-xl bg-[#1a1a1a] border border-[#222]">
+                  <div key={req.fromAddress} className="flex items-center justify-between p-4 rounded-xl bg-asset-detail-bg border border-white/[0.06]">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-full bg-primary-orange/10 flex items-center justify-center"><MdPersonAdd size={18} className="text-primary-orange" /></div>
                       <div><p className="text-white text-sm font-medium">{displayName(req.fromAddress, req.nfd)}</p><p className="text-gray-600 text-[10px] font-mono">{shortenAddr(req.fromAddress)}</p></div>
@@ -1042,12 +1043,12 @@ export function BeaconChat() {
         )}
 
         {phase === "contacts" && (
-          <div className="bg-[#111] rounded-2xl p-8 border border-[#222] shadow-2xl">
+          <div className="bg-primary-black rounded-2xl p-8 border border-white/[0.06] shadow-2xl">
             <div className="flex items-center justify-between mb-8"><h2 className="text-xl font-bold text-white">Add Contact</h2><button onClick={() => setPhase("home")} className="text-gray-500 hover:text-white"><MdClose size={24} /></button></div>
             <div className="space-y-4">
               <div>
                 <label className="text-[10px] text-gray-500 font-bold uppercase tracking-widest block mb-2">Wallet Address or .algo Name</label>
-                <input type="text" value={newContactAddr} onChange={e => setNewContactAddr(e.target.value)} placeholder="ALGO... or name.algo" className="w-full py-3 px-4 bg-[#1a1a1a] text-white rounded-xl border border-[#222] outline-none focus:border-primary-orange transition-all mb-2" />
+                <input type="text" value={newContactAddr} onChange={e => setNewContactAddr(e.target.value)} placeholder="ALGO... or name.algo" className="w-full py-3 px-4 bg-asset-detail-bg text-white rounded-xl border border-white/[0.06] outline-none focus:border-primary-orange transition-all mb-2" />
                 {activeAddress && (
                   <button 
                     type="button"
@@ -1068,22 +1069,22 @@ export function BeaconChat() {
         )}
 
         {phase === "connecting" && (
-          <div className="bg-[#111] rounded-2xl p-8 border border-[#222] shadow-2xl text-center">
-            <div className="animate-spin w-12 h-12 border-4 border-[#222] border-t-primary-orange rounded-full mx-auto mb-6" />
+          <div className="bg-primary-black rounded-2xl p-8 border border-white/[0.06] shadow-2xl text-center">
+            <div className="animate-spin w-12 h-12 border-4 border-white/[0.06] border-t-primary-orange rounded-full mx-auto mb-6" />
             <p className="text-white font-medium mb-2">{connectionStatus}</p>
             <button onClick={goHome} className="mt-6 text-red-400 text-sm font-bold uppercase tracking-widest">Cancel</button>
           </div>
         )}
 
         {phase === "chat" && (
-          <div className="bg-[#111] rounded-2xl border border-[#222] shadow-2xl flex flex-col w-full overflow-hidden" style={{ height: "80vh" }}>
-            <div className="flex items-center justify-between px-6 py-4 border-b border-[#222] bg-[#0d0d0d]">
+          <div className="bg-primary-black rounded-2xl border border-white/[0.06] shadow-2xl flex flex-col w-full overflow-hidden" style={{ height: "80vh" }}>
+            <div className="flex items-center justify-between px-6 py-4 border-b border-white/[0.06] bg-primary-black">
               <div className="flex items-center gap-3">
                 <div className="relative">
                   <div className="w-10 h-10 rounded-full bg-primary-orange/10 flex items-center justify-center">
                     {isConnected ? <MdSignalWifi4Bar className="text-green-500" /> : <MdSignalWifiOff className="text-red-500" />}
                   </div>
-                  <span className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-[#0d0d0d] ${isConnected ? "bg-green-500" : "bg-red-500"}`} />
+                  <span className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-white/[0.06] ${isConnected ? "bg-green-500" : "bg-red-500"}`} />
                 </div>
                 <div>
                   <h2 className="text-white font-bold text-sm">{displayName(peerAddress, peerNfd)}</h2>
@@ -1099,7 +1100,7 @@ export function BeaconChat() {
               {messages.length === 0 && <div className="flex items-center justify-center h-full text-gray-600 text-sm">Start your serverless conversation</div>}
               {messages.map((msg, i) => (
                 <div key={i} className={`flex ${msg.sender === "me" ? "justify-end" : "justify-start"}`}>
-                  <div className={`max-w-[75%] rounded-2xl px-4 py-2.5 ${msg.sender === "me" ? "bg-primary-orange text-white rounded-br-md" : "bg-[#1a1a1a] text-gray-200 border border-[#222] rounded-bl-md"}`}>
+                  <div className={`max-w-[75%] rounded-2xl px-4 py-2.5 ${msg.sender === "me" ? "bg-primary-orange text-white rounded-br-md" : "bg-asset-detail-bg text-gray-200 border border-white/[0.06] rounded-bl-md"}`}>
                     <p className="text-sm whitespace-pre-wrap break-words leading-relaxed">{msg.text}</p>
                     {msg.fileUrl && (
                       <a href={msg.fileUrl} download={msg.text.split(": ")[1]} className="mt-2 block py-2 px-3 bg-black/20 rounded-lg text-[10px] font-bold text-primary-orange hover:bg-black/40 transition-all text-center">Download File</a>
@@ -1111,8 +1112,8 @@ export function BeaconChat() {
               <div ref={messagesEndRef} />
             </div>
 
-            <div className="p-4 border-t border-[#222] bg-[#0d0d0d] flex gap-2">
-              <label className="w-12 h-12 bg-[#1a1a1a] text-gray-500 rounded-xl flex items-center justify-center border border-[#222] hover:text-white transition-all cursor-pointer">
+            <div className="p-4 border-t border-white/[0.06] bg-primary-black flex gap-2">
+              <label className="w-12 h-12 bg-asset-detail-bg text-gray-500 rounded-xl flex items-center justify-center border border-white/[0.06] hover:text-white transition-all cursor-pointer">
                 <MdAttachFile size={20} />
                 <input type="file" className="hidden" onChange={e => {
                   const file = e.target.files?.[0];
@@ -1120,7 +1121,7 @@ export function BeaconChat() {
                   e.target.value = "";
                 }} />
               </label>
-              <input type="text" value={messageInput} onChange={e => setMessageInput(e.target.value)} onKeyDown={e => e.key === "Enter" && sendMessage()} onPaste={handlePaste} placeholder="Type a message..." className="flex-1 bg-[#1a1a1a] text-white rounded-xl px-4 py-3 border border-[#222] outline-none focus:border-primary-orange transition-all" />
+              <input type="text" value={messageInput} onChange={e => setMessageInput(e.target.value)} onKeyDown={e => e.key === "Enter" && sendMessage()} onPaste={handlePaste} placeholder="Type a message..." className="flex-1 bg-asset-detail-bg text-white rounded-xl px-4 py-3 border border-white/[0.06] outline-none focus:border-primary-orange transition-all" />
               <button onClick={sendMessage} disabled={!messageInput.trim() || !isConnected} className="w-12 h-12 bg-primary-orange text-white rounded-xl flex items-center justify-center hover:scale-105 active:scale-95 transition-all disabled:opacity-40"><MdSend size={20} /></button>
             </div>
           </div>
@@ -1128,7 +1129,7 @@ export function BeaconChat() {
       </div>
 
       {/* BEACON Protocol - Practitioner Section */}
-      <section className="mt-20 pt-12 border-t border-[#222] w-full max-w-4xl mx-auto pb-20">
+      <section className="mt-20 pt-12 border-t border-white/[0.06] w-full max-w-4xl mx-auto pb-20">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
           <div className="space-y-4">
             <h2 className="text-xl font-bold text-white tracking-tight italic">The BEACON Protocol</h2>

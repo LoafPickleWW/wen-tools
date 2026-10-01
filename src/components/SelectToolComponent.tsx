@@ -1,4 +1,5 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef, type MouseEvent } from "react";
+import { Reticle } from "./cypher/Reticle";
 import { Link, useSearchParams } from "react-router-dom";
 import { TOOLS } from "../constants";
 import CarouselComponent from "./CarouselComponent";
@@ -69,37 +70,95 @@ const SUITES = [
   }
 ];
 
+/**
+ * Renders a monochrome icon asset filled with the theme gradient, so tool
+ * icons re-color along with the active theme.
+ */
+function ToolIcon({ src, size = "h-11 w-11" }: { src: string; size?: string }) {
+  return (
+    <span
+      className={`${size} relative grid shrink-0 place-items-center rounded-xl border border-primary-orange/20 bg-primary-orange/10 transition duration-300 group-hover:scale-105 group-hover:border-primary-orange/40`}
+    >
+      <span
+        aria-hidden="true"
+        className="h-[55%] w-[55%]"
+        style={{
+          background: "linear-gradient(135deg, rgb(var(--brand)), rgb(var(--brand-2)))",
+          WebkitMask: `url(${src}) center / contain no-repeat`,
+          mask: `url(${src}) center / contain no-repeat`,
+        }}
+      />
+    </span>
+  );
+}
+
+/** Tracks the cursor so a card can draw a soft spotlight under it. */
+function trackSpotlight(e: MouseEvent<HTMLElement>) {
+  const r = e.currentTarget.getBoundingClientRect();
+  e.currentTarget.style.setProperty("--mx", `${e.clientX - r.left}px`);
+  e.currentTarget.style.setProperty("--my", `${e.clientY - r.top}px`);
+}
+
+const Spotlight = () => (
+  <span
+    aria-hidden="true"
+    className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+    style={{
+      background:
+        "radial-gradient(360px circle at var(--mx, 50%) var(--my, 0%), rgb(var(--brand) / 0.12), transparent 60%)",
+    }}
+  />
+);
+
 function ToolCard({ tool, index }: { tool: any; index: number }) {
   return (
-    <Link 
-      to={tool.path} 
-      className="animate-fade-in"
-      style={{ animationDelay: `${index * 30}ms` }}
+    <Link
+      to={tool.path}
+      onMouseMove={trackSpotlight}
+      className="button-link group animate-fade-in relative flex h-full flex-col overflow-hidden rounded-2xl border border-white/[0.07] bg-banner-grey/50 p-5 text-left backdrop-blur transition duration-300 hover:-translate-y-0.5 hover:border-primary-orange/30 hover:bg-banner-grey/80"
+      style={{ animationDelay: `${Math.min(index * 30, 360)}ms` }}
       onClick={() => trackEvent("tool_click", "home", tool.label)}
       aria-label={`Open ${tool.label}: ${tool.description}`}
     >
-      <div className="button-link group relative flex flex-col h-full rounded-[36px] bg-banner-grey p-2.5 text-center transition-all duration-300 ease-in-out hover:scale-[1.02] hover:bg-secondary-gray border border-transparent hover:border-amber-400/30">
-        <div className="relative flex items-center mb-[50px] w-full h-[70px] rounded-t-[28px] bg-gradient-to-r from-[#E4E808] to-[#FD941D]">
-          <div className="absolute top-[85%] left-1/2 -translate-x-1/2 -translate-y-1/2 z-10">
-            <div className="relative flex items-center justify-center w-20 h-20 text-center rounded-full bg-[#262626] flex-shrink-0 border-transparent bg-gradient-to-r from-yellow-400 to-orange-400 p-1 ">
-              <div className="flex items-center justify-center w-full h-full rounded-full bg-[#262626]">
-                <img
-                  src={tool.icon}
-                  alt="icon"
-                  className="w-[70%] h-[70%] invert-[0.9] group-hover:scale-110 transition-transform"
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-        <h5 className="text-xl xl:text-2xl font-bold text-white group-hover:text-amber-400 transition-colors">
-          {tool.label}
-        </h5>
-        <p className="text-sm xl:text-base font-light text-slate-300 p-2 mt-2 leading-relaxed">
-          {tool.description}
-        </p>
+      <Spotlight />
+      <Reticle />
+      <div className="relative flex items-start justify-between">
+        <ToolIcon src={tool.icon} />
+        <span className="font-mono text-[11px] text-slate-600 transition group-hover:text-primary-orange">
+          [{String(index + 1).padStart(2, "0")}]
+        </span>
+      </div>
+      <h3 className="relative mt-4 font-display text-lg font-semibold tracking-tight text-white">
+        {tool.label}
+      </h3>
+      <p className="relative mt-1.5 flex-1 text-sm leading-relaxed text-slate-400">
+        {tool.description}
+      </p>
+      <div className="relative mt-5 flex items-center justify-between border-t border-dashed border-white/[0.08] pt-3 font-mono text-[11px] text-slate-500">
+        <span className="truncate transition group-hover:text-slate-300">~{tool.path}</span>
+        <span className="text-primary-orange opacity-0 transition duration-300 group-hover:translate-x-0.5 group-hover:opacity-100">
+          run →
+        </span>
       </div>
     </Link>
+  );
+}
+
+function SectionHeading({ index, eyebrow, title, count }: { index?: number; eyebrow: string; title: string; count?: number }) {
+  return (
+    <div className="mb-6 flex items-end justify-between gap-4">
+      <div>
+        <p className="wt-label mb-3">
+          ( {index !== undefined ? String(index).padStart(2, "0") + " " : ""}{eyebrow} )
+        </p>
+        <h2 className="font-display text-2xl font-semibold tracking-tight text-white md:text-3xl">
+          {title}
+        </h2>
+      </div>
+      {count !== undefined && (
+        <span className="font-mono text-xs text-slate-500">{count} tools</span>
+      )}
+    </div>
   );
 }
 
@@ -122,7 +181,7 @@ export function SelectToolComponent() {
   const filteredTools = useMemo(() => {
     const tools = TOOLS.filter(t => !t.hideFromLanding);
     if (!searchQuery) return tools;
-    
+
     const query = searchQuery.toLowerCase();
     return tools.filter(
       (t) =>
@@ -130,6 +189,22 @@ export function SelectToolComponent() {
         t.description.toLowerCase().includes(query)
     );
   }, [searchQuery]);
+
+  // Suites live on "/" as ?suite=, so the route-level ScrollToTop never fires.
+  // Opening a suite starts at the top; leaving one returns to the suite list.
+  const prevSuite = useRef(selectedSuiteId);
+  useEffect(() => {
+    const prev = prevSuite.current;
+    prevSuite.current = selectedSuiteId;
+    if (prev === selectedSuiteId) return;
+    if (selectedSuiteId) {
+      window.scrollTo({ top: 0 });
+    } else if (prev) {
+      requestAnimationFrame(() =>
+        document.getElementById("tool-suites")?.scrollIntoView({ block: "start" })
+      );
+    }
+  }, [selectedSuiteId]);
 
   const activeSuite = useMemo(() => {
     return SUITES.find(s => s.id === selectedSuiteId);
@@ -141,46 +216,31 @@ export function SelectToolComponent() {
   }, [selectedSuiteId]);
 
   return (
-    <main className="text-center w-full max-w-7xl mx-auto px-4 pt-0" aria-label="Algorand Tool Discovery">
-      {/* Navigation & Search (Pinned Flush To Top) */}
-      <div className="w-full bg-primary-black py-3 mb-6 border-b border-secondary-gray/30">
+    <main id="tools" className={`mx-auto w-full max-w-7xl scroll-mt-24 px-4 text-center ${activeSuite ? "pt-8" : ""}`} aria-label="Algorand Tool Discovery">
+      {/* Search */}
+      <div className={activeSuite ? "hidden" : "-mt-2 mb-10"}>
         <ToolSearch query={searchQuery} setQuery={setSearchQuery} />
-      </div>
-
-      {/* Carousels Section */}
-      <div className="mx-auto my-4 md:my-6">
-        <div className="flex flex-col lg:flex-row items-center justify-center lg:gap-8 gap-6">
-          <CarouselComponent
-            images={[
-              { path: "./wenwallet.png", url: "/wallet" },
-            ]}
-          />
-          <CarouselComponent
-            images={[
-              { path: "./AEwebp.webp", url: "https://astroexplorer.co/" },
-            ]}
-          />
-        </div>
       </div>
 
       {/* Tools Listing */}
       <div className="min-h-[400px]">
         {searchQuery ? (
-          <div className="animate-fade-in">
-            <h2 className="text-xl text-slate-400 mb-8 text-left">
-              Found {filteredTools.length} tools matching "{searchQuery}"
-            </h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 items-stretch mb-12">
+          <div className="animate-fade-in text-left">
+            <p className="mb-6 text-sm text-slate-400">
+              <span className="font-semibold text-white">{filteredTools.length}</span>{" "}
+              {filteredTools.length === 1 ? "tool matches" : "tools match"} “{searchQuery}”
+            </p>
+            <div className="mb-12 grid grid-cols-1 items-stretch gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {filteredTools.map((tool, index) => (
                 <ToolCard key={tool.id} tool={tool} index={index} />
               ))}
             </div>
             {filteredTools.length === 0 && (
-              <div className="text-center py-20">
-                <p className="text-2xl text-slate-500">No tools found matching your search.</p>
-                <button 
+              <div className="flex flex-col items-center gap-3 rounded-3xl border border-dashed border-white/10 py-20 text-center">
+                <p className="font-display text-xl text-slate-300">Nothing matches that search.</p>
+                <button
                   onClick={() => setSearchQuery("")}
-                  className="mt-4 text-amber-400 hover:underline font-semibold"
+                  className="wt-btn wt-btn-ghost"
                 >
                   Clear search
                 </button>
@@ -189,102 +249,108 @@ export function SelectToolComponent() {
           </div>
         ) : activeSuite ? (
           <div className="animate-fade-in text-left">
-            <button 
+            <button
               onClick={() => setSearchParams({})}
-              className="mb-8 px-5 py-2.5 bg-banner-grey hover:bg-secondary-gray text-gray-200 border border-white/5 rounded-xl transition flex items-center gap-2 font-bold text-xs shadow-md"
+              className="wt-btn wt-btn-ghost mb-6 text-xs"
             >
-              ← Back to Discovery
+              ← Back to discovery
             </button>
-            
-            <div className="mb-10 bg-banner-grey/40 border border-white/5 p-6 md:p-8 rounded-3xl backdrop-blur-md">
-              <h2 className="text-3xl font-black italic uppercase tracking-tight text-white mb-2 bg-gradient-to-r from-white to-slate-500 bg-clip-text text-transparent">
-                {activeSuite.label}
-              </h2>
-              <p className="text-slate-300 text-sm leading-relaxed">
-                {activeSuite.description}
-              </p>
+
+            <div className="relative mb-8 overflow-hidden rounded-3xl border border-white/[0.07] bg-banner-grey/50 p-6 backdrop-blur md:p-8">
+              <div
+                aria-hidden="true"
+                className="pointer-events-none absolute inset-0"
+                style={{ background: "radial-gradient(40rem 16rem at 0% 0%, rgb(var(--brand) / 0.12), transparent 70%)" }}
+              />
+              <div className="relative flex items-start gap-5">
+                <ToolIcon src={activeSuite.icon} size="h-14 w-14" />
+                <div>
+                  <h2 className="font-display text-3xl font-semibold tracking-tight text-white">
+                    {activeSuite.label}
+                  </h2>
+                  <p className="mt-2 max-w-3xl text-sm leading-relaxed text-slate-400">
+                    {activeSuite.description}
+                  </p>
+                </div>
+              </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 items-stretch mb-20">
+            <div className="mb-20 grid grid-cols-1 items-stretch gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {suiteTools.map((tool, index) => (
                 <ToolCard key={tool.id} tool={tool} index={index} />
               ))}
             </div>
           </div>
         ) : (
-          <div className="space-y-16">
+          <div className="space-y-20">
             {/* Featured Tools Section */}
-            <section className="text-left animate-fade-in">
-              <h2 className="text-2xl font-black italic uppercase tracking-tight text-white mb-6 border-l-4 border-amber-400 pl-4 bg-gradient-to-r from-white to-slate-500 bg-clip-text text-transparent">
-                Featured Tools
-              </h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 items-stretch">
+            <section className="animate-fade-in text-left">
+              <SectionHeading index={1} eyebrow="start here" title="Featured tools" />
+              <div className="grid grid-cols-1 items-stretch gap-3 sm:grid-cols-2 lg:grid-cols-4">
                 {featuredTools.map((tool, index) => (
                   <ToolCard key={tool.id} tool={tool} index={index} />
                 ))}
               </div>
             </section>
 
+            {/* Sponsored slot. Add entries to rotate more ads. */}
+            <section className="animate-fade-in mx-auto max-w-3xl" aria-label="Sponsored">
+              <div className="relative flex items-center justify-center rounded-3xl border border-white/[0.07] bg-banner-grey/40 px-6 pb-3 pt-8 backdrop-blur transition hover:border-white/15">
+                <span className="wt-label absolute left-5 top-4 !text-slate-600">( sponsored )</span>
+                <CarouselComponent
+                  images={[{ path: "./AEwebp.webp", url: "https://astroexplorer.co/" }]}
+                />
+              </div>
+            </section>
+
             {/* Tool Suites Section */}
-            <section className="text-left animate-fade-in">
-              <h2 className="text-2xl font-black italic uppercase tracking-tight text-white mb-6 border-l-4 border-amber-400 pl-4 bg-gradient-to-r from-white to-slate-500 bg-clip-text text-transparent">
-                Tool Suites
-              </h2>
-              <div className="space-y-6 mb-20 max-w-6xl mx-auto">
-                {SUITES.map((suite) => {
+            <section id="tool-suites" className="animate-fade-in scroll-mt-24 text-left">
+              <SectionHeading index={2} eyebrow="everything else" title="Tool suites" />
+              <div className="mb-20 grid gap-3 md:grid-cols-2">
+                {SUITES.map((suite, i) => {
                   const cardContent = (
-                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-                      <div className="flex flex-col md:flex-row md:items-start gap-6 flex-grow">
-                        {/* Icon */}
-                        <div className="w-14 h-14 rounded-2xl bg-gradient-to-r from-amber-400 to-orange-500 p-0.5 flex-shrink-0 shadow-lg shadow-orange-500/10">
-                          <div className="w-full h-full rounded-[14px] bg-[#1a1a1a] flex items-center justify-center">
-                            <img 
-                              src={suite.icon} 
-                              alt={suite.label} 
-                              className="w-[60%] h-[60%] object-contain invert"
-                            />
+                    <>
+                      <Spotlight />
+                      <Reticle />
+                      <div className="relative flex items-start gap-4">
+                        <ToolIcon src={suite.icon} size="h-12 w-12" />
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center justify-between gap-3">
+                            <h3 className="font-display text-xl font-semibold tracking-tight text-white">
+                              {suite.label}
+                            </h3>
+                            <span className="flex items-center gap-1.5 text-xs font-semibold text-primary-orange opacity-60 transition duration-300 group-hover:translate-x-1 group-hover:opacity-100">
+                              <span className="hidden sm:inline">Open</span>
+                              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.25} d="M9 5l7 7-7 7" />
+                              </svg>
+                            </span>
                           </div>
-                        </div>
-                        {/* Details */}
-                        <div className="space-y-2 max-w-4xl">
-                          <h3 className="text-2xl font-black italic uppercase tracking-tight text-white group-hover:text-amber-400 transition-colors">
-                            {suite.label}
-                          </h3>
-                          <p className="text-slate-300 text-sm leading-relaxed">
+                          <p className="mt-1.5 text-sm leading-relaxed text-slate-400">
                             {suite.description}
                           </p>
-                          <div className="flex flex-wrap gap-2 pt-2">
-                            {suite.features.map((feat, i) => (
-                              <span key={i} className="text-slate-400 text-xs flex items-center gap-1.5 bg-slate-950/40 px-3 py-1 rounded-xl border border-white/5">
-                                <span className="text-amber-400 font-bold">•</span>
+                          <ul className="mt-4 flex flex-wrap gap-1.5">
+                            {suite.features.map((feat, j) => (
+                              <li key={j} className="rounded-lg border border-white/[0.06] bg-primary-black/40 px-2.5 py-1 text-[11px] text-slate-400">
                                 {feat}
-                              </span>
+                              </li>
                             ))}
-                          </div>
+                          </ul>
                         </div>
                       </div>
-                      {/* Arrow Indicator */}
-                      <div className="flex-shrink-0 self-end md:self-center flex items-center gap-2 text-amber-400 font-bold group-hover:translate-x-2 transition-transform duration-300">
-                        <span className="text-xs uppercase tracking-wider opacity-0 group-hover:opacity-100 transition-opacity">Launch Suite</span>
-                        <svg
-                          className="w-5 h-5"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
-                        </svg>
-                      </div>
-                    </div>
+                    </>
                   );
 
-                  const cardClasses = "block w-full bg-banner-grey/40 border border-white/5 hover:border-amber-400/40 hover:bg-secondary-gray/40 rounded-3xl p-6 md:p-8 transition-all duration-300 shadow-2xl group cursor-pointer hover:scale-[1.01]";
+                  const cardClasses = `button-link group relative block w-full overflow-hidden rounded-3xl [--wt-r:24px] border border-white/[0.07] bg-banner-grey/50 p-6 text-left backdrop-blur transition duration-300 hover:-translate-y-0.5 hover:border-primary-orange/30 hover:bg-banner-grey/80 ${
+                    i === SUITES.length - 1 && SUITES.length % 2 === 1 ? "md:col-span-2" : ""
+                  }`;
 
                   if (suite.path) {
                     return (
-                      <Link 
+                      <Link
                         key={suite.id}
                         to={suite.path}
+                        onMouseMove={trackSpotlight}
                         className={cardClasses}
                       >
                         {cardContent}
@@ -293,10 +359,11 @@ export function SelectToolComponent() {
                   }
 
                   return (
-                    <button 
+                    <button
                       key={suite.id}
                       onClick={() => setSearchParams({ suite: suite.id })}
-                      className={`${cardClasses} text-left`}
+                      onMouseMove={trackSpotlight}
+                      className={cardClasses}
                     >
                       {cardContent}
                     </button>

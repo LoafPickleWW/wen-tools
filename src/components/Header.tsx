@@ -1,43 +1,52 @@
-import AppBar from "@mui/material/AppBar";
-import Toolbar from "@mui/material/Toolbar";
-import Typography from "@mui/material/Typography";
-
-import { Link } from "react-router-dom";
+import { Link, NavLink } from "react-router-dom";
 import ConnectButton from "./ConnectButton";
 import SelectNetworkComponent from "./SelectNetworkComponent";
 import DonationDialog from "./DonationDialog";
+import { Wordmark } from "./Wordmark";
+
+const NAV = [
+  { label: "Wallet", to: "/wallet" },
+  { label: "Swap", to: "/wen-swap" },
+  { label: "Agents", to: "/agents" },
+  { label: "Encyclopedia", to: "/encyclopedia" },
+];
 
 export function Header() {
   return (
-    <AppBar sx={{ backgroundColor: "#1A171A" }} position="sticky" className="wentools-header transition-all duration-500">
-      <Toolbar  className="flex flex-row items-center justify-between w-[100%] lg:w-[90%] mx-auto py-2 px-4 gap-0 lg:gap-6">
-        <Link to="/" aria-label="wen.tools Home">
-          <img src="/w-t-logo.png" alt="wen.tools - Algorand Developer Utility Suite" className=" wentools-logo mr-2 p-1 w-20 lg:w-36 transition-all duration-500" />
+    <header className="wentools-header sticky top-0 z-40 border-b border-white/[0.07] bg-primary-black/70 backdrop-blur-xl backdrop-saturate-150 transition-colors duration-500">
+      <div className="mx-auto flex h-16 w-full max-w-7xl items-center gap-2 px-3 sm:gap-3 sm:px-4">
+        <Link
+          to="/"
+          aria-label="wen.tools Home"
+          className="wentools-logo shrink-0 text-xl transition hover:opacity-90 sm:text-[1.4rem]"
+        >
+          <Wordmark />
         </Link>
-        <Typography
-          component="div"
-          sx={{
-            fontFamily: "Josefin Slab",
-            flexGrow: 1,
-            fontWeight: 400,
-            fontSize: {
-              xs: ".5rem",
-              sm: "1rem",
-              lg: "1rem",
-            },
-            ":hover": {
-              cursor: "pointer",
-            },
-            ml: { xs: 2, sm: 0 },
-            display: { xs: "none", sm: "block" },
-          }}
-        ></Typography>
-      <div className="flex flex-row items-center gap-1 sm:gap-3">
-        <ConnectButton />
-        <SelectNetworkComponent />
-        <DonationDialog />
+
+        <nav aria-label="Primary" className="ml-6 hidden items-center gap-0.5 lg:flex">
+          {NAV.map((item) => (
+            <NavLink
+              key={item.to}
+              to={item.to}
+              className={({ isActive }) =>
+                `rounded-lg px-3 py-1.5 text-sm font-medium transition ${
+                  isActive
+                    ? "bg-white/[0.06] text-white"
+                    : "text-slate-400 hover:bg-white/[0.04] hover:text-white"
+                }`
+              }
+            >
+              {item.label}
+            </NavLink>
+          ))}
+        </nav>
+
+        <div className="ml-auto flex items-center gap-1.5 sm:gap-2">
+          <SelectNetworkComponent />
+          <DonationDialog />
+          <ConnectButton />
+        </div>
       </div>
-      </Toolbar>
-    </AppBar>
+    </header>
   );
 }

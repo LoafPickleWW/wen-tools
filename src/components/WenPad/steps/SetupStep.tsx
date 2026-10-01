@@ -16,13 +16,13 @@ const SetupStep = () => {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-[#010002]/40 p-8 rounded-3xl border border-gray-800">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-primary-black/40 p-8 rounded-3xl border border-white/[0.08]">
         <div className="col-span-full space-y-1">
           <label className="text-[10px] font-black uppercase tracking-[0.2em] text-primary-orange ml-1">Collection Name</label>
           <input 
             {...form.register('name')}
             placeholder="e.g. Astro Punks"
-            className="w-full bg-[#1A171A] border border-gray-800 rounded-2xl px-6 py-4 text-lg font-bold focus:outline-none focus:border-primary-orange/50 transition-all placeholder:text-gray-700"
+            className="w-full bg-asset-detail-bg border border-white/[0.08] rounded-2xl px-6 py-4 text-lg font-bold focus:outline-none focus:border-primary-orange/50 transition-all placeholder:text-gray-700"
           />
         </div>
 
@@ -31,7 +31,7 @@ const SetupStep = () => {
           <input 
             {...form.register('unitName')}
             placeholder="e.g. ASTRO"
-            className="w-full bg-[#1A171A] border border-gray-800 rounded-2xl px-6 py-4 text-sm focus:outline-none focus:border-primary-orange/50 transition-all placeholder:text-gray-700"
+            className="w-full bg-asset-detail-bg border border-white/[0.08] rounded-2xl px-6 py-4 text-sm focus:outline-none focus:border-primary-orange/50 transition-all placeholder:text-gray-700"
           />
         </div>
 
@@ -41,7 +41,7 @@ const SetupStep = () => {
             type="number"
             {...form.register('size', { valueAsNumber: true })}
             placeholder="How many NFTs?"
-            className="w-full bg-[#1A171A] border border-gray-800 rounded-2xl px-6 py-4 text-sm focus:outline-none focus:border-primary-orange/50 transition-all placeholder:text-gray-700"
+            className="w-full bg-asset-detail-bg border border-white/[0.08] rounded-2xl px-6 py-4 text-sm focus:outline-none focus:border-primary-orange/50 transition-all placeholder:text-gray-700"
           />
         </div>
 
@@ -51,7 +51,7 @@ const SetupStep = () => {
             {...form.register('description')}
             placeholder="Tell us about your collection..."
             rows={3}
-            className="w-full bg-[#1A171A] border border-gray-800 rounded-2xl px-6 py-4 text-sm focus:outline-none focus:border-primary-orange/50 transition-all placeholder:text-gray-700 resize-none"
+            className="w-full bg-asset-detail-bg border border-white/[0.08] rounded-2xl px-6 py-4 text-sm focus:outline-none focus:border-primary-orange/50 transition-all placeholder:text-gray-700 resize-none"
           />
         </div>
       </div>

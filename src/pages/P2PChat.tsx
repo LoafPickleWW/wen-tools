@@ -1,3 +1,5 @@
+import { ToolHero } from "../components/cypher/ToolKit";
+import { Meta } from "../components/Meta";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useWallet } from "@txnlab/use-wallet-react";
 import algosdk from "algosdk";
@@ -504,11 +506,18 @@ export function P2PChat() {
   const shortenAddr = (addr: string) => addr ? `${addr.slice(0, 6)}...${addr.slice(-4)}` : "";
 
   return (
-    <div className="flex flex-col items-center justify-center w-full px-4 py-8 min-h-[80vh]">
+    <div className="flex flex-col items-center justify-start w-full px-4 pb-8 min-h-[80vh]">
+      <Meta />
+      <ToolHero
+        tag="p2p chat"
+        title="P2P Encrypted Chat"
+        description="End-to-end encrypted peer-to-peer chat between Algorand wallets."
+        meta={["end-to-end encrypted", "wallet identity", "dead drops"]}
+      />
       <div className="w-full max-w-2xl">
         {phase === "setup" && (
-          <div className="bg-[#1a1a1a] rounded-2xl p-8 border border-[#333] shadow-2xl">
-            <h1 className="text-3xl font-bold text-white mb-8 text-center">🔐 P2P Encrypted Chat</h1>
+          <div className="bg-asset-detail-bg rounded-2xl p-8 border border-white/10 shadow-2xl">
+            <p className="wt-label mb-6 text-center">( host setup )</p>
             <div className="p-6 rounded-xl bg-primary-orange/5 border border-primary-orange/20 mb-6 text-center">
               <p className="text-primary-orange text-sm font-bold mb-2 uppercase tracking-widest">Host Identity Required</p>
               <p className="text-gray-400 text-xs leading-relaxed">
@@ -523,11 +532,11 @@ export function P2PChat() {
               Verify & Create Session
             </button>
             <div className="flex flex-col gap-3">
-              <input type="text" value={remoteRequestId} onChange={(e) => setRemoteRequestId(e.target.value)} placeholder="Session ID..." className="w-full py-3 px-4 bg-[#242424] text-white rounded-xl border border-[#333]" />
+              <input type="text" value={remoteRequestId} onChange={(e) => setRemoteRequestId(e.target.value)} placeholder="Session ID..." className="w-full py-3 px-4 bg-banner-grey text-white rounded-xl border border-white/10" />
               <button onClick={() => joinSession()} className="w-full py-3 bg-[#646cff] text-white rounded-xl font-bold">Join Session</button>
             </div>
 
-            <div className="mt-8 pt-8 border-t border-[#333]">
+            <div className="mt-8 pt-8 border-t border-white/10">
               <p className="text-gray-500 text-[10px] font-black uppercase tracking-widest mb-4 text-center">Asynchronous Tools</p>
               <button 
                 onClick={() => setPhase("deaddrop")}
@@ -541,11 +550,11 @@ export function P2PChat() {
 
         {/* ─── DEAD DROP PHASE ─── */}
         {phase === "deaddrop" && (
-          <div className="bg-[#1a1a1a] rounded-2xl p-8 border border-[#333] shadow-2xl">
+          <div className="bg-asset-detail-bg rounded-2xl p-8 border border-white/10 shadow-2xl">
             <div className="flex items-center justify-between mb-8">
-              <h1 className="text-2xl font-bold text-white flex items-center gap-2">
+              <h2 className="text-2xl font-bold text-white flex items-center gap-2">
                 <span className="text-primary-orange">📦</span> Dead Drop Relay
-              </h1>
+              </h2>
               <button onClick={() => setPhase("setup")} className="text-gray-500 hover:text-white transition-colors">
                 <MdClose size={24} />
               </button>
@@ -562,7 +571,7 @@ export function P2PChat() {
                       value={ddRecipient}
                       onChange={(e) => setDdRecipient(e.target.value)}
                       placeholder="Recipient Wallet or .algo name"
-                      className="w-full py-3 px-4 bg-[#242424] text-white rounded-xl border border-[#333] outline-none focus:border-primary-orange transition-all mb-2"
+                      className="w-full py-3 px-4 bg-banner-grey text-white rounded-xl border border-white/10 outline-none focus:border-primary-orange transition-all mb-2"
                     />
                     {activeAddress && (
                       <button 
@@ -579,9 +588,9 @@ export function P2PChat() {
                       value={ddMessage}
                       onChange={(e) => setDdMessage(e.target.value)}
                       placeholder={ddFile ? `File attached: ${ddFile.name}` : "Your encrypted message..."}
-                      className="flex-1 py-3 px-4 bg-[#242424] text-white rounded-xl border border-[#333] outline-none focus:border-primary-orange transition-all min-h-[60px]"
+                      className="flex-1 py-3 px-4 bg-banner-grey text-white rounded-xl border border-white/10 outline-none focus:border-primary-orange transition-all min-h-[60px]"
                     />
-                    <label className="p-4 bg-[#242424] hover:bg-[#333] text-gray-400 rounded-xl border border-[#333] cursor-pointer transition-all">
+                    <label className="p-4 bg-banner-grey hover:bg-secondary-gray text-gray-400 rounded-xl border border-white/10 cursor-pointer transition-all">
                       <MdAttachFile size={20} />
                       <input 
                         type="file" 
@@ -907,7 +916,7 @@ export function P2PChat() {
 
         {/* ─── WAITING PHASE (Offer side) ─── */}
         {phase === "waiting" && (
-          <div className="bg-[#1a1a1a] rounded-2xl p-8 border border-[#333] shadow-2xl text-center">
+          <div className="bg-asset-detail-bg rounded-2xl p-8 border border-white/10 shadow-2xl text-center">
             <div className="mb-6">
               <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary-orange/10 text-primary-orange text-sm mb-4">
                 <span className="w-2 h-2 rounded-full bg-primary-orange animate-pulse" />
@@ -920,21 +929,21 @@ export function P2PChat() {
                 <p className="text-gray-400 text-sm mb-3">
                   📱 Scan to join the chat:
                 </p>
-                <div className="p-4 rounded-2xl bg-[#0a0a0a] border border-[#222] inline-block">
+                <div className="p-4 rounded-2xl bg-primary-black border border-white/[0.06] inline-block">
                   <img src={qrDataUrl} alt="Session QR" className="w-64 h-64 rounded-lg" />
                 </div>
               </div>
             )}
 
             <div className="flex items-center gap-4 mb-6">
-              <div className="flex-1 h-px bg-[#333]" />
+              <div className="flex-1 h-px bg-secondary-gray" />
               <span className="text-gray-500 text-sm">OR</span>
-              <div className="flex-1 h-px bg-[#333]" />
+              <div className="flex-1 h-px bg-secondary-gray" />
             </div>
 
             <div className="mb-6">
               <p className="text-gray-400 text-sm mb-2">🌐 Share this link for browser-based join:</p>
-              <div className="flex items-center gap-2 bg-[#0a0a0a] rounded-xl p-3 border border-[#222]">
+              <div className="flex items-center gap-2 bg-primary-black rounded-xl p-3 border border-white/[0.06]">
                 <code className="flex-1 text-primary-orange text-[10px] break-all text-left font-mono">
                   {deepLinkUrl}
                 </code>
@@ -966,7 +975,7 @@ export function P2PChat() {
 
         {/* ─── CONNECTING PHASE ─── */}
         {phase === "connecting" && (
-          <div className="bg-[#1a1a1a] rounded-2xl p-8 border border-[#333] shadow-2xl text-center">
+          <div className="bg-asset-detail-bg rounded-2xl p-8 border border-white/10 shadow-2xl text-center">
             {pendingNonce ? (
               <>
                 <div className="w-16 h-16 bg-primary-orange/20 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -983,8 +992,8 @@ export function P2PChat() {
                     }
                   }}
                   className="w-full py-4 px-6 rounded-xl font-bold text-white
-                    bg-gradient-to-r from-primary-orange to-[#e06b10]
-                    hover:from-[#e06b10] hover:to-primary-orange
+                    bg-gradient-to-r from-primary-orange to-orange-600
+                    hover:from-orange-600 hover:to-primary-orange
                     transition-all duration-300 shadow-lg hover:shadow-primary-orange/30
                     flex items-center justify-center gap-2"
                 >
@@ -994,7 +1003,7 @@ export function P2PChat() {
               </>
             ) : (
               <>
-                <div className="animate-spin w-12 h-12 border-4 border-[#333] border-t-primary-orange rounded-full mx-auto mb-4" />
+                <div className="animate-spin w-12 h-12 border-4 border-white/10 border-t-primary-orange rounded-full mx-auto mb-4" />
                 <p className="text-white font-medium">{connectionStatus}</p>
                 <p className="text-gray-500 text-sm mt-2">This may take a moment...</p>
               </>
@@ -1010,11 +1019,11 @@ export function P2PChat() {
 
         {/* ─── CHAT PHASE ─── */}
         {phase === "chat" && (
-          <div className="bg-[#1a1a1a] rounded-2xl border border-[#333] shadow-2xl flex flex-col w-full overflow-hidden"
+          <div className="bg-asset-detail-bg rounded-2xl border border-white/10 shadow-2xl flex flex-col w-full overflow-hidden"
             style={{ height: "80vh" }}>
             
             {/* Chat Header */}
-            <div className="flex items-center justify-between px-6 py-4 border-b border-[#333] bg-[#1e1e1e]">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-white/10 bg-banner-grey">
               <div className="flex items-center gap-3">
                 <span className={`w-3 h-3 rounded-full ${isConnected ? "bg-green-500 animate-pulse" : "bg-red-500"}`} />
                 <div>
@@ -1033,7 +1042,7 @@ export function P2PChat() {
             </div>
 
             {/* Messages */}
-            <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-6 space-y-6 bg-[#141414]">
+            <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-6 space-y-6 bg-primary-black">
               {messages.length === 0 && (
                 <div className="text-center py-20">
                   <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-4 border border-white/10">
@@ -1057,7 +1066,7 @@ export function P2PChat() {
                     {/* Avatar */}
                     <div 
                       onClick={() => addr && setShowIdentityCard({ address: addr, nfd })}
-                      className="flex-shrink-0 w-9 h-9 rounded-full bg-[#222] border border-white/10 overflow-hidden cursor-pointer hover:border-primary-orange transition-all self-end mb-1 shadow-lg"
+                      className="flex-shrink-0 w-9 h-9 rounded-full bg-banner-grey border border-white/10 overflow-hidden cursor-pointer hover:border-primary-orange transition-all self-end mb-1 shadow-lg"
                     >
                       {nfd?.avatar ? (
                         <img src={nfd.avatar} alt="avatar" className="w-full h-full object-cover" />
@@ -1071,8 +1080,8 @@ export function P2PChat() {
                     <div
                       className={`max-w-[85%] sm:max-w-[70%] px-4 py-3 rounded-2xl text-sm whitespace-pre-wrap break-words shadow-md ${
                         isMe
-                          ? "bg-gradient-to-br from-primary-orange to-[#e06b10] text-white rounded-br-md"
-                          : "bg-[#2a2a3a] text-gray-100 rounded-bl-md"
+                          ? "bg-gradient-to-br from-primary-orange to-orange-600 text-white rounded-br-md"
+                          : "bg-banner-grey text-gray-100 rounded-bl-md"
                       }`}
                     >
                       {/* Name tag for peer */}
@@ -1136,8 +1145,8 @@ export function P2PChat() {
             </div>
 
             {/* Input Area */}
-            <div className="p-4 border-t border-[#333] bg-[#1e1e1e]">
-              <div className="flex items-end gap-2 bg-[#262626] rounded-2xl border border-[#3a3a3a] p-2 focus-within:border-primary-orange/50 transition-all">
+            <div className="p-4 border-t border-white/10 bg-banner-grey">
+              <div className="flex items-end gap-2 bg-banner-grey rounded-2xl border border-white/15 p-2 focus-within:border-primary-orange/50 transition-all">
                 <button
                   onClick={() => {
                     const input = document.createElement("input");
@@ -1191,7 +1200,7 @@ export function P2PChat() {
         {phase === "setup" && (
           <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Security Info */}
-            <div className="p-6 rounded-2xl bg-[#1a1a1a] border border-[#333] shadow-xl">
+            <div className="p-6 rounded-2xl bg-asset-detail-bg border border-white/10 shadow-xl">
               <h3 className="text-sm font-bold text-white mb-4 flex items-center gap-2 uppercase tracking-widest">
                 <span className="text-primary-orange">🔒</span> Security Specs
               </h3>
@@ -1212,7 +1221,7 @@ export function P2PChat() {
             </div>
 
             {/* Use Cases */}
-            <div className="p-6 rounded-2xl bg-[#1a1a1a] border border-[#333] shadow-xl">
+            <div className="p-6 rounded-2xl bg-asset-detail-bg border border-white/10 shadow-xl">
               <h3 className="text-sm font-bold text-white mb-4 flex items-center gap-2 uppercase tracking-widest">
                 <span className="text-primary-orange">🚀</span> Common Use Cases
               </h3>
@@ -1237,7 +1246,7 @@ export function P2PChat() {
         {/* Identity Card Modal */}
         {showIdentityCard && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fadeIn">
-            <div className="bg-[#1a1a1a] border border-white/10 rounded-[2.5rem] w-full max-w-sm overflow-hidden shadow-2xl">
+            <div className="bg-asset-detail-bg border border-white/10 rounded-[2.5rem] w-full max-w-sm overflow-hidden shadow-2xl">
               <div className="relative p-8 text-center">
                 <button 
                   onClick={() => setShowIdentityCard(null)}
@@ -1246,7 +1255,7 @@ export function P2PChat() {
                   <MdClose size={24} />
                 </button>
 
-                <div className="w-24 h-24 rounded-full bg-[#333] border-4 border-primary-orange mx-auto mb-6 overflow-hidden shadow-xl shadow-primary-orange/20">
+                <div className="w-24 h-24 rounded-full bg-secondary-gray border-4 border-primary-orange mx-auto mb-6 overflow-hidden shadow-xl shadow-primary-orange/20">
                   {showIdentityCard.nfd?.avatar ? (
                     <img src={showIdentityCard.nfd.avatar} alt="avatar" className="w-full h-full object-cover" />
                   ) : (

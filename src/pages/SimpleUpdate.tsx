@@ -1,3 +1,5 @@
+import { ToolHero } from "../components/cypher/ToolKit";
+import { Reticle } from "../components/cypher/Reticle";
 import { useState } from "react";
 import algosdk from "algosdk";
 import { useNavigate } from "react-router-dom";
@@ -81,7 +83,7 @@ export function SimpleUpdate() {
           type="text"
           id={`category-${id}`}
           placeholder={type === "traits" ? "Trait type" : type === "filters" ? "Filter type" : "Extra key"}
-          className="w-1/2 bg-slate-900/60 border border-slate-700 text-sm font-medium text-white placeholder:text-slate-500 px-4 py-2.5 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary-orange focus:border-primary-orange transition-all"
+          className="w-1/2 bg-asset-detail-bg/60 border border-white/[0.12] text-sm font-medium text-white placeholder:text-slate-500 px-4 py-2.5 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary-orange focus:border-primary-orange transition-all"
           value={item.category}
           onChange={(e) => {
             const newMetadata = formData[type].map((trait: any) => {
@@ -104,7 +106,7 @@ export function SimpleUpdate() {
           id={`name-${id}`}
           type="text"
           placeholder="Value"
-          className="w-1/2 bg-slate-900/60 border border-slate-700 text-sm font-medium text-white placeholder:text-slate-500 px-4 py-2.5 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary-orange focus:border-primary-orange transition-all"
+          className="w-1/2 bg-asset-detail-bg/60 border border-white/[0.12] text-sm font-medium text-white placeholder:text-slate-500 px-4 py-2.5 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary-orange focus:border-primary-orange transition-all"
           value={item.name}
           onChange={(e) => {
             const newMetadata = formData[type].map((trait: any) => {
@@ -641,12 +643,16 @@ export function SimpleUpdate() {
         title="Simple Update" 
         description="Modify metadata and configuration for existing Algorand assets. Supporting ARC-19, ARC-69, and standard token updates."
       />
-      <h1 className="text-3xl font-extrabold bg-gradient-to-r from-orange-400 to-amber-500 bg-clip-text text-transparent tracking-tight mt-6">
-        {TOOLS.find((tool) => tool.path === window.location.pathname)?.label || "Simple Update"}
-      </h1>
+      <ToolHero
+        tag="update"
+        title={TOOLS.find((tool) => tool.path === window.location.pathname)?.label || "Simple Update"}
+        description="Modify metadata, URLs, freeze or clawback settings for a single existing asset."
+        meta={["single asset", "ARC-19 / 69"]}
+      />
       <ConnectButton inmain={true} />
 
-      <div className="w-full max-w-xl bg-white/5 backdrop-blur-md rounded-2xl border border-white/10 p-6 md:p-8 mt-6 shadow-2xl space-y-6 text-left">
+      <div className="w-full max-w-xl wt-frame relative bg-banner-grey/50 backdrop-blur-md rounded-3xl border border-white/[0.07] p-6 md:p-8 mt-6 shadow-2xl [--wt-r:24px] [--wt-in:12px] space-y-6 text-left">
+<Reticle />
         {assetID === "" || !formData.name ? (
           <div className="space-y-4">
             <div className="flex flex-col">
@@ -657,7 +663,7 @@ export function SimpleUpdate() {
                 type="number"
                 id="asset_id"
                 placeholder="Ex: 2315438437"
-                className="w-full bg-slate-900/60 border border-slate-700 text-sm font-medium text-white placeholder:text-slate-500 px-4 py-3 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary-orange focus:border-primary-orange transition-all"
+                className="w-full bg-asset-detail-bg/60 border border-white/[0.12] text-sm font-medium text-white placeholder:text-slate-500 px-4 py-3 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary-orange focus:border-primary-orange transition-all"
               />
             </div>
             <button
@@ -669,9 +675,9 @@ export function SimpleUpdate() {
           </div>
         ) : (
           <>
-            <div className="flex items-center justify-between p-4 bg-slate-900/60 border border-slate-800 rounded-xl">
+            <div className="flex items-center justify-between p-4 bg-asset-detail-bg/60 border border-white/[0.08] rounded-xl">
               <button
-                className="text-xs font-bold text-slate-400 hover:text-white transition-colors uppercase tracking-wider bg-slate-800/40 hover:bg-slate-805/80 border border-slate-700/50 px-3 py-1.5 rounded-lg"
+                className="text-xs font-bold text-slate-400 hover:text-white transition-colors uppercase tracking-wider bg-slate-800/40 hover:bg-slate-805/80 border border-white/[0.12] px-3 py-1.5 rounded-lg"
                 onClick={() => {
                   removeStoredData();
                   window.location.reload();
@@ -699,7 +705,7 @@ export function SimpleUpdate() {
                   Name
                 </label>
                 <input
-                  className="w-full bg-slate-950/40 border border-slate-800 text-sm font-medium text-slate-400 px-4 py-3 rounded-xl cursor-not-allowed select-none"
+                  className="w-full bg-primary-black/40 border border-white/[0.08] text-sm font-medium text-slate-400 px-4 py-3 rounded-xl cursor-not-allowed select-none"
                   value={formData.name}
                   disabled
                 />
@@ -709,7 +715,7 @@ export function SimpleUpdate() {
                   Unit name
                 </label>
                 <input
-                  className="w-full bg-slate-950/40 border border-slate-800 text-sm font-medium text-slate-400 px-4 py-3 rounded-xl cursor-not-allowed select-none"
+                  className="w-full bg-primary-black/40 border border-white/[0.08] text-sm font-medium text-slate-400 px-4 py-3 rounded-xl cursor-not-allowed select-none"
                   value={formData.unitName}
                   disabled
                 />
@@ -722,7 +728,7 @@ export function SimpleUpdate() {
                   Total supply
                 </label>
                 <input
-                  className="w-full bg-slate-950/40 border border-slate-800 text-sm font-medium text-slate-400 px-4 py-3 rounded-xl cursor-not-allowed select-none"
+                  className="w-full bg-primary-black/40 border border-white/[0.08] text-sm font-medium text-slate-400 px-4 py-3 rounded-xl cursor-not-allowed select-none"
                   value={formData.totalSupply}
                   disabled
                 />
@@ -732,7 +738,7 @@ export function SimpleUpdate() {
                   Decimals
                 </label>
                 <input
-                  className="w-full bg-slate-950/40 border border-slate-800 text-sm font-medium text-slate-400 px-4 py-3 rounded-xl cursor-not-allowed select-none"
+                  className="w-full bg-primary-black/40 border border-white/[0.08] text-sm font-medium text-slate-400 px-4 py-3 rounded-xl cursor-not-allowed select-none"
                   value={formData.decimals}
                   disabled
                 />
@@ -745,7 +751,7 @@ export function SimpleUpdate() {
                   ARC format
                 </label>
                 <input
-                  className="w-full bg-slate-950/40 border border-slate-800 text-sm font-medium text-slate-400 px-4 py-3 rounded-xl cursor-not-allowed select-none"
+                  className="w-full bg-primary-black/40 border border-white/[0.08] text-sm font-medium text-slate-400 px-4 py-3 rounded-xl cursor-not-allowed select-none"
                   value={formData.format}
                   disabled
                 />
@@ -758,7 +764,7 @@ export function SimpleUpdate() {
                     New Image / Media <span className="text-[10px] italic lowercase">(optional)</span>
                   </label>
                   <input
-                    className="block w-full text-sm border border-slate-700 rounded-xl cursor-pointer bg-slate-900/60 text-slate-300 focus:outline-none focus:ring-1 focus:ring-primary-orange focus:border-primary-orange file:mr-4 file:py-2.5 file:px-4 file:rounded-l-xl file:border-0 file:text-xs file:font-semibold file:bg-slate-800 file:text-white hover:file:bg-slate-700 transition-all"
+                    className="block w-full text-sm border border-white/[0.12] rounded-xl cursor-pointer bg-asset-detail-bg/60 text-slate-300 focus:outline-none focus:ring-1 focus:ring-primary-orange focus:border-primary-orange file:mr-4 file:py-2.5 file:px-4 file:rounded-l-xl file:border-0 file:text-xs file:font-semibold file:bg-slate-800 file:text-white hover:file:bg-slate-700 transition-all"
                     id="select_image"
                     type="file"
                     accept="image/*,video/*,audio/*,model/*,.obj,.glb,.gltf,.stl,.3mf,.fbx,.dae"
@@ -844,14 +850,14 @@ export function SimpleUpdate() {
                 {["external_url", "description"].map((key) => {
                   return (
                     <div className="flex gap-2" key={key}>
-                      <div className="w-28 bg-slate-850 border border-slate-700 text-xs font-bold uppercase tracking-wider flex items-center justify-center text-slate-300 rounded-xl px-3 py-2 select-none">
+                      <div className="w-28 bg-slate-850 border border-white/[0.12] text-xs font-bold uppercase tracking-wider flex items-center justify-center text-slate-300 rounded-xl px-3 py-2 select-none">
                         {key === "external_url" ? "External URL" : "Description"}
                       </div>
                       <input
                         id={key}
                         type="text"
                         placeholder="(optional)"
-                        className="flex-1 bg-slate-900/60 border border-slate-700 text-sm font-medium text-white placeholder:text-slate-500 px-4 py-2.5 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary-orange focus:border-primary-orange transition-all"
+                        className="flex-1 bg-asset-detail-bg/60 border border-white/[0.12] text-sm font-medium text-white placeholder:text-slate-500 px-4 py-2.5 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary-orange focus:border-primary-orange transition-all"
                         value={formData[key]}
                         onChange={(e) => {
                           setFormData({ ...formData, [key]: e.target.value });
@@ -974,11 +980,11 @@ export function SimpleUpdate() {
 
             {/* Asset Capabilities Section */}
             {(formData.freeze || formData.clawback) && (
-              <div className="bg-slate-900/40 border border-slate-800 rounded-xl p-4 space-y-4 pt-4 border-t border-slate-800">
+              <div className="bg-asset-detail-bg/40 border border-white/[0.08] rounded-xl p-4 space-y-4 pt-4 border-t border-white/[0.08]">
                 <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">Asset Capabilities</h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {formData.freeze && (
-                    <label className="flex items-center justify-between p-3 bg-slate-900/60 border border-slate-800 rounded-lg cursor-pointer hover:bg-slate-900/80 transition-all">
+                    <label className="flex items-center justify-between p-3 bg-asset-detail-bg/60 border border-white/[0.08] rounded-lg cursor-pointer hover:bg-asset-detail-bg/80 transition-all">
                       <span className="text-sm font-medium text-gray-250">Remove Freeze</span>
                       <input
                         type="checkbox"
@@ -990,7 +996,7 @@ export function SimpleUpdate() {
                     </label>
                   )}
                   {formData.clawback && (
-                    <label className="flex items-center justify-between p-3 bg-slate-900/60 border border-slate-800 rounded-lg cursor-pointer hover:bg-slate-900/80 transition-all">
+                    <label className="flex items-center justify-between p-3 bg-asset-detail-bg/60 border border-white/[0.08] rounded-lg cursor-pointer hover:bg-asset-detail-bg/80 transition-all">
                       <span className="text-sm font-medium text-gray-250">Remove Clawback</span>
                       <input
                         type="checkbox"
@@ -1017,7 +1023,7 @@ export function SimpleUpdate() {
             ) : (
               <>
                 {previewAsset && (
-                  <div className="pt-4 border-t border-slate-800 animate-fadeIn">
+                  <div className="pt-4 border-t border-white/[0.08] animate-fadeIn">
                     <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">Update Preview</h4>
                     <PreviewAssetComponent
                       imageUrl={
@@ -1036,7 +1042,7 @@ export function SimpleUpdate() {
                 )}
 
                 {/* Steps and Action Button */}
-                <div className="flex flex-col justify-center items-center w-full pt-4 border-t border-slate-800 space-y-4">
+                <div className="flex flex-col justify-center items-center w-full pt-4 border-t border-white/[0.08] space-y-4">
                   {processStep === 4 ? (
                     <div className="w-full text-center space-y-3 bg-green-500/10 border border-green-500/20 p-4 rounded-xl">
                       <p className="text-green-400 text-sm font-bold animate-pulse">
@@ -1063,7 +1069,7 @@ export function SimpleUpdate() {
                           Do Another Update
                         </button>
                         <button
-                          className="flex-1 py-2.5 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-xl border border-slate-700 transition"
+                          className="flex-1 py-2.5 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-xl border border-white/[0.12] transition"
                           onClick={() => {
                             removeStoredData();
                             navigate("/");
@@ -1081,7 +1087,7 @@ export function SimpleUpdate() {
                       </p>
                     </div>
                   ) : processStep === 2 ? (
-                    <div className="w-full space-y-3 bg-slate-900/60 border border-slate-800 p-4 rounded-xl text-center">
+                    <div className="w-full space-y-3 bg-asset-detail-bg/60 border border-white/[0.08] p-4 rounded-xl text-center">
                       <p className="text-green-400 text-sm font-bold animate-pulse mb-2">
                         ✓ Transaction created!
                       </p>
@@ -1163,7 +1169,7 @@ export function SimpleUpdate() {
       </p>
 
       {/* Practitioner Section: Asset Management */}
-      <section className="mt-20 pt-12 border-t border-slate-800 w-full max-w-4xl text-left px-4">
+      <section className="mt-20 pt-12 border-t border-white/[0.08] w-full max-w-4xl text-left px-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
           <div className="space-y-4">
             <h2 className="text-xl font-bold text-white tracking-tight italic">Asset Management</h2>

@@ -1,3 +1,5 @@
+import { Reticle } from "../components/cypher/Reticle";
+import { ToolHero } from "../components/cypher/ToolKit";
 import { useState } from "react";
 import { toast } from "react-toastify";
 import axios from "axios";
@@ -313,24 +315,25 @@ export function CollectionDataDownloader() {
         title="Auto Detect Collection Data Downloader"
         description="Paste creator wallets to automatically detect asset standards (ARC-19, ARC-69, ARC-3, ASA) and download full consolidated CSV files."
       />
-      <h1 className="text-3xl font-extrabold mt-8 bg-gradient-to-r from-primary-yellow to-secondary-orange bg-clip-text text-transparent">
-        Auto Detect Collection Data Downloader
-      </h1>
-      <p className="text-slate-400 mt-2 text-sm max-w-xl">
-        Enter one or more creator wallet addresses. The tool automatically audits all created assets, discovers their metadata standards, flattens the traits, and exports a unified CSV.
-      </p>
+      <ToolHero
+        tag="downloader"
+        title="Collection Data Downloader"
+        description="Enter one or more creator wallets. Every created asset is audited, its metadata standard detected and its traits flattened into one CSV."
+        meta={["auto-detect ARC-3 / 19 / 69", "flattened traits", "CSV export"]}
+      />
       
       <div className="w-full mt-6">
         <ConnectButton inmain={true} />
       </div>
 
-      <div className="w-full mt-8 bg-slate-900/60 border border-slate-700/50 backdrop-blur-md rounded-2xl p-6 shadow-2xl flex flex-col items-center">
+      <div className="w-full mt-8 wt-frame relative bg-banner-grey/50 border border-white/[0.07] backdrop-blur-md rounded-3xl [--wt-r:24px] [--wt-in:12px] p-6 shadow-2xl flex flex-col items-center">
+        <Reticle />
         <label className="text-slate-300 text-sm font-semibold mb-2 self-start">
           Creator Wallets (Comma, space, or newline separated)
         </label>
         <textarea
           placeholder="Paste creator wallet addresses here..."
-          className="bg-slate-950/80 text-white placeholder-slate-500 border border-slate-800 rounded-xl p-4 w-full h-32 focus:ring-2 focus:ring-primary-orange focus:border-transparent outline-none font-mono text-sm leading-relaxed"
+          className="bg-primary-black/80 text-white placeholder-slate-500 border border-white/[0.08] rounded-xl p-4 w-full h-32 focus:ring-2 focus:ring-primary-orange focus:border-transparent outline-none font-mono text-sm leading-relaxed"
           value={creatorWalletsInput}
           onChange={(e) => setCreatorWalletsInput(e.target.value)}
           disabled={loadingAssets || resolvingMetadata}
@@ -347,23 +350,23 @@ export function CollectionDataDownloader() {
 
       {stats.total > 0 && (
         <div className="w-full mt-8 grid grid-cols-2 md:grid-cols-5 gap-4">
-          <div className="bg-slate-900/40 border border-slate-800 rounded-xl p-4 backdrop-blur-sm">
+          <div className="bg-asset-detail-bg/40 border border-white/[0.08] rounded-xl p-4 backdrop-blur-sm">
             <p className="text-xs uppercase text-slate-500 font-bold">Total Assets</p>
             <p className="text-2xl font-bold text-white mt-1">{stats.total}</p>
           </div>
-          <div className="bg-slate-900/40 border border-slate-800 rounded-xl p-4 backdrop-blur-sm">
+          <div className="bg-asset-detail-bg/40 border border-white/[0.08] rounded-xl p-4 backdrop-blur-sm">
             <p className="text-xs uppercase text-slate-500 font-bold">ARC-19 Detected</p>
             <p className="text-2xl font-bold text-primary-yellow mt-1">{stats.arc19}</p>
           </div>
-          <div className="bg-slate-900/40 border border-slate-800 rounded-xl p-4 backdrop-blur-sm">
+          <div className="bg-asset-detail-bg/40 border border-white/[0.08] rounded-xl p-4 backdrop-blur-sm">
             <p className="text-xs uppercase text-slate-500 font-bold">ARC-69 Detected</p>
             <p className="text-2xl font-bold text-cyan-400 mt-1">{stats.arc69}</p>
           </div>
-          <div className="bg-slate-900/40 border border-slate-800 rounded-xl p-4 backdrop-blur-sm">
+          <div className="bg-asset-detail-bg/40 border border-white/[0.08] rounded-xl p-4 backdrop-blur-sm">
             <p className="text-xs uppercase text-slate-500 font-bold">ARC-3 Detected</p>
             <p className="text-2xl font-bold text-emerald-400 mt-1">{stats.arc3}</p>
           </div>
-          <div className="bg-slate-900/40 border border-slate-800 rounded-xl p-4 backdrop-blur-sm">
+          <div className="bg-asset-detail-bg/40 border border-white/[0.08] rounded-xl p-4 backdrop-blur-sm">
             <p className="text-xs uppercase text-slate-500 font-bold">ASA / Tokens</p>
             <p className="text-2xl font-bold text-slate-300 mt-1">{stats.asa}</p>
           </div>
@@ -371,7 +374,7 @@ export function CollectionDataDownloader() {
       )}
 
       {assets.length > 0 && (
-        <div className="w-full mt-8 bg-slate-900/60 border border-slate-700/50 backdrop-blur-md rounded-2xl p-6 shadow-2xl flex flex-col items-center">
+        <div className="w-full mt-8 bg-asset-detail-bg/60 border border-white/[0.12] backdrop-blur-md rounded-2xl p-6 shadow-2xl flex flex-col items-center">
           {resolvingMetadata ? (
             <div className="w-full">
               <p className="text-sm font-semibold text-slate-300 mb-2">

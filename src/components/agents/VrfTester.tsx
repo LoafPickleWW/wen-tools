@@ -65,7 +65,7 @@ export function VrfTester() {
   };
 
   return (
-    <div className="max-w-xl mx-auto my-8 p-6 bg-neutral-900/60 backdrop-blur-sm rounded-2xl border border-neutral-800 shadow-xl">
+    <div className="max-w-xl mx-auto my-8 p-6 bg-asset-detail-bg/60 backdrop-blur-sm rounded-2xl border border-white/[0.08] shadow-xl">
       <h2 className="text-xl font-bold mb-4 text-white">X402 VRF Agent Tester</h2>
       <form onSubmit={handleSubmit} className="space-y-4">
         <label className="block">
@@ -73,7 +73,7 @@ export function VrfTester() {
           <select
             value={mode}
             onChange={e => setMode(parseInt(e.target.value, 10))}
-            className="w-full rounded-md border border-neutral-700 bg-neutral-800 p-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full rounded-md border border-white/[0.12] bg-banner-grey p-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
             {[1,2,3,4,5,6].map(n => (
               <option key={n} value={n}>Mode {n}</option>
@@ -86,7 +86,7 @@ export function VrfTester() {
             rows={6}
             value={extraJson}
             onChange={e => setExtraJson(e.target.value)}
-            className="w-full rounded-md border border-neutral-700 bg-neutral-800 p-2 text-white font-mono text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full rounded-md border border-white/[0.12] bg-banner-grey p-2 text-white font-mono text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             placeholder='e.g. {"seed":"0x1234"}'
           />
         </label>
@@ -104,7 +104,7 @@ export function VrfTester() {
         </pre>
       )}
       {result && (
-        <pre className="mt-4 p-3 bg-neutral-800/60 text-green-200 rounded-md overflow-x-auto whitespace-pre-wrap">
+        <pre className="mt-4 p-3 bg-banner-grey/60 text-green-200 rounded-md overflow-x-auto whitespace-pre-wrap">
           {result}
         </pre>
       )}

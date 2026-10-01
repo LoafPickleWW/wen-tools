@@ -2,11 +2,8 @@
 import { useEffect, useState } from "react";
 
 // ** MUI Imports
-import { IconButton } from "@mui/material";
-import Button, { ButtonProps } from "@mui/material/Button";
 import Menu from "@mui/material/Menu";
 import Tooltip from "@mui/material/Tooltip";
-import { styled } from '@mui/material/styles';
 import { useWallet } from "@txnlab/use-wallet-react";
 
 // ** Wallet Imports
@@ -15,10 +12,10 @@ import { isCrustAuth, isCrustAuthFail, signLoginAlgorandForCrustIpfsEndpoint } f
 import { getNfDomainsInBulk } from "../utils";
 
 import { FaCopy, FaWallet } from "react-icons/fa";
-import { IoPlanet, IoLockClosed, IoShieldCheckmark, IoRefresh } from "react-icons/io5";
+import { IoPlanet, IoShieldCheckmark, IoRefresh } from "react-icons/io5";
 import { toast } from "react-toastify";
 import { usePQTheme } from "../context/PQThemeContext";
-import { THEME_TIERS } from "../types/pqTheme";
+import { ThemeSwatches } from "./quantum/ThemeSwatches";
 
 export default function ConnectButton({
   inmain = false
@@ -31,12 +28,9 @@ export default function ConnectButton({
     isPQAccount,
     isScanning,
     pqTxCount,
-    quantumTheme,
-    setQuantumTheme,
     backgroundFxEnabled,
     setBackgroundFxEnabled,
     isThemeActive,
-    unlockedThemes,
     nextTier,
     recheckPQ,
   } = usePQTheme();
@@ -175,49 +169,49 @@ export default function ConnectButton({
     }>
       {!activeAddress ? (
         inmain
-          ? <ButtonMain
+          ? <button
             id="connect-button-main"
             aria-controls={open ? "connect-menu" : undefined}
             aria-haspopup="true"
             aria-expanded={open ? "true" : undefined}
             onClick={handleClick}
-            variant="outlined"
-            color="inherit"
+            className="wt-btn wt-btn-primary h-11 px-6"
           >
-            <span className="font-sans font-light normal-case sm:leading-relaxed leading-relaxed text-xl">
-              Login
-            </span>
-          </ButtonMain>
-          : <Button
+            <FaWallet className="text-sm" />
+            Connect wallet
+          </button>
+          : <button
             id={"connect-button"}
             aria-controls={open ? "connect-menu" : undefined}
             aria-haspopup="true"
             aria-expanded={open ? "true" : undefined}
             onClick={handleClick}
-            color="inherit"
+            className="wt-btn wt-btn-primary h-9 px-3.5 sm:px-4"
           >
-            <span className="font-sans font-light normal-case sm:leading-relaxed leading-tight lg:text-xl">
-              Login
-            </span>
-          </Button>
+            <FaWallet className="text-[13px]" />
+            <span>Connect</span>
+          </button>
       ) : (!inmain &&
-        <Tooltip title="Account Options" placement="bottom-start">
-          <IconButton
+        <Tooltip title="Account" placement="bottom-end">
+          <button
             id={"connect-button" + (inmain ? "-main" : "")}
             aria-controls={open ? "connect-menu" : undefined}
             aria-haspopup="true"
             aria-expanded={open ? "true" : undefined}
             onClick={handleClick}
-            sx={{
-              fontFamily: "sans",
-              color: "white",
-              borderRadius: "24px",
-              position: "relative",
-            }}
-            className={isThemeActive ? "quantum-wallet-btn" : ""}
+            className={`wt-btn wt-btn-ghost h-9 gap-2 pl-1.5 pr-3 text-xs ${isThemeActive ? "quantum-wallet-btn" : ""}`}
           >
-            <FaWallet className="text-2xl" />
-          </IconButton>
+            <span
+              className="h-6 w-6 shrink-0 rounded-full"
+              style={{
+                background:
+                  "conic-gradient(from 140deg, rgb(var(--brand)), rgb(var(--brand-2)), rgb(var(--brand)))",
+              }}
+            />
+            <span className="hidden max-w-[9rem] truncate font-medium sm:inline">
+              {nfdName ? nfdName : shortenAddress(activeAddress)}
+            </span>
+          </button>
         </Tooltip>
       )}
       <Menu
@@ -251,15 +245,15 @@ export default function ConnectButton({
         }}
       >
         {!activeAddress ? (
-          <div className="flex flex-col gap-1 w-[200px] p-2.5 bg-slate-950/95 border border-slate-800 rounded-2xl text-white shadow-2xl backdrop-blur-2xl">
-            <div className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400 border-b border-slate-800/80 mb-1">
+          <div className="flex flex-col gap-1 w-[200px] p-2.5 bg-asset-detail-bg/95 border border-white/10 rounded-2xl text-white shadow-2xl backdrop-blur-2xl">
+            <div className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400 border-b border-white/[0.07] mb-1">
               Select Wallet
             </div>
             <button
               className="flex items-center gap-3 w-full px-3 py-2.5 rounded-xl hover:bg-orange-500/10 hover:border-orange-500/30 border border-transparent transition-all text-left text-xs font-bold text-slate-200 hover:text-orange-400 group"
               onClick={connectToPera}
             >
-              <div className="w-7 h-7 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-center p-1.5 shrink-0 group-hover:border-orange-500/40 group-hover:scale-105 transition-all">
+              <div className="w-7 h-7 rounded-xl bg-slate-900 border border-white/10 flex items-center justify-center p-1.5 shrink-0 group-hover:border-orange-500/40 group-hover:scale-105 transition-all">
                 <img src="/pera-logomark-white.png" alt="Pera" className="w-full h-full object-contain" />
               </div>
               <span>Pera Wallet</span>
@@ -268,7 +262,7 @@ export default function ConnectButton({
               className="flex items-center gap-3 w-full px-3 py-2.5 rounded-xl hover:bg-orange-500/10 hover:border-orange-500/30 border border-transparent transition-all text-left text-xs font-bold text-slate-200 hover:text-orange-400 group"
               onClick={connectToDefly}
             >
-              <div className="w-7 h-7 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-center p-1.5 shrink-0 group-hover:border-orange-500/40 group-hover:scale-105 transition-all">
+              <div className="w-7 h-7 rounded-xl bg-slate-900 border border-white/10 flex items-center justify-center p-1.5 shrink-0 group-hover:border-orange-500/40 group-hover:scale-105 transition-all">
                 <img src="/defly-logo.png" alt="Defly" className="w-full h-full object-contain" />
               </div>
               <span>Defly Wallet</span>
@@ -277,7 +271,7 @@ export default function ConnectButton({
               className="flex items-center gap-3 w-full px-3 py-2.5 rounded-xl hover:bg-orange-500/10 hover:border-orange-500/30 border border-transparent transition-all text-left text-xs font-bold text-slate-200 hover:text-orange-400 group"
               onClick={connectToLute}
             >
-              <div className="w-7 h-7 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-center p-1.5 shrink-0 group-hover:border-orange-500/40 group-hover:scale-105 transition-all">
+              <div className="w-7 h-7 rounded-xl bg-slate-900 border border-white/10 flex items-center justify-center p-1.5 shrink-0 group-hover:border-orange-500/40 group-hover:scale-105 transition-all">
                 <img src="/lute-wallet.svg" alt="Lute" className="w-full h-full object-contain" />
               </div>
               <span>Lute Wallet</span>
@@ -286,16 +280,16 @@ export default function ConnectButton({
         ) : (
           /* Seamless Unified Quantum Wallet Control Panel */
           <div
-            className="w-[320px] p-4 rounded-3xl bg-slate-950/95 border border-slate-800 text-white shadow-2xl backdrop-blur-2xl space-y-3.5 font-sans transition-all duration-300"
+            className="w-[320px] p-4 rounded-3xl bg-asset-detail-bg/95 border border-white/10 text-white shadow-2xl backdrop-blur-2xl space-y-3.5 font-sans transition-all duration-300"
             style={{
               borderColor: isThemeActive ? "var(--pq-glow)" : undefined,
               boxShadow: isThemeActive ? "0 0 25px var(--pq-glow-subtle)" : undefined,
             }}
           >
             {/* 1. Account Header & Identity */}
-            <div className="flex items-center justify-between pb-3 border-b border-slate-800/80">
+            <div className="flex items-center justify-between pb-3 border-b border-white/[0.07]">
               <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-center p-1.5 shrink-0 shadow-inner">
+                <div className="w-9 h-9 rounded-2xl bg-slate-900 border border-white/10 flex items-center justify-center p-1.5 shrink-0 shadow-inner">
                   {activeWallet?.id === "pera" && <img src="/pera-logomark-white.png" alt="Pera" className="w-5 h-5 object-contain" />}
                   {activeWallet?.id === "defly" && <img src="/defly-logo.png" alt="Defly" className="w-6 h-6 object-contain" />}
                   {activeWallet?.id === "lute" && <img src="/lute-wallet.svg" alt="Lute" className="w-5 h-5 object-contain" />}
@@ -357,7 +351,7 @@ export default function ConnectButton({
 
             {/* 2. Account Balances Grid */}
             <div className="grid grid-cols-2 gap-2 text-xs">
-              <div className="bg-slate-900/70 p-2.5 rounded-2xl border border-slate-800/80 flex flex-col justify-between">
+              <div className="bg-banner-grey/70 p-2.5 rounded-2xl border border-white/[0.07] flex flex-col justify-between">
                 <span className="text-[10px] uppercase tracking-wider text-slate-400 font-semibold">Balance</span>
                 <div className="flex items-center justify-between mt-1">
                   <span className="font-extrabold text-sm text-white">{((accountData?.amount || 0) / 10 ** 6).toFixed(2)}</span>
@@ -370,7 +364,7 @@ export default function ConnectButton({
                 </div>
               </div>
 
-              <div className="bg-slate-900/70 p-2.5 rounded-2xl border border-slate-800/80 flex flex-col justify-between">
+              <div className="bg-banner-grey/70 p-2.5 rounded-2xl border border-white/[0.07] flex flex-col justify-between">
                 <span className="text-[10px] uppercase tracking-wider text-slate-400 font-semibold">Min Balance</span>
                 <div className="flex items-center justify-between mt-1">
                   <span className="font-bold text-sm text-slate-300">{((accountData?.["min-balance"] || 0) / 10 ** 6).toFixed(2)}</span>
@@ -381,7 +375,7 @@ export default function ConnectButton({
 
             {/* 3. Quantum Mastery & Themes (rendered when PQ account active or scanning) */}
             {(isScanning || isThemeActive || isPQAccount) && (
-              <div className="pt-2.5 border-t border-slate-800/80 space-y-2.5">
+              <div className="pt-2.5 border-t border-white/[0.07] space-y-2.5">
                 <div className="flex items-center justify-between text-xs">
                   <div className="flex items-center gap-1.5">
                     <IoPlanet
@@ -429,7 +423,7 @@ export default function ConnectButton({
                       <span>Next: {nextTier.nextTheme.name}</span>
                       <span>{pqTxCount} / {nextTier.requiredTx} Tx</span>
                     </div>
-                    <div className="w-full bg-slate-900 rounded-full h-1.5 overflow-hidden border border-slate-800">
+                    <div className="w-full bg-slate-900 rounded-full h-1.5 overflow-hidden border border-white/10">
                       <div
                         className="h-full rounded-full transition-all duration-500"
                         style={{
@@ -445,46 +439,12 @@ export default function ConnectButton({
 
                 {/* Theme Selectors */}
                 <div className="space-y-1.5">
-                  <span className="text-[10px] font-semibold text-slate-400 block">Unlocked Color Themes</span>
-                  <div className="grid grid-cols-2 gap-1.5">
-                    {THEME_TIERS.map((tier) => {
-                      const isUnlocked = unlockedThemes.includes(tier.id);
-                      const isSelected = quantumTheme === tier.id;
-                      return (
-                        <button
-                          key={tier.id}
-                          disabled={!isUnlocked}
-                          onClick={() => setQuantumTheme(tier.id)}
-                          style={
-                            isSelected
-                              ? {
-                                  borderColor: tier.color,
-                                  backgroundColor: `${tier.color}22`,
-                                  boxShadow: `0 0 10px ${tier.color}44`,
-                                }
-                              : undefined
-                          }
-                          className={`flex items-center justify-between px-2.5 py-1.5 rounded-xl border text-left text-[10px] transition-all ${
-                            isSelected
-                              ? "text-white font-bold shadow-sm ring-1 ring-white/20"
-                              : isUnlocked
-                              ? "border-slate-800 bg-slate-900/60 text-slate-300 hover:border-slate-700 hover:text-white"
-                              : "border-slate-800/40 bg-slate-950/30 text-slate-600 opacity-50 cursor-not-allowed"
-                          }`}
-                        >
-                          <div className="flex items-center gap-1.5 truncate">
-                            <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: tier.color }} />
-                            <span className="truncate">{tier.name}</span>
-                          </div>
-                          {!isUnlocked && <IoLockClosed className="text-slate-600 shrink-0 text-[10px]" />}
-                        </button>
-                      );
-                    })}
-                  </div>
+                  <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 block">Theme</span>
+                  <ThemeSwatches />
                 </div>
 
                 {/* Atomic FX Switch */}
-                <div className="flex items-center justify-between text-[11px] pt-1 border-t border-slate-800/60">
+                <div className="flex items-center justify-between text-[11px] pt-1 border-t border-white/[0.06]">
                   <span className="text-slate-400 text-[10px]">Atomic Orbital FX</span>
                   <button
                     onClick={() => setBackgroundFxEnabled(!backgroundFxEnabled)}
@@ -504,7 +464,7 @@ export default function ConnectButton({
             )}
 
             {/* 4. Disconnect Action Button */}
-            <div className="pt-2 border-t border-slate-800/80">
+            <div className="pt-2 border-t border-white/[0.07]">
               <button
                 onClick={disconnect}
                 className="w-full py-2 px-3 rounded-xl bg-red-950/40 hover:bg-red-900/60 border border-red-800/50 text-red-300 hover:text-white text-xs font-semibold transition-all duration-200 shadow-sm flex items-center justify-center gap-2"
@@ -518,12 +478,3 @@ export default function ConnectButton({
     </div>
   );
 }
-
-const ButtonMain = styled(Button)<ButtonProps>(({ theme }) => ({
-  borderColor: '#f57b14',
-  color: '#f57b14',
-  '&:hover': {
-    backgroundColor: '#f57b14',
-    color: theme.palette.getContrastText('#f57b14'),
-  },
-}));

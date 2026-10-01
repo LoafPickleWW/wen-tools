@@ -1,3 +1,4 @@
+import { ToolHero } from "../components/cypher/ToolKit";
 import { useState, useCallback, useRef, useEffect } from "react";
 import { toast } from "react-toastify";
 import { useWallet } from "@txnlab/use-wallet-react";
@@ -1207,20 +1208,12 @@ export function NFTImportTool() {
       <div className="w-full max-w-6xl px-4">
         {/* Header */}
         <div className="text-center mb-8 mt-4">
-          <div className="flex items-center justify-center gap-3 mb-3">
-            <div className="w-12 h-12 bg-gradient-to-br from-orange-500 to-amber-600 rounded-xl flex items-center justify-center shadow-lg shadow-orange-500/20">
-              <svg xmlns="http://www.w3.org/2000/svg" className="w-7 h-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-              </svg>
-            </div>
-            <h1 className="text-3xl font-bold bg-gradient-to-r from-orange-400 to-amber-300 bg-clip-text text-transparent">
-              NFT Import Tool
-            </h1>
-          </div>
-          <p className="text-gray-400 max-w-xl mx-auto text-sm leading-relaxed">
-            Import your NFTs from other blockchains (XRP Ledger, Cardano, Ethereum) and re-mint them on Algorand.
-            Scans metadata &amp; IPFS images, then formats to your chosen ARC standard.
-          </p>
+          <ToolHero
+            tag="nft import"
+            title="NFT Import Tool"
+            description="Import NFTs from other blockchains (XRP Ledger, Cardano, Ethereum) and re-mint them on Algorand. Scans metadata and IPFS images, then formats them to your chosen ARC standard."
+            meta={["XRPL", "Cardano", "Ethereum", "→ Algorand"]}
+          />
         </div>
 
         {/* Step Indicator */}

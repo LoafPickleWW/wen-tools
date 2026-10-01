@@ -1,3 +1,4 @@
+import { ToolHero } from "../components/cypher/ToolKit";
 import { useState } from "react";
 import { toast } from "react-toastify";
 import { useClusterData } from "../components/analytics/useClusterData";
@@ -91,22 +92,18 @@ export function ClusterMap() {
 
       <article className="mx-auto text-white mb-16 flex flex-col items-center max-w-6xl w-full px-4 gap-8">
         {/* Header Section */}
-        <div className="w-full flex flex-col items-center mt-10 text-center">
-          <div className="flex items-center gap-3 justify-center">
-            <div className="p-2.5 bg-gradient-to-br from-amber-400 to-orange-500 rounded-2xl shadow-lg shadow-orange-500/20">
-              <IoShareSocialOutline className="text-2xl text-black" aria-hidden="true" />
-            </div>
-            <h1 className="text-3xl md:text-5xl font-black tracking-tight bg-gradient-to-r from-amber-300 via-amber-400 to-orange-500 bg-clip-text text-transparent py-1 uppercase">
-              Cluster Map
-            </h1>
-          </div>
-          <p className="text-slate-400 mt-4 text-sm md:text-base font-medium max-w-xl leading-relaxed">
-            Trace relationships and uncover coordinated wallet networks or transaction flows on Algorand.
-          </p>
+        <div className="w-full flex flex-col items-center text-center">
+          <ToolHero
+            icon={<IoShareSocialOutline aria-hidden="true" />}
+            tag="cluster map"
+            title="Cluster Map"
+            description="Trace relationships and uncover coordinated wallet networks or transaction flows on Algorand."
+            meta={["wallet graph", "bot networks", "transaction flows"]}
+          />
         </div>
 
         {/* Action Panel */}
-        <div className="w-full bg-[#18181c]/90 border border-white/5 rounded-3xl p-6 md:p-8 backdrop-blur-xl shadow-2xl flex flex-col gap-6">
+        <div className="w-full bg-asset-detail-bg/90 border border-white/5 rounded-3xl p-6 md:p-8 backdrop-blur-xl shadow-2xl flex flex-col gap-6">
           <div className="flex justify-between items-center flex-wrap gap-4">
             <ConnectButton inmain={true} />
             
@@ -133,7 +130,7 @@ export function ClusterMap() {
                   type="checkbox"
                   checked={excludeSystem}
                   onChange={(e) => setExcludeSystem(e.target.checked)}
-                  className="rounded border-slate-800 text-amber-400 focus:ring-amber-400 bg-slate-950 h-3.5 w-3.5"
+                  className="rounded border-white/[0.08] text-amber-400 focus:ring-amber-400 bg-primary-black h-3.5 w-3.5"
                 />
                 <span className="text-slate-300 select-none">Filter AMMs</span>
               </label>

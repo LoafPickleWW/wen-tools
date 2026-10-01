@@ -543,7 +543,7 @@ export function ClusterGraph({ nodes: initialNodes, edges: initialEdges, onNodeC
           <span>Net Receiver (&gt;60% incoming)</span>
         </div>
         <div className="flex items-center gap-2">
-          <div className="w-3 h-3 rounded-full bg-[#f59e0b]" />
+          <div className="w-3 h-3 rounded-full bg-amber-500" />
           <span>Balanced / Hub Wallet</span>
         </div>
         <div className="flex items-center gap-2 mt-1 border-t border-secondary-gray/30 pt-1">

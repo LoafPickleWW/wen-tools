@@ -1,3 +1,5 @@
+import { ToolHero } from "../components/cypher/ToolKit";
+import { Reticle } from "../components/cypher/Reticle";
 import { useState, useEffect } from "react";
 import algosdk from "algosdk";
 import Papa from "papaparse";
@@ -845,13 +847,20 @@ export function BatchMint() {
         description="Unified Algorand Batch/Collection Asset Minter. Support for ARC-3, ARC-19, and ARC-69, using Crust, Pinata or custom setups."
       />
 
-      <div className="w-full max-w-2xl bg-white/5 backdrop-blur-md rounded-2xl border border-white/10 p-6 md:p-8 mt-6 shadow-2xl">
-        <h1 className="text-3xl font-extrabold bg-gradient-to-r from-orange-400 to-amber-500 bg-clip-text text-transparent mb-2">
-          Batch Collection Mint
-        </h1>
-        <p className="text-gray-300 text-sm mb-6">
-          Mint large collections with custom traits and metadata configurations using standard Algorand specs.
-        </p>
+      <ToolHero
+
+        tag="bulk mint"
+
+        title="Batch Collection Mint"
+
+        description="Mint large collections with custom traits and metadata using standard Algorand specs."
+
+        meta={["ARC-3 / 19 / 69","CSV or range","IPFS pinning"]}
+
+      />
+
+      <div className="w-full max-w-2xl wt-frame relative bg-banner-grey/50 backdrop-blur-md rounded-3xl border border-white/[0.07] p-6 md:p-8 mt-6 shadow-2xl [--wt-r:24px] [--wt-in:12px]">
+<Reticle />
 
         <ConnectButton inmain={true} />
 
@@ -867,13 +876,13 @@ export function BatchMint() {
                   Asset Standard
                 </label>
                 <select
-                  className="w-full bg-slate-900/60 border border-slate-700 text-sm font-medium text-white px-4 py-3 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary-orange focus:border-primary-orange transition-all"
+                  className="w-full bg-asset-detail-bg/60 border border-white/[0.12] text-sm font-medium text-white px-4 py-3 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary-orange focus:border-primary-orange transition-all"
                   value={formData.collectionFormat}
                   onChange={(e) => setFormData({ ...formData, collectionFormat: e.target.value })}
                 >
-                  <option value="ARC3" className="bg-slate-900 text-white">ARC3 (Immutable Metadata)</option>
-                  <option value="ARC19" className="bg-slate-900 text-white">ARC19 (Mutable Metadata via IPFS)</option>
-                  <option value="ARC69" className="bg-slate-900 text-white">ARC69 (Mutable Metadata via Tx Note)</option>
+                  <option value="ARC3" className="bg-asset-detail-bg text-white">ARC3 (Immutable Metadata)</option>
+                  <option value="ARC19" className="bg-asset-detail-bg text-white">ARC19 (Mutable Metadata via IPFS)</option>
+                  <option value="ARC69" className="bg-asset-detail-bg text-white">ARC69 (Mutable Metadata via Tx Note)</option>
                 </select>
               </div>
 
@@ -889,14 +898,14 @@ export function BatchMint() {
 
             {/* Token inputs - full width below the grid */}
             {effectiveProvider === "pinata" && (
-              <div className="flex flex-col animate-fadeIn bg-slate-900/40 p-4 rounded-xl border border-slate-800">
+              <div className="flex flex-col animate-fadeIn bg-asset-detail-bg/40 p-4 rounded-xl border border-white/[0.08]">
                 <label className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-400">
                   Pinata JWT Token*
                 </label>
                 <input
                   type="password"
                   placeholder="Paste Pinata JWT Token"
-                  className="w-full bg-slate-900/60 border border-slate-700 text-sm font-medium text-white placeholder:text-slate-500 px-4 py-3 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary-orange focus:border-primary-orange transition-all"
+                  className="w-full bg-asset-detail-bg/60 border border-white/[0.12] text-sm font-medium text-white placeholder:text-slate-500 px-4 py-3 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary-orange focus:border-primary-orange transition-all"
                   required
                   value={formData.pinataToken}
                   onChange={(e) => setFormData({ ...formData, pinataToken: e.target.value })}
@@ -916,14 +925,14 @@ export function BatchMint() {
             )}
 
             {effectiveProvider === "filebase" && (
-              <div className="flex flex-col animate-fadeIn bg-slate-900/40 p-4 rounded-xl border border-slate-800">
+              <div className="flex flex-col animate-fadeIn bg-asset-detail-bg/40 p-4 rounded-xl border border-white/[0.08]">
                 <label className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-400">
                   Filebase API Token*
                 </label>
                 <input
                   type="password"
                   placeholder="Paste Filebase API Token"
-                  className="w-full bg-slate-900/60 border border-slate-700 text-sm font-medium text-white placeholder:text-slate-500 px-4 py-3 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary-orange focus:border-primary-orange transition-all"
+                  className="w-full bg-asset-detail-bg/60 border border-white/[0.12] text-sm font-medium text-white placeholder:text-slate-500 px-4 py-3 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary-orange focus:border-primary-orange transition-all"
                   required
                   value={formData.filebaseToken}
                   onChange={(e) => setFormData({ ...formData, filebaseToken: e.target.value })}
@@ -943,14 +952,14 @@ export function BatchMint() {
             )}
 
             {effectiveProvider === "algofile" && (
-              <div className="w-full text-xs bg-slate-900/60 p-4 border border-slate-800 rounded-xl text-slate-400 font-medium leading-relaxed animate-fadeIn text-left mt-3">
+              <div className="w-full text-xs bg-asset-detail-bg/60 p-4 border border-white/[0.08] rounded-xl text-slate-400 font-medium leading-relaxed animate-fadeIn text-left mt-3">
                 <span className="text-orange-500 font-extrabold mr-1.5 uppercase tracking-wide">Beta Feature:</span> 
                 Direct browser-to-S3 media upload and automatic CID replacement in JSON metadata files is in active development. Please verify transaction previews carefully before executing on Mainnet.
               </div>
             )}
 
              {/* Folder CID Mode Fields (Core Configuration) */}
-             <div className="space-y-4 bg-slate-900/40 p-4 rounded-xl border border-slate-850 animate-fadeIn text-left">
+             <div className="space-y-4 bg-asset-detail-bg/40 p-4 rounded-xl border border-slate-850 animate-fadeIn text-left">
                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                  <div>
                    <label className="block mb-1.5 text-xs text-gray-400 uppercase tracking-wider font-bold">Collection Name</label>
@@ -958,7 +967,7 @@ export function BatchMint() {
                      type="text"
                      placeholder="Ex: USAlgo"
                      maxLength={32}
-                     className="w-full bg-slate-900/60 border border-slate-700 text-sm font-medium text-white placeholder:text-slate-500 px-4 py-2.5 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary-orange focus:border-primary-orange transition-all"
+                     className="w-full bg-asset-detail-bg/60 border border-white/[0.12] text-sm font-medium text-white placeholder:text-slate-500 px-4 py-2.5 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary-orange focus:border-primary-orange transition-all"
                      value={formData.name}
                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                    />
@@ -969,7 +978,7 @@ export function BatchMint() {
                      type="text"
                      placeholder="Ex: USA"
                      maxLength={8}
-                     className="w-full bg-slate-900/60 border border-slate-700 text-sm font-medium text-white placeholder:text-slate-500 px-4 py-2.5 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary-orange focus:border-primary-orange transition-all"
+                     className="w-full bg-asset-detail-bg/60 border border-white/[0.12] text-sm font-medium text-white placeholder:text-slate-500 px-4 py-2.5 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary-orange focus:border-primary-orange transition-all"
                      value={formData.unitName}
                      onChange={(e) => setFormData({ ...formData, unitName: e.target.value })}
                    />
@@ -979,7 +988,7 @@ export function BatchMint() {
                {effectiveProvider === "algofile" ? (
                  <div>
                    <label className="block mb-1.5 text-xs text-gray-400 uppercase tracking-wider font-bold">Upload Collection Images (Multiple)*</label>
-                   <div className="flex flex-col items-center justify-center border-2 border-dashed border-slate-700 hover:border-orange-500/50 bg-slate-900/40 hover:bg-slate-900/60 p-6 rounded-xl cursor-pointer transition-all relative">
+                   <div className="flex flex-col items-center justify-center border-2 border-dashed border-white/[0.12] hover:border-orange-500/50 bg-asset-detail-bg/40 hover:bg-asset-detail-bg/60 p-6 rounded-xl cursor-pointer transition-all relative">
                      <svg className="w-8 h-8 text-slate-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path>
                      </svg>
@@ -1009,7 +1018,7 @@ export function BatchMint() {
                      <input
                        type="text"
                        placeholder="Qm..."
-                       className="w-full bg-slate-900/60 border border-slate-700 text-sm font-medium text-white placeholder:text-slate-500 px-4 py-2.5 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary-orange focus:border-primary-orange transition-all"
+                       className="w-full bg-asset-detail-bg/60 border border-white/[0.12] text-sm font-medium text-white placeholder:text-slate-500 px-4 py-2.5 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary-orange focus:border-primary-orange transition-all"
                        value={formData.mediaIPFSCID}
                        onChange={(e) => setFormData({ ...formData, mediaIPFSCID: e.target.value })}
                      />
@@ -1019,7 +1028,7 @@ export function BatchMint() {
                      <input
                        type="text"
                        placeholder="Ex: .png, .jpg"
-                       className="w-full bg-slate-900/60 border border-slate-700 text-sm font-medium text-white placeholder:text-slate-500 px-4 py-2.5 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary-orange focus:border-primary-orange transition-all"
+                       className="w-full bg-asset-detail-bg/60 border border-white/[0.12] text-sm font-medium text-white placeholder:text-slate-500 px-4 py-2.5 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary-orange focus:border-primary-orange transition-all"
                        value={formData.mediaExtension}
                        onChange={(e) => setFormData({ ...formData, mediaExtension: e.target.value })}
                      />
@@ -1033,7 +1042,7 @@ export function BatchMint() {
                    <input
                      type="number"
                      placeholder="1"
-                     className="w-full bg-slate-900/60 border border-slate-700 text-sm font-medium text-white placeholder:text-slate-500 px-4 py-2.5 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary-orange focus:border-primary-orange transition-all"
+                     className="w-full bg-asset-detail-bg/60 border border-white/[0.12] text-sm font-medium text-white placeholder:text-slate-500 px-4 py-2.5 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary-orange focus:border-primary-orange transition-all"
                      value={formData.startIndex}
                      onChange={(e) => setFormData({ ...formData, startIndex: e.target.value })}
                    />
@@ -1043,14 +1052,14 @@ export function BatchMint() {
                    <input
                      type="number"
                      placeholder="100"
-                     className="w-full bg-slate-900/60 border border-slate-700 text-sm font-medium text-white placeholder:text-slate-500 px-4 py-2.5 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary-orange focus:border-primary-orange transition-all"
+                     className="w-full bg-asset-detail-bg/60 border border-white/[0.12] text-sm font-medium text-white placeholder:text-slate-500 px-4 py-2.5 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary-orange focus:border-primary-orange transition-all"
                      value={formData.endIndex}
                      onChange={(e) => setFormData({ ...formData, endIndex: e.target.value })}
                    />
                  </div>
                </div>
 
-               <div className="pt-2 border-t border-slate-800 mt-2">
+               <div className="pt-2 border-t border-white/[0.08] mt-2">
                  <span className="block mb-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">
                    Optional Metadata Fallbacks
                  </span>
@@ -1063,7 +1072,7 @@ export function BatchMint() {
                        <input
                          type="text"
                          placeholder="(optional)"
-                         className="flex-1 bg-slate-900/60 border border-slate-700 text-xs font-medium text-white placeholder:text-slate-500 px-3 py-2 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary-orange focus:border-primary-orange transition-all"
+                         className="flex-1 bg-asset-detail-bg/60 border border-white/[0.12] text-xs font-medium text-white placeholder:text-slate-500 px-3 py-2 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary-orange focus:border-primary-orange transition-all"
                          value={formData[field]}
                          onChange={(e) => setFormData({ ...formData, [field]: e.target.value })}
                        />
@@ -1074,7 +1083,7 @@ export function BatchMint() {
              </div>
 
              {/* CSV Accordion Section */}
-             <div className="border border-slate-800 rounded-xl overflow-hidden bg-slate-900/20 text-left">
+             <div className="border border-white/[0.08] rounded-xl overflow-hidden bg-asset-detail-bg/20 text-left">
                <button
                  type="button"
                  className="w-full flex justify-between items-center p-4 text-sm font-semibold text-gray-300 hover:bg-slate-800/30 transition-colors"
@@ -1086,7 +1095,7 @@ export function BatchMint() {
                  <span className="text-xs text-gray-500 font-mono">{isCsvAccordionOpen ? "▲" : "▼"}</span>
                </button>
                {isCsvAccordionOpen && (
-                 <div className="p-4 border-t border-slate-800 space-y-4 animate-fadeIn">
+                 <div className="p-4 border-t border-white/[0.08] space-y-4 animate-fadeIn">
                    {/* Templates and Guides */}
                    <div className="flex flex-wrap gap-3">
                      <a
@@ -1112,7 +1121,7 @@ export function BatchMint() {
                      <div className="flex justify-center items-center w-full">
                        <label
                          htmlFor="csv-upload"
-                         className="flex flex-col justify-center items-center w-full h-32 px-4 bg-slate-800/30 rounded-xl border-2 border-slate-700 border-dashed cursor-pointer hover:bg-slate-800/50 hover:border-slate-500 transition"
+                         className="flex flex-col justify-center items-center w-full h-32 px-4 bg-slate-800/30 rounded-xl border-2 border-white/[0.12] border-dashed cursor-pointer hover:bg-slate-800/50 hover:border-slate-500 transition"
                        >
                          <div className="flex flex-col justify-center items-center pt-5 pb-6 text-center">
                            <p className="mb-1 text-sm text-gray-300 font-bold">
@@ -1133,7 +1142,7 @@ export function BatchMint() {
                        </label>
                      </div>
                    ) : (
-                     <div className="bg-slate-800/40 p-4 rounded-xl border border-slate-700 flex justify-between items-center">
+                     <div className="bg-slate-800/40 p-4 rounded-xl border border-white/[0.12] flex justify-between items-center">
                        <div className="text-left">
                          <span className="text-green-400 font-semibold text-sm block">CSV File Loaded Successfully</span>
                          <span className="text-xs text-gray-400">{csvData.length - 1} assets detected in file.</span>
@@ -1154,7 +1163,7 @@ export function BatchMint() {
              </div>
 
             {/* Custom parameters (Freeze / Clawback) */}
-            <div className="bg-slate-800/10 p-4 rounded-xl border border-slate-700/40 space-y-3">
+            <div className="bg-slate-800/10 p-4 rounded-xl border border-white/[0.12] space-y-3">
               <span className="block mb-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">
                 Advanced Token Configuration
               </span>
@@ -1222,7 +1231,7 @@ export function BatchMint() {
         {processStep > START_PROCESS && (
           <div className="my-6 space-y-4">
             {previewAsset && (
-              <div className="p-4 bg-slate-800/40 rounded-xl border border-slate-700/60 max-w-sm mx-auto">
+              <div className="p-4 bg-slate-800/40 rounded-xl border border-white/[0.12] max-w-sm mx-auto">
                 <span className="text-xs text-gray-400 uppercase tracking-wider block mb-2 font-bold">First Asset Preview</span>
                 <PreviewAssetComponent
                   imageUrl={
@@ -1253,7 +1262,7 @@ export function BatchMint() {
                 <p className="text-gray-300 text-sm">Please approve transactions in your wallet. Keeping browser tab open.</p>
               </div>
             ) : processStep === SIGN_TRANSACTIONS_PROCESS ? (
-              <div className="p-6 bg-slate-800/60 rounded-xl border border-slate-700 flex flex-col items-center">
+              <div className="p-6 bg-slate-800/60 rounded-xl border border-white/[0.12] flex flex-col items-center">
                 <span className="text-orange-400 font-bold block mb-2">Step 2: Sign Transactions</span>
                 <p className="text-gray-300 text-sm mb-4">Compiled transactions are ready for signing.</p>
                 <button
@@ -1264,7 +1273,7 @@ export function BatchMint() {
                 </button>
               </div>
             ) : (
-              <div className="p-6 bg-slate-800/60 rounded-xl border border-slate-700 flex flex-col items-center">
+              <div className="p-6 bg-slate-800/60 rounded-xl border border-white/[0.12] flex flex-col items-center">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500 mb-3"></div>
                 <span className="text-gray-300 text-sm">Compiling asset specifications & uploading metadata JSON...</span>
               </div>
@@ -1341,7 +1350,7 @@ export function BatchMint() {
         ]}
       />
 
-      <section className="mt-12 pt-8 border-t border-slate-800 w-full max-w-2xl text-left px-4 text-xs text-gray-500">
+      <section className="mt-12 pt-8 border-t border-white/[0.08] w-full max-w-2xl text-left px-4 text-xs text-gray-500">
         <p className="mb-2">
           ⚠️ <strong>Warnings and Best Practices:</strong> Batches containing more than 200 items should use Mnemonic/Infinity Mode. Ensure you have tested a single asset mint first to verify the layout and formatting on explorer platforms.
         </p>

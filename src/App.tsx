@@ -10,6 +10,8 @@ import Home from "./views/home";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.min.css";
 import { PQThemeProvider } from "./context/PQThemeContext";
+import { ChainPulseProvider } from "./context/ChainPulse";
+import { PageShell } from "./components/cypher/PageShell";
 import { AtomicBackground } from "./components/quantum/AtomicBackground";
 import { Header } from "./components/Header";
 import { Footer } from "./components/Footer";
@@ -40,6 +42,7 @@ import { Encyclopedia } from './pages/Encyclopedia';
 import WenSwapTool from './pages/WenSwapTool';
 import { TermsOfUse } from "./pages/TermsOfUse";
 import { PrivacyPolicy } from "./pages/PrivacyPolicy";
+import { NotFound } from "./pages/NotFound";
 import AgentMarketplace from './pages/AgentMarketplace';
 import { BulkAssetManager } from "./pages/BulkAssetManager";
 import { MintingSuite } from "./pages/MintingSuite";
@@ -87,8 +90,10 @@ function App() {
   return (
     <WalletProvider manager={walletManager}>
       <PQThemeProvider>
-        <div className="bg-primary-black flex flex-col min-h-screen font-sans relative">
+      <ChainPulseProvider>
+        <div className="wt-app bg-primary-black flex flex-col min-h-screen font-sans relative transition-colors duration-500">
           <AtomicBackground />
+          <div className="wt-grain" aria-hidden="true" />
           <ToastContainer
             pauseOnFocusLoss={false}
             closeOnClick
@@ -104,6 +109,7 @@ function App() {
         <Router>
           <ScrollToTop />
           <Header />
+          <PageShell>
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/distribution-suite" element={<DistributionSuite />} />
@@ -199,12 +205,14 @@ function App() {
             <Route path="/wallet/account/:account" element={<WenWallet />} />
             <Route path="/wallet/asset/:assetId" element={<WalletAssetDetail />} />
             <Route path="/cluster-map" element={<ClusterMap />} />
-            <Route path="*" element={<Home />} />
+            <Route path="*" element={<NotFound />} />
           </Routes>
+          </PageShell>
           <Footer />
         </Router>
       </div>
       <Analytics />
+      </ChainPulseProvider>
       </PQThemeProvider>
     </WalletProvider>
   );

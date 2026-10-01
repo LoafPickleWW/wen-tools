@@ -176,9 +176,9 @@ export function SmartContractViewer() {
   };
 
   return (
-    <div className="w-full max-w-4xl mx-auto my-12 border border-neutral-800 rounded-2xl overflow-hidden bg-primary-black">
+    <div className="w-full max-w-4xl mx-auto my-12 border border-white/[0.08] rounded-2xl overflow-hidden bg-primary-black">
       <div 
-        className="w-full px-6 py-4 flex items-center justify-between cursor-pointer hover:bg-neutral-900 transition-colors"
+        className="w-full px-6 py-4 flex items-center justify-between cursor-pointer hover:bg-asset-detail-bg transition-colors"
         onClick={() => setIsOpen(!isOpen)}
       >
         <div className="flex items-center gap-3">
@@ -196,10 +196,10 @@ export function SmartContractViewer() {
       </div>
 
       {isOpen && (
-        <div className="relative border-t border-neutral-800 bg-neutral-950/50 p-4">
+        <div className="relative border-t border-white/[0.08] bg-primary-black/50 p-4">
           <button
             onClick={handleCopy}
-            className="absolute top-6 right-6 p-2 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 rounded-lg transition-colors flex items-center gap-2 text-xs font-bold uppercase tracking-wider"
+            className="absolute top-6 right-6 p-2 bg-banner-grey hover:bg-secondary-gray text-neutral-300 rounded-lg transition-colors flex items-center gap-2 text-xs font-bold uppercase tracking-wider"
           >
             {copied ? <IoCheckmark className="text-green-400 text-lg" /> : <IoCopy className="text-lg" />}
             {copied ? "Copied" : "Copy"}

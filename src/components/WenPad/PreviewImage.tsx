@@ -98,7 +98,7 @@ const PreviewImage = ({ item, layers, width, height }: Props) => {
   }, [drawImage]);
 
   return (
-    <div className="relative w-full h-full bg-gray-800 rounded-lg overflow-hidden min-h-[220px] flex items-center justify-center">
+    <div className="relative w-full h-full bg-banner-grey rounded-lg overflow-hidden min-h-[220px] flex items-center justify-center">
       {!image && !loading && (
         <div className="flex flex-col items-center justify-center text-white/50">
           <MdLayers size={40} />
@@ -107,7 +107,7 @@ const PreviewImage = ({ item, layers, width, height }: Props) => {
       )}
 
       {loading && (
-        <div className="absolute inset-0 z-20 flex items-center justify-center bg-gray-800/60 backdrop-blur-xs">
+        <div className="absolute inset-0 z-20 flex items-center justify-center bg-banner-grey/60 backdrop-blur-xs">
           <MdLoop size={36} className="animate-spin text-primary-orange" />
         </div>
       )}

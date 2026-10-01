@@ -1,3 +1,4 @@
+import { ToolHero, PathCard } from "../components/cypher/ToolKit";
 
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { Meta } from "../components/Meta";
@@ -77,6 +78,10 @@ export function MintingSuite({ defaultPath = null }: MintingSuiteProps) {
     }
   };
 
+  // Inside an actual tool (not the dashboard or a choice screen)
+  const isToolView =
+    currentPath !== null && currentPath !== "mint_options" && currentPath !== "update_options";
+
   const getBackLabel = (): string => {
     const backState = getBackState();
     if (backState === "mint_options") return "← Back to Mint Options";
@@ -106,66 +111,46 @@ export function MintingSuite({ defaultPath = null }: MintingSuiteProps) {
       case "mint_options":
         return (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-3xl mx-auto w-full mt-6 animate-fadeIn">
-            <div
+            <PathCard
+              index={0}
               onClick={() => setCurrentPath("simple_mint")}
-              className="bg-white/5 backdrop-blur-md border border-white/10 hover:border-orange-500/30 hover:bg-white/10 rounded-2xl p-6 cursor-pointer transition shadow-lg group text-left flex flex-col justify-between"
-            >
-              <div>
-                <img src="/icons/smint.png" alt="Mint 1 Asset" className="w-10 h-10 mb-3 object-contain invert" />
-                <h3 className="text-xl font-bold group-hover:text-orange-400 transition">Mint 1 Asset</h3>
-                <p className="text-gray-300 text-sm mt-2 leading-relaxed">
-                  Mint a single asset (NFT or Token) with custom properties. Supports Crust, Pinata, and Filebase.
-                </p>
-              </div>
-              <span className="text-orange-400 text-xs font-semibold mt-4 block">Launch Simple Minter →</span>
-            </div>
+              icon="/icons/smint.png"
+              title="Mint 1 Asset"
+              description="Mint a single asset (NFT or Token) with custom properties. Supports Crust, Pinata, and Filebase."
+              cta="Launch Simple Minter →"
+            />
 
-            <div
+            <PathCard
+              index={1}
               onClick={() => setCurrentPath("batch_mint")}
-              className="bg-white/5 backdrop-blur-md border border-white/10 hover:border-orange-500/30 hover:bg-white/10 rounded-2xl p-6 cursor-pointer transition shadow-lg group text-left flex flex-col justify-between"
-            >
-              <div>
-                <img src="/icons/bulk.png" alt="Bulk Mint" className="w-10 h-10 mb-3 object-contain invert" />
-                <h3 className="text-xl font-bold group-hover:text-orange-400 transition">Bulk Mint</h3>
-                <p className="text-gray-300 text-sm mt-2 leading-relaxed">
-                  Mint bulk collections in ARC-3, ARC-19, or ARC-69 formats using CSV file uploads or range generation.
-                </p>
-              </div>
-              <span className="text-orange-400 text-xs font-semibold mt-4 block">Launch Bulk Minter →</span>
-            </div>
+              icon="/icons/bulk.png"
+              title="Bulk Mint"
+              description="Mint bulk collections in ARC-3, ARC-19, or ARC-69 formats using CSV file uploads or range generation."
+              cta="Launch Bulk Minter →"
+            />
           </div>
         );
 
       case "update_options":
         return (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-3xl mx-auto w-full mt-6 animate-fadeIn text-left">
-            <div
+            <PathCard
+              index={0}
               onClick={() => setCurrentPath("simple_update")}
-              className="bg-white/5 backdrop-blur-md border border-white/10 hover:border-orange-500/30 hover:bg-white/10 rounded-2xl p-6 cursor-pointer transition shadow-lg group flex flex-col justify-between"
-            >
-              <div>
-                <img src="/icons/mintupdate.png" alt="Update 1 Asset" className="w-10 h-10 mb-2 object-contain invert" />
-                <h3 className="text-lg font-bold group-hover:text-orange-400 transition">Update 1 Asset</h3>
-                <p className="text-gray-300 text-xs mt-2 leading-relaxed">
-                  Modify metadata, urls, freeze, or clawback settings for a single asset.
-                </p>
-              </div>
-              <span className="text-orange-400 text-xs font-semibold mt-4 block">Launch Update Minter →</span>
-            </div>
+              icon="/icons/mintupdate.png"
+              title="Update 1 Asset"
+              description="Modify metadata, urls, freeze, or clawback settings for a single asset."
+              cta="Launch Update Minter →"
+            />
 
-            <div
+            <PathCard
+              index={1}
               onClick={() => setCurrentPath("bulk_update")}
-              className="bg-white/5 backdrop-blur-md border border-white/10 hover:border-orange-500/30 hover:bg-white/10 rounded-2xl p-6 cursor-pointer transition shadow-lg group flex flex-col justify-between"
-            >
-              <div>
-                <img src="/icons/arc69u.png" alt="Bulk Update" className="w-10 h-10 mb-2 object-contain invert" />
-                <h3 className="text-lg font-bold group-hover:text-orange-400 transition">Bulk Update</h3>
-                <p className="text-gray-300 text-xs mt-2 leading-relaxed">
-                  Bulk update metadata note fields or reserve address CIDs across your collection using CSV configuration (supports ARC-69 & ARC-19).
-                </p>
-              </div>
-              <span className="text-orange-400 text-xs font-semibold mt-4 block">Launch Bulk Updater →</span>
-            </div>
+              icon="/icons/arc69u.png"
+              title="Bulk Update"
+              description="Bulk update metadata note fields or reserve address CIDs across your collection using CSV configuration (supports ARC-69 & ARC-19)."
+              cta="Launch Bulk Updater →"
+            />
           </div>
         );
 
@@ -174,109 +159,74 @@ export function MintingSuite({ defaultPath = null }: MintingSuiteProps) {
         return (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto w-full mt-10 animate-fadeIn text-left">
             {/* Path 1: Generate via WenPad */}
-            <div
+            <PathCard
+              index={0}
               onClick={() => setCurrentPath("generate")}
-              className="bg-white/5 backdrop-blur-md border border-white/10 hover:border-orange-500/30 hover:bg-white/10 rounded-2xl p-6 md:p-8 cursor-pointer transition shadow-xl group duration-300 transform hover:scale-[1.01]"
-            >
-              <img src="/icons/wenpad.png" alt="WenPad" className="w-12 h-12 mb-4 object-contain invert" />
-              <h3 className="text-xl font-bold group-hover:text-orange-400 transition">
-                No Artwork or Metadata
-              </h3>
-              <p className="text-gray-300 text-sm mt-3 leading-relaxed">
-                Generate layered artwork and JSON metadata directly in the browser using WenPad's layer configuration engine.
-              </p>
-              <span className="text-orange-400 text-xs font-semibold mt-6 block">Generate Artwork via WenPad →</span>
-            </div>
+              icon="/icons/wenpad.png"
+              title="No Artwork or Metadata"
+              description="Generate layered artwork and JSON metadata directly in the browser using WenPad's layer configuration engine."
+              cta="Generate Artwork via WenPad →"
+            />
 
             {/* Path 2: Mint Assets */}
-            <div
+            <PathCard
+              index={1}
               onClick={() => setCurrentPath("mint_options")}
-              className="bg-white/5 backdrop-blur-md border border-white/10 hover:border-orange-500/30 hover:bg-white/10 rounded-2xl p-6 md:p-8 cursor-pointer transition shadow-xl group duration-300 transform hover:scale-[1.01]"
-            >
-              <img src="/icons/mint.png" alt="Mint" className="w-12 h-12 mb-4 object-contain invert" />
-              <h3 className="text-xl font-bold group-hover:text-orange-400 transition">
-                Already Have Images / Files
-              </h3>
-              <p className="text-gray-300 text-sm mt-3 leading-relaxed">
-                Mint individual assets or compile entire bulk collections into ARC-3, ARC-19, or ARC-69 formats.
-              </p>
-              <span className="text-orange-400 text-xs font-semibold mt-6 block">Mint Assets / Collections →</span>
-            </div>
+              icon="/icons/mint.png"
+              title="Already Have Images / Files"
+              description="Mint individual assets or compile entire bulk collections into ARC-3, ARC-19, or ARC-69 formats."
+              cta="Mint Assets / Collections →"
+            />
 
             {/* Path 3: Update Assets */}
-            <div
+            <PathCard
+              index={2}
               onClick={() => setCurrentPath("update_options")}
-              className="bg-white/5 backdrop-blur-md border border-white/10 hover:border-orange-500/30 hover:bg-white/10 rounded-2xl p-6 md:p-8 cursor-pointer transition shadow-xl group duration-300 transform hover:scale-[1.01]"
-            >
-              <img src="/icons/mintupdate.png" alt="Update" className="w-12 h-12 mb-4 object-contain invert" />
-              <h3 className="text-xl font-bold group-hover:text-orange-400 transition">
-                Update Minted Collection
-              </h3>
-              <p className="text-gray-300 text-sm mt-3 leading-relaxed">
-                Modify configurations, update transaction notes, or alter dynamic metadata reserve references on-chain.
-              </p>
-              <span className="text-orange-400 text-xs font-semibold mt-6 block">Update Minted Assets →</span>
-            </div>
+              icon="/icons/mintupdate.png"
+              title="Update Minted Collection"
+              description="Modify configurations, update transaction notes, or alter dynamic metadata reserve references on-chain."
+              cta="Update Minted Assets →"
+            />
 
             {/* Path 4: Downloader */}
-            <div
+            <PathCard
+              index={3}
               onClick={() => setCurrentPath("downloader")}
-              className="bg-white/5 backdrop-blur-md border border-white/10 hover:border-orange-500/30 hover:bg-white/10 rounded-2xl p-6 md:p-8 cursor-pointer transition shadow-xl group duration-300 transform hover:scale-[1.01]"
-            >
-              <img src="/icons/arc69d.png" alt="Downloader" className="w-12 h-12 mb-4 object-contain invert" />
-              <h3 className="text-xl font-bold group-hover:text-orange-400 transition">
-                Download Collection Data
-              </h3>
-              <p className="text-gray-300 text-sm mt-3 leading-relaxed">
-                Audit and fetch complete collection details from creator wallets. Exports a clean flattened CSV of traits.
-              </p>
-              <span className="text-orange-400 text-xs font-semibold mt-6 block">Extract Collection CSV →</span>
-            </div>
+              icon="/icons/arc69d.png"
+              title="Download Collection Data"
+              description="Audit and fetch complete collection details from creator wallets. Exports a clean flattened CSV of traits."
+              cta="Extract Collection CSV →"
+            />
 
             {/* Path 5: Find Collection Holders */}
-            <div
+            <PathCard
+              index={4}
               onClick={() => setCurrentPath("snapshot")}
-              className="bg-white/5 backdrop-blur-md border border-white/10 hover:border-orange-500/30 hover:bg-white/10 rounded-2xl p-6 md:p-8 cursor-pointer transition shadow-xl group duration-300 transform hover:scale-[1.01]"
-            >
-              <img src="/icons/devtools.png" alt="Holders" className="w-12 h-12 mb-4 object-contain invert" />
-              <h3 className="text-xl font-bold group-hover:text-orange-400 transition">
-                Find Collection Holders
-              </h3>
-              <p className="text-gray-300 text-sm mt-3 leading-relaxed">
-                Query and snapshot all current holders of a given NFT collection or asset. Generate accurate snapshots for airdrops or community analytics.
-              </p>
-              <span className="text-orange-400 text-xs font-semibold mt-6 block">Snapshot Holders →</span>
-            </div>
+              icon="/icons/devtools.png"
+              title="Find Collection Holders"
+              description="Query and snapshot all current holders of a given NFT collection or asset. Generate accurate snapshots for airdrops or community analytics."
+              cta="Snapshot Holders →"
+            />
 
             {/* Path 6: Import from other chains */}
-            <div
+            <PathCard
+              index={5}
               onClick={() => setCurrentPath("import")}
-              className="bg-white/5 backdrop-blur-md border border-white/10 hover:border-orange-500/30 hover:bg-white/10 rounded-2xl p-6 md:p-8 cursor-pointer transition shadow-xl group duration-300 transform hover:scale-[1.01]"
-            >
-              <img src="/icons/mint.png" alt="Import" className="w-12 h-12 mb-4 object-contain invert" />
-              <h3 className="text-xl font-bold group-hover:text-orange-400 transition">
-                Import from other chains
-              </h3>
-              <p className="text-gray-300 text-sm mt-3 leading-relaxed">
-                Have NFTs from other chains you want to move over? Scan and re-mint your XRPL collections on Algorand.
-              </p>
-              <span className="text-orange-400 text-xs font-semibold mt-6 block">Launch NFT Import Tool →</span>
-            </div>
+              icon="/icons/mint.png"
+              title="Import from other chains"
+              description="Have NFTs from other chains you want to move over? Scan and re-mint your XRPL collections on Algorand."
+              cta="Launch NFT Import Tool →"
+            />
 
             {/* Path 7: Stablecoin Studio */}
-            <div
+            <PathCard
+              index={6}
               onClick={() => navigate("/stablecoin-studio")}
-              className="bg-white/5 backdrop-blur-md border border-white/10 hover:border-orange-500/30 hover:bg-white/10 rounded-2xl p-6 md:p-8 cursor-pointer transition shadow-xl group duration-300 transform hover:scale-[1.01]"
-            >
-              <img src="/icons/devtools.png" alt="Stablecoin Studio" className="w-12 h-12 mb-4 object-contain invert" />
-              <h3 className="text-xl font-bold group-hover:text-orange-400 transition">
-                Stablecoin Studio (via Brale)
-              </h3>
-              <p className="text-gray-300 text-sm mt-3 leading-relaxed">
-                Configure, mint, and manage fiat-backed stablecoins on Algorand using Brale's infrastructure.
-              </p>
-              <span className="text-orange-400 text-xs font-semibold mt-6 block">Launch Stablecoin Studio →</span>
-            </div>
+              icon="/icons/devtools.png"
+              title="Stablecoin Studio (via Brale)"
+              description="Configure, mint, and manage fiat-backed stablecoins on Algorand using Brale's infrastructure."
+              cta="Launch Stablecoin Studio"
+            />
           </div>
         );
     }
@@ -289,26 +239,35 @@ export function MintingSuite({ defaultPath = null }: MintingSuiteProps) {
         description="Streamlined choice-based creator workspace for generating, minting, updating, and auditing Algorand standard assets."
       />
 
-      {/* Header and Title */}
-      <div className="mt-8 text-center max-w-2xl">
-        <h1 className="text-4xl font-extrabold bg-gradient-to-r from-orange-400 to-amber-500 bg-clip-text text-transparent tracking-tight">
-          Creator Suite
-        </h1>
-        <p className="text-gray-400 text-sm mt-2">
-          An integrated, professional workspace designed to simplify asset creation workflows on the Algorand blockchain.
-        </p>
-      </div>
-
-      {/* Navigation breadcrumb / Back Button */}
-      {currentPath !== null && (
-        <div className="w-full max-w-4xl mt-6 flex justify-start">
+      {/* Header: full hero on choice screens, compact bar inside a tool */}
+      {isToolView ? (
+        <div className="mt-6 flex w-full max-w-4xl">
           <button
             onClick={() => setCurrentPath(getBackState())}
-            className="px-4 py-2 bg-slate-900 border border-slate-800 hover:bg-slate-800 text-gray-200 rounded-xl transition flex items-center gap-2 font-semibold text-xs shadow-md"
+            className="wt-btn wt-btn-ghost font-mono text-xs"
           >
             {getBackLabel()}
           </button>
         </div>
+      ) : (
+        <>
+          <ToolHero
+            tag="creator"
+            title="Creator Suite"
+            description="An integrated workspace that simplifies asset creation on Algorand: generate, mint, update and audit."
+            meta={["WenPad", "ARC-3 / 19 / 69", "CSV bulk", "Crust · Pinata · Filebase"]}
+          />
+          {currentPath !== null && (
+            <div className="w-full max-w-4xl flex justify-start">
+              <button
+                onClick={() => setCurrentPath(getBackState())}
+                className="wt-btn wt-btn-ghost font-mono text-xs"
+              >
+                {getBackLabel()}
+              </button>
+            </div>
+          )}
+        </>
       )}
 
       {/* Renders Dashboard or Selected View */}
@@ -318,16 +277,16 @@ export function MintingSuite({ defaultPath = null }: MintingSuiteProps) {
 
       {/* Creator suite info footer */}
       {currentPath === null && (
-        <section className="mt-20 pt-12 border-t border-slate-800 w-full text-left max-w-4xl">
+        <section className="mt-20 pt-12 border-t border-white/[0.08] w-full text-left max-w-4xl">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-12 text-sm text-gray-400">
             <div className="space-y-3">
-              <h4 className="text-lg font-bold text-white italic">Integrated Creator Journeys</h4>
+              <h4 className="text-lg font-semibold text-white">Integrated Creator Journeys</h4>
               <p className="leading-relaxed">
                 By organizing utilities into choice-based starting states, the Creator Suite eliminates redundant navigations. Access generative layer tooling, single and collection minters, or auditing facilities seamlessly.
               </p>
             </div>
             <div className="space-y-3">
-              <h4 className="text-lg font-bold text-white italic">Technical Standards Enforcement</h4>
+              <h4 className="text-lg font-semibold text-white">Technical Standards Enforcement</h4>
               <p className="leading-relaxed">
                 Every component within this dashboard compiles transactions compliant with Algorand ARC specifications (including ARC-3, ARC-19, and ARC-69). Build collections recognized across explorer platforms and decentralized marketplaces.
               </p>

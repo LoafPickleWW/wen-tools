@@ -1,3 +1,4 @@
+import { ToolHero , ToolTabs } from "../components/cypher/ToolKit";
 import { useState, useEffect, useCallback } from "react";
 import { useWallet } from "@txnlab/use-wallet-react";
 import { Meta } from "../components/Meta";
@@ -190,19 +191,12 @@ export function StablecoinStudio() {
       />
 
       {/* Header Banner */}
-      <div className="mt-8 text-center max-w-3xl">
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-orange-500/10 border border-orange-500/20 text-orange-400 text-xs font-medium mb-3">
-          <span className="w-2 h-2 rounded-full bg-orange-400 animate-pulse"></span>
-          Powered by Brale (Stablecoin-as-a-Service)
-        </div>
-        <h1 className="text-4xl font-extrabold bg-gradient-to-r from-orange-400 via-amber-400 to-yellow-500 bg-clip-text text-transparent tracking-tight">
-          Stablecoin Studio
-        </h1>
-        <p className="text-gray-300 text-sm mt-3 leading-relaxed">
-          Configure, onboard, mint, and redeem regulated, fiat-backed stablecoins on Algorand.
-          Zero database required — your API credentials stay 100% in your browser.
-        </p>
-      </div>
+      <ToolHero
+        tag="stablecoins"
+        title="Stablecoin Studio"
+        description="Configure, onboard, mint and redeem regulated, fiat-backed stablecoins on Algorand. No database: your API credentials stay in your browser."
+        meta={["powered by Brale", "fiat-backed", "credentials stay local"]}
+      />
 
       {/* Connection Status Badge */}
       <div className="mt-6 flex items-center gap-3 bg-white/5 backdrop-blur-md border border-white/10 px-4 py-2 rounded-xl text-xs">
@@ -223,48 +217,17 @@ export function StablecoinStudio() {
       </div>
 
       {/* Navigation Tabs */}
-      <div className="flex flex-wrap justify-center gap-2 mt-8 bg-black/40 backdrop-blur-md p-1.5 rounded-2xl border border-white/10 w-full max-w-2xl">
-        <button
-          onClick={() => setActiveTab("config")}
-          className={`flex-1 min-w-[130px] py-2.5 px-4 rounded-xl text-xs font-semibold transition ${
-            activeTab === "config"
-              ? "bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-lg"
-              : "text-gray-400 hover:text-white hover:bg-white/5"
-          }`}
-        >
-          1. API & Config
-        </button>
-        <button
-          onClick={() => setActiveTab("kyc")}
-          className={`flex-1 min-w-[130px] py-2.5 px-4 rounded-xl text-xs font-semibold transition ${
-            activeTab === "kyc"
-              ? "bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-lg"
-              : "text-gray-400 hover:text-white hover:bg-white/5"
-          }`}
-        >
-          2. KYB / Sub-Accounts
-        </button>
-        <button
-          onClick={() => setActiveTab("portal")}
-          className={`flex-1 min-w-[130px] py-2.5 px-4 rounded-xl text-xs font-semibold transition ${
-            activeTab === "portal"
-              ? "bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-lg"
-              : "text-gray-400 hover:text-white hover:bg-white/5"
-          }`}
-        >
-          3. Mint & Burn
-        </button>
-        <button
-          onClick={() => setActiveTab("analytics")}
-          className={`flex-1 min-w-[130px] py-2.5 px-4 rounded-xl text-xs font-semibold transition ${
-            activeTab === "analytics"
-              ? "bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-lg"
-              : "text-gray-400 hover:text-white hover:bg-white/5"
-          }`}
-        >
-          4. Reserve Attestations
-        </button>
-      </div>
+      <ToolTabs
+        className="mt-2 max-w-2xl"
+        active={activeTab}
+        onChange={setActiveTab}
+        tabs={[
+          { id: "config", label: "API & Config" },
+          { id: "kyc", label: "KYB / Sub-Accounts" },
+          { id: "portal", label: "Mint & Burn" },
+          { id: "analytics", label: "Reserve Attestations" },
+        ]}
+      />
 
       {/* Tab 1: API & Config */}
       {activeTab === "config" && (

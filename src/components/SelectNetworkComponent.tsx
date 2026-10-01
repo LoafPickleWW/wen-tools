@@ -1,62 +1,45 @@
-import FormControlLabel from "@mui/material/FormControlLabel";
-import FormGroup from "@mui/material/FormGroup";
-import Switch from "@mui/material/Switch";
 import { NetworkId, useWallet } from "@txnlab/use-wallet-react";
-import { usePQTheme } from "../context/PQThemeContext";
 
+const NETWORKS = [
+  { id: NetworkId.MAINNET, label: "Mainnet", short: "Main", dot: "bg-emerald-400" },
+  { id: NetworkId.TESTNET, label: "Testnet", short: "Test", dot: "bg-sky-400" },
+];
+
+/** Segmented Mainnet / Testnet switch. */
 export default function SelectNetworkComponent() {
   const { activeNetwork, setActiveNetwork } = useWallet();
-  const { isThemeActive } = usePQTheme();
 
   return (
-    <FormGroup sx={{ justifyContent: "center" }}>
-      <FormControlLabel
-        label={
-          <span
-            className={`font-sans text-sm font-medium transition-colors ${
-              isThemeActive ? "font-bold" : "text-primary-gray"
+    <div
+      role="radiogroup"
+      aria-label="Network"
+      className="flex items-center rounded-xl border border-white/10 bg-banner-grey/60 p-0.5 text-xs font-medium backdrop-blur"
+    >
+      {NETWORKS.map((n) => {
+        const active = activeNetwork === n.id;
+        return (
+          <button
+            key={n.id}
+            type="button"
+            role="radio"
+            aria-checked={active}
+            onClick={() => !active && setActiveNetwork(n.id)}
+            className={`flex items-center gap-1.5 rounded-[10px] px-2 py-1.5 transition sm:px-2.5 ${
+              active
+                ? "bg-secondary-gray/80 text-white shadow-sm"
+                : "text-slate-400 hover:text-white"
             }`}
-            style={{
-              color: isThemeActive ? "var(--pq-primary, #00f0ff)" : undefined,
-            }}
           >
-            {activeNetwork.charAt(0).toUpperCase() + activeNetwork.slice(1)}
-          </span>
-        }
-        control={
-          <Switch
-            checked={activeNetwork === NetworkId.MAINNET}
-            onChange={() =>
-              activeNetwork === NetworkId.MAINNET
-                ? setActiveNetwork(NetworkId.TESTNET)
-                : setActiveNetwork(NetworkId.MAINNET)
-            }
-            sx={{
-              "& .MuiSwitch-switchBase.Mui-checked": {
-                color: isThemeActive ? "var(--pq-primary, #00f0ff)" : "#f57b14",
-              },
-              "& .MuiSwitch-switchBase.Mui-checked .MuiSwitch-thumb": {
-                backgroundColor: isThemeActive ? "var(--pq-primary, #00f0ff)" : "#f57b14",
-                boxShadow: isThemeActive ? "0 0 10px var(--pq-glow)" : "none",
-              },
-              "& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track": {
-                backgroundColor: isThemeActive ? "var(--pq-primary, #00f0ff)" : "#f57b14",
-                opacity: 0.7,
-              },
-              "& .MuiSwitch-thumb": {
-                backgroundColor: isThemeActive ? "var(--pq-primary, #00f0ff)" : "#f57b14",
-                boxShadow: isThemeActive ? "0 0 10px var(--pq-glow)" : "none",
-                transition: "all 0.3s ease",
-              },
-              "& .MuiSwitch-track": {
-                backgroundColor: isThemeActive ? "var(--pq-primary, #00f0ff)" : "#fff",
-                opacity: isThemeActive ? 0.6 : 0.3,
-              },
-            }}
-          />
-        }
-        classes={{ label: "text-white" }}
-      />
-    </FormGroup>
+            <span
+              className={`h-1.5 w-1.5 rounded-full transition ${
+                active ? n.dot : "bg-slate-600"
+              }`}
+            />
+            <span className="hidden md:inline">{n.label}</span>
+            <span className="md:hidden">{n.short}</span>
+          </button>
+        );
+      })}
+    </div>
   );
 }

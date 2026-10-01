@@ -9,6 +9,12 @@ interface ThemeColors {
 }
 
 const THEME_PALETTES: Record<QuantumTheme, ThemeColors> = {
+  classic: {
+    primary: "#f57b14",
+    secondary: "#ffc000",
+    glow: "rgba(245, 123, 20, 0.35)",
+    particle: "#fdba74",
+  },
   cyan: {
     primary: "#00f0ff",
     secondary: "#3b82f6",
@@ -41,6 +47,7 @@ export const AtomicBackground: React.FC = () => {
 
   useEffect(() => {
     if (!isThemeActive || !backgroundFxEnabled) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 
     const canvas = canvasRef.current;
     if (!canvas) return;

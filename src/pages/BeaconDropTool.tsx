@@ -1,3 +1,4 @@
+import { ToolHero } from "../components/cypher/ToolKit";
 import { useState, useRef, useCallback, useEffect } from "react";
 import { useWallet } from "@txnlab/use-wallet-react";
 import algosdk from "algosdk";
@@ -488,19 +489,19 @@ export function BeaconDropTool() {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center w-full px-4 py-8 min-h-[80vh]">
+    <div className="flex flex-col items-center justify-start w-full px-4 pb-8 min-h-[80vh]">
       <Meta 
         title="BEACON Drop Tool" 
         description="Securely send and receive encrypted messages and files on-chain using the BEACON protocol. Fully decentralized, serverless peer-to-peer communication on Algorand."
       />
-      <div className="w-full max-w-2xl bg-[#1a1a1a] rounded-2xl p-8 border border-[#333] shadow-2xl">
+      <ToolHero
+        tag="beacon drop"
+        title="BEACON Drop"
+        description="Send and receive encrypted messages and files on-chain with the BEACON protocol."
+        meta={["serverless", "on-chain", "peer-to-peer"]}
+      />
+      <div className="w-full max-w-2xl bg-asset-detail-bg rounded-2xl p-8 border border-white/10 shadow-2xl">
         <div className="flex flex-col items-center justify-center mb-8">
-          <h1 className="text-3xl font-bold text-white flex items-center gap-2">
-            <span className="text-primary-orange">📡</span> BEACON Drop
-          </h1>
-          <p className="text-primary-orange/80 mt-2 text-sm uppercase tracking-widest font-bold">
-            Serverless • On-Chain • Peer-to-Peer
-          </p>
           <div className="mt-4 px-4 py-2 bg-primary-orange/10 border border-primary-orange/30 rounded-lg flex items-center gap-2 text-xs text-primary-orange max-w-md text-center leading-relaxed">
             <MdInfo size={24} className="shrink-0" />
             <span>
@@ -521,7 +522,7 @@ export function BeaconDropTool() {
                   value={ddRecipient}
                   onChange={(e) => setDdRecipient(e.target.value)}
                   placeholder="Recipient Wallet or .algo name"
-                  className="w-full py-3 px-4 bg-[#242424] text-white rounded-xl border border-[#333] outline-none focus:border-primary-orange transition-all mb-2"
+                  className="w-full py-3 px-4 bg-banner-grey text-white rounded-xl border border-white/10 outline-none focus:border-primary-orange transition-all mb-2"
                 />
                 {activeAddress && (
                   <button 
@@ -538,9 +539,9 @@ export function BeaconDropTool() {
                   value={ddMessage}
                   onChange={(e) => setDdMessage(e.target.value)}
                   placeholder={ddFile ? `File attached: ${ddFile.name}` : "Your encrypted message..."}
-                  className="flex-1 py-3 px-4 bg-[#242424] text-white rounded-xl border border-[#333] outline-none focus:border-primary-orange transition-all min-h-[60px]"
+                  className="flex-1 py-3 px-4 bg-banner-grey text-white rounded-xl border border-white/10 outline-none focus:border-primary-orange transition-all min-h-[60px]"
                 />
-                <label className="p-4 bg-[#242424] hover:bg-[#333] text-gray-400 rounded-xl border border-[#333] cursor-pointer transition-all">
+                <label className="p-4 bg-banner-grey hover:bg-secondary-gray text-gray-400 rounded-xl border border-white/10 cursor-pointer transition-all">
                   <MdAttachFile size={20} />
                   <input 
                     type="file" 
@@ -572,7 +573,7 @@ export function BeaconDropTool() {
                 </button>
 
                 {showAdvanced && (
-                  <div className="p-4 border-t border-white/5 space-y-3 bg-[#242424]/20 animate-in fade-in slide-in-from-top-1 duration-200">
+                  <div className="p-4 border-t border-white/5 space-y-3 bg-banner-grey/20 animate-in fade-in slide-in-from-top-1 duration-200">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-1.5 text-gray-400">
                         <MdAccessTime size={14} className="text-primary-orange" />
@@ -596,7 +597,7 @@ export function BeaconDropTool() {
                         type="datetime-local"
                         value={unlockDate}
                         onChange={(e) => setUnlockDate(e.target.value)}
-                        className="w-full py-2.5 px-3 bg-[#1e1e1e] text-white text-xs rounded-lg border border-[#333] group-hover:border-[#444] outline-none focus:border-primary-orange transition-all font-mono"
+                        className="w-full py-2.5 px-3 bg-banner-grey text-white text-xs rounded-lg border border-white/10 group-hover:border-white/15 outline-none focus:border-primary-orange transition-all font-mono"
                       />
                     </div>
 
@@ -663,7 +664,7 @@ export function BeaconDropTool() {
                   const countdownText = diff > 0 ? formatCountdown(drop.notBefore) : "Unlocking...";
                   
                   return (
-                    <div key={`pending-${idx}`} className="p-4 bg-neutral-900/40 rounded-xl border border-neutral-800/80 animate-in fade-in slide-in-from-bottom-2 relative overflow-hidden text-left">
+                    <div key={`pending-${idx}`} className="p-4 bg-asset-detail-bg/40 rounded-xl border border-white/[0.08] animate-in fade-in slide-in-from-bottom-2 relative overflow-hidden text-left">
                       <div className="flex items-center justify-between mb-2">
                         <p className="text-[10px] text-neutral-500 font-bold uppercase tracking-widest flex items-center gap-1">
                           <span>🔒 Locked Future Drop ({drop.type === 'file' ? 'File' : 'Text'})</span>
@@ -765,7 +766,7 @@ export function BeaconDropTool() {
 
       {showUninitializedModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-          <div className="bg-[#1a1a1a] border border-[#333] rounded-2xl p-8 max-w-md w-full shadow-2xl relative">
+          <div className="bg-asset-detail-bg border border-white/10 rounded-2xl p-8 max-w-md w-full shadow-2xl relative">
             <button onClick={() => setShowUninitializedModal(false)} className="absolute top-4 right-4 text-gray-500 hover:text-white">
               <MdClose size={24} />
             </button>
@@ -774,7 +775,7 @@ export function BeaconDropTool() {
               The recipient wallet <strong className="text-white break-all">{uninitializedRecipient}</strong> has not initialized their BEACON inbox yet. 
               Because BEACON is fully decentralized, they must opt-in before you can securely send them an encrypted drop.
             </p>
-            <div className="p-4 bg-black rounded-xl border border-[#333] mb-6 font-mono text-xs text-primary-orange break-all text-center">
+            <div className="p-4 bg-black rounded-xl border border-white/10 mb-6 font-mono text-xs text-primary-orange break-all text-center">
               https://tools.wen.so/beacon-drop
             </div>
             <button
@@ -790,7 +791,7 @@ export function BeaconDropTool() {
         </div>
       )}
       {/* Practitioner Section: Serverless Peer-to-Peer Signaling */}
-      <section className="mt-20 pt-12 border-t border-slate-800 w-full max-w-4xl text-left px-4">
+      <section className="mt-20 pt-12 border-t border-white/[0.08] w-full max-w-4xl text-left px-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
           <div className="space-y-4">
             <h2 className="text-xl font-bold text-white tracking-tight italic">Serverless Peer-to-Peer Signaling</h2>

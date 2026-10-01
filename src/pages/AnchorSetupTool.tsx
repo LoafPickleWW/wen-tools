@@ -1,8 +1,20 @@
+import { ToolHero , ToolTabs } from "../components/cypher/ToolKit";
 import { useState } from "react";
 import {
-  IoShieldCheckmark, IoCodeSlash, IoDocumentText, IoRocket,
-  IoCopy, IoCheckmark, IoSearchSharp, IoLogoGithub,
-  IoApps, IoPricetag, IoWarning, IoClose
+  IoShieldCheckmark,
+  IoCodeSlash,
+  IoDocumentText,
+  IoRocket,
+  IoCopy,
+  IoCheckmark,
+  IoSearchSharp,
+  IoLogoGithub,
+  IoApps,
+  IoPricetag,
+  IoWarning,
+  IoClose,
+  IoSettingsOutline,
+  IoSearchOutline,
 } from "react-icons/io5";
 import { trackEvent } from "../utils";
 import { Meta } from "../components/Meta";
@@ -362,35 +374,25 @@ Verification cross-references npm metadata (wallet \`${wallet || "YOUR_WALLET_AD
       />
 
       {/* Header */}
-      <div className="w-full flex flex-col items-center mt-12 mb-8">
-        <div className="flex items-center gap-4">
-          <div className="p-2 md:p-3 bg-amber-400 rounded-2xl shadow-lg shadow-amber-400/20">
-            <IoShieldCheckmark className="text-3xl md:text-4xl text-black" aria-hidden="true" />
-          </div>
-          <h1 id="anchor-title" className="text-3xl md:text-5xl font-black tracking-tight bg-gradient-to-r from-amber-200 via-amber-400 to-orange-500 bg-clip-text text-transparent">
-            ANCHOR Protocol
-          </h1>
-        </div>
-        <p className="text-slate-400 mt-4 text-lg font-medium text-center max-w-2xl">
-          Tamper-evident software supply chain integrity for the Algorand ecosystem.
-        </p>
+      <div className="w-full flex flex-col items-center mb-8">
+        <ToolHero
+          icon={<IoShieldCheckmark aria-hidden="true" />}
+          tag="anchor"
+          title="ANCHOR Protocol"
+          description="Tamper-evident software supply chain integrity for the Algorand ecosystem."
+          meta={["package hashes", "GitHub · NPM", "on-chain provenance"]}
+        />
 
         {/* Tabs */}
-        <nav className="flex gap-2 mt-8 bg-primary-black border border-secondary-gray rounded-2xl p-1" aria-label="Tool sections">
-          {(["setup", "verify"] as Tab[]).map(t => (
-            <button
-              key={t}
-              onClick={() => setTab(t)}
-              className={`px-8 py-2.5 rounded-xl font-bold text-sm transition-all uppercase tracking-wider ${
-                tab === t
-                  ? "bg-amber-400 text-black shadow-lg shadow-amber-400/20"
-                  : "text-slate-400 hover:text-white"
-              }`}
-            >
-              {t === "setup" ? "⚙ Setup" : "🔍 Verify"}
-            </button>
-          ))}
-        </nav>
+        <ToolTabs
+          className="max-w-sm"
+          active={tab}
+          onChange={setTab}
+          tabs={[
+            { id: "setup", label: "Setup", icon: <IoSettingsOutline /> },
+            { id: "verify", label: "Verify", icon: <IoSearchOutline /> },
+          ]}
+        />
       </div>
 
       {/* ── SETUP TAB ─────────────────────────────────────────────────────────── */}
@@ -425,7 +427,7 @@ Verification cross-references npm metadata (wallet \`${wallet || "YOUR_WALLET_AD
                         className={`py-2 px-4 rounded-xl font-bold transition-all ${
                           network === n
                             ? "bg-amber-400 text-black shadow-lg shadow-amber-400/20"
-                            : "bg-primary-black text-slate-400 border border-secondary-gray hover:border-slate-600"
+                            : "bg-primary-black text-slate-400 border border-secondary-gray hover:border-white/15"
                         }`}
                       >{n.toUpperCase()}</button>
                     ))}
@@ -441,7 +443,7 @@ Verification cross-references npm metadata (wallet \`${wallet || "YOUR_WALLET_AD
                         className={`py-2 px-2 rounded-xl font-bold transition-all text-sm ${
                           manager === m
                             ? "bg-slate-200 text-black"
-                            : "bg-primary-black text-slate-400 border border-secondary-gray hover:border-slate-600"
+                            : "bg-primary-black text-slate-400 border border-secondary-gray hover:border-white/15"
                         }`}
                       >{m.toUpperCase()}</button>
                     ))}
@@ -570,7 +572,7 @@ Verification cross-references npm metadata (wallet \`${wallet || "YOUR_WALLET_AD
                   className={`flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-sm transition-all border ${
                     verifyMode === mode.id
                       ? "bg-amber-400 text-black border-amber-400 shadow-lg shadow-amber-400/20"
-                      : "bg-primary-black text-slate-400 border-secondary-gray hover:border-slate-600"
+                      : "bg-primary-black text-slate-400 border-secondary-gray hover:border-white/15"
                   }`}
                 >
                   {mode.icon} {mode.label}
@@ -614,7 +616,7 @@ Verification cross-references npm metadata (wallet \`${wallet || "YOUR_WALLET_AD
               <button
                 onClick={handleVerify}
                 disabled={!verifyInput.trim() || verifyLoading}
-                className="flex items-center gap-2 px-6 py-3 bg-amber-400 hover:bg-amber-300 disabled:bg-slate-700 disabled:text-slate-500 text-black font-black rounded-xl transition-all shadow-lg shadow-amber-400/20 text-sm whitespace-nowrap"
+                className="flex items-center gap-2 px-6 py-3 bg-amber-400 hover:bg-amber-300 disabled:bg-secondary-gray disabled:text-slate-500 text-black font-black rounded-xl transition-all shadow-lg shadow-amber-400/20 text-sm whitespace-nowrap"
               >
                 {verifyLoading
                   ? <span className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin" />
@@ -656,7 +658,7 @@ Verification cross-references npm metadata (wallet \`${wallet || "YOUR_WALLET_AD
         </div>
       )}
       {/* Practitioner Section: Supply Chain Provenance */}
-      <section className="mt-20 pt-12 border-t border-slate-800 w-full max-w-4xl text-left px-4">
+      <section className="mt-20 pt-12 border-t border-white/[0.08] w-full max-w-4xl text-left px-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
           <div className="space-y-4">
             <h2 className="text-xl font-bold text-white tracking-tight italic">Supply Chain Provenance</h2>
@@ -683,7 +685,7 @@ function VerifyResultCard({ result }: { result: VerifyResult }) {
     verified:   { color: "green",  label: "✓ VERIFIED",    border: "border-green-500/30",  bg: "bg-green-500/5",  text: "text-green-400" },
     partial:    { color: "yellow", label: "~ PARTIAL",     border: "border-yellow-500/30", bg: "bg-yellow-500/5", text: "text-yellow-400" },
     failed:     { color: "red",    label: "✗ FAILED",      border: "border-red-500/30",    bg: "bg-red-500/5",    text: "text-red-400" },
-    unenrolled: { color: "slate",  label: "○ UNENROLLED",  border: "border-slate-600/50",  bg: "bg-slate-800/30", text: "text-slate-400" },
+    unenrolled: { color: "slate",  label: "○ UNENROLLED",  border: "border-white/15",  bg: "bg-banner-grey/30", text: "text-slate-400" },
     error:      { color: "red",    label: "✗ ERROR",       border: "border-red-500/30",    bg: "bg-red-500/5",    text: "text-red-400" },
     loading:    { color: "amber",  label: "...",            border: "border-amber-500/30",  bg: "bg-amber-500/5",  text: "text-amber-400" },
     idle:       { color: "slate",  label: "",              border: "",                     bg: "",                text: "" },

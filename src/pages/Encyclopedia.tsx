@@ -1,3 +1,4 @@
+import { ToolHero } from "../components/cypher/ToolKit";
 import { Meta } from "../components/Meta";
 import { TOOLS } from "../constants";
 import { Link } from "react-router-dom";
@@ -10,14 +11,12 @@ export function Encyclopedia() {
         description="A comprehensive directory and knowledge base for the Algorand blockchain. Master ARC standards, mass-minting, airdrops, and secure on-chain protocols."
       />
 
-      <header className="mb-16 border-b border-slate-800 pb-12 w-full">
-        <h1 className="text-4xl md:text-6xl font-black tracking-tight mb-6 bg-gradient-to-r from-white via-slate-400 to-slate-600 bg-clip-text text-transparent italic">
-          The Algorand Encyclopedia
-        </h1>
-        <p className="text-xl text-slate-400 max-w-3xl leading-relaxed">
-          The definitive directory of high-performance tools, decentralized protocols, and technical standards for the Algorand ecosystem. Built for developers, creators, and professional practitioners.
-        </p>
-      </header>
+      <ToolHero
+        tag="encyclopedia"
+        title="The Algorand Encyclopedia"
+        description="A directory of tools, protocols and technical standards for the Algorand ecosystem, built for developers, creators and practitioners."
+        meta={["ARC standards", "AVM", "box storage", "rekeying"]}
+      />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-16">
         {/* Sidebar / Quick Links */}

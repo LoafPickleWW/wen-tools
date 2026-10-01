@@ -1,3 +1,5 @@
+import { Reticle } from "../components/cypher/Reticle";
+import { TermSpinner, ToolHero, ToolTabs } from "../components/cypher/ToolKit";
 import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import Papa from "papaparse";
@@ -1217,70 +1219,30 @@ export function DistributionSuite({
 
       <article className="mx-auto text-white mb-16 flex flex-col items-center max-w-4xl w-full px-4">
         {/* Header Section */}
-        <header className="w-full flex flex-col items-center mt-10 mb-8 text-center">
-          <div className="flex items-center gap-3 justify-center">
-            <div className="p-2.5 bg-gradient-to-br from-orange-500 to-amber-600 rounded-2xl shadow-lg shadow-orange-500/20">
-              <IoPaperPlane className="text-2xl text-black" aria-hidden="true" />
-            </div>
-            <h1 className="text-3xl md:text-5xl font-black tracking-tight bg-gradient-to-r from-orange-300 via-orange-500 to-amber-500 bg-clip-text text-transparent py-1 uppercase">
-              Distribution Suite
-            </h1>
-          </div>
-          <p className="text-slate-400 mt-4 text-sm md:text-base font-medium max-w-xl leading-relaxed">
-            Consolidated workspace for manual sends, bulk CSV airdrops, creator wallet snapshot drops, and secure NFD vault contract transfers.
-          </p>
-        </header>
+        <ToolHero
+          icon={<IoPaperPlane aria-hidden="true" />}
+          tag="distribution"
+          title="Distribution Suite"
+          description="Consolidated workspace for manual sends, bulk CSV airdrops, creator wallet snapshot drops, and secure NFD vault contract transfers."
+          meta={["CSV airdrops","ARC-59 inbox","NFD vaults","holder snapshots"]}
+        />
 
         {/* Tab Selector - Glassmorphism */}
-        <div className="flex flex-wrap gap-2 p-1.5 bg-[#121214] border border-white/5 rounded-2xl w-full max-w-3xl mx-auto mb-8 shadow-xl justify-center">
-          <button
-            onClick={() => handleTabChange("custom")}
-            className={`flex-1 min-w-[120px] py-2.5 px-3 rounded-xl font-extrabold flex items-center justify-center gap-2 transition-all duration-300 text-xs md:text-sm ${
-              activeTab === "custom"
-                ? "bg-gradient-to-r from-orange-500 to-amber-500 text-black shadow-lg shadow-orange-500/10"
-                : "text-slate-400 hover:text-white hover:bg-white/[0.03]"
-            }`}
-          >
-            <IoBriefcase className="text-lg" />
-            <span>Custom List</span>
-          </button>
-          <button
-            onClick={() => handleTabChange("creator-wallet")}
-            className={`flex-1 min-w-[120px] py-2.5 px-3 rounded-xl font-extrabold flex items-center justify-center gap-2 transition-all duration-300 text-xs md:text-sm ${
-              activeTab === "creator-wallet"
-                ? "bg-gradient-to-r from-orange-500 to-amber-500 text-black shadow-lg shadow-orange-500/10"
-                : "text-slate-400 hover:text-white hover:bg-white/[0.03]"
-            }`}
-          >
-            <IoWallet className="text-lg" />
-            <span>Creator Wallet</span>
-          </button>
-          <button
-            onClick={() => handleTabChange("asset-holders")}
-            className={`flex-1 min-w-[120px] py-2.5 px-3 rounded-xl font-extrabold flex items-center justify-center gap-2 transition-all duration-300 text-xs md:text-sm ${
-              activeTab === "asset-holders"
-                ? "bg-gradient-to-r from-orange-500 to-amber-500 text-black shadow-lg shadow-orange-500/10"
-                : "text-slate-400 hover:text-white hover:bg-white/[0.03]"
-            }`}
-          >
-            <IoSparkles className="text-lg" />
-            <span>Asset Holders</span>
-          </button>
-          <button
-            onClick={() => handleTabChange("vault")}
-            className={`flex-1 min-w-[120px] py-2.5 px-3 rounded-xl font-extrabold flex items-center justify-center gap-2 transition-all duration-300 text-xs md:text-sm ${
-              activeTab === "vault"
-                ? "bg-gradient-to-r from-orange-500 to-amber-500 text-black shadow-lg shadow-orange-500/10"
-                : "text-slate-400 hover:text-white hover:bg-white/[0.03]"
-            }`}
-          >
-            <IoGlobe className="text-lg" />
-            <span>NFD Vaults</span>
-          </button>
-        </div>
+        <ToolTabs
+          className="max-w-3xl"
+          active={activeTab}
+          onChange={handleTabChange}
+          tabs={[
+            { id: "custom", label: "Custom List", icon: <IoBriefcase /> },
+            { id: "creator-wallet", label: "Creator Wallet", icon: <IoWallet /> },
+            { id: "asset-holders", label: "Asset Holders", icon: <IoSparkles /> },
+            { id: "vault", label: "NFD Vaults", icon: <IoGlobe /> },
+          ]}
+        />
 
         {/* Main Action Box */}
-        <div className="w-full bg-[#18181c]/90 border border-white/5 rounded-[32px] p-6 md:p-10 backdrop-blur-xl shadow-2xl relative overflow-hidden flex flex-col items-center gap-6">
+        <div className="w-full bg-asset-detail-bg/90 border border-white/5 rounded-[32px] p-6 md:p-10 backdrop-blur-xl shadow-2xl relative overflow-hidden wt-frame [--wt-r:32px] [--wt-in:12px] flex flex-col items-center gap-6">
+          <Reticle />
           <ConnectButton inmain={true} />
 
           {/* ================================================================= */}
@@ -1290,23 +1252,23 @@ export function DistributionSuite({
             <div className="w-full flex flex-col items-center gap-6">
               {/* Info Box */}
               {customSubMode === "manual" ? (
-                <div className="w-full bg-blue-500/5 border border-blue-500/20 rounded-2xl p-4 flex gap-3 text-sm text-blue-200 items-start text-left leading-relaxed">
-                  <IoInformationCircle className="text-xl text-blue-400 shrink-0 mt-0.5" />
+                <div className="w-full bg-primary-black/40 border border-white/[0.08] rounded-2xl p-4 flex gap-3 text-sm text-slate-300 items-start text-left leading-relaxed">
+                  <IoInformationCircle className="text-xl text-primary-orange shrink-0 mt-0.5" />
                   <div>
                     <span className="font-bold text-white">Manual Custom Distribution:</span> Enter one asset with a list of recipient addresses, or a list of multiple assets targeting a single wallet address. Ideal for precise token logistics.
                   </div>
                 </div>
               ) : (
-                <div className="w-full bg-blue-500/5 border border-blue-500/20 rounded-2xl p-4 flex gap-3 text-sm text-blue-200 items-start text-left leading-relaxed">
-                  <IoInformationCircle className="text-xl text-blue-400 shrink-0 mt-0.5" />
+                <div className="w-full bg-primary-black/40 border border-white/[0.08] rounded-2xl p-4 flex gap-3 text-sm text-slate-300 items-start text-left leading-relaxed">
+                  <IoInformationCircle className="text-xl text-primary-orange shrink-0 mt-0.5" />
                   <div>
-                    <span className="font-bold text-white">CSV Mass Distribution:</span> Upload a spreadsheet mapping recipients to asset IDs and custom amounts. Ensure columns include <code className="text-blue-300">asset_id</code>, <code className="text-blue-300">receiver</code>, and <code className="text-blue-300">amount</code>.
+                    <span className="font-bold text-white">CSV Mass Distribution:</span> Upload a spreadsheet mapping recipients to asset IDs and custom amounts. Ensure columns include <code className="text-primary-orange">asset_id</code>, <code className="text-primary-orange">receiver</code>, and <code className="text-primary-orange">amount</code>.
                   </div>
                 </div>
               )}
 
               {/* Toggle Manual / CSV */}
-              <div className="flex gap-2 p-1 bg-slate-950 border border-slate-800 rounded-xl w-full max-w-xs justify-center">
+              <div className="flex gap-2 p-1 bg-primary-black border border-white/[0.08] rounded-xl w-full max-w-xs justify-center">
                 <button
                   onClick={() => {
                     setCustomSubMode("manual");
@@ -1337,7 +1299,7 @@ export function DistributionSuite({
                   {/* Manual Type Side-by-Side Selector */}
                   <div className="flex flex-col items-center gap-1.5 w-full">
                     <label className="text-slate-400 text-xs font-semibold">Distribution Type</label>
-                    <div className="flex gap-2 p-1 bg-slate-950 border border-slate-800 rounded-xl w-full max-w-md justify-center">
+                    <div className="flex gap-2 p-1 bg-primary-black border border-white/[0.08] rounded-xl w-full max-w-md justify-center">
                       {MANUAL_TYPES.map((t) => (
                         <button
                           key={t.value}
@@ -1367,7 +1329,7 @@ export function DistributionSuite({
                       {manualType === "multipleAssetsOneReceiver" ? (
                         <textarea
                           placeholder="Asset IDs (one per line or comma separated)"
-                          className="bg-slate-950/80 text-white placeholder-slate-600 border border-slate-800 rounded-xl p-3 h-28 focus:ring-2 focus:ring-primary-orange focus:border-transparent outline-none font-mono text-xs"
+                          className="bg-primary-black/80 text-white placeholder-slate-600 border border-white/[0.08] rounded-xl p-3 h-28 focus:ring-2 focus:ring-primary-orange focus:border-transparent outline-none font-mono text-xs"
                           value={manualAssets}
                           onChange={(e) => setManualAssets(e.target.value)}
                         />
@@ -1375,7 +1337,7 @@ export function DistributionSuite({
                         <input
                           type="text"
                           placeholder="e.g. 1 (for ALGO) or ASA ID"
-                          className="bg-slate-950/80 text-white placeholder-slate-600 border border-slate-800 rounded-xl p-3 focus:ring-2 focus:ring-primary-orange focus:border-transparent outline-none font-mono text-xs"
+                          className="bg-primary-black/80 text-white placeholder-slate-600 border border-white/[0.08] rounded-xl p-3 focus:ring-2 focus:ring-primary-orange focus:border-transparent outline-none font-mono text-xs"
                           value={manualAssets}
                           onChange={(e) => setManualAssets(e.target.value)}
                         />
@@ -1392,14 +1354,14 @@ export function DistributionSuite({
                           type="text"
                           placeholder="Algorand Address (58 chars)"
                           maxLength={58}
-                          className="bg-slate-950/80 text-white placeholder-slate-600 border border-slate-800 rounded-xl p-3 focus:ring-2 focus:ring-primary-orange focus:border-transparent outline-none font-mono text-xs"
+                          className="bg-primary-black/80 text-white placeholder-slate-600 border border-white/[0.08] rounded-xl p-3 focus:ring-2 focus:ring-primary-orange focus:border-transparent outline-none font-mono text-xs"
                           value={manualReceivers}
                           onChange={(e) => setManualReceivers(e.target.value)}
                         />
                       ) : (
                         <textarea
                           placeholder="Addresses (one per line or comma separated)"
-                          className="bg-slate-950/80 text-white placeholder-slate-600 border border-slate-800 rounded-xl p-3 h-28 focus:ring-2 focus:ring-primary-orange focus:border-transparent outline-none font-mono text-xs"
+                          className="bg-primary-black/80 text-white placeholder-slate-600 border border-white/[0.08] rounded-xl p-3 h-28 focus:ring-2 focus:ring-primary-orange focus:border-transparent outline-none font-mono text-xs"
                           value={manualReceivers}
                           onChange={(e) => setManualReceivers(e.target.value)}
                         />
@@ -1412,7 +1374,7 @@ export function DistributionSuite({
                       <input
                         type="number"
                         placeholder="Amount"
-                        className="bg-slate-950/80 text-white placeholder-slate-600 border border-slate-800 rounded-xl p-3 focus:ring-2 focus:ring-primary-orange focus:border-transparent outline-none font-mono text-xs"
+                        className="bg-primary-black/80 text-white placeholder-slate-600 border border-white/[0.08] rounded-xl p-3 focus:ring-2 focus:ring-primary-orange focus:border-transparent outline-none font-mono text-xs"
                         value={manualAmount}
                         onChange={(e) => setManualAmount(e.target.value)}
                         min={0}
@@ -1426,7 +1388,7 @@ export function DistributionSuite({
                     <input
                       type="text"
                       placeholder="Enter custom transaction note memo"
-                      className="bg-slate-950/80 text-white placeholder-slate-600 border border-slate-800 rounded-xl p-3 w-full focus:ring-2 focus:ring-primary-orange focus:border-transparent outline-none text-xs"
+                      className="bg-primary-black/80 text-white placeholder-slate-600 border border-white/[0.08] rounded-xl p-3 w-full focus:ring-2 focus:ring-primary-orange focus:border-transparent outline-none text-xs"
                       value={manualNote}
                       onChange={(e) => setManualNote(e.target.value)}
                     />
@@ -1449,16 +1411,16 @@ export function DistributionSuite({
                       </div>
                     ) : manualProcessStep === "SENDING_TO_ASSET_INBOX" ? (
                       <div className="flex flex-col items-center gap-2">
-                        <div className="animate-spin rounded-full border-4 border-slate-800 border-t-primary-orange h-8 w-8"></div>
+                        <TermSpinner />
                         <span className="text-sm text-slate-300">Sending inbox transactions to the ledger...</span>
                       </div>
                     ) : manualProcessStep === "CALCULATING_FEES" ? (
                       <div className="flex flex-col items-center gap-2">
-                        <div className="animate-spin rounded-full border-4 border-slate-800 border-t-primary-orange h-8 w-8"></div>
+                        <TermSpinner />
                         <span className="text-sm text-slate-300">Calculating ARC-59 Inbox MBR funding fees...</span>
                       </div>
                     ) : manualProcessStep === "SEND_TO_ASSET_INBOX" ? (
-                      <div className="w-full max-w-sm bg-slate-950 border border-slate-800 rounded-2xl p-5 flex flex-col gap-3 text-left">
+                      <div className="w-full max-w-sm bg-primary-black border border-white/[0.08] rounded-2xl p-5 flex flex-col gap-3 text-left">
                         <div className="flex justify-between items-center text-sm">
                           <span className="text-slate-400">Total Txns:</span>
                           <span className="text-primary-orange font-bold font-mono">{manualInboxInfo.logDataArray.length}</span>
@@ -1469,7 +1431,7 @@ export function DistributionSuite({
                             {(manualInboxInfo.grandTotal * 1e-6).toFixed(4)} ALGO
                           </span>
                         </div>
-                        <div className="flex justify-between items-center text-sm border-b border-slate-800/80 pb-3">
+                        <div className="flex justify-between items-center text-sm border-b border-white/[0.08] pb-3">
                           <span className="text-slate-400">Your Spendable Balance:</span>
                           <span className="text-slate-200 font-bold font-mono">{(manualSpendingBalance * 1e-6).toFixed(4)} ALGO</span>
                         </div>
@@ -1494,7 +1456,7 @@ export function DistributionSuite({
                       </div>
                     ) : manualProcessStep === "SENDING_TXNS" ? (
                       <div className="flex flex-col items-center gap-2">
-                        <div className="animate-spin rounded-full border-4 border-slate-800 border-t-primary-orange h-8 w-8"></div>
+                        <TermSpinner />
                         <span className="text-sm text-slate-400">Broadcasting transactions to network...</span>
                       </div>
                     ) : (
@@ -1503,7 +1465,7 @@ export function DistributionSuite({
                           <input
                             type="checkbox"
                             id="manual_inbox"
-                            className="rounded border-slate-800 text-primary-orange focus:ring-primary-orange bg-slate-950 h-4 w-4"
+                            className="rounded border-white/[0.08] text-primary-orange focus:ring-primary-orange bg-primary-black h-4 w-4"
                             checked={manualInbox}
                             onChange={(e) => setManualInbox(e.target.checked)}
                           />
@@ -1554,7 +1516,7 @@ export function DistributionSuite({
                   {csvData === null ? (
                     <label
                       htmlFor="csv-dropzone"
-                      className="flex flex-col justify-center items-center w-full max-w-md mx-auto h-40 px-4 rounded-2xl border-2 border-dashed cursor-pointer bg-[#0f0f11] border-slate-800 hover:border-orange-500/50 hover:bg-white/[0.02] transition duration-300"
+                      className="flex flex-col justify-center items-center w-full max-w-md mx-auto h-40 px-4 rounded-2xl border-2 border-dashed cursor-pointer bg-primary-black border-white/[0.08] hover:border-orange-500/50 hover:bg-white/[0.02] transition duration-300"
                     >
                       <div className="flex flex-col justify-center items-center text-center">
                         <IoCloudUpload className="text-3xl text-slate-400 mb-2" />
@@ -1600,16 +1562,16 @@ export function DistributionSuite({
                         </div>
                       ) : csvProcessStep === "SENDING_TO_ASSET_INBOX" ? (
                         <div className="flex flex-col items-center gap-2">
-                          <div className="animate-spin rounded-full border-4 border-slate-800 border-t-primary-orange h-8 w-8"></div>
+                          <TermSpinner />
                           <span className="text-sm text-slate-300">Sending inbox transactions to the network...</span>
                         </div>
                       ) : csvProcessStep === "CALCULATING_FEES" ? (
                         <div className="flex flex-col items-center gap-2">
-                          <div className="animate-spin rounded-full border-4 border-slate-800 border-t-primary-orange h-8 w-8"></div>
+                          <TermSpinner />
                           <span className="text-sm text-slate-300">Calculating fees...</span>
                         </div>
                       ) : csvProcessStep === "SEND_TO_ASSET_INBOX" ? (
-                        <div className="w-full max-w-sm bg-slate-950 border border-slate-800 rounded-2xl p-5 flex flex-col gap-3 text-left">
+                        <div className="w-full max-w-sm bg-primary-black border border-white/[0.08] rounded-2xl p-5 flex flex-col gap-3 text-left">
                           <div className="flex justify-between items-center text-sm">
                             <span className="text-slate-400">Total Txns:</span>
                             <span className="text-primary-orange font-bold font-mono">{csvInboxInfo.logDataArray.length}</span>
@@ -1620,7 +1582,7 @@ export function DistributionSuite({
                               {(csvInboxInfo.grandTotal * 1e-6).toFixed(4)} ALGO
                             </span>
                           </div>
-                          <div className="flex justify-between items-center text-sm border-b border-slate-800/80 pb-3">
+                          <div className="flex justify-between items-center text-sm border-b border-white/[0.08] pb-3">
                             <span className="text-slate-400">Your Spendable Balance:</span>
                             <span className="text-slate-200 font-bold font-mono">{(csvSpendingBalance * 1e-6).toFixed(4)} ALGO</span>
                           </div>
@@ -1650,12 +1612,12 @@ export function DistributionSuite({
                         </div>
                       ) : csvProcessStep === "SENDING_TXNS" ? (
                         <div className="flex flex-col items-center gap-2">
-                          <div className="animate-spin rounded-full border-4 border-slate-800 border-t-primary-orange h-8 w-8"></div>
+                          <TermSpinner />
                           <span className="text-sm text-slate-400">Broadcasting transactions to ledger...</span>
                         </div>
                       ) : (
                         <div className="w-full flex flex-col items-center gap-4">
-                          <div className="text-sm font-bold text-slate-300 bg-[#0f0f11] px-5 py-3 rounded-xl border border-white/5">
+                          <div className="text-sm font-bold text-slate-300 bg-primary-black px-5 py-3 rounded-xl border border-white/5">
                             File uploaded: {csvData.length - 1} records detected.
                           </div>
 
@@ -1663,7 +1625,7 @@ export function DistributionSuite({
                             <input
                               type="checkbox"
                               id="csv_inbox"
-                              className="rounded border-slate-800 text-primary-orange focus:ring-primary-orange bg-slate-950 h-4 w-4"
+                              className="rounded border-white/[0.08] text-primary-orange focus:ring-primary-orange bg-primary-black h-4 w-4"
                               checked={csvInbox}
                               onChange={(e) => setCsvInbox(e.target.checked)}
                             />
@@ -1700,8 +1662,8 @@ export function DistributionSuite({
           {/* ================================================================= */}
           {activeTab === "creator-wallet" && (
             <div className="w-full flex flex-col items-center gap-6">
-              <div className="w-full bg-blue-500/5 border border-blue-500/20 rounded-2xl p-4 flex gap-3 text-sm text-blue-200 items-start text-left leading-relaxed">
-                <IoInformationCircle className="text-xl text-blue-400 shrink-0 mt-0.5" />
+              <div className="w-full bg-primary-black/40 border border-white/[0.08] rounded-2xl p-4 flex gap-3 text-sm text-slate-300 items-start text-left leading-relaxed">
+                <IoInformationCircle className="text-xl text-primary-orange shrink-0 mt-0.5" />
                 <div>
                   <span className="font-bold text-white">Creator Wallet Distribution:</span> Identify all wallets holding assets created by one or more creator accounts, and distribute target tokens to them proportionally.
                 </div>
@@ -1713,7 +1675,7 @@ export function DistributionSuite({
                   <label className="text-slate-300 text-sm font-semibold">Creator Wallet(s)*</label>
                   <textarea
                     placeholder="Creator addresses (one per line or comma separated)"
-                    className="bg-slate-950/80 text-white placeholder-slate-600 border border-slate-800 rounded-xl p-3 h-28 focus:ring-2 focus:ring-primary-orange focus:border-transparent outline-none font-mono text-xs"
+                    className="bg-primary-black/80 text-white placeholder-slate-600 border border-white/[0.08] rounded-xl p-3 h-28 focus:ring-2 focus:ring-primary-orange focus:border-transparent outline-none font-mono text-xs"
                     value={creatorWallets}
                     onChange={(e) => setCreatorWallets(e.target.value)}
                   />
@@ -1724,7 +1686,7 @@ export function DistributionSuite({
                   <label className="text-slate-300 text-sm font-semibold">Asset Name Prefix Filters (optional)</label>
                   <textarea
                     placeholder="e.g. WEN (one per line, comma separated)"
-                    className="bg-slate-950/80 text-white placeholder-slate-600 border border-slate-800 rounded-xl p-3 h-28 focus:ring-2 focus:ring-primary-orange focus:border-transparent outline-none font-mono text-xs"
+                    className="bg-primary-black/80 text-white placeholder-slate-600 border border-white/[0.08] rounded-xl p-3 h-28 focus:ring-2 focus:ring-primary-orange focus:border-transparent outline-none font-mono text-xs"
                     value={creatorPrefixes}
                     onChange={(e) => setCreatorPrefixes(e.target.value)}
                   />
@@ -1735,7 +1697,7 @@ export function DistributionSuite({
                   <label className="text-slate-300 text-sm font-semibold">Creator's Specified Asset IDs (optional)</label>
                   <textarea
                     placeholder="Limit scan to specific created asset IDs"
-                    className="bg-slate-950/80 text-white placeholder-slate-600 border border-slate-800 rounded-xl p-3 h-20 focus:ring-2 focus:ring-primary-orange focus:border-transparent outline-none font-mono text-xs"
+                    className="bg-primary-black/80 text-white placeholder-slate-600 border border-white/[0.08] rounded-xl p-3 h-20 focus:ring-2 focus:ring-primary-orange focus:border-transparent outline-none font-mono text-xs"
                     value={creatorSpecifiedAssetIds}
                     onChange={(e) => setCreatorSpecifiedAssetIds(e.target.value)}
                   />
@@ -1748,7 +1710,7 @@ export function DistributionSuite({
                     <input
                       type="number"
                       placeholder="e.g. 10"
-                      className="bg-slate-950/80 text-white placeholder-slate-600 border border-slate-800 rounded-xl p-3 focus:ring-2 focus:ring-primary-orange focus:border-transparent outline-none font-mono text-xs"
+                      className="bg-primary-black/80 text-white placeholder-slate-600 border border-white/[0.08] rounded-xl p-3 focus:ring-2 focus:ring-primary-orange focus:border-transparent outline-none font-mono text-xs"
                       value={creatorAmount}
                       onChange={(e) => setCreatorAmount(e.target.value)}
                       min={0}
@@ -1761,7 +1723,7 @@ export function DistributionSuite({
                     <input
                       type="text"
                       placeholder="e.g. 1 for ALGO or Custom ASA"
-                      className="bg-slate-950/80 text-white placeholder-slate-600 border border-slate-800 rounded-xl p-3 focus:ring-2 focus:ring-primary-orange focus:border-transparent outline-none font-mono text-xs"
+                      className="bg-primary-black/80 text-white placeholder-slate-600 border border-white/[0.08] rounded-xl p-3 focus:ring-2 focus:ring-primary-orange focus:border-transparent outline-none font-mono text-xs"
                       value={creatorAssetID}
                       onChange={(e) => setCreatorAssetID(e.target.value)}
                     />
@@ -1775,7 +1737,7 @@ export function DistributionSuite({
                 <input
                   type="text"
                   placeholder="Enter notes memo"
-                  className="bg-slate-950/80 text-white placeholder-slate-600 border border-slate-800 rounded-xl p-3 w-full focus:ring-2 focus:ring-primary-orange focus:border-transparent outline-none text-xs"
+                  className="bg-primary-black/80 text-white placeholder-slate-600 border border-white/[0.08] rounded-xl p-3 w-full focus:ring-2 focus:ring-primary-orange focus:border-transparent outline-none text-xs"
                   value={creatorNote}
                   onChange={(e) => setCreatorNote(e.target.value)}
                 />
@@ -1797,7 +1759,7 @@ export function DistributionSuite({
                     </p>
                   </div>
                 ) : creatorProcessStep === 6 ? (
-                  <div className="w-full max-w-sm bg-slate-950 border border-slate-800 rounded-2xl p-5 flex flex-col gap-3 text-left">
+                  <div className="w-full max-w-sm bg-primary-black border border-white/[0.08] rounded-2xl p-5 flex flex-col gap-3 text-left">
                     <div className="flex justify-between items-center text-sm">
                       <span className="text-slate-400">Total Txns:</span>
                       <span className="text-primary-orange font-bold font-mono">{creatorInboxInfo.logDataArray.length}</span>
@@ -1808,7 +1770,7 @@ export function DistributionSuite({
                         {(creatorInboxInfo.grandTotal * 1e-6).toFixed(4)} ALGO
                       </span>
                     </div>
-                    <div className="flex justify-between items-center text-sm border-b border-slate-800/80 pb-3">
+                    <div className="flex justify-between items-center text-sm border-b border-white/[0.08] pb-3">
                       <span className="text-slate-400">Your Spendable Balance:</span>
                       <span className="text-slate-200 font-bold font-mono">{(creatorSpendingBalance * 1e-6).toFixed(4)} ALGO</span>
                     </div>
@@ -1828,7 +1790,7 @@ export function DistributionSuite({
                   </div>
                 ) : creatorProcessStep === 5 ? (
                   <div className="flex flex-col items-center gap-2">
-                    <div className="animate-spin rounded-full border-4 border-slate-800 border-t-primary-orange h-8 w-8"></div>
+                    <TermSpinner />
                     <span className="text-sm text-slate-300">Calculating fees...</span>
                   </div>
                 ) : creatorProcessStep === 4 ? (
@@ -1837,7 +1799,7 @@ export function DistributionSuite({
                   </div>
                 ) : creatorProcessStep === 3 ? (
                   <div className="flex flex-col items-center gap-2">
-                    <div className="animate-spin rounded-full border-4 border-slate-800 border-t-primary-orange h-8 w-8"></div>
+                    <TermSpinner />
                     <span className="text-sm text-slate-400">Broadcasting transactions...</span>
                   </div>
                 ) : creatorProcessStep === 2 ? (
@@ -1849,7 +1811,7 @@ export function DistributionSuite({
                       <input
                         type="checkbox"
                         id="creator_inbox"
-                        className="rounded border-slate-800 text-primary-orange focus:ring-primary-orange bg-slate-950 h-4 w-4"
+                        className="rounded border-white/[0.08] text-primary-orange focus:ring-primary-orange bg-primary-black h-4 w-4"
                         checked={creatorInbox}
                         onChange={(e) => setCreatorInbox(e.target.checked)}
                       />
@@ -1875,7 +1837,7 @@ export function DistributionSuite({
                   </div>
                 ) : creatorProcessStep === 1 ? (
                   <div className="flex flex-col items-center gap-2 text-center">
-                    <div className="animate-spin rounded-full border-4 border-slate-800 border-t-primary-orange h-8 w-8"></div>
+                    <TermSpinner />
                     <span className="text-sm text-slate-300">Fetching creator asset balances and owners...</span>
                     {creatorFoundAssetCount > 0 && (
                       <span className="text-xs text-slate-500 font-mono">
@@ -1900,8 +1862,8 @@ export function DistributionSuite({
           {/* ================================================================= */}
           {activeTab === "asset-holders" && (
             <div className="w-full flex flex-col items-center gap-6">
-              <div className="w-full bg-blue-500/5 border border-blue-500/20 rounded-2xl p-4 flex gap-3 text-sm text-blue-200 items-start text-left leading-relaxed">
-                <IoInformationCircle className="text-xl text-blue-400 shrink-0 mt-0.5" />
+              <div className="w-full bg-primary-black/40 border border-white/[0.08] rounded-2xl p-4 flex gap-3 text-sm text-slate-300 items-start text-left leading-relaxed">
+                <IoInformationCircle className="text-xl text-primary-orange shrink-0 mt-0.5" />
                 <div>
                   <span className="font-bold text-white">Specific Asset Airdrop:</span> Duplicate or distribute tokens to all holders of a specific reference asset. Perfect for rewards distributions or governance drops.
                 </div>
@@ -1914,7 +1876,7 @@ export function DistributionSuite({
                   <input
                     type="text"
                     placeholder="Enter reference asset ID"
-                    className="bg-slate-950/80 text-white placeholder-slate-600 border border-slate-800 rounded-xl p-3 focus:ring-2 focus:ring-primary-orange focus:border-transparent outline-none font-mono text-xs"
+                    className="bg-primary-black/80 text-white placeholder-slate-600 border border-white/[0.08] rounded-xl p-3 focus:ring-2 focus:ring-primary-orange focus:border-transparent outline-none font-mono text-xs"
                     value={holderSpecifiedAssetId}
                     onChange={(e) => setHolderSpecifiedAssetId(e.target.value)}
                   />
@@ -1926,7 +1888,7 @@ export function DistributionSuite({
                   <input
                     type="number"
                     placeholder="e.g. 5"
-                    className="bg-slate-950/80 text-white placeholder-slate-600 border border-slate-800 rounded-xl p-3 focus:ring-2 focus:ring-primary-orange focus:border-transparent outline-none font-mono text-xs"
+                    className="bg-primary-black/80 text-white placeholder-slate-600 border border-white/[0.08] rounded-xl p-3 focus:ring-2 focus:ring-primary-orange focus:border-transparent outline-none font-mono text-xs"
                     value={holderAmount}
                     onChange={(e) => setHolderAmount(e.target.value)}
                     min={0}
@@ -1939,7 +1901,7 @@ export function DistributionSuite({
                   <input
                     type="text"
                     placeholder="e.g. 1 for ALGO or Custom ASA"
-                    className="bg-slate-950/80 text-white placeholder-slate-600 border border-slate-800 rounded-xl p-3 focus:ring-2 focus:ring-primary-orange focus:border-transparent outline-none font-mono text-xs"
+                    className="bg-primary-black/80 text-white placeholder-slate-600 border border-white/[0.08] rounded-xl p-3 focus:ring-2 focus:ring-primary-orange focus:border-transparent outline-none font-mono text-xs"
                     value={holderAssetID}
                     onChange={(e) => setHolderAssetID(e.target.value)}
                   />
@@ -1952,7 +1914,7 @@ export function DistributionSuite({
                 <input
                   type="text"
                   placeholder="Enter note memo"
-                  className="bg-slate-950/80 text-white placeholder-slate-600 border border-slate-800 rounded-xl p-3 w-full focus:ring-2 focus:ring-primary-orange focus:border-transparent outline-none text-xs"
+                  className="bg-primary-black/80 text-white placeholder-slate-600 border border-white/[0.08] rounded-xl p-3 w-full focus:ring-2 focus:ring-primary-orange focus:border-transparent outline-none text-xs"
                   value={holderNote}
                   onChange={(e) => setHolderNote(e.target.value)}
                 />
@@ -1974,7 +1936,7 @@ export function DistributionSuite({
                     </p>
                   </div>
                 ) : holderProcessStep === 6 ? (
-                  <div className="w-full max-w-sm bg-slate-950 border border-slate-800 rounded-2xl p-5 flex flex-col gap-3 text-left">
+                  <div className="w-full max-w-sm bg-primary-black border border-white/[0.08] rounded-2xl p-5 flex flex-col gap-3 text-left">
                     <div className="flex justify-between items-center text-sm">
                       <span className="text-slate-400">Total Txns:</span>
                       <span className="text-primary-orange font-bold font-mono">{holderInboxInfo.logDataArray.length}</span>
@@ -1985,7 +1947,7 @@ export function DistributionSuite({
                         {(holderInboxInfo.grandTotal * 1e-6).toFixed(4)} ALGO
                       </span>
                     </div>
-                    <div className="flex justify-between items-center text-sm border-b border-slate-800/80 pb-3">
+                    <div className="flex justify-between items-center text-sm border-b border-white/[0.08] pb-3">
                       <span className="text-slate-400">Your Spendable Balance:</span>
                       <span className="text-slate-200 font-bold font-mono">{(holderSpendingBalance * 1e-6).toFixed(4)} ALGO</span>
                     </div>
@@ -2005,7 +1967,7 @@ export function DistributionSuite({
                   </div>
                 ) : holderProcessStep === 5 ? (
                   <div className="flex flex-col items-center gap-2">
-                    <div className="animate-spin rounded-full border-4 border-slate-800 border-t-primary-orange h-8 w-8"></div>
+                    <TermSpinner />
                     <span className="text-sm text-slate-300">Calculating fees...</span>
                   </div>
                 ) : holderProcessStep === 4 ? (
@@ -2014,7 +1976,7 @@ export function DistributionSuite({
                   </div>
                 ) : holderProcessStep === 3 ? (
                   <div className="flex flex-col items-center gap-2">
-                    <div className="animate-spin rounded-full border-4 border-slate-800 border-t-primary-orange h-8 w-8"></div>
+                    <TermSpinner />
                     <span className="text-sm text-slate-400">Broadcasting transactions...</span>
                   </div>
                 ) : holderProcessStep === 2 ? (
@@ -2026,7 +1988,7 @@ export function DistributionSuite({
                       <input
                         type="checkbox"
                         id="holder_inbox"
-                        className="rounded border-slate-800 text-primary-orange focus:ring-primary-orange bg-slate-950 h-4 w-4"
+                        className="rounded border-white/[0.08] text-primary-orange focus:ring-primary-orange bg-primary-black h-4 w-4"
                         checked={holderInbox}
                         onChange={(e) => setHolderInbox(e.target.checked)}
                       />
@@ -2052,7 +2014,7 @@ export function DistributionSuite({
                   </div>
                 ) : holderProcessStep === 1 ? (
                   <div className="flex flex-col items-center gap-2 text-center">
-                    <div className="animate-spin rounded-full border-4 border-slate-800 border-t-primary-orange h-8 w-8"></div>
+                    <TermSpinner />
                     <span className="text-sm text-slate-300">Fetching asset balances and owners...</span>
                     {holderFoundAssetCount > 0 && (
                       <span className="text-xs text-slate-500 font-mono">
@@ -2077,15 +2039,15 @@ export function DistributionSuite({
           {/* ================================================================= */}
           {activeTab === "vault" && (
             <div className="w-full flex flex-col items-center gap-6">
-              <div className="w-full bg-blue-500/5 border border-blue-500/20 rounded-2xl p-4 flex gap-3 text-sm text-blue-200 items-start text-left leading-relaxed">
-                <IoInformationCircle className="text-xl text-blue-400 shrink-0 mt-0.5" />
+              <div className="w-full bg-primary-black/40 border border-white/[0.08] rounded-2xl p-4 flex gap-3 text-sm text-slate-300 items-start text-left leading-relaxed">
+                <IoInformationCircle className="text-xl text-primary-orange shrink-0 mt-0.5" />
                 <div>
                   <span className="font-bold text-white">NFD Vault Distribution:</span> Deliver assets securely into NFD smart contract vaults. Vault contracts handles administrative opt-ins automatically without requiring receiver actions.
                 </div>
               </div>
 
               {/* Sub-mode segments vs domains */}
-              <div className="flex gap-2 p-1 bg-slate-950 border border-slate-800 rounded-xl w-full max-w-sm justify-center">
+              <div className="flex gap-2 p-1 bg-primary-black border border-white/[0.08] rounded-xl w-full max-w-sm justify-center">
                 <button
                   onClick={() => {
                     setVaultType("segments");
@@ -2119,7 +2081,7 @@ export function DistributionSuite({
                   <input
                     type="text"
                     placeholder="Asset ID"
-                    className="bg-slate-950/80 text-white placeholder-slate-600 border border-slate-800 rounded-xl p-3 focus:ring-2 focus:ring-primary-orange focus:border-transparent outline-none font-mono text-xs"
+                    className="bg-primary-black/80 text-white placeholder-slate-600 border border-white/[0.08] rounded-xl p-3 focus:ring-2 focus:ring-primary-orange focus:border-transparent outline-none font-mono text-xs"
                     value={vaultAssetID}
                     onChange={(e) => setVaultAssetID(e.target.value)}
                   />
@@ -2133,7 +2095,7 @@ export function DistributionSuite({
                   {vaultType === "domains" ? (
                     <textarea
                       placeholder="Domains (one per line, comma separated)"
-                      className="bg-slate-950/80 text-white placeholder-slate-600 border border-slate-800 rounded-xl p-3 h-20 focus:ring-2 focus:ring-primary-orange focus:border-transparent outline-none font-mono text-xs"
+                      className="bg-primary-black/80 text-white placeholder-slate-600 border border-white/[0.08] rounded-xl p-3 h-20 focus:ring-2 focus:ring-primary-orange focus:border-transparent outline-none font-mono text-xs"
                       value={vaultDomains}
                       onChange={(e) => setVaultDomains(e.target.value)}
                     />
@@ -2141,7 +2103,7 @@ export function DistributionSuite({
                     <input
                       type="text"
                       placeholder="e.g. orange.algo"
-                      className="bg-slate-950/80 text-white placeholder-slate-600 border border-slate-800 rounded-xl p-3 focus:ring-2 focus:ring-primary-orange focus:border-transparent outline-none font-mono text-xs"
+                      className="bg-primary-black/80 text-white placeholder-slate-600 border border-white/[0.08] rounded-xl p-3 focus:ring-2 focus:ring-primary-orange focus:border-transparent outline-none font-mono text-xs"
                       value={vaultDomains}
                       onChange={(e) => setVaultDomains(e.target.value)}
                     />
@@ -2154,7 +2116,7 @@ export function DistributionSuite({
                   <input
                     type="number"
                     placeholder="Amount"
-                    className="bg-slate-950/80 text-white placeholder-slate-600 border border-slate-800 rounded-xl p-3 focus:ring-2 focus:ring-primary-orange focus:border-transparent outline-none font-mono text-xs"
+                    className="bg-primary-black/80 text-white placeholder-slate-600 border border-white/[0.08] rounded-xl p-3 focus:ring-2 focus:ring-primary-orange focus:border-transparent outline-none font-mono text-xs"
                     value={vaultAmount}
                     onChange={(e) => setVaultAmount(e.target.value)}
                     min={0}
@@ -2168,7 +2130,7 @@ export function DistributionSuite({
                 <input
                   type="text"
                   placeholder="Enter note memo"
-                  className="bg-slate-950/80 text-white placeholder-slate-600 border border-slate-800 rounded-xl p-3 w-full focus:ring-2 focus:ring-primary-orange focus:border-transparent outline-none text-xs"
+                  className="bg-primary-black/80 text-white placeholder-slate-600 border border-white/[0.08] rounded-xl p-3 w-full focus:ring-2 focus:ring-primary-orange focus:border-transparent outline-none text-xs"
                   value={vaultNote}
                   onChange={(e) => setVaultNote(e.target.value)}
                 />
@@ -2183,7 +2145,7 @@ export function DistributionSuite({
                   </div>
                 ) : vaultProcessStep === 4 ? (
                   <div className="flex flex-col items-center gap-2">
-                    <div className="animate-spin rounded-full border-4 border-slate-800 border-t-primary-orange h-8 w-8"></div>
+                    <TermSpinner />
                     <span className="text-sm text-slate-300">Sending vault transactions to the network...</span>
                   </div>
                 ) : vaultProcessStep === 3 ? (
@@ -2200,12 +2162,12 @@ export function DistributionSuite({
                   </div>
                 ) : vaultProcessStep === 2 ? (
                   <div className="flex flex-col items-center gap-2">
-                    <div className="animate-spin rounded-full border-4 border-slate-800 border-t-primary-orange h-8 w-8"></div>
+                    <TermSpinner />
                     <span className="text-sm text-slate-300">Creating smart contract vault transactions...</span>
                   </div>
                 ) : vaultProcessStep === 1 ? (
                   <div className="flex flex-col items-center gap-2">
-                    <div className="animate-spin rounded-full border-4 border-slate-800 border-t-primary-orange h-8 w-8"></div>
+                    <TermSpinner />
                     <span className="text-sm text-slate-300">Fetching sub-domain segments of {vaultDomains}...</span>
                   </div>
                 ) : (

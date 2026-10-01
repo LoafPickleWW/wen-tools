@@ -16,12 +16,10 @@ import { FaCopy, FaHeart, FaChevronDown } from "react-icons/fa";
 import { toast } from "react-toastify";
 import { useWallet } from "@txnlab/use-wallet-react";
 import algosdk from "algosdk";
-import { usePQTheme } from "../context/PQThemeContext";
 
 const DonationDialog = () => {
   const [open, setOpen] = useState(false);
   const { activeAddress, algodClient, transactionSigner, activeNetwork } = useWallet();
-  const { isThemeActive } = usePQTheme();
 
   const [donateAmount, setDonateAmount] = useState<string>("10");
   const [assetType, setAssetType] = useState<"ALGO" | "USDC">("ALGO");
@@ -138,72 +136,22 @@ const DonationDialog = () => {
 
   return (
     <>
-      <Button
-        variant="contained"
-        size="large"
-        sx={{
-          color: isThemeActive ? "#020617" : "#010010",
-          border: "0",
-          background: isThemeActive
-            ? "linear-gradient(135deg, var(--pq-primary, #00f0ff), var(--pq-secondary, #3b82f6))"
-            : "linear-gradient(to right, #EAE004, #FF931E)",
-          transition: "all 0.3s ease",
-          borderRadius: "9999px",
-          padding: {
-            xs: ".4rem .6rem",
-            sm: ".4rem 1.2rem",
-          },
-          minWidth: {
-            xs: "auto",
-            sm: "64px",
-          },
-          textTransform: "none",
-          fontSize: {
-            xs: ".9rem",
-            md: "1.1rem",
-          },
-          fontFamily: "Poppins, sans-serif",
-          opacity: 1,
-          boxShadow: isThemeActive
-            ? "0 0 16px var(--pq-glow)"
-            : "0 0 8px rgba(234, 224, 4, 0.5)",
-          animation: "donatePulse 2.5s infinite ease-in-out",
-          "@keyframes donatePulse": {
-            "0%": {
-              boxShadow: isThemeActive
-                ? "0 0 0 0 var(--pq-glow)"
-                : "0 0 0 0 rgba(234, 224, 4, 0.7)",
-            },
-            "70%": {
-              boxShadow: "0 0 0 8px transparent",
-            },
-            "100%": {
-              boxShadow: "0 0 0 0 transparent",
-            },
-          },
-          "&:hover": {
-            opacity: 0.95,
-            transform: "scale(1.05)",
-            boxShadow: isThemeActive
-              ? "0 0 24px var(--pq-glow)"
-              : "0 0 12px rgba(255, 147, 30, 0.8)",
-          },
-        }}
+      <button
+        type="button"
         onClick={handleOpen}
-        className="font-semibold font-sans text-[#010010] text-xl w-auto flex items-center justify-center"
+        aria-label="Donate"
+        className="wt-btn wt-btn-ghost group h-9 px-2.5 sm:px-3"
       >
+        <FaHeart className="text-[13px] text-primary-orange transition-transform group-hover:scale-110" />
         <span className="hidden sm:inline">Donate</span>
-        <span className="inline sm:hidden flex items-center">
-          <FaHeart className="text-sm" />
-        </span>
-      </Button>
+      </button>
       <Dialog 
         open={open} 
         onClose={handleClose}
         PaperProps={{
           sx: {
-            backgroundColor: "#1A171A",
-            border: "2px solid #FF931E",
+            backgroundColor: "rgb(var(--surface-3))",
+            border: "2px solid rgb(var(--brand))",
             borderRadius: "20px",
             color: "white",
             padding: "8px",
@@ -238,25 +186,25 @@ const DonationDialog = () => {
                   borderRadius: "10px",
                   "& .MuiToggleButtonGroup-grouped": {
                     color: "white",
-                    borderColor: "rgba(255, 147, 30, 0.3)",
+                    borderColor: "rgb(var(--brand) / 0.3)",
                     textTransform: "none",
                     fontFamily: "Poppins, sans-serif",
                     py: 0.5,
                     "&:first-of-type": {
                       borderTopLeftRadius: "10px !important",
                       borderBottomLeftRadius: "10px !important",
-                      borderLeft: "1px solid rgba(255, 147, 30, 0.3) !important",
+                      borderLeft: "1px solid rgb(var(--brand) / 0.3) !important",
                     },
                     "&:last-of-type": {
                       borderTopRightRadius: "10px !important",
                       borderBottomRightRadius: "10px !important",
                     },
                     "&.Mui-selected": {
-                      backgroundColor: "#FF931E",
+                      backgroundColor: "rgb(var(--brand))",
                       color: "#010010",
                       fontWeight: "bold",
                       "&:hover": {
-                        backgroundColor: "#FF931E",
+                        backgroundColor: "rgb(var(--brand))",
                       }
                     }
                   }
@@ -281,16 +229,16 @@ const DonationDialog = () => {
                   onClick={() => setDonateAmount(preset)}
                   sx={{
                     color: donateAmount === preset ? "#010010" : "white",
-                    borderColor: "#FF931E",
-                    backgroundColor: donateAmount === preset ? "#FF931E" : "transparent",
+                    borderColor: "rgb(var(--brand))",
+                    backgroundColor: donateAmount === preset ? "rgb(var(--brand))" : "transparent",
                     textTransform: "none",
                     fontFamily: "Poppins, sans-serif",
                     borderRadius: "8px",
                     py: 0.5,
                     fontWeight: donateAmount === preset ? "bold" : "normal",
                     "&:hover": {
-                      borderColor: "#FF931E",
-                      backgroundColor: donateAmount === preset ? "#FF931E" : "rgba(255, 147, 30, 0.1)",
+                      borderColor: "rgb(var(--brand))",
+                      backgroundColor: donateAmount === preset ? "rgb(var(--brand))" : "rgb(var(--brand) / 0.1)",
                     }
                   }}
                 >
@@ -311,22 +259,22 @@ const DonationDialog = () => {
             fullWidth
             size="small"
             InputLabelProps={{
-              style: { color: "rgba(255, 147, 30, 0.8)", fontSize: "0.80rem" }
+              style: { color: "rgb(var(--brand) / 0.8)", fontSize: "0.80rem" }
             }}
             sx={{
               "& .MuiOutlinedInput-root": {
                 color: "white",
-                backgroundColor: "#272227",
+                backgroundColor: "rgb(var(--surface))",
                 borderRadius: "10px",
                 fontSize: "0.8rem",
                 "& fieldset": {
-                  borderColor: "rgba(255, 147, 30, 0.5)",
+                  borderColor: "rgb(var(--brand) / 0.5)",
                 },
                 "&:hover fieldset": {
-                  borderColor: "#FF931E",
+                  borderColor: "rgb(var(--brand))",
                 },
                 "&.Mui-focused fieldset": {
-                  borderColor: "#FF931E",
+                  borderColor: "rgb(var(--brand))",
                 },
               },
             }}
@@ -339,7 +287,7 @@ const DonationDialog = () => {
               onClick={handleDonate}
               disabled={donatingInProgress}
               sx={{
-                background: "linear-gradient(to right, #EAE004, #FF931E)",
+                background: "linear-gradient(to right, rgb(var(--brand-2)), rgb(var(--brand)))",
                 color: "#010010",
                 fontWeight: "bold",
                 borderRadius: "10px",
@@ -355,7 +303,7 @@ const DonationDialog = () => {
               {donatingInProgress ? "Processing..." : `Donate ${donateAmount} ${assetType}`}
             </Button>
           ) : (
-            <div className="text-center text-[11px] text-slate-400 p-2 bg-[#272227] rounded-lg border border-dashed border-slate-700">
+            <div className="text-center text-[11px] text-slate-400 p-2 bg-banner-grey rounded-lg border border-dashed border-slate-700">
               Connect wallet in header to donate directly
             </div>
           )}
@@ -367,13 +315,13 @@ const DonationDialog = () => {
               color: "white",
               boxShadow: "none",
               "&:before": { display: "none" },
-              border: "1px solid rgba(255, 147, 30, 0.2)",
+              border: "1px solid rgb(var(--brand) / 0.2)",
               borderRadius: "10px !important",
               overflow: "hidden",
             }}
           >
             <AccordionSummary
-              expandIcon={<FaChevronDown className="text-[10px] text-[#FF931E]" />}
+              expandIcon={<FaChevronDown className="text-[10px] text-[rgb(var(--brand))]" />}
               sx={{ minHeight: "auto", py: 0, "& .MuiAccordionSummary-content": { my: 0.75 } }}
             >
               <span className="text-[11px] font-semibold text-slate-300 font-sans">Or scan QR / copy address</span>
@@ -396,22 +344,22 @@ const DonationDialog = () => {
                 size="small"
                 helperText="wentools.algo"
                 FormHelperTextProps={{
-                  style: { textAlign: "center", color: "#FF931E", fontWeight: "600", marginTop: "2px", fontSize: "0.7rem" },
+                  style: { textAlign: "center", color: "rgb(var(--brand))", fontWeight: "600", marginTop: "2px", fontSize: "0.7rem" },
                 }}
                 sx={{
                   "& .MuiOutlinedInput-root": {
                     color: "white",
-                    backgroundColor: "#272227",
+                    backgroundColor: "rgb(var(--surface))",
                     borderRadius: "6px",
                     fontSize: "0.7rem",
                     "& fieldset": {
-                      borderColor: "rgba(255, 147, 30, 0.3)",
+                      borderColor: "rgb(var(--brand) / 0.3)",
                     },
                   },
                 }}
                 InputProps={{
                   endAdornment: (
-                    <IconButton onClick={handleCopy} sx={{ color: "#FF931E", p: 0.5 }}>
+                    <IconButton onClick={handleCopy} sx={{ color: "rgb(var(--brand))", p: 0.5 }}>
                       <FaCopy className="w-3 h-3" />
                     </IconButton>
                   ),

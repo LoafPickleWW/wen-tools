@@ -732,7 +732,7 @@ export const ARC62ManagerTool = () => {
             value={inputAssetId}
             onChange={(e) => setInputAssetId(e.target.value.trim())}
             placeholder="Enter asset id"
-            className="w-48 bg-gray-300 text-sm font-medium text-center leading-none text-black placeholder:text-black/50 px-3 py-2 border rounded border-gray-200"
+            className="w-48 bg-banner-grey text-sm font-medium text-center leading-none text-white placeholder:text-slate-500 px-3 py-2 border rounded-xl border-white/10"
           />
           <button
             type="submit"
@@ -1044,7 +1044,7 @@ export const ARC62ManagerTool = () => {
                       Label {num}
                     </label>
                     <input
-                      className="w-64 bg-gray-300 text-sm font-medium text-center leading-none text-black placeholder:text-black/30 px-3 py-2 border rounded border-gray-200"
+                      className="w-64 bg-banner-grey text-sm font-medium text-center leading-none text-white placeholder:text-slate-500 px-3 py-2 border rounded-xl border-white/10"
                       placeholder="Key"
                       value={newLabelForm[`key${num}` as keyof LabelForm]}
                       onChange={(e) => {
@@ -1067,7 +1067,7 @@ export const ARC62ManagerTool = () => {
                       <span id={`key_label_${num}`}></span>
                     </label>
                     <input
-                      className="w-64 mt-2 bg-gray-300 text-sm font-medium text-center leading-none text-black placeholder:text-black/30 px-3 py-2 border rounded border-gray-200"
+                      className="w-64 mt-2 bg-banner-grey text-sm font-medium text-center leading-none text-white placeholder:text-slate-500 px-3 py-2 border rounded-xl border-white/10"
                       placeholder="Wallet Address"
                       value={newLabelForm[`value${num}` as keyof LabelForm]}
                       onChange={async (e) => {

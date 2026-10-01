@@ -1,3 +1,4 @@
+import { ToolHero } from "../components/cypher/ToolKit";
 import { useState, useRef, useEffect } from "react";
 import algosdk from "algosdk";
 import { IoSparkles, IoSearch, IoStop, IoCopy, IoCheckmark, IoWallet } from "react-icons/io5";
@@ -73,19 +74,13 @@ export default function VanityAddressTool() {
         description="High-performance Algorand vanity address generator. Create custom wallet addresses with specific prefixes for project identities and protocol signing."
       />
       {/* Header */}
-      <div className="w-full flex flex-col items-center mt-12 mb-8 text-center">
-        <div className="flex items-center gap-4">
-          <div className="p-3 bg-amber-400 rounded-2xl shadow-lg shadow-amber-400/20">
-            <IoSparkles className="text-4xl text-black" />
-          </div>
-          <h1 id="vanity-title" className="text-3xl md:text-5xl font-black tracking-tight bg-gradient-to-r from-amber-200 via-amber-400 to-orange-500 bg-clip-text text-transparent uppercase">
-            Vanity Address
-          </h1>
-        </div>
-        <p className="text-slate-400 mt-4 text-lg font-medium max-w-xl">
-          Generate a custom Algorand wallet address with a specific prefix. Perfect for project identities and protocol signing wallets.
-        </p>
-      </div>
+      <ToolHero
+        icon={<IoSparkles aria-hidden="true" />}
+        tag="vanity"
+        title="Vanity Address"
+        description="Generate a custom Algorand wallet address with a specific prefix. Perfect for project identities and protocol signing wallets."
+        meta={["runs in your browser", "custom prefix", "keys never leave this tab"]}
+      />
 
       <div className="w-full bg-banner-grey border border-secondary-gray rounded-[36px] p-8 md:p-12 backdrop-blur-xl shadow-2xl relative overflow-hidden">
         {/* Search Progress Background */}

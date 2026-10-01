@@ -1,3 +1,5 @@
+import { Reticle } from "../components/cypher/Reticle";
+import { TermSpinner, ToolHero, ToolTabs } from "../components/cypher/ToolKit";
 import { showDonationToast, BONFIRE_APP_IDS } from "../utils";
 import { useState, useEffect, useMemo } from "react";
 import { toast } from "react-toastify";
@@ -688,55 +690,35 @@ export function HoldingsAuditor({ defaultTab = "wallet" }: HoldingsAuditorProps)
 
       <article className="mx-auto text-white mb-16 flex flex-col items-center max-w-4xl w-full px-4">
         {/* Header Section */}
-        <header className="w-full flex flex-col items-center mt-10 mb-8 text-center">
-          <div className="flex items-center gap-3 justify-center">
-            <div className="p-2.5 bg-gradient-to-br from-orange-500 to-amber-600 rounded-2xl shadow-lg shadow-orange-500/20">
-              <IoSearch className="text-2xl text-black" aria-hidden="true" />
-            </div>
-            <h1 className="text-3xl md:text-5xl font-black tracking-tight bg-gradient-to-r from-orange-300 via-orange-500 to-amber-500 bg-clip-text text-transparent py-1 uppercase">
-              Holdings Auditor
-            </h1>
-          </div>
-          <p className="text-slate-400 mt-4 text-sm md:text-base font-medium max-w-xl leading-relaxed">
-            Consolidated auditor to review wallet asset inventories and track distribution balances across multiple assets.
-          </p>
-        </header>
+        <ToolHero
+          icon={<IoSearch aria-hidden="true" />}
+          tag="auditor"
+          title="Holdings Auditor"
+          description="Consolidated auditor to review wallet asset inventories and track distribution balances across multiple assets."
+          meta={["wallet holdings","asset holders","CSV export"]}
+        />
 
         {/* Tab Selector - Glassmorphism */}
-        <div className="flex flex-wrap gap-2 p-1.5 bg-[#121214] border border-white/5 rounded-2xl w-full max-w-md mx-auto mb-8 shadow-xl justify-center">
-          <button
-            onClick={() => handleTabChange("wallet")}
-            className={`flex-1 min-w-[120px] py-2.5 px-3 rounded-xl font-extrabold flex items-center justify-center gap-2 transition-all duration-300 text-xs md:text-sm ${
-              activeTab === "wallet"
-                ? "bg-gradient-to-r from-orange-500 to-amber-500 text-black shadow-lg shadow-orange-500/10"
-                : "text-slate-400 hover:text-white hover:bg-white/[0.03]"
-            }`}
-          >
-            <IoWallet className="text-lg" />
-            <span>Wallet Holdings</span>
-          </button>
-          <button
-            onClick={() => handleTabChange("asset")}
-            className={`flex-1 min-w-[120px] py-2.5 px-3 rounded-xl font-extrabold flex items-center justify-center gap-2 transition-all duration-300 text-xs md:text-sm ${
-              activeTab === "asset"
-                ? "bg-gradient-to-r from-orange-500 to-amber-500 text-black shadow-lg shadow-orange-500/10"
-                : "text-slate-400 hover:text-white hover:bg-white/[0.03]"
-            }`}
-          >
-            <IoBriefcase className="text-lg" />
-            <span>Asset Holders</span>
-          </button>
-        </div>
+        <ToolTabs
+          className="max-w-md"
+          active={activeTab}
+          onChange={handleTabChange}
+          tabs={[
+            { id: "wallet", label: "Wallet Holdings", icon: <IoWallet /> },
+            { id: "asset", label: "Asset Holders", icon: <IoBriefcase /> },
+          ]}
+        />
 
         {/* Main Action Box */}
-        <div className="w-full bg-[#18181c]/90 border border-white/5 rounded-[32px] p-6 md:p-10 backdrop-blur-xl shadow-2xl relative overflow-hidden flex flex-col items-center gap-6">
+        <div className="w-full bg-asset-detail-bg/90 border border-white/5 rounded-[32px] p-6 md:p-10 backdrop-blur-xl shadow-2xl relative overflow-hidden wt-frame [--wt-r:32px] [--wt-in:12px] flex flex-col items-center gap-6">
+          <Reticle />
           <ConnectButton inmain={true} />
 
           {/* TAB 1: WALLET HOLDINGS VIEW */}
           {activeTab === "wallet" && (
             <div className="w-full flex flex-col items-center gap-6">
-              <div className="w-full bg-blue-500/5 border border-blue-500/20 rounded-2xl p-4 flex gap-3 text-sm text-blue-200 items-start text-left leading-relaxed">
-                <IoInformationCircle className="text-xl text-blue-400 shrink-0 mt-0.5" />
+              <div className="w-full bg-primary-black/40 border border-white/[0.08] rounded-2xl p-4 flex gap-3 text-sm text-slate-300 items-start text-left leading-relaxed">
+                <IoInformationCircle className="text-xl text-primary-orange shrink-0 mt-0.5" />
                 <div>
                   <span className="font-bold text-white">Wallet Inventory Audit:</span> Retrieve all Algorand Standard Assets (ASAs) held by a target wallet. Ideal for portfolio auditing, export compliance, and asset verification.
                 </div>
@@ -748,7 +730,7 @@ export function HoldingsAuditor({ defaultTab = "wallet" }: HoldingsAuditorProps)
                   type="text"
                   placeholder="Enter Algorand Address (58 characters)"
                   maxLength={58}
-                  className="bg-slate-950/80 text-white placeholder-slate-500 border border-slate-800 rounded-xl p-3.5 w-full focus:ring-2 focus:ring-primary-orange focus:border-transparent outline-none font-mono text-sm"
+                  className="bg-primary-black/80 text-white placeholder-slate-500 border border-white/[0.08] rounded-xl p-3.5 w-full focus:ring-2 focus:ring-primary-orange focus:border-transparent outline-none font-mono text-sm"
                   value={userWallet}
                   onChange={(e) => setUserWallet(e.target.value)}
                   disabled={walletLoading || walletExportLoading}
@@ -759,7 +741,7 @@ export function HoldingsAuditor({ defaultTab = "wallet" }: HoldingsAuditorProps)
                 <input
                   type="checkbox"
                   id="includedCreatedAssets"
-                  className="mr-2 rounded border-slate-800 text-primary-orange focus:ring-primary-orange bg-slate-950 h-4 w-4"
+                  className="mr-2 rounded border-white/[0.08] text-primary-orange focus:ring-primary-orange bg-primary-black h-4 w-4"
                   checked={isIncludedCreatedAssets}
                   onChange={(e) => setIsIncludedCreatedAssets(e.target.checked)}
                   disabled={walletLoading || walletExportLoading}
@@ -778,14 +760,14 @@ export function HoldingsAuditor({ defaultTab = "wallet" }: HoldingsAuditorProps)
               </button>
 
               {walletData.length > 0 && (
-                <div className="w-full mt-2 bg-slate-900/40 border border-slate-800 rounded-2xl p-6 flex flex-col items-center gap-4">
+                <div className="w-full mt-2 bg-asset-detail-bg/40 border border-white/[0.08] rounded-2xl p-6 flex flex-col items-center gap-4">
                   <p className="text-sm text-slate-300">
                     Wallet has <span className="text-primary-orange font-bold font-mono">{walletData.length}</span> active asset balances.
                   </p>
 
                   {walletExportLoading ? (
                     <div className="flex flex-col items-center gap-2">
-                      <div className="animate-spin rounded-full border-4 border-slate-800 border-t-primary-orange h-8 w-8"></div>
+                      <TermSpinner />
                       <span className="text-xs text-slate-400 font-mono">
                         Auditing asset: {walletCounter} / {walletData.length}
                       </span>
@@ -807,8 +789,8 @@ export function HoldingsAuditor({ defaultTab = "wallet" }: HoldingsAuditorProps)
           {/* TAB 2: ASSET HOLDERS VIEW */}
           {activeTab === "asset" && (
             <div className="w-full flex flex-col items-center gap-6">
-              <div className="w-full bg-blue-500/5 border border-blue-500/20 rounded-2xl p-4 flex gap-3 text-sm text-blue-200 items-start text-left leading-relaxed">
-                <IoInformationCircle className="text-xl text-blue-400 shrink-0 mt-0.5" />
+              <div className="w-full bg-primary-black/40 border border-white/[0.08] rounded-2xl p-4 flex gap-3 text-sm text-slate-300 items-start text-left leading-relaxed">
+                <IoInformationCircle className="text-xl text-primary-orange shrink-0 mt-0.5" />
                 <div>
                   <span className="font-bold text-white">Asset Distribution Audit:</span> Extract holder rosters across multiple separate asset IDs. Apply filters to identify NFD-verified wallets, node runners, or RandGallery listings.
                 </div>
@@ -818,19 +800,19 @@ export function HoldingsAuditor({ defaultTab = "wallet" }: HoldingsAuditorProps)
                 <label className="text-slate-300 text-sm font-semibold">Asset ID List</label>
                 <textarea
                   placeholder="Enter Asset IDs (comma, space, or newline separated)"
-                  className="bg-slate-950/80 text-white placeholder-slate-500 border border-slate-800 rounded-xl p-4 w-full h-24 focus:ring-2 focus:ring-primary-orange focus:border-transparent outline-none font-mono text-sm leading-relaxed"
+                  className="bg-primary-black/80 text-white placeholder-slate-500 border border-white/[0.08] rounded-xl p-4 w-full h-24 focus:ring-2 focus:ring-primary-orange focus:border-transparent outline-none font-mono text-sm leading-relaxed"
                   value={assetId}
                   onChange={(e) => setAssetId(e.target.value)}
                   disabled={assetOwnersLoading || assetLoading}
                 />
               </div>
 
-              <div className="w-full grid grid-cols-1 md:grid-cols-2 gap-3.5 p-5 bg-slate-950/40 border border-slate-800/80 rounded-xl text-left">
+              <div className="w-full grid grid-cols-1 md:grid-cols-2 gap-3.5 p-5 bg-primary-black/40 border border-white/[0.08] rounded-xl text-left">
                 <div className="flex items-center">
                   <input
                     type="checkbox"
                     id="check_optin"
-                    className="mr-2 rounded border-slate-800 text-primary-orange focus:ring-primary-orange bg-slate-950 h-4 w-4"
+                    className="mr-2 rounded border-white/[0.08] text-primary-orange focus:ring-primary-orange bg-primary-black h-4 w-4"
                     checked={checkOptin}
                     onChange={(e) => setCheckOptin(e.target.checked)}
                     disabled={assetOwnersLoading || assetLoading}
@@ -844,7 +826,7 @@ export function HoldingsAuditor({ defaultTab = "wallet" }: HoldingsAuditorProps)
                   <input
                     type="checkbox"
                     id="check_running_node"
-                    className="mr-2 rounded border-slate-800 text-primary-orange focus:ring-primary-orange bg-slate-950 h-4 w-4"
+                    className="mr-2 rounded border-white/[0.08] text-primary-orange focus:ring-primary-orange bg-primary-black h-4 w-4"
                     checked={checkRunningNode}
                     onChange={(e) => setCheckRunningNode(e.target.checked)}
                     disabled={assetOwnersLoading || assetLoading}
@@ -858,7 +840,7 @@ export function HoldingsAuditor({ defaultTab = "wallet" }: HoldingsAuditorProps)
                   <input
                     type="checkbox"
                     id="nfd_only"
-                    className="mr-2 rounded border-slate-800 text-primary-orange focus:ring-primary-orange bg-slate-950 h-4 w-4"
+                    className="mr-2 rounded border-white/[0.08] text-primary-orange focus:ring-primary-orange bg-primary-black h-4 w-4"
                     checked={checkNfdOnly}
                     onChange={(e) => setCheckNfdOnly(e.target.checked)}
                     disabled={assetOwnersLoading || assetLoading}
@@ -872,7 +854,7 @@ export function HoldingsAuditor({ defaultTab = "wallet" }: HoldingsAuditorProps)
                   <input
                     type="checkbox"
                     id="nfd_verified_only"
-                    className="mr-2 rounded border-slate-800 text-primary-orange focus:ring-primary-orange bg-slate-950 h-4 w-4"
+                    className="mr-2 rounded border-white/[0.08] text-primary-orange focus:ring-primary-orange bg-primary-black h-4 w-4"
                     checked={checkVerifiedOnly}
                     onChange={(e) => setCheckVerifiedOnly(e.target.checked)}
                     disabled={assetOwnersLoading || assetLoading}
@@ -886,7 +868,7 @@ export function HoldingsAuditor({ defaultTab = "wallet" }: HoldingsAuditorProps)
                   <input
                     type="checkbox"
                     id="check_rand"
-                    className="mr-2 rounded border-slate-800 text-primary-orange focus:ring-primary-orange bg-slate-950 h-4 w-4"
+                    className="mr-2 rounded border-white/[0.08] text-primary-orange focus:ring-primary-orange bg-primary-black h-4 w-4"
                     checked={checkRandSupport}
                     onChange={(e) => setCheckRandSupport(e.target.checked)}
                     disabled={assetOwnersLoading || assetLoading}
@@ -907,7 +889,7 @@ export function HoldingsAuditor({ defaultTab = "wallet" }: HoldingsAuditorProps)
 
               {assetOwnersLoading && (
                 <div className="flex flex-col items-center gap-2 mt-4">
-                  <div className="animate-spin rounded-full border-4 border-slate-800 border-t-primary-orange h-8 w-8"></div>
+                  <TermSpinner />
                   <span className="text-sm text-slate-300">Fetching asset owners from ledger...</span>
                 </div>
               )}
@@ -916,14 +898,14 @@ export function HoldingsAuditor({ defaultTab = "wallet" }: HoldingsAuditorProps)
                 <div className="w-full mt-8 space-y-8 animate-fadeIn text-left">
                   {assetLoading ? (
                     <div className="w-full flex flex-col items-center gap-2 py-8">
-                      <div className="animate-spin rounded-full border-4 border-slate-800 border-t-primary-orange h-8 w-8"></div>
+                      <TermSpinner />
                       <span className="text-sm text-slate-300">{assetLoadingMessage}</span>
                     </div>
                   ) : (
                     <>
                       {/* Asset Selector (if multiple assets are loaded) */}
                       {assetHolders.length > 1 && (
-                        <div className="flex flex-col sm:flex-row sm:items-center gap-3 bg-slate-900/40 border border-slate-800 rounded-2xl p-4 w-full">
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-3 bg-asset-detail-bg/40 border border-white/[0.08] rounded-2xl p-4 w-full">
                           <label className="text-slate-300 text-sm font-semibold whitespace-nowrap">Select Active Asset View:</label>
                           <select
                             value={selectedAssetId}
@@ -931,7 +913,7 @@ export function HoldingsAuditor({ defaultTab = "wallet" }: HoldingsAuditorProps)
                               setSelectedAssetId(e.target.value);
                               setAssetCurrentPage(1);
                             }}
-                            className="bg-slate-950 border border-slate-800 text-white rounded-xl p-2.5 outline-none text-sm w-full font-semibold focus:ring-2 focus:ring-primary-orange"
+                            className="bg-primary-black border border-white/[0.08] text-white rounded-xl p-2.5 outline-none text-sm w-full font-semibold focus:ring-2 focus:ring-primary-orange"
                           >
                             <option value="all">All Assets (Aggregated)</option>
                             {assetHolders.map((asset) => (
@@ -948,7 +930,7 @@ export function HoldingsAuditor({ defaultTab = "wallet" }: HoldingsAuditorProps)
                         <>
                           {/* Summary Statistics Cards */}
                           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 w-full">
-                            <div className="bg-slate-900/40 border border-slate-800 rounded-2xl p-5 flex flex-col justify-between shadow-xl min-h-[110px]">
+                            <div className="bg-asset-detail-bg/40 border border-white/[0.08] rounded-2xl p-5 flex flex-col justify-between shadow-xl min-h-[110px]">
                               <div className="flex justify-between items-start w-full">
                                 <p className="text-slate-400 text-xs font-bold uppercase tracking-wider">Total Supply</p>
                                 <div className="bg-indigo-500/10 p-2 rounded-xl border border-indigo-500/20 text-indigo-400 shrink-0">
@@ -966,7 +948,7 @@ export function HoldingsAuditor({ defaultTab = "wallet" }: HoldingsAuditorProps)
                               </div>
                             </div>
 
-                            <div className="bg-slate-900/40 border border-slate-800 rounded-2xl p-5 flex flex-col justify-between shadow-xl min-h-[110px]">
+                            <div className="bg-asset-detail-bg/40 border border-white/[0.08] rounded-2xl p-5 flex flex-col justify-between shadow-xl min-h-[110px]">
                               <div className="flex justify-between items-start w-full">
                                 <p className="text-slate-400 text-xs font-bold uppercase tracking-wider">Circulating Supply</p>
                                 <div className="bg-emerald-500/10 p-2 rounded-xl border border-emerald-500/20 text-emerald-400 shrink-0">
@@ -984,7 +966,7 @@ export function HoldingsAuditor({ defaultTab = "wallet" }: HoldingsAuditorProps)
                               </div>
                             </div>
 
-                            <div className="bg-slate-900/40 border border-slate-800 rounded-2xl p-5 flex flex-col justify-between shadow-xl min-h-[110px]">
+                            <div className="bg-asset-detail-bg/40 border border-white/[0.08] rounded-2xl p-5 flex flex-col justify-between shadow-xl min-h-[110px]">
                               <div className="flex justify-between items-start w-full">
                                 <p className="text-slate-400 text-xs font-bold uppercase tracking-wider">Creator & Reserve</p>
                                 <div className="bg-orange-500/10 p-2 rounded-xl border border-orange-500/20 text-orange-400 shrink-0">
@@ -1002,7 +984,7 @@ export function HoldingsAuditor({ defaultTab = "wallet" }: HoldingsAuditorProps)
                               </div>
                             </div>
 
-                            <div className="bg-slate-900/40 border border-slate-800 rounded-2xl p-5 flex flex-col justify-between shadow-xl min-h-[110px]">
+                            <div className="bg-asset-detail-bg/40 border border-white/[0.08] rounded-2xl p-5 flex flex-col justify-between shadow-xl min-h-[110px]">
                               <div className="flex justify-between items-start w-full">
                                 <p className="text-slate-400 text-xs font-bold uppercase tracking-wider">Burned (Bonfire)</p>
                                 <div className="bg-rose-500/10 p-2 rounded-xl border border-rose-500/20 text-rose-400 shrink-0">
@@ -1022,9 +1004,9 @@ export function HoldingsAuditor({ defaultTab = "wallet" }: HoldingsAuditorProps)
                           </div>
 
                           {/* Horizontal Token Allocation Breakdown Bar */}
-                          <div className="bg-slate-900/40 border border-slate-800 rounded-2xl p-6 shadow-xl w-full">
+                          <div className="bg-asset-detail-bg/40 border border-white/[0.08] rounded-2xl p-6 shadow-xl w-full">
                             <h3 className="text-sm font-bold text-slate-300 uppercase tracking-wider mb-4">Token Allocation Breakdown</h3>
-                            <div className="w-full h-6 rounded-full overflow-hidden bg-slate-950 flex border border-slate-800">
+                            <div className="w-full h-6 rounded-full overflow-hidden bg-primary-black flex border border-white/[0.08]">
                               {assetAnalytics.totalSupply > 0 ? (
                                 <>
                                   <div
@@ -1066,7 +1048,7 @@ export function HoldingsAuditor({ defaultTab = "wallet" }: HoldingsAuditorProps)
                           {/* Whale stats & Extra indicators */}
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
                             {/* Whale Concentration */}
-                            <div className="bg-slate-900/40 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
+                            <div className="bg-asset-detail-bg/40 border border-white/[0.08] rounded-2xl p-6 shadow-xl space-y-4">
                               <h3 className="text-sm font-bold text-slate-300 uppercase tracking-wider">Whale Concentration (% of Circulating)</h3>
                               <div className="space-y-3 font-mono">
                                 <div>
@@ -1074,7 +1056,7 @@ export function HoldingsAuditor({ defaultTab = "wallet" }: HoldingsAuditorProps)
                                     <span>Top 5 Wallets</span>
                                     <span>{assetAnalytics.top5Pct}%</span>
                                   </div>
-                                  <div className="w-full bg-slate-950 h-2 rounded-full overflow-hidden border border-slate-850">
+                                  <div className="w-full bg-primary-black h-2 rounded-full overflow-hidden border border-slate-850">
                                     <div style={{ width: `${assetAnalytics.top5Pct}%` }} className="bg-gradient-to-r from-orange-500 to-orange-400 h-full" />
                                   </div>
                                 </div>
@@ -1083,7 +1065,7 @@ export function HoldingsAuditor({ defaultTab = "wallet" }: HoldingsAuditorProps)
                                     <span>Top 10 Wallets</span>
                                     <span>{assetAnalytics.top10Pct}%</span>
                                   </div>
-                                  <div className="w-full bg-slate-950 h-2 rounded-full overflow-hidden border border-slate-850">
+                                  <div className="w-full bg-primary-black h-2 rounded-full overflow-hidden border border-slate-850">
                                     <div style={{ width: `${assetAnalytics.top10Pct}%` }} className="bg-gradient-to-r from-orange-500 to-amber-500 h-full" />
                                   </div>
                                 </div>
@@ -1092,7 +1074,7 @@ export function HoldingsAuditor({ defaultTab = "wallet" }: HoldingsAuditorProps)
                                     <span>Top 20 Wallets</span>
                                     <span>{assetAnalytics.top20Pct}%</span>
                                   </div>
-                                  <div className="w-full bg-slate-950 h-2 rounded-full overflow-hidden border border-slate-850">
+                                  <div className="w-full bg-primary-black h-2 rounded-full overflow-hidden border border-slate-850">
                                     <div style={{ width: `${assetAnalytics.top20Pct}%` }} className="bg-gradient-to-r from-orange-500 to-yellow-500 h-full" />
                                   </div>
                                 </div>
@@ -1100,25 +1082,25 @@ export function HoldingsAuditor({ defaultTab = "wallet" }: HoldingsAuditorProps)
                             </div>
 
                             {/* Additional Statistics Panel */}
-                            <div className="bg-slate-900/40 border border-slate-800 rounded-2xl p-6 shadow-xl flex flex-col justify-between gap-4">
+                            <div className="bg-asset-detail-bg/40 border border-white/[0.08] rounded-2xl p-6 shadow-xl flex flex-col justify-between gap-4">
                               <h3 className="text-sm font-bold text-slate-300 uppercase tracking-wider">Ecosystem Statistics</h3>
                               <div className="grid grid-cols-2 gap-4 flex-1 mt-2">
-                                <div className="bg-slate-950/50 rounded-xl p-3 border border-slate-850">
+                                <div className="bg-primary-black/50 rounded-xl p-3 border border-slate-850">
                                   <span className="text-slate-400 text-xs font-semibold">Mode Balance</span>
                                   <p className="text-lg font-bold text-white mt-1 font-mono">{assetAnalytics.modeBalance.toLocaleString(undefined, { maximumFractionDigits: 4 })}</p>
                                   <span className="text-[10px] text-slate-500 block mt-0.5">Most common balance held</span>
                                 </div>
-                                <div className="bg-slate-950/50 rounded-xl p-3 border border-slate-850">
+                                <div className="bg-primary-black/50 rounded-xl p-3 border border-slate-850">
                                   <span className="text-slate-400 text-xs font-semibold">Unique Wallets</span>
                                   <p className="text-lg font-bold text-white mt-1 font-mono">{assetAnalytics.totalCirculatingHolders}</p>
                                   <span className="text-[10px] text-slate-500 block mt-0.5">Circulating holder addresses</span>
                                 </div>
-                                <div className="bg-slate-950/50 rounded-xl p-3 border border-slate-850">
+                                <div className="bg-primary-black/50 rounded-xl p-3 border border-slate-850">
                                   <span className="text-slate-400 text-xs font-semibold">NFD Adoption</span>
                                   <p className="text-lg font-bold text-white mt-1 font-mono">{assetAnalytics.nfdAdoptionRate}%</p>
                                   <span className="text-[10px] text-slate-500 block mt-0.5">Wallets mapped to NFD domains</span>
                                 </div>
-                                <div className="bg-slate-950/50 rounded-xl p-3 border border-slate-850">
+                                <div className="bg-primary-black/50 rounded-xl p-3 border border-slate-850">
                                   <span className="text-slate-400 text-xs font-semibold">Burn Address</span>
                                   <p className="text-xs font-bold text-rose-400 mt-2 font-mono truncate" title={bonfireAddr}>
                                     {bonfireAddr ? `${bonfireAddr.slice(0, 6)}...${bonfireAddr.slice(-6)}` : "N/A"}
@@ -1130,7 +1112,7 @@ export function HoldingsAuditor({ defaultTab = "wallet" }: HoldingsAuditorProps)
                           </div>
 
                           {/* Quick Actions & Search Panel */}
-                          <div className="bg-slate-900/40 border border-slate-800 rounded-2xl p-6 shadow-xl flex flex-col md:flex-row gap-4 items-center justify-between w-full">
+                          <div className="bg-asset-detail-bg/40 border border-white/[0.08] rounded-2xl p-6 shadow-xl flex flex-col md:flex-row gap-4 items-center justify-between w-full">
                             <div className="flex flex-wrap items-center gap-3">
                               <button
                                 onClick={downloadAssetHoldersDataAsCSV}
@@ -1141,7 +1123,7 @@ export function HoldingsAuditor({ defaultTab = "wallet" }: HoldingsAuditorProps)
                               </button>
                               <button
                                 onClick={copyAllAssetWallets}
-                                className="px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-xl text-sm transition flex items-center gap-2 cursor-pointer border border-slate-700"
+                                className="px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-xl text-sm transition flex items-center gap-2 cursor-pointer border border-white/[0.12]"
                               >
                                 Copy All Wallets
                               </button>
@@ -1151,7 +1133,7 @@ export function HoldingsAuditor({ defaultTab = "wallet" }: HoldingsAuditorProps)
                               <input
                                 type="text"
                                 placeholder="Search Wallet or NFD..."
-                                className="bg-slate-950/80 text-white placeholder-slate-500 border border-slate-850 rounded-xl px-4 py-2.5 pl-10 w-full focus:ring-2 focus:ring-primary-orange focus:border-transparent outline-none text-sm"
+                                className="bg-primary-black/80 text-white placeholder-slate-500 border border-slate-850 rounded-xl px-4 py-2.5 pl-10 w-full focus:ring-2 focus:ring-primary-orange focus:border-transparent outline-none text-sm"
                                 value={assetSearchTerm}
                                 onChange={(e) => {
                                   setAssetSearchTerm(e.target.value);
@@ -1165,15 +1147,15 @@ export function HoldingsAuditor({ defaultTab = "wallet" }: HoldingsAuditorProps)
                           </div>
 
                           {/* Holders Table */}
-                          <div className="bg-slate-900/60 border border-slate-800 rounded-2xl overflow-hidden shadow-2xl w-full">
+                          <div className="bg-asset-detail-bg/60 border border-white/[0.08] rounded-2xl overflow-hidden shadow-2xl w-full">
                             <div className="overflow-x-auto">
                               <table className="w-full text-left border-collapse">
                                 <thead>
-                                  <tr className="border-b border-slate-800 bg-slate-950/40 text-slate-400 text-xs uppercase font-bold">
+                                  <tr className="border-b border-white/[0.08] bg-primary-black/40 text-slate-400 text-xs uppercase font-bold">
                                     <th className="p-4 pl-6">Wallet / NFD Domain</th>
                                     <th
                                       onClick={() => handleAssetSort("total")}
-                                      className="p-4 cursor-pointer hover:bg-slate-950/65 transition select-none text-center"
+                                      className="p-4 cursor-pointer hover:bg-primary-black/65 transition select-none text-center"
                                     >
                                       <div className="flex items-center justify-center gap-1">
                                         Aggregated Balance
@@ -1185,7 +1167,7 @@ export function HoldingsAuditor({ defaultTab = "wallet" }: HoldingsAuditorProps)
                                 </thead>
                                 <tbody className="divide-y divide-slate-850 text-sm font-medium">
                                   {paginatedAssetHolders.map((holder) => (
-                                    <tr key={holder.wallet} className="hover:bg-slate-900/30 transition-colors">
+                                    <tr key={holder.wallet} className="hover:bg-asset-detail-bg/30 transition-colors">
                                       <td className="p-4 pl-6 max-w-xs sm:max-w-md">
                                         <div className="flex flex-col gap-0.5">
                                           {holder.nfd && (
@@ -1219,7 +1201,7 @@ export function HoldingsAuditor({ defaultTab = "wallet" }: HoldingsAuditorProps)
 
                             {/* Pagination Controls */}
                             {totalAssetPages > 1 && (
-                              <div className="flex items-center justify-between border-t border-slate-850 px-6 py-4 bg-slate-950/20 text-sm font-semibold w-full">
+                              <div className="flex items-center justify-between border-t border-slate-850 px-6 py-4 bg-primary-black/20 text-sm font-semibold w-full">
                                 <span className="text-slate-400 font-mono text-xs">
                                   Showing {((assetCurrentPage - 1) * assetItemsPerPage) + 1} to {Math.min(assetCurrentPage * assetItemsPerPage, processedAssetHolders.length)} of {processedAssetHolders.length} wallets
                                 </span>
@@ -1227,7 +1209,7 @@ export function HoldingsAuditor({ defaultTab = "wallet" }: HoldingsAuditorProps)
                                   <button
                                     onClick={() => setAssetCurrentPage(prev => Math.max(1, prev - 1))}
                                     disabled={assetCurrentPage === 1}
-                                    className="px-4 py-2 border border-slate-800 rounded-xl hover:bg-slate-900 hover:text-white transition disabled:opacity-30 disabled:hover:bg-transparent"
+                                    className="px-4 py-2 border border-white/[0.08] rounded-xl hover:bg-asset-detail-bg hover:text-white transition disabled:opacity-30 disabled:hover:bg-transparent"
                                   >
                                     Previous
                                   </button>
@@ -1237,7 +1219,7 @@ export function HoldingsAuditor({ defaultTab = "wallet" }: HoldingsAuditorProps)
                                   <button
                                     onClick={() => setAssetCurrentPage(prev => Math.min(totalAssetPages, prev + 1))}
                                     disabled={assetCurrentPage === totalAssetPages}
-                                    className="px-4 py-2 border border-slate-800 rounded-xl hover:bg-slate-900 hover:text-white transition disabled:opacity-30 disabled:hover:bg-transparent"
+                                    className="px-4 py-2 border border-white/[0.08] rounded-xl hover:bg-asset-detail-bg hover:text-white transition disabled:opacity-30 disabled:hover:bg-transparent"
                                   >
                                     Next
                                   </button>
@@ -1260,7 +1242,7 @@ export function HoldingsAuditor({ defaultTab = "wallet" }: HoldingsAuditorProps)
         </div>
 
         {/* Practitioner Section */}
-        <section className="mt-20 pt-12 border-t border-slate-800 w-full max-w-4xl text-left px-4">
+        <section className="mt-20 pt-12 border-t border-white/[0.08] w-full max-w-4xl text-left px-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
             <div className="space-y-4">
               <h2 className="text-xl font-bold text-white tracking-tight italic">On-Chain Inventory Auditing</h2>

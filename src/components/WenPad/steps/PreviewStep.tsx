@@ -534,7 +534,7 @@ const PreviewStep = () => {
                 setSearchQuery(e.target.value);
                 setCurrentPage(1);
               }}
-              className="w-full bg-gray-800 border border-gray-700 rounded-xl pl-9 pr-3 py-2 text-sm focus:outline-none focus:border-primary-orange"
+              className="w-full bg-banner-grey border border-white/[0.12] rounded-xl pl-9 pr-3 py-2 text-sm focus:outline-none focus:border-primary-orange"
             />
           </div>
 
@@ -542,7 +542,7 @@ const PreviewStep = () => {
           <select 
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value)}
-            className="bg-gray-800 border border-gray-700 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-primary-orange"
+            className="bg-banner-grey border border-white/[0.12] rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-primary-orange"
           >
             <option value="name">Sort by Name</option>
             <option value="rank">Sort by Rarity (Rare first)</option>
@@ -556,7 +556,7 @@ const PreviewStep = () => {
               setItemsPerPage(Number(e.target.value));
               setCurrentPage(1);
             }}
-            className="bg-gray-800 border border-gray-700 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-primary-orange"
+            className="bg-banner-grey border border-white/[0.12] rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-primary-orange"
           >
             <option value={24}>24 / page</option>
             <option value={48}>48 / page</option>
@@ -571,7 +571,7 @@ const PreviewStep = () => {
               className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all border ${
                 corruptedItemsCount > 0
                   ? 'bg-amber-500/20 text-amber-300 border-amber-500/50 hover:bg-amber-500/30 shadow-md animate-pulse'
-                  : 'bg-gray-800 text-gray-400 border-gray-700 hover:bg-gray-700 hover:text-white'
+                  : 'bg-banner-grey text-gray-400 border-white/[0.12] hover:bg-secondary-gray hover:text-white'
               }`}
               title="Purge assets minted with deleted traits and renumber remaining collection 1..N"
             >
@@ -587,7 +587,7 @@ const PreviewStep = () => {
                 type="button"
                 onClick={() => setDownloadMenuOpen(!downloadMenuOpen)}
                 disabled={exportingZip}
-                className="flex items-center gap-1.5 px-3 py-2 bg-gray-800 hover:bg-gray-700 text-gray-200 border border-gray-700 rounded-xl text-xs font-bold transition-all disabled:opacity-50"
+                className="flex items-center gap-1.5 px-3 py-2 bg-banner-grey hover:bg-secondary-gray text-gray-200 border border-white/[0.12] rounded-xl text-xs font-bold transition-all disabled:opacity-50"
                 title="Download preview images"
               >
                 <MdDownload size={16} className="text-primary-orange" />
@@ -596,7 +596,7 @@ const PreviewStep = () => {
 
               {downloadMenuOpen && (
                 <div 
-                  className="absolute right-0 top-full mt-2 w-64 bg-gray-900 border border-gray-700 rounded-2xl shadow-2xl p-2 z-30 space-y-1 animate-in fade-in zoom-in-95 duration-100"
+                  className="absolute right-0 top-full mt-2 w-64 bg-asset-detail-bg border border-white/[0.12] rounded-2xl shadow-2xl p-2 z-30 space-y-1 animate-in fade-in zoom-in-95 duration-100"
                   onMouseLeave={() => setDownloadMenuOpen(false)}
                 >
                   <p className="px-3 py-1.5 text-[10px] font-black uppercase tracking-wider text-primary-orange flex items-center justify-between">
@@ -606,7 +606,7 @@ const PreviewStep = () => {
                   <button
                     type="button"
                     onClick={() => handleDownloadZip(paginatedItems, `page_${safeCurrentPage}`)}
-                    className="w-full text-left px-3 py-2 text-xs font-semibold rounded-xl hover:bg-gray-800 text-gray-200 flex items-center justify-between transition-colors"
+                    className="w-full text-left px-3 py-2 text-xs font-semibold rounded-xl hover:bg-banner-grey text-gray-200 flex items-center justify-between transition-colors"
                   >
                     <span>Current Page</span>
                     <span className="text-[10px] text-gray-500 font-normal">({paginatedItems.length} items)</span>
@@ -614,13 +614,13 @@ const PreviewStep = () => {
                   <button
                     type="button"
                     onClick={() => handleDownloadZip(previewItems, 'all')}
-                    className="w-full text-left px-3 py-2 text-xs font-semibold rounded-xl hover:bg-gray-800 text-primary-orange flex items-center justify-between transition-colors"
+                    className="w-full text-left px-3 py-2 text-xs font-semibold rounded-xl hover:bg-banner-grey text-primary-orange flex items-center justify-between transition-colors"
                   >
                     <span>All Generated Items</span>
                     <span className="text-[10px] text-gray-500 font-normal">({previewItems.length} items)</span>
                   </button>
 
-                  <div className="my-1 border-t border-gray-800" />
+                  <div className="my-1 border-t border-white/[0.08]" />
 
                   <p className="px-3 py-1.5 text-[10px] font-black uppercase tracking-wider text-gray-400 flex items-center justify-between">
                     <span>Export Metadata Only</span>
@@ -629,7 +629,7 @@ const PreviewStep = () => {
                   <button
                     type="button"
                     onClick={() => handleDownloadMetadataOnly(previewItems, 'all')}
-                    className="w-full text-left px-3 py-2 text-xs font-semibold rounded-xl hover:bg-gray-800 text-gray-200 flex items-center justify-between transition-colors"
+                    className="w-full text-left px-3 py-2 text-xs font-semibold rounded-xl hover:bg-banner-grey text-gray-200 flex items-center justify-between transition-colors"
                     title="Export master _metadata.json for all items"
                   >
                     <span className="flex items-center gap-1.5">
@@ -641,7 +641,7 @@ const PreviewStep = () => {
                   <button
                     type="button"
                     onClick={() => handleDownloadMetadataOnly(paginatedItems, `page_${safeCurrentPage}`)}
-                    className="w-full text-left px-3 py-2 text-xs font-semibold rounded-xl hover:bg-gray-800 text-gray-300 flex items-center justify-between transition-colors"
+                    className="w-full text-left px-3 py-2 text-xs font-semibold rounded-xl hover:bg-banner-grey text-gray-300 flex items-center justify-between transition-colors"
                     title="Export metadata JSON for current page"
                   >
                     <span className="flex items-center gap-1.5">
@@ -670,7 +670,7 @@ const PreviewStep = () => {
       {/* Exporting ZIP Progress Overlay */}
       {exportingZip && exportProgress && (
         <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-gray-900 border border-gray-700 rounded-3xl p-6 max-w-sm w-full space-y-4 shadow-2xl text-center animate-in fade-in zoom-in-95">
+          <div className="bg-asset-detail-bg border border-white/[0.12] rounded-3xl p-6 max-w-sm w-full space-y-4 shadow-2xl text-center animate-in fade-in zoom-in-95">
             <div className="w-12 h-12 rounded-full bg-primary-orange/20 text-primary-orange mx-auto flex items-center justify-center">
               <MdDownload size={24} className="animate-bounce" />
             </div>
@@ -680,7 +680,7 @@ const PreviewStep = () => {
                 Rendering item {exportProgress.current} of {exportProgress.total}...
               </p>
             </div>
-            <div className="w-full bg-gray-800 rounded-full h-2.5 overflow-hidden border border-gray-700/60">
+            <div className="w-full bg-banner-grey rounded-full h-2.5 overflow-hidden border border-white/[0.12]">
               <div 
                 className="bg-primary-orange h-full transition-all duration-150"
                 style={{ width: `${(exportProgress.current / exportProgress.total) * 100}%` }}
@@ -692,7 +692,7 @@ const PreviewStep = () => {
             <button
               type="button"
               onClick={handleCancelExport}
-              className="mt-1 px-4 py-1.5 bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-white text-xs font-semibold rounded-xl border border-gray-700 transition-colors"
+              className="mt-1 px-4 py-1.5 bg-banner-grey hover:bg-secondary-gray text-gray-300 hover:text-white text-xs font-semibold rounded-xl border border-white/[0.12] transition-colors"
             >
               Cancel Export
             </button>
@@ -728,7 +728,7 @@ const PreviewStep = () => {
 
       {/* Pagination Bar (Top) */}
       {displayedItems.length > 0 && (
-        <div className="flex flex-wrap items-center justify-between gap-3 bg-[#010002]/40 px-4 py-2.5 rounded-xl border border-gray-800/80 text-xs text-gray-400">
+        <div className="flex flex-wrap items-center justify-between gap-3 bg-primary-black/40 px-4 py-2.5 rounded-xl border border-white/[0.08] text-xs text-gray-400">
           <span>
             Showing <strong className="text-gray-200">{(safeCurrentPage - 1) * itemsPerPage + 1}</strong> - <strong className="text-gray-200">{Math.min(safeCurrentPage * itemsPerPage, displayedItems.length)}</strong> of <strong className="text-primary-orange">{displayedItems.length}</strong> items
           </span>
@@ -737,7 +737,7 @@ const PreviewStep = () => {
             <button
               onClick={() => handlePageChange(1)}
               disabled={safeCurrentPage <= 1}
-              className="px-2 py-1 bg-gray-800 hover:bg-gray-700 disabled:opacity-40 disabled:hover:bg-gray-800 rounded-lg transition-colors"
+              className="px-2 py-1 bg-banner-grey hover:bg-secondary-gray disabled:opacity-40 disabled:hover:bg-banner-grey rounded-lg transition-colors"
               title="First Page"
             >
               «
@@ -745,18 +745,18 @@ const PreviewStep = () => {
             <button
               onClick={() => handlePageChange(safeCurrentPage - 1)}
               disabled={safeCurrentPage <= 1}
-              className="p-1 bg-gray-800 hover:bg-gray-700 disabled:opacity-40 disabled:hover:bg-gray-800 rounded-lg transition-colors"
+              className="p-1 bg-banner-grey hover:bg-secondary-gray disabled:opacity-40 disabled:hover:bg-banner-grey rounded-lg transition-colors"
               title="Previous Page"
             >
               <MdNavigateBefore size={18} />
             </button>
-            <span className="px-3 py-1 font-semibold text-gray-200 bg-gray-900 border border-gray-700 rounded-lg">
+            <span className="px-3 py-1 font-semibold text-gray-200 bg-asset-detail-bg border border-white/[0.12] rounded-lg">
               Page {safeCurrentPage} of {totalPages}
             </span>
             <button
               onClick={() => handlePageChange(safeCurrentPage + 1)}
               disabled={safeCurrentPage >= totalPages}
-              className="p-1 bg-gray-800 hover:bg-gray-700 disabled:opacity-40 disabled:hover:bg-gray-800 rounded-lg transition-colors"
+              className="p-1 bg-banner-grey hover:bg-secondary-gray disabled:opacity-40 disabled:hover:bg-banner-grey rounded-lg transition-colors"
               title="Next Page"
             >
               <MdNavigateNext size={18} />
@@ -764,7 +764,7 @@ const PreviewStep = () => {
             <button
               onClick={() => handlePageChange(totalPages)}
               disabled={safeCurrentPage >= totalPages}
-              className="px-2 py-1 bg-gray-800 hover:bg-gray-700 disabled:opacity-40 disabled:hover:bg-gray-800 rounded-lg transition-colors"
+              className="px-2 py-1 bg-banner-grey hover:bg-secondary-gray disabled:opacity-40 disabled:hover:bg-banner-grey rounded-lg transition-colors"
               title="Last Page"
             >
               »
@@ -783,14 +783,14 @@ const PreviewStep = () => {
             <div 
               key={item.id} 
               onClick={() => setSelectedItem(item)}
-              className={`bg-gray-800/90 rounded-2xl border overflow-hidden hover:shadow-xl hover:scale-[1.01] transition-all group shadow-md cursor-pointer flex flex-col ${
+              className={`bg-banner-grey/90 rounded-2xl border overflow-hidden hover:shadow-xl hover:scale-[1.01] transition-all group shadow-md cursor-pointer flex flex-col ${
                 hasNoTraits 
                   ? 'border-red-500/40 hover:border-red-500/80 bg-red-950/10' 
-                  : 'border-gray-700/80 hover:border-primary-orange/60'
+                  : 'border-white/[0.12] hover:border-primary-orange/60'
               }`}
             >
               {/* Artwork - 100% clean and unobstructed */}
-              <div className="aspect-square relative w-full bg-gray-900/60 overflow-hidden">
+              <div className="aspect-square relative w-full bg-asset-detail-bg/60 overflow-hidden">
                 <PreviewImage 
                   item={item} 
                   layers={project.layers}
@@ -829,7 +829,7 @@ const PreviewStep = () => {
               </div>
 
               {/* Card Footer - Structured & Clean Rarity */}
-              <div className="p-3 flex-1 flex flex-col justify-between bg-gray-800/90 gap-2">
+              <div className="p-3 flex-1 flex flex-col justify-between bg-banner-grey/90 gap-2">
                 <div>
                   <div className="flex items-center justify-between gap-1.5">
                     <p className="text-xs font-bold text-gray-200 truncate flex-1" title={`#${item.index} ${project.name || 'NFT'}`}>
@@ -855,7 +855,7 @@ const PreviewStep = () => {
                   </div>
                 </div>
 
-                <div className="pt-2 border-t border-gray-700/50 flex items-center justify-between text-[10px] text-gray-500">
+                <div className="pt-2 border-t border-white/[0.12] flex items-center justify-between text-[10px] text-gray-500">
                   <span>{Object.keys(item.traits || {}).length} traits</span>
                   <span className="text-primary-orange group-hover:text-primary-orange/80 flex items-center gap-1 font-semibold">
                     Inspect →
@@ -868,7 +868,7 @@ const PreviewStep = () => {
 
         {/* Empty State */}
         {previewItems.length === 0 && !generateIsLoading && (
-          <div className="col-span-full py-20 px-6 flex flex-col items-center justify-center text-center bg-gray-900/30 rounded-3xl border-2 border-dashed border-gray-800 space-y-4">
+          <div className="col-span-full py-20 px-6 flex flex-col items-center justify-center text-center bg-asset-detail-bg/30 rounded-3xl border-2 border-dashed border-white/[0.08] space-y-4">
             <div className="p-4 bg-primary-orange/10 rounded-full text-primary-orange">
               <MdRefresh size={44} className="opacity-80" />
             </div>
@@ -931,7 +931,7 @@ const PreviewStep = () => {
 
         {/* Search returned 0 items */}
         {previewItems.length > 0 && displayedItems.length === 0 && (
-          <div className="col-span-full py-20 flex flex-col items-center justify-center text-gray-500 bg-gray-900/20 rounded-3xl border border-gray-800">
+          <div className="col-span-full py-20 flex flex-col items-center justify-center text-gray-500 bg-asset-detail-bg/20 rounded-3xl border border-white/[0.08]">
             <p className="text-sm">No items found matching "{searchQuery}"</p>
             <button
               onClick={() => setSearchQuery('')}
@@ -949,7 +949,7 @@ const PreviewStep = () => {
           <button
             onClick={() => handlePageChange(safeCurrentPage - 1)}
             disabled={safeCurrentPage <= 1}
-            className="flex items-center gap-1 px-4 py-2 bg-gray-800 hover:bg-gray-700 disabled:opacity-40 disabled:hover:bg-gray-800 rounded-xl text-xs font-bold transition-colors"
+            className="flex items-center gap-1 px-4 py-2 bg-banner-grey hover:bg-secondary-gray disabled:opacity-40 disabled:hover:bg-banner-grey rounded-xl text-xs font-bold transition-colors"
           >
             <MdNavigateBefore size={16} /> Previous
           </button>
@@ -959,7 +959,7 @@ const PreviewStep = () => {
           <button
             onClick={() => handlePageChange(safeCurrentPage + 1)}
             disabled={safeCurrentPage >= totalPages}
-            className="flex items-center gap-1 px-4 py-2 bg-gray-800 hover:bg-gray-700 disabled:opacity-40 disabled:hover:bg-gray-800 rounded-xl text-xs font-bold transition-colors"
+            className="flex items-center gap-1 px-4 py-2 bg-banner-grey hover:bg-secondary-gray disabled:opacity-40 disabled:hover:bg-banner-grey rounded-xl text-xs font-bold transition-colors"
           >
             Next <MdNavigateNext size={16} />
           </button>
@@ -976,11 +976,11 @@ const PreviewStep = () => {
           }}
         >
           <div 
-            className="bg-[#1A171A] border border-gray-700 rounded-3xl max-w-3xl w-full p-6 space-y-6 shadow-2xl relative max-h-[92vh] overflow-y-auto"
+            className="bg-asset-detail-bg border border-white/[0.12] rounded-3xl max-w-3xl w-full p-6 space-y-6 shadow-2xl relative max-h-[92vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
-            <div className="flex justify-between items-center pb-3 border-b border-gray-800">
+            <div className="flex justify-between items-center pb-3 border-b border-white/[0.08]">
               <div>
                 <h3 className="text-xl font-black text-gray-100">
                   #{selectedItem.index} {project.name || 'NFT'}
@@ -992,12 +992,12 @@ const PreviewStep = () => {
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <div className="flex items-center bg-gray-900 border border-gray-800 rounded-xl p-0.5">
+                <div className="flex items-center bg-asset-detail-bg border border-white/[0.08] rounded-xl p-0.5">
                   <button
                     type="button"
                     disabled={!hasPrevItem}
                     onClick={handlePrevItem}
-                    className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-gray-800 disabled:opacity-30 disabled:hover:bg-transparent transition-colors cursor-pointer"
+                    className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-banner-grey disabled:opacity-30 disabled:hover:bg-transparent transition-colors cursor-pointer"
                     title="Previous NFT"
                   >
                     <MdNavigateBefore size={18} />
@@ -1006,7 +1006,7 @@ const PreviewStep = () => {
                     type="button"
                     disabled={!hasNextItem}
                     onClick={handleNextItem}
-                    className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-gray-800 disabled:opacity-30 disabled:hover:bg-transparent transition-colors cursor-pointer"
+                    className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-banner-grey disabled:opacity-30 disabled:hover:bg-transparent transition-colors cursor-pointer"
                     title="Next NFT"
                   >
                     <MdNavigateNext size={18} />
@@ -1018,7 +1018,7 @@ const PreviewStep = () => {
                     setRuleCreator(null);
                     setEditingItemTraitLayer(null);
                   }}
-                  className="p-2 rounded-full bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-white transition-colors cursor-pointer"
+                  className="p-2 rounded-full bg-banner-grey hover:bg-secondary-gray text-gray-400 hover:text-white transition-colors cursor-pointer"
                 >
                   <MdClose size={20} />
                 </button>
@@ -1028,7 +1028,7 @@ const PreviewStep = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
               {/* Left Column: Image & Download Button */}
               <div className="space-y-3">
-                <div className="aspect-square bg-gray-900 rounded-2xl overflow-hidden border border-gray-800 shadow-xl">
+                <div className="aspect-square bg-asset-detail-bg rounded-2xl overflow-hidden border border-white/[0.08] shadow-xl">
                   <PreviewImage 
                     item={selectedItem} 
                     layers={project.layers}
@@ -1049,7 +1049,7 @@ const PreviewStep = () => {
                   <button
                     type="button"
                     onClick={() => handleDownloadSingleJson(selectedItem)}
-                    className="flex items-center justify-center gap-1.5 py-3 px-3 bg-gray-800 hover:bg-gray-700 text-gray-200 border border-gray-700 font-bold text-xs uppercase tracking-wider rounded-xl transition-all cursor-pointer hover:border-gray-600 truncate"
+                    className="flex items-center justify-center gap-1.5 py-3 px-3 bg-banner-grey hover:bg-secondary-gray text-gray-200 border border-white/[0.12] font-bold text-xs uppercase tracking-wider rounded-xl transition-all cursor-pointer hover:border-white/15 truncate"
                     title="Download trait metadata as JSON"
                   >
                     <MdDataObject size={16} className="text-primary-orange" /> Metadata JSON
@@ -1081,13 +1081,13 @@ const PreviewStep = () => {
                     return (
                       <div 
                         key={layerName} 
-                        className="p-2.5 bg-gray-900/60 rounded-xl border border-gray-800 text-xs hover:border-gray-700 transition-colors space-y-2"
+                        className="p-2.5 bg-asset-detail-bg/60 rounded-xl border border-white/[0.08] text-xs hover:border-white/[0.12] transition-colors space-y-2"
                       >
                         <div className="flex justify-between items-center">
                           <div className="flex items-center gap-1.5 truncate">
                             <span className="text-gray-400 uppercase tracking-wide font-black text-[10px]">{layerName}</span>
                             {!hasTrait && (
-                              <span className="text-[9px] font-semibold text-gray-500 bg-gray-800/80 px-1.5 py-0.5 rounded">
+                              <span className="text-[9px] font-semibold text-gray-500 bg-banner-grey/80 px-1.5 py-0.5 rounded">
                                 Empty
                               </span>
                             )}
@@ -1108,7 +1108,7 @@ const PreviewStep = () => {
                                   trait.layerId || layer?.id || '', 
                                   trait.traitId || traitDetails?.id || ''
                                 )}
-                                className="px-2 py-0.5 bg-gray-800 hover:bg-primary-orange hover:text-black text-gray-300 rounded-lg text-[10px] font-bold transition-all border border-gray-700 flex items-center gap-1 cursor-pointer"
+                                className="px-2 py-0.5 bg-banner-grey hover:bg-primary-orange hover:text-black text-gray-300 rounded-lg text-[10px] font-bold transition-all border border-white/[0.12] flex items-center gap-1 cursor-pointer"
                                 title={`Add rule for ${layerName}: ${trait.value}`}
                               >
                                 <MdAdd size={12} /> Rule
@@ -1124,12 +1124,12 @@ const PreviewStep = () => {
                               <select
                                 value={currentTraitId}
                                 onChange={(e) => handleTraitChange(layerName, e.target.value)}
-                                className="w-full bg-black/60 border border-gray-800 hover:border-primary-orange/60 focus:border-primary-orange text-gray-200 text-xs font-bold rounded-lg px-2.5 py-1.5 focus:outline-none transition-colors cursor-pointer truncate"
+                                className="w-full bg-black/60 border border-white/[0.08] hover:border-primary-orange/60 focus:border-primary-orange text-gray-200 text-xs font-bold rounded-lg px-2.5 py-1.5 focus:outline-none transition-colors cursor-pointer truncate"
                                 title={`Change trait for ${layerName}`}
                               >
                                 <option value="" className="text-gray-500">🚫 None (Empty)</option>
                                 {layer.traits.map((t) => (
-                                  <option key={t.id} value={t.id} className="bg-gray-900 text-white">
+                                  <option key={t.id} value={t.id} className="bg-asset-detail-bg text-white">
                                     {t.name} {t.rarity ? `(${t.rarity}%)` : ''}
                                   </option>
                                 ))}
@@ -1168,7 +1168,7 @@ const PreviewStep = () => {
                                 <button
                                   type="button"
                                   onClick={() => setEditingItemTraitLayer(null)}
-                                  className="p-1 bg-gray-800 text-gray-400 hover:text-white rounded cursor-pointer"
+                                  className="p-1 bg-banner-grey text-gray-400 hover:text-white rounded cursor-pointer"
                                   title="Cancel"
                                 >
                                   <MdClose size={14} />
@@ -1181,7 +1181,7 @@ const PreviewStep = () => {
                                   setEditingItemTraitLayer(layerName);
                                   setEditingItemTraitVal(trait.value);
                                 }}
-                                className="p-1.5 text-gray-400 hover:text-primary-orange hover:bg-gray-800/80 rounded-lg transition-colors cursor-pointer shrink-0"
+                                className="p-1.5 text-gray-400 hover:text-primary-orange hover:bg-banner-grey/80 rounded-lg transition-colors cursor-pointer shrink-0"
                                 title="Edit display name for this trait"
                               >
                                 <MdEdit size={13} />
@@ -1196,7 +1196,7 @@ const PreviewStep = () => {
 
                 {/* In-Modal Rule Creator Card */}
                 {ruleCreator && (
-                  <div className="p-3.5 bg-gray-950 border border-primary-orange/50 rounded-2xl space-y-3 animate-in fade-in zoom-in-95 duration-150">
+                  <div className="p-3.5 bg-primary-black border border-primary-orange/50 rounded-2xl space-y-3 animate-in fade-in zoom-in-95 duration-150">
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-bold text-gray-200 flex items-center gap-1.5">
                         <MdRule size={16} className="text-primary-orange" />
@@ -1219,7 +1219,7 @@ const PreviewStep = () => {
                         className={`py-2 px-2.5 rounded-xl border flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
                           ruleCreator.ruleType === 'block'
                             ? 'bg-red-500/20 text-red-300 border-red-500/60 shadow-md'
-                            : 'bg-gray-900 text-gray-400 border-gray-800 hover:text-white'
+                            : 'bg-asset-detail-bg text-gray-400 border-white/[0.08] hover:text-white'
                         }`}
                       >
                         <MdBlock size={14} /> Never Use With
@@ -1237,7 +1237,7 @@ const PreviewStep = () => {
                         className={`py-2 px-2.5 rounded-xl border flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
                           ruleCreator.ruleType === 'force'
                             ? 'bg-blue-500/20 text-blue-300 border-blue-500/60 shadow-md'
-                            : 'bg-gray-900 text-gray-400 border-gray-800 hover:text-white'
+                            : 'bg-asset-detail-bg text-gray-400 border-white/[0.08] hover:text-white'
                         }`}
                       >
                         <MdElectricBolt size={14} /> Always Use With
@@ -1259,7 +1259,7 @@ const PreviewStep = () => {
                               targetTraitId: ruleCreator.ruleType === 'block' ? '*' : (targetL?.traits[0]?.id || ''),
                             });
                           }}
-                          className="w-full bg-gray-900 border border-gray-700 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-primary-orange"
+                          className="w-full bg-asset-detail-bg border border-white/[0.12] rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-primary-orange"
                         >
                           {project.layers
                             .filter(l => l.id !== ruleCreator.sourceLayerId && l.name !== ruleCreator.sourceLayerName)
@@ -1274,7 +1274,7 @@ const PreviewStep = () => {
                         <select
                           value={ruleCreator.targetTraitId}
                           onChange={(e) => setRuleCreator({ ...ruleCreator, targetTraitId: e.target.value })}
-                          className="w-full bg-gray-900 border border-gray-700 rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-primary-orange"
+                          className="w-full bg-asset-detail-bg border border-white/[0.12] rounded-xl px-2.5 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-primary-orange"
                         >
                           {ruleCreator.ruleType === 'block' && (
                             <option value="*">⛔ Entire Category (All traits)</option>
@@ -1289,7 +1289,7 @@ const PreviewStep = () => {
                     </div>
 
                     {/* Summary Sentence */}
-                    <div className="text-[11px] text-gray-400 bg-gray-900/80 p-2.5 rounded-xl border border-gray-800">
+                    <div className="text-[11px] text-gray-400 bg-asset-detail-bg/80 p-2.5 rounded-xl border border-white/[0.08]">
                       Rule: If <strong className="text-white">{ruleCreator.sourceTraitName}</strong> ({ruleCreator.sourceLayerName}) is selected ➔ <strong className={ruleCreator.ruleType === 'block' ? 'text-red-400' : 'text-blue-400'}>
                         {ruleCreator.ruleType === 'block' ? 'NEVER use with' : 'ALWAYS use with'}
                       </strong> <strong className="text-primary-orange">
@@ -1304,7 +1304,7 @@ const PreviewStep = () => {
                       <button
                         type="button"
                         onClick={() => setRuleCreator(null)}
-                        className="px-3 py-1.5 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-xl text-xs font-semibold"
+                        className="px-3 py-1.5 bg-banner-grey hover:bg-secondary-gray text-gray-300 rounded-xl text-xs font-semibold"
                       >
                         Cancel
                       </button>
@@ -1321,7 +1321,7 @@ const PreviewStep = () => {
 
                 {/* Active Rules on this item */}
                 {activeRulesOnSelectedItem.length > 0 && (
-                  <div className="space-y-2 pt-2 border-t border-gray-800">
+                  <div className="space-y-2 pt-2 border-t border-white/[0.08]">
                     <span className="text-[10px] font-black uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
                       <MdRule size={14} /> Active Rules on this NFT ({activeRulesOnSelectedItem.length})
                     </span>
@@ -1330,7 +1330,7 @@ const PreviewStep = () => {
                       {activeRulesOnSelectedItem.map(({ sourceLayer, sourceTrait, rule, targetLayerName, targetTraitName, ruleIndex }) => (
                         <div 
                           key={`${sourceTrait.id}-${ruleIndex}`}
-                          className="flex items-center justify-between p-2 rounded-xl bg-gray-900/90 border border-gray-800 text-[11px]"
+                          className="flex items-center justify-between p-2 rounded-xl bg-asset-detail-bg/90 border border-white/[0.08] text-[11px]"
                         >
                           <div className="flex items-center gap-1.5 text-gray-300 truncate mr-2">
                             <span className={`text-[9px] font-black px-1.5 py-0.2 rounded uppercase ${

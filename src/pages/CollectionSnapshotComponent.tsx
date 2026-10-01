@@ -1,3 +1,6 @@
+import { Reticle } from "../components/cypher/Reticle";
+import { ToolHero } from "../components/cypher/ToolKit";
+import { TermSpinner } from "../components/cypher/ToolKit";
 import { showDonationToast } from "../utils";
 import { useState, useMemo } from "react";
 import { toast } from "react-toastify";
@@ -504,15 +507,16 @@ export function CollectionSnapshot() {
         title="Collection Snapshot Tool" 
         description="Capture real-time holder data for any Algorand NFT collection. Generate accurate snapshots for airdrops, governance, and community analytics."
       />
-      <h1 className="text-3xl font-extrabold mt-8 bg-gradient-to-r from-primary-yellow to-secondary-orange bg-clip-text text-transparent">
-        Collection Snapshot Tool
-      </h1>
-      <p className="text-slate-400 mt-2 text-sm max-w-xl">
-        Capture real-time holder data for any Algorand NFT collection. Generate accurate snapshots for airdrops, governance, and community analytics.
-      </p>
+      <ToolHero
+        tag="snapshot"
+        title="Collection Snapshot"
+        description="Capture real-time holder data for any Algorand NFT collection, for airdrops, governance and community analytics."
+        meta={["live holders", "creator wallets or prefixes", "CSV export"]}
+      />
 
       {/* Snapshot Inputs & Options Panel */}
-      <div className="w-full max-w-2xl mt-8 bg-slate-900/60 border border-slate-700/50 backdrop-blur-md rounded-2xl p-6 md:p-8 shadow-2xl flex flex-col items-center gap-4">
+      <div className="w-full max-w-2xl mt-8 wt-frame relative bg-banner-grey/50 border border-white/[0.07] backdrop-blur-md rounded-3xl [--wt-r:24px] [--wt-in:12px] p-6 md:p-8 shadow-2xl flex flex-col items-center gap-4">
+        <Reticle />
         <ConnectButton inmain={true} />
         
         <div className="w-full flex flex-col items-start gap-1 text-left">
@@ -521,7 +525,7 @@ export function CollectionSnapshot() {
             rows={creatorWallet.split(",").length > 1 ? 3 : 1}
             id="creatorWallet"
             placeholder="Enter Creator Wallet Address List (comma, space, or newline separated)"
-            className="bg-slate-950/80 text-white placeholder-slate-500 border border-slate-800 rounded-xl p-4 w-full h-24 focus:ring-2 focus:ring-primary-orange focus:border-transparent outline-none font-mono text-sm leading-relaxed"
+            className="bg-primary-black/80 text-white placeholder-slate-500 border border-white/[0.08] rounded-xl p-4 w-full h-24 focus:ring-2 focus:ring-primary-orange focus:border-transparent outline-none font-mono text-sm leading-relaxed"
             value={creatorWallet}
             onChange={(e) => setCreatorWallet(e.target.value)}
           />
@@ -533,18 +537,18 @@ export function CollectionSnapshot() {
             type="text"
             id="unitNamePrefix"
             placeholder="e.g. CARD, HERO (comma separated)"
-            className="bg-slate-950/80 text-white placeholder-slate-500 border border-slate-800 rounded-xl p-3 w-full focus:ring-2 focus:ring-primary-orange focus:border-transparent outline-none font-mono text-sm"
+            className="bg-primary-black/80 text-white placeholder-slate-500 border border-white/[0.08] rounded-xl p-3 w-full focus:ring-2 focus:ring-primary-orange focus:border-transparent outline-none font-mono text-sm"
             value={unitNamePrefix}
             onChange={(e) => setUnitNamePrefix(e.target.value)}
           />
         </div>
 
-        <div className="w-full flex flex-col gap-2.5 p-4 bg-slate-950/40 border border-slate-800/80 rounded-xl text-left">
+        <div className="w-full flex flex-col gap-2.5 p-4 bg-primary-black/40 border border-white/[0.08] rounded-xl text-left">
           <div className="flex items-center">
             <input
               type="checkbox"
               id="check_separated"
-              className="mr-2 rounded border-slate-800 text-primary-orange focus:ring-primary-orange bg-slate-950"
+              className="mr-2 rounded border-white/[0.08] text-primary-orange focus:ring-primary-orange bg-primary-black"
               checked={checkSeparated}
               onChange={(e) => setCheckSeparated(e.target.checked)}
             />
@@ -556,7 +560,7 @@ export function CollectionSnapshot() {
             <input
               type="checkbox"
               id="check_rand"
-              className="mr-2 rounded border-slate-800 text-primary-orange focus:ring-primary-orange bg-slate-950"
+              className="mr-2 rounded border-white/[0.08] text-primary-orange focus:ring-primary-orange bg-primary-black"
               checked={checkRandSupport}
               onChange={(e) => setCheckRandSupport(e.target.checked)}
             />
@@ -568,7 +572,7 @@ export function CollectionSnapshot() {
             <input
               type="checkbox"
               id="check_downbad"
-              className="mr-2 rounded border-slate-800 text-primary-orange focus:ring-primary-orange bg-slate-950"
+              className="mr-2 rounded border-white/[0.08] text-primary-orange focus:ring-primary-orange bg-primary-black"
               checked={checkDownbadSupport}
               onChange={(e) => setCheckDownbadSupport(e.target.checked)}
             />
@@ -580,7 +584,7 @@ export function CollectionSnapshot() {
             <input
               type="checkbox"
               id="check_akita"
-              className="mr-2 rounded border-slate-800 text-primary-orange focus:ring-primary-orange bg-slate-950"
+              className="mr-2 rounded border-white/[0.08] text-primary-orange focus:ring-primary-orange bg-primary-black"
               checked={checkAkitaSupport}
               onChange={(e) => setCheckAkitaSupport(e.target.checked)}
             />
@@ -603,7 +607,7 @@ export function CollectionSnapshot() {
           </button>
         ) : (
           <div className="w-full flex flex-col items-center gap-2 mt-2">
-            <div className="animate-spin rounded-full border-4 border-slate-800 border-t-primary-orange h-8 w-8"></div>
+            <TermSpinner />
             <span className="text-sm text-slate-300">Auditing asset balances from blockchain...</span>
             <span className="text-xs text-slate-400 font-mono">
               {counter} / {collectionData.length || "?"} assets audited
@@ -618,7 +622,7 @@ export function CollectionSnapshot() {
           
           {/* Analytics Summary Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            <div className="bg-slate-900/40 border border-slate-800 rounded-2xl p-6 flex items-center justify-between shadow-xl">
+            <div className="bg-asset-detail-bg/40 border border-white/[0.08] rounded-2xl p-6 flex items-center justify-between shadow-xl">
               <div>
                 <p className="text-slate-400 text-xs font-bold uppercase tracking-wider">Total Assets</p>
                 <h3 className="text-2xl font-extrabold mt-1 text-white font-mono">{analytics.totalAssets}</h3>
@@ -628,7 +632,7 @@ export function CollectionSnapshot() {
               </div>
             </div>
 
-            <div className="bg-slate-900/40 border border-slate-800 rounded-2xl p-6 flex items-center justify-between shadow-xl">
+            <div className="bg-asset-detail-bg/40 border border-white/[0.08] rounded-2xl p-6 flex items-center justify-between shadow-xl">
               <div>
                 <p className="text-slate-400 text-xs font-bold uppercase tracking-wider">Unique Holders</p>
                 <h3 className="text-2xl font-extrabold mt-1 text-white font-mono">{analytics.totalHolders}</h3>
@@ -638,7 +642,7 @@ export function CollectionSnapshot() {
               </div>
             </div>
 
-            <div className="bg-slate-900/40 border border-slate-800 rounded-2xl p-6 flex items-center justify-between shadow-xl">
+            <div className="bg-asset-detail-bg/40 border border-white/[0.08] rounded-2xl p-6 flex items-center justify-between shadow-xl">
               <div>
                 <p className="text-slate-400 text-xs font-bold uppercase tracking-wider">Unique Ratio</p>
                 <h3 className="text-2xl font-extrabold mt-1 text-white font-mono">{analytics.uniqueRatio}%</h3>
@@ -648,7 +652,7 @@ export function CollectionSnapshot() {
               </div>
             </div>
 
-            <div className="bg-slate-900/40 border border-slate-800 rounded-2xl p-6 flex items-center justify-between shadow-xl">
+            <div className="bg-asset-detail-bg/40 border border-white/[0.08] rounded-2xl p-6 flex items-center justify-between shadow-xl">
               <div>
                 <p className="text-slate-400 text-xs font-bold uppercase tracking-wider">Listed Ratio</p>
                 <h3 className="text-2xl font-extrabold mt-1 text-white font-mono">
@@ -665,10 +669,10 @@ export function CollectionSnapshot() {
           </div>
 
           {/* Premium Distribution Bar Panel */}
-          <div className="bg-slate-900/40 border border-slate-800 rounded-2xl p-6 shadow-xl">
+          <div className="bg-asset-detail-bg/40 border border-white/[0.08] rounded-2xl p-6 shadow-xl">
             <h3 className="text-sm font-bold text-slate-300 uppercase tracking-wider mb-4">Asset Distribution Breakdown</h3>
             
-            <div className="w-full h-6 rounded-full overflow-hidden bg-slate-950 flex border border-slate-800">
+            <div className="w-full h-6 rounded-full overflow-hidden bg-primary-black flex border border-white/[0.08]">
               <div 
                 style={{ width: `${(analytics.totalUnlisted / analytics.totalAssets) * 100}%` }}
                 className="bg-gradient-to-r from-emerald-500 to-green-400 h-full transition-all duration-500 relative group cursor-pointer"
@@ -725,7 +729,7 @@ export function CollectionSnapshot() {
           </div>
 
           {/* Quick Actions & Search Panel */}
-          <div className="bg-slate-900/40 border border-slate-800 rounded-2xl p-6 shadow-xl flex flex-col md:flex-row gap-4 items-center justify-between">
+          <div className="bg-asset-detail-bg/40 border border-white/[0.08] rounded-2xl p-6 shadow-xl flex flex-col md:flex-row gap-4 items-center justify-between">
             <div className="flex flex-wrap items-center gap-3">
               <button
                 onClick={downloadCollectionDataAsCSV}
@@ -736,13 +740,13 @@ export function CollectionSnapshot() {
               </button>
               <button
                 onClick={copyAllWallets}
-                className="px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-xl text-sm transition flex items-center gap-2 cursor-pointer border border-slate-700"
+                className="px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-xl text-sm transition flex items-center gap-2 cursor-pointer border border-white/[0.12]"
               >
                 Copy All Wallets
               </button>
               <button
                 onClick={copyUnlistedWallets}
-                className="px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-xl text-sm transition flex items-center gap-2 cursor-pointer border border-slate-700"
+                className="px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-xl text-sm transition flex items-center gap-2 cursor-pointer border border-white/[0.12]"
               >
                 Copy Unlisted Wallets
               </button>
@@ -752,7 +756,7 @@ export function CollectionSnapshot() {
               <input
                 type="text"
                 placeholder="Search Wallet or NFD..."
-                className="bg-slate-950/80 text-white placeholder-slate-500 border border-slate-850 rounded-xl px-4 py-2.5 pl-10 w-full focus:ring-2 focus:ring-primary-orange focus:border-transparent outline-none text-sm"
+                className="bg-primary-black/80 text-white placeholder-slate-500 border border-slate-850 rounded-xl px-4 py-2.5 pl-10 w-full focus:ring-2 focus:ring-primary-orange focus:border-transparent outline-none text-sm"
                 value={searchTerm}
                 onChange={(e) => {
                   setSearchTerm(e.target.value);
@@ -766,15 +770,15 @@ export function CollectionSnapshot() {
           </div>
 
           {/* Interactive Holders Table */}
-          <div className="bg-slate-900/60 border border-slate-800 rounded-2xl overflow-hidden shadow-2xl">
+          <div className="bg-asset-detail-bg/60 border border-white/[0.08] rounded-2xl overflow-hidden shadow-2xl">
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse">
                 <thead>
-                  <tr className="border-b border-slate-800 bg-slate-950/40 text-slate-400 text-xs uppercase font-bold">
+                  <tr className="border-b border-white/[0.08] bg-primary-black/40 text-slate-400 text-xs uppercase font-bold">
                     <th className="p-4 pl-6">Wallet / NFD Domain</th>
                     <th 
                       onClick={() => handleSort("total")}
-                      className="p-4 cursor-pointer hover:bg-slate-950/65 transition select-none text-center"
+                      className="p-4 cursor-pointer hover:bg-primary-black/65 transition select-none text-center"
                     >
                       <div className="flex items-center justify-center gap-1">
                         Total Count
@@ -783,7 +787,7 @@ export function CollectionSnapshot() {
                     </th>
                     <th 
                       onClick={() => handleSort("held")}
-                      className="p-4 cursor-pointer hover:bg-slate-950/65 transition select-none text-center"
+                      className="p-4 cursor-pointer hover:bg-primary-black/65 transition select-none text-center"
                     >
                       <div className="flex items-center justify-center gap-1">
                         Held (Unlisted)
@@ -793,7 +797,7 @@ export function CollectionSnapshot() {
                     {checkRandSupport && (
                       <th 
                         onClick={() => handleSort("rand")}
-                        className="p-4 cursor-pointer hover:bg-slate-950/65 transition select-none text-center"
+                        className="p-4 cursor-pointer hover:bg-primary-black/65 transition select-none text-center"
                       >
                         <div className="flex items-center justify-center gap-1">
                           Rand Listed
@@ -804,7 +808,7 @@ export function CollectionSnapshot() {
                     {checkDownbadSupport && (
                       <th 
                         onClick={() => handleSort("downbad")}
-                        className="p-4 cursor-pointer hover:bg-slate-950/65 transition select-none text-center"
+                        className="p-4 cursor-pointer hover:bg-primary-black/65 transition select-none text-center"
                       >
                         <div className="flex items-center justify-center gap-1">
                           Downbad Listed
@@ -815,7 +819,7 @@ export function CollectionSnapshot() {
                     {checkAkitaSupport && (
                       <th 
                         onClick={() => handleSort("akita")}
-                        className="p-4 cursor-pointer hover:bg-slate-950/65 transition select-none text-center"
+                        className="p-4 cursor-pointer hover:bg-primary-black/65 transition select-none text-center"
                       >
                         <div className="flex items-center justify-center gap-1">
                           Akita Listed
@@ -828,7 +832,7 @@ export function CollectionSnapshot() {
                 </thead>
                 <tbody className="divide-y divide-slate-850 text-sm font-medium">
                   {paginatedHolders.map((holder) => (
-                    <tr key={holder.wallet} className="hover:bg-slate-900/30 transition-colors">
+                    <tr key={holder.wallet} className="hover:bg-asset-detail-bg/30 transition-colors">
                       <td className="p-4 pl-6 max-w-xs sm:max-w-md">
                         <div className="flex flex-col gap-0.5">
                           {holder.nfd && (
@@ -853,7 +857,7 @@ export function CollectionSnapshot() {
                       <td className="p-4 pr-6 text-right">
                         <button
                           onClick={() => copyToClipboard(holder.wallet)}
-                          className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-lg transition border border-slate-700 cursor-pointer shadow"
+                          className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-lg transition border border-white/[0.12] cursor-pointer shadow"
                         >
                           Copy Address
                         </button>
@@ -876,7 +880,7 @@ export function CollectionSnapshot() {
 
             {/* Pagination Controls */}
             {totalPages > 1 && (
-              <div className="p-4 bg-slate-950/40 border-t border-slate-800 flex items-center justify-between text-xs font-bold text-slate-400">
+              <div className="p-4 bg-primary-black/40 border-t border-white/[0.08] flex items-center justify-between text-xs font-bold text-slate-400">
                 <span>
                   Showing {Math.min(processedHolders.length, (currentPage - 1) * itemsPerPage + 1)} - {Math.min(processedHolders.length, currentPage * itemsPerPage)} of {processedHolders.length} wallets
                 </span>
@@ -884,7 +888,7 @@ export function CollectionSnapshot() {
                   <button
                     disabled={currentPage === 1}
                     onClick={() => setCurrentPage(p => p - 1)}
-                    className="px-3 py-1.5 bg-slate-900 border border-slate-800 rounded-lg hover:bg-slate-800 text-white disabled:opacity-50 transition cursor-pointer"
+                    className="px-3 py-1.5 bg-asset-detail-bg border border-white/[0.08] rounded-lg hover:bg-slate-800 text-white disabled:opacity-50 transition cursor-pointer"
                   >
                     Previous
                   </button>
@@ -894,7 +898,7 @@ export function CollectionSnapshot() {
                   <button
                     disabled={currentPage === totalPages}
                     onClick={() => setCurrentPage(p => p + 1)}
-                    className="px-3 py-1.5 bg-slate-900 border border-slate-800 rounded-lg hover:bg-slate-800 text-white disabled:opacity-50 transition cursor-pointer"
+                    className="px-3 py-1.5 bg-asset-detail-bg border border-white/[0.08] rounded-lg hover:bg-slate-800 text-white disabled:opacity-50 transition cursor-pointer"
                   >
                     Next
                   </button>
@@ -906,7 +910,7 @@ export function CollectionSnapshot() {
       )}
 
       {/* Practitioner Section: Snapshot Accuracy */}
-      <section className="mt-20 pt-12 border-t border-slate-800 w-full max-w-4xl text-left">
+      <section className="mt-20 pt-12 border-t border-white/[0.08] w-full max-w-4xl text-left">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
           <div className="space-y-4">
             <h2 className="text-xl font-bold text-white tracking-tight italic">Snapshot Accuracy</h2>

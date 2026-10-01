@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "wen-tools",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["exec", "vite", "--config", ".claude/vite.preview.config.ts", "--port", "5199", "--strictPort"],
+      "port": 5199
+    }
+  ]
+}

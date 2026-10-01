@@ -24,7 +24,7 @@ const CustomizeStep = () => {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {customs.map((custom) => (
-          <div key={custom.id} className="bg-gray-800 border border-gray-700 p-4 rounded-xl space-y-4">
+          <div key={custom.id} className="bg-banner-grey border border-white/[0.12] p-4 rounded-xl space-y-4">
             <div className="flex justify-between items-center">
               <span className="font-bold text-primary-orange">Custom #{custom.index}</span>
               <button 
@@ -37,7 +37,7 @@ const CustomizeStep = () => {
             
             <div className="grid grid-cols-2 gap-2">
               {layers.map(layer => (
-                <div key={layer.id} className="space-y-1.5 bg-gray-900/60 p-2.5 rounded-xl border border-gray-700/60">
+                <div key={layer.id} className="space-y-1.5 bg-asset-detail-bg/60 p-2.5 rounded-xl border border-white/[0.12]">
                   <div className="flex items-center justify-between">
                     <label className="text-[10px] font-bold uppercase text-gray-400">{layer.name}</label>
                     {custom.traits[layer.name] && (
@@ -47,7 +47,7 @@ const CustomizeStep = () => {
                     )}
                   </div>
                   <select 
-                    className="w-full bg-gray-900 border border-gray-700 rounded-lg px-2 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-primary-orange"
+                    className="w-full bg-asset-detail-bg border border-white/[0.12] rounded-lg px-2 py-1.5 text-xs text-gray-200 focus:outline-none focus:border-primary-orange"
                     value={
                       layer.traits.some(t => t.id === custom.traits[layer.name]?.traitId || t.name === custom.traits[layer.name]?.value)
                         ? (layer.traits.find(t => t.id === custom.traits[layer.name]?.traitId)?.name || custom.traits[layer.name]?.value)
@@ -132,7 +132,7 @@ const CustomizeStep = () => {
         ))}
 
         {customs.length === 0 && (
-          <div className="col-span-full py-20 border-2 border-dashed border-gray-800 rounded-2xl flex flex-col items-center justify-center text-gray-500">
+          <div className="col-span-full py-20 border-2 border-dashed border-white/[0.08] rounded-2xl flex flex-col items-center justify-center text-gray-500">
              <MdAutoFixHigh size={48} className="opacity-10 mb-4" />
              <p>No customs defined yet.</p>
           </div>

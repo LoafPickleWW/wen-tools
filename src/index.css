@@ -1,7 +1,285 @@
-@import url("https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&family=Roboto:ital,wght@0,100;0,300;0,400;0,500;0,700;0,900;1,100;1,300;1,400;1,500;1,700;1,900&display=swap");
 @import "tailwindcss/base";
 @import "tailwindcss/components";
 @import "tailwindcss/utilities";
+
+/* ===========================================================================
+ * Theme tokens
+ *
+ * Every accent and surface color in the app resolves to one of these
+ * variables (see tailwind.config.js). Tailwind's orange / amber / yellow
+ * palettes are remapped here too, so the existing utilities such as
+ * `bg-orange-500/20`, `hover:text-amber-400` or `from-primary-orange`
+ * re-skin automatically when a Quantum theme is applied, with no
+ * per-class overrides needed.
+ *
+ * Values are RGB triplets so Tailwind's opacity modifiers keep working.
+ * The palette scales are generated from tailwindcss/colors.
+ * Default values reproduce the classic wen.tools look.
+ * ========================================================================= */
+
+:root {
+  --orange-50: 255 247 237;
+  --orange-100: 255 237 213;
+  --orange-200: 254 215 170;
+  --orange-300: 253 186 116;
+  --orange-400: 251 146 60;
+  --orange-500: 249 115 22;
+  --orange-600: 234 88 12;
+  --orange-700: 194 65 12;
+  --orange-800: 154 52 18;
+  --orange-900: 124 45 18;
+  --orange-950: 67 20 7;
+  --amber-50: 255 251 235;
+  --amber-100: 254 243 199;
+  --amber-200: 253 230 138;
+  --amber-300: 252 211 77;
+  --amber-400: 251 191 36;
+  --amber-500: 245 158 11;
+  --amber-600: 217 119 6;
+  --amber-700: 180 83 9;
+  --amber-800: 146 64 14;
+  --amber-900: 120 53 15;
+  --amber-950: 69 26 3;
+  --yellow-50: 254 252 232;
+  --yellow-100: 254 249 195;
+  --yellow-200: 254 240 138;
+  --yellow-300: 253 224 71;
+  --yellow-400: 250 204 21;
+  --yellow-500: 234 179 8;
+  --yellow-600: 202 138 4;
+  --yellow-700: 161 98 7;
+  --yellow-800: 133 77 14;
+  --yellow-900: 113 63 18;
+  --yellow-950: 66 32 6;
+
+  /* Brand */
+  --brand: 245 123 20;          /* primary-orange */
+  --brand-2: 255 192 0;         /* primary-yellow */
+  --brand-soft: 247 223 124;    /* secondary-yellow */
+
+  /* Surfaces */
+  --bg: 8 8 10;                 /* primary-black */
+  --surface: 30 30 34;          /* banner-grey (cards) */
+  --surface-2: 50 51 56;        /* secondary-gray (hover / raised) */
+  --surface-3: 22 22 25;        /* asset-detail-bg */
+  --hairline: 255 255 255;
+
+  /* Legacy Quantum vars, still read by inline styles across the app */
+  --pq-primary: rgb(var(--brand));
+  --pq-secondary: rgb(var(--brand-2));
+  --pq-glow: rgb(var(--brand) / 0.45);
+  --pq-glow-subtle: rgb(var(--brand) / 0.12);
+}
+
+/* Cyan Pulse: neon cyan over deep navy */
+:root[data-quantum-theme="cyan"] {
+  --orange-50: 236 254 255;
+  --orange-100: 207 250 254;
+  --orange-200: 165 243 252;
+  --orange-300: 103 232 249;
+  --orange-400: 34 211 238;
+  --orange-500: 6 182 212;
+  --orange-600: 8 145 178;
+  --orange-700: 14 116 144;
+  --orange-800: 21 94 117;
+  --orange-900: 22 78 99;
+  --orange-950: 8 51 68;
+  --amber-50: 240 249 255;
+  --amber-100: 224 242 254;
+  --amber-200: 186 230 253;
+  --amber-300: 125 211 252;
+  --amber-400: 56 189 248;
+  --amber-500: 14 165 233;
+  --amber-600: 2 132 199;
+  --amber-700: 3 105 161;
+  --amber-800: 7 89 133;
+  --amber-900: 12 74 110;
+  --amber-950: 8 47 73;
+  --yellow-50: 236 254 255;
+  --yellow-100: 207 250 254;
+  --yellow-200: 165 243 252;
+  --yellow-300: 103 232 249;
+  --yellow-400: 34 211 238;
+  --yellow-500: 6 182 212;
+  --yellow-600: 8 145 178;
+  --yellow-700: 14 116 144;
+  --yellow-800: 21 94 117;
+  --yellow-900: 22 78 99;
+  --yellow-950: 8 51 68;
+  --brand: 0 240 255;
+  --brand-2: 125 211 252;
+  --brand-soft: 186 230 253;
+  --bg: 3 7 16;
+  --surface: 14 22 36;
+  --surface-2: 28 40 60;
+  --surface-3: 10 17 30;
+}
+
+/* Antimatter Violet: purple into fuchsia */
+:root[data-quantum-theme="violet"] {
+  --orange-50: 250 245 255;
+  --orange-100: 243 232 255;
+  --orange-200: 233 213 255;
+  --orange-300: 216 180 254;
+  --orange-400: 192 132 252;
+  --orange-500: 168 85 247;
+  --orange-600: 147 51 234;
+  --orange-700: 126 34 206;
+  --orange-800: 107 33 168;
+  --orange-900: 88 28 135;
+  --orange-950: 59 7 100;
+  --amber-50: 253 244 255;
+  --amber-100: 250 232 255;
+  --amber-200: 245 208 254;
+  --amber-300: 240 171 252;
+  --amber-400: 232 121 249;
+  --amber-500: 217 70 239;
+  --amber-600: 192 38 211;
+  --amber-700: 162 28 175;
+  --amber-800: 134 25 143;
+  --amber-900: 112 26 117;
+  --amber-950: 74 4 78;
+  --yellow-50: 245 243 255;
+  --yellow-100: 237 233 254;
+  --yellow-200: 221 214 254;
+  --yellow-300: 196 181 253;
+  --yellow-400: 167 139 250;
+  --yellow-500: 139 92 246;
+  --yellow-600: 124 58 237;
+  --yellow-700: 109 40 217;
+  --yellow-800: 91 33 182;
+  --yellow-900: 76 29 149;
+  --yellow-950: 46 16 101;
+  --brand: 192 132 252;
+  --brand-2: 240 171 252;
+  --brand-soft: 245 208 254;
+  --bg: 9 5 18;
+  --surface: 25 17 40;
+  --surface-2: 44 33 64;
+  --surface-3: 18 12 31;
+}
+
+/* Zero-Point Mint: emerald into teal */
+:root[data-quantum-theme="emerald"] {
+  --orange-50: 236 253 245;
+  --orange-100: 209 250 229;
+  --orange-200: 167 243 208;
+  --orange-300: 110 231 183;
+  --orange-400: 52 211 153;
+  --orange-500: 16 185 129;
+  --orange-600: 5 150 105;
+  --orange-700: 4 120 87;
+  --orange-800: 6 95 70;
+  --orange-900: 6 78 59;
+  --orange-950: 2 44 34;
+  --amber-50: 240 253 250;
+  --amber-100: 204 251 241;
+  --amber-200: 153 246 228;
+  --amber-300: 94 234 212;
+  --amber-400: 45 212 191;
+  --amber-500: 20 184 166;
+  --amber-600: 13 148 136;
+  --amber-700: 15 118 110;
+  --amber-800: 17 94 89;
+  --amber-900: 19 78 74;
+  --amber-950: 4 47 46;
+  --yellow-50: 240 253 244;
+  --yellow-100: 220 252 231;
+  --yellow-200: 187 247 208;
+  --yellow-300: 134 239 172;
+  --yellow-400: 74 222 128;
+  --yellow-500: 34 197 94;
+  --yellow-600: 22 163 74;
+  --yellow-700: 21 128 61;
+  --yellow-800: 22 101 52;
+  --yellow-900: 20 83 45;
+  --yellow-950: 5 46 22;
+  --brand: 52 211 153;
+  --brand-2: 94 234 212;
+  --brand-soft: 167 243 208;
+  --bg: 3 11 9;
+  --surface: 13 29 25;
+  --surface-2: 26 48 42;
+  --surface-3: 9 22 19;
+}
+
+/* Solar Fusion: molten gold */
+:root[data-quantum-theme="amber"] {
+  --orange-50: 255 251 235;
+  --orange-100: 254 243 199;
+  --orange-200: 253 230 138;
+  --orange-300: 252 211 77;
+  --orange-400: 251 191 36;
+  --orange-500: 245 158 11;
+  --orange-600: 217 119 6;
+  --orange-700: 180 83 9;
+  --orange-800: 146 64 14;
+  --orange-900: 120 53 15;
+  --orange-950: 69 26 3;
+  --amber-50: 254 252 232;
+  --amber-100: 254 249 195;
+  --amber-200: 254 240 138;
+  --amber-300: 253 224 71;
+  --amber-400: 250 204 21;
+  --amber-500: 234 179 8;
+  --amber-600: 202 138 4;
+  --amber-700: 161 98 7;
+  --amber-800: 133 77 14;
+  --amber-900: 113 63 18;
+  --amber-950: 66 32 6;
+  --yellow-50: 254 252 232;
+  --yellow-100: 254 249 195;
+  --yellow-200: 254 240 138;
+  --yellow-300: 253 224 71;
+  --yellow-400: 250 204 21;
+  --yellow-500: 234 179 8;
+  --yellow-600: 202 138 4;
+  --yellow-700: 161 98 7;
+  --yellow-800: 133 77 14;
+  --yellow-900: 113 63 18;
+  --yellow-950: 66 32 6;
+  --brand: 251 191 36;
+  --brand-2: 253 224 71;
+  --brand-soft: 254 240 138;
+  --bg: 12 9 3;
+  --surface: 32 25 13;
+  --surface-2: 54 43 24;
+  --surface-3: 24 18 8;
+}
+
+:root[data-quantum-theme] {
+  --pq-primary: rgb(var(--brand));
+  --pq-secondary: rgb(var(--brand-2));
+  --pq-glow: rgb(var(--brand) / 0.45);
+  --pq-glow-subtle: rgb(var(--brand) / 0.12);
+}
+
+/* ===========================================================================
+ * Base
+ * ========================================================================= */
+
+html {
+  background: rgb(var(--bg));
+  color-scheme: dark;
+}
+
+body {
+  background: rgb(var(--bg));
+  font-feature-settings: "cv11", "ss01", "ss03";
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  transition: background-color 0.5s ease;
+}
+
+::selection {
+  background: rgb(var(--brand) / 0.35);
+  color: #fff;
+}
+
+:focus-visible {
+  outline: 2px solid rgb(var(--brand));
+  outline-offset: 2px;
+}
 
 /* Chrome, Safari, Edge, Opera */
 input::-webkit-outer-spin-button,
@@ -16,6 +294,101 @@ input[type="number"] {
   appearance: textfield;
 }
 
+/* Scrollbars follow the theme */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(var(--brand) / 0.55) transparent;
+}
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgb(var(--brand) / 0.45);
+  border-radius: 10px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgb(var(--brand) / 0.8);
+}
+
+/* Ambient backdrop: a soft brand glow and a faint grid behind everything */
+.wt-app {
+  isolation: isolate;
+}
+.wt-app::before,
+.wt-app::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+}
+.wt-app::before {
+  background:
+    radial-gradient(70rem 32rem at 50% -10rem, rgb(var(--brand) / 0.14), transparent 70%),
+    radial-gradient(40rem 26rem at 95% 5%, rgb(var(--brand-2) / 0.06), transparent 70%);
+}
+.wt-app::after {
+  background-image:
+    linear-gradient(rgb(var(--hairline) / 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(var(--hairline) / 0.035) 1px, transparent 1px);
+  background-size: 56px 56px;
+  mask-image: radial-gradient(ellipse 80% 55% at 50% 0%, #000 25%, transparent 75%);
+  -webkit-mask-image: radial-gradient(ellipse 80% 55% at 50% 0%, #000 25%, transparent 75%);
+}
+
+/* ===========================================================================
+ * Components
+ * ========================================================================= */
+
+@layer components {
+  .wt-gradient-text {
+    background: linear-gradient(100deg, rgb(var(--brand)) 10%, rgb(var(--brand-2)) 90%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  .wt-eyebrow {
+    @apply font-display text-xs font-semibold uppercase tracking-[0.18em] text-slate-400;
+  }
+
+  .wt-chip {
+    @apply inline-flex items-center gap-2 rounded-full border border-white/10 bg-banner-grey/60 px-3 py-1 text-xs font-medium text-slate-300 backdrop-blur;
+  }
+
+  .wt-btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition duration-200 active:scale-[0.97] disabled:pointer-events-none disabled:opacity-50;
+  }
+  .wt-btn-primary {
+    color: rgb(12 10 8);
+    background: linear-gradient(135deg, rgb(var(--brand)), rgb(var(--brand-2)));
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.3),
+      0 8px 28px -12px rgb(var(--brand) / 0.9);
+  }
+  .wt-btn-primary:hover {
+    filter: brightness(1.07);
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.3),
+      0 12px 36px -12px rgb(var(--brand));
+  }
+  .wt-btn-ghost {
+    @apply border border-white/10 bg-banner-grey/60 text-slate-100 backdrop-blur hover:border-white/20 hover:bg-banner-grey;
+  }
+
+  .wt-icon-btn {
+    @apply grid h-9 w-9 place-items-center rounded-xl border border-white/10 bg-banner-grey/60 text-slate-300 transition hover:border-white/20 hover:text-white;
+  }
+}
+
+/* ===========================================================================
+ * Legacy helpers
+ * ========================================================================= */
+
 .tooltip {
   visibility: hidden;
   position: absolute;
@@ -24,35 +397,6 @@ input[type="number"] {
 .has-tooltip:hover .tooltip {
   visibility: visible;
   z-index: 10;
-}
-
-/* scrollbar */
-
-::-webkit-scrollbar {
-  width: 8px;
-}
-
-::-webkit-scrollbar-track {
-  background: #1e1e1e;
-  border-radius: 10px;
-}
-
-::-webkit-scrollbar-thumb {
-  background: #fd941d;
-  border-radius: 10px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: #357abd;
-}
-* {
-  scrollbar-width: thin;
-  scrollbar-color: #fd941d #1e1e1e;
-}
-body {
-  -ms-overflow-style: none;
-  scrollbar-face-color: #fd941d;
-  scrollbar-track-color: #1e1e1e;
 }
 
 @keyframes ticker {
@@ -77,10 +421,6 @@ body {
   animation: ticker 15s linear infinite;
 }
 
-/*
- * The ticker speed is higher at larger screen sizes, so make the animation
- * duration longer to decrease the ticker speed
- */
 @media (min-width: 600px) {
   .ticker-text {
     animation-duration: 20s;
@@ -93,23 +433,13 @@ body {
   }
 }
 
-/* Stop the animations for users who may be sensitive to motion */
-@media (prefers-reduced-motion: reduce) {
-  .ticker-text {
-    animation: none;
-    width: auto;
-    padding-left: 0;
-    padding-right: 0%;
-    margin: 0 auto 0;
-  }
-}
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(10px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
 .animate-fade-in {
-  animation: fadeIn 0.3s ease-out forwards;
+  animation: fadeIn 0.4s cubic-bezier(0.2, 0.7, 0.2, 1) both;
 }
 
 @keyframes spinSlow {
@@ -121,86 +451,50 @@ body {
   animation: spinSlow 12s linear infinite;
 }
 
-/* ---------------------------------------------------------------------------
- * Quantum Atomic Theme Definitions & Overrides
- * --------------------------------------------------------------------------- */
-
-:root[data-quantum-theme="cyan"] {
-  --pq-primary: #00f0ff;
-  --pq-secondary: #3b82f6;
-  --pq-glow: rgba(0, 240, 255, 0.45);
-  --pq-glow-subtle: rgba(0, 240, 255, 0.12);
+@keyframes wtPulseDot {
+  0%, 100% { box-shadow: 0 0 0 0 rgb(var(--brand) / 0.6); }
+  50% { box-shadow: 0 0 0 6px rgb(var(--brand) / 0); }
 }
 
-:root[data-quantum-theme="violet"] {
-  --pq-primary: #c084fc;
-  --pq-secondary: #a855f7;
-  --pq-glow: rgba(192, 132, 252, 0.45);
-  --pq-glow-subtle: rgba(192, 132, 252, 0.12);
+.wt-pulse-dot {
+  animation: wtPulseDot 2s ease-in-out infinite;
 }
 
-:root[data-quantum-theme="emerald"] {
-  --pq-primary: #34d399;
-  --pq-secondary: #10b981;
-  --pq-glow: rgba(52, 211, 153, 0.45);
-  --pq-glow-subtle: rgba(52, 211, 153, 0.12);
-}
-
-:root[data-quantum-theme="amber"] {
-  --pq-primary: #fbbf24;
-  --pq-secondary: #f59e0b;
-  --pq-glow: rgba(251, 191, 36, 0.45);
-  --pq-glow-subtle: rgba(251, 191, 36, 0.12);
-}
-
-/* Quantum active scrollbar & ambient glow */
-html.quantum-mode ::-webkit-scrollbar-thumb,
-html.quantum-mode *::-webkit-scrollbar-thumb,
-html.quantum-mode .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: var(--pq-primary, #00f0ff) !important;
-  box-shadow: 0 0 12px var(--pq-glow, rgba(0, 240, 255, 0.6)) !important;
-  border-radius: 10px !important;
-}
-
-html.quantum-mode ::-webkit-scrollbar-thumb:hover,
-html.quantum-mode *::-webkit-scrollbar-thumb:hover,
-html.quantum-mode .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: var(--pq-secondary, #00f0ff) !important;
-}
-
-html.quantum-mode,
-html.quantum-mode * {
-  scrollbar-color: var(--pq-primary, #00f0ff) #04060f !important;
-}
-
-/* ---------------------------------------------------------------------------
- * Quantum App-Wide Component Shifts
- * --------------------------------------------------------------------------- */
+/* ===========================================================================
+ * Quantum mode: decorative effects only.
+ * Colors come from the tokens above; these rules add the glow and motion
+ * that make the PQ themes feel special.
+ * ========================================================================= */
 
 @keyframes quantumLaser {
   0% { background-position: 200% 0; }
   100% { background-position: -200% 0; }
 }
 
-/* 1. Header Quantum Shift with Laser Beam Sweep */
-html.quantum-mode .wentools-header,
-html.quantum-mode .MuiAppBar-root {
-  position: relative !important;
-  background: rgba(4, 6, 18, 0.88) !important;
-  backdrop-filter: blur(24px) saturate(190%) !important;
-  border-bottom: 1px solid var(--pq-glow) !important;
-  box-shadow: 0 4px 35px var(--pq-glow-subtle) !important;
-  transition: border-color 0.5s ease, box-shadow 0.5s ease;
+@keyframes quantumPulseBorder {
+  0%, 100% {
+    border-color: var(--pq-glow);
+    box-shadow: 0 0 18px -1px var(--pq-glow-subtle), inset 0 0 12px -4px var(--pq-glow-subtle);
+  }
+  50% {
+    border-color: var(--pq-primary);
+    box-shadow: 0 0 30px 3px var(--pq-glow), inset 0 0 18px -2px var(--pq-glow-subtle);
+  }
 }
 
-html.quantum-mode .wentools-header::after,
-html.quantum-mode .MuiAppBar-root::after {
-  content: '';
+/* Header: a sweeping laser along the bottom edge */
+html.quantum-mode .wentools-header {
+  border-bottom-color: var(--pq-glow-subtle);
+  box-shadow: 0 4px 35px var(--pq-glow-subtle);
+}
+
+html.quantum-mode .wentools-header::after {
+  content: "";
   position: absolute;
   bottom: -1px;
   left: 0;
   width: 100%;
-  height: 2px;
+  height: 1px;
   background: linear-gradient(90deg, transparent, var(--pq-primary), var(--pq-secondary), transparent);
   background-size: 200% 100%;
   animation: quantumLaser 4s linear infinite;
@@ -212,324 +506,361 @@ html.quantum-mode .wentools-logo {
 }
 
 .quantum-wallet-btn {
-  border: 1px solid var(--pq-primary) !important;
-  box-shadow: 0 0 16px var(--pq-glow) !important;
-  background: rgba(0, 240, 255, 0.08) !important;
-  transition: all 0.3s ease !important;
+  border-color: var(--pq-primary) !important;
+  box-shadow: 0 0 16px var(--pq-glow);
+  transition: box-shadow 0.3s ease;
 }
 
 .quantum-wallet-btn:hover {
-  box-shadow: 0 0 24px var(--pq-glow) !important;
-  transform: scale(1.05);
+  box-shadow: 0 0 24px var(--pq-glow);
 }
 
-/* 2. Footer Quantum Shift */
+/* Footer */
 html.quantum-mode footer {
-  background: rgba(3, 5, 12, 0.95) !important;
-  border-top: 1px solid var(--pq-glow) !important;
-  box-shadow: 0 -4px 30px var(--pq-glow-subtle) !important;
-  transition: border-color 0.5s ease;
+  border-top-color: var(--pq-glow-subtle);
+  box-shadow: 0 -4px 30px var(--pq-glow-subtle);
 }
 
-html.quantum-mode footer a:hover {
-  color: var(--pq-primary) !important;
-  text-shadow: 0 0 8px var(--pq-glow);
+/* Solid accent fills get dark text so neon backgrounds stay readable */
+html.quantum-mode :is(
+  .bg-primary-orange, .bg-secondary-orange, .bg-primary-yellow,
+  .bg-orange-400, .bg-orange-500, .bg-orange-600,
+  .bg-amber-300, .bg-amber-400, .bg-amber-500,
+  .bg-yellow-400, .bg-yellow-500
+) {
+  color: rgb(2 6 23);
 }
 
-/* 3. Primary Button Quantum Shift */
-html.quantum-mode .bg-primary-yellow,
-html.quantum-mode .bg-primary-orange,
-html.quantum-mode .bg-secondary-orange {
-  background: linear-gradient(135deg, var(--pq-primary), var(--pq-secondary)) !important;
-  color: #020617 !important;
-  font-weight: 800 !important;
-  border: 1px solid var(--pq-primary) !important;
-  box-shadow: 0 0 20px -2px var(--pq-glow) !important;
-  transition: all 0.3s ease !important;
+/* Accent buttons pick up a soft glow */
+html.quantum-mode :is(.bg-primary-orange, .bg-orange-500, .bg-amber-400) {
+  box-shadow: 0 0 20px -4px var(--pq-glow);
 }
 
-html.quantum-mode .bg-primary-yellow:hover,
-html.quantum-mode .bg-primary-orange:hover,
-html.quantum-mode .bg-secondary-orange:hover {
-  transform: translateY(-1px) scale(1.02);
-  box-shadow: 0 0 30px 2px var(--pq-glow) !important;
+html.quantum-mode .button-link:hover {
+  border-color: var(--pq-primary);
+  box-shadow: 0 0 25px var(--pq-glow-subtle);
 }
 
-/* 4. Text, Headings & Title Gradients Quantum Shift */
-html.quantum-mode .text-primary-yellow,
-html.quantum-mode .text-primary-orange,
-html.quantum-mode .text-primary-orange\/70,
-html.quantum-mode .text-primary-orange\/80,
-html.quantum-mode .text-primary-orange\/90,
-html.quantum-mode .text-amber-400,
-html.quantum-mode .text-amber-400\/70,
-html.quantum-mode .text-amber-400\/80,
-html.quantum-mode .text-amber-400\/90,
-html.quantum-mode .text-amber-500,
-html.quantum-mode .text-yellow-400,
-html.quantum-mode .text-orange-400,
-html.quantum-mode .text-orange-500,
-html.quantum-mode .text-orange-500\/70,
-html.quantum-mode .text-orange-500\/80,
-html.quantum-mode .text-orange-500\/90 {
-  color: var(--pq-primary) !important;
+/* Opt-in pulsing border for hero elements */
+html.quantum-mode .quantum-card-glow {
+  animation: quantumPulseBorder 3.5s ease-in-out infinite;
 }
 
-html.quantum-mode .group:hover .group-hover\:text-amber-400,
-html.quantum-mode .group:hover .group-hover\:text-orange-400,
-html.quantum-mode .hover\:text-orange-400:hover,
-html.quantum-mode .hover\:text-amber-400:hover {
-  color: var(--pq-primary) !important;
-}
-
-html.quantum-mode .border-primary-yellow,
-html.quantum-mode .border-primary-orange,
-html.quantum-mode .border-primary-orange\/10,
-html.quantum-mode .border-primary-orange\/20,
-html.quantum-mode .border-primary-orange\/30,
-html.quantum-mode .border-primary-orange\/40,
-html.quantum-mode .border-primary-orange\/50,
-html.quantum-mode .border-secondary-orange,
-html.quantum-mode .border-secondary-orange\/10,
-html.quantum-mode .border-secondary-orange\/20,
-html.quantum-mode .border-secondary-orange\/30,
-html.quantum-mode .border-amber-400,
-html.quantum-mode .border-amber-400\/10,
-html.quantum-mode .border-amber-400\/20,
-html.quantum-mode .border-amber-400\/30,
-html.quantum-mode .border-amber-400\/40,
-html.quantum-mode .border-amber-400\/50,
-html.quantum-mode .border-amber-500,
-html.quantum-mode .border-amber-500\/10,
-html.quantum-mode .border-amber-500\/20,
-html.quantum-mode .border-amber-500\/30,
-html.quantum-mode .border-orange-400,
-html.quantum-mode .border-orange-500,
-html.quantum-mode .border-orange-500\/10,
-html.quantum-mode .border-orange-500\/20,
-html.quantum-mode .border-orange-500\/30,
-html.quantum-mode .focus\:border-primary-orange:focus,
-html.quantum-mode .focus\:border-amber-400:focus {
-  border-color: var(--pq-primary) !important;
-}
-
-/* Card Banners & Title Gradients Shift */
-html.quantum-mode .from-primary-orange,
-html.quantum-mode .from-primary-yellow,
-html.quantum-mode .from-amber-200,
-html.quantum-mode .from-amber-300,
-html.quantum-mode .from-amber-400,
-html.quantum-mode .from-amber-500,
-html.quantum-mode .from-yellow-400,
-html.quantum-mode .from-orange-300,
-html.quantum-mode .from-orange-400,
-html.quantum-mode .from-orange-500,
-html.quantum-mode .from-\[\#E4E808\],
-html.quantum-mode .from-\[\#FF512F\] {
-  --tw-gradient-from: var(--pq-primary) var(--tw-gradient-from-position) !important;
-  --tw-gradient-to: #ffffff var(--tw-gradient-to-position) !important;
-  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important;
-}
-
-html.quantum-mode .to-secondary-orange,
-html.quantum-mode .to-amber-300,
-html.quantum-mode .to-amber-400,
-html.quantum-mode .to-amber-500,
-html.quantum-mode .to-amber-600,
-html.quantum-mode .to-amber-700,
-html.quantum-mode .to-orange-400,
-html.quantum-mode .to-orange-500,
-html.quantum-mode .to-orange-600,
-html.quantum-mode .to-red-500,
-html.quantum-mode .to-\[\#FD941D\],
-html.quantum-mode .to-\[\#DD2476\] {
-  --tw-gradient-to: #ffffff var(--tw-gradient-to-position) !important;
-}
-
-@keyframes quantumPulseBorder {
-  0%, 100% {
-    border-color: var(--pq-glow) !important;
-    box-shadow: 0 0 18px -1px var(--pq-glow-subtle), inset 0 0 12px -4px var(--pq-glow-subtle) !important;
-  }
-  50% {
-    border-color: var(--pq-primary) !important;
-    box-shadow: 0 0 30px 3px var(--pq-glow), inset 0 0 18px -2px var(--pq-glow-subtle) !important;
-  }
-}
-
-/* 5. Tool Card Glassmorphism & Pulsing Glow Overrides */
-html.quantum-mode .quantum-card-glow,
-html.quantum-mode .bg-primary-black\/60,
-html.quantum-mode .bg-banner-grey,
-html.quantum-mode .button-link {
-  animation: quantumPulseBorder 3.5s ease-in-out infinite !important;
-}
-
-/* 6. WenPad, Fee Breakdown & Agent Marketplace Overrides */
-html.quantum-mode .bg-primary-orange\/10,
-html.quantum-mode .bg-orange-500\/5,
-html.quantum-mode .bg-orange-500\/10,
-html.quantum-mode .bg-orange-500\/20 {
-  background-color: var(--pq-glow-subtle) !important;
-}
-
-html.quantum-mode .border-primary-orange,
-html.quantum-mode .border-orange-500\/20,
-html.quantum-mode .border-orange-500\/30,
-html.quantum-mode .border-primary-orange\/20 {
-  border-color: var(--pq-glow) !important;
-}
-
-html.quantum-mode .shadow-primary-orange\/5 {
-  box-shadow: 0 0 20px var(--pq-glow-subtle) !important;
-}
-
-html.quantum-mode .text-orange-500\/60 {
-  color: var(--pq-primary) !important;
-  opacity: 0.8;
-}
-
-html.quantum-mode .bg-orange-500 {
-  background: linear-gradient(135deg, var(--pq-primary), var(--pq-secondary)) !important;
-  color: #020617 !important;
-}
-
-html.quantum-mode .hover\:bg-orange-500:hover {
-  background: var(--pq-primary) !important;
-  color: #020617 !important;
-}
-
-/* 7. MUI Components, Wallet Grid & Pagination Overrides */
-html.quantum-mode .MuiChip-colorWarning {
-  background-color: var(--pq-primary) !important;
-  color: #020617 !important;
-  font-weight: 800 !important;
-}
-
-html.quantum-mode .MuiButton-containedWarning {
-  background-color: var(--pq-primary) !important;
-  color: #020617 !important;
-  font-weight: 800 !important;
-  box-shadow: 0 0 15px var(--pq-glow) !important;
-}
-
-html.quantum-mode .MuiPaginationItem-root.Mui-selected {
-  background-color: var(--pq-primary) !important;
-  color: #020617 !important;
-  font-weight: 800 !important;
-  box-shadow: 0 0 12px var(--pq-glow) !important;
-}
-
+/* MUI components that use MUI's own palette rather than Tailwind */
+html.quantum-mode .MuiChip-colorWarning,
+html.quantum-mode .MuiButton-containedWarning,
+html.quantum-mode .MuiPaginationItem-root.Mui-selected,
 html.quantum-mode .MuiPaginationItem-root.Mui-selected:hover {
   background-color: var(--pq-primary) !important;
+  color: rgb(2 6 23) !important;
 }
 
-html.quantum-mode .MuiCheckbox-root.Mui-checked {
+html.quantum-mode .MuiCheckbox-root.Mui-checked,
+html.quantum-mode .MuiRadio-root.Mui-checked {
   color: var(--pq-primary) !important;
 }
 
-html.quantum-mode .text-secondary-orange,
-html.quantum-mode .text-primary-orange {
-  color: var(--pq-primary) !important;
+@media (prefers-reduced-motion: reduce) {
+  .ticker-text {
+    animation: none;
+    width: auto;
+    padding-left: 0;
+    padding-right: 0%;
+    margin: 0 auto 0;
+  }
+  .wt-pulse-dot,
+  .animate-spin-slow,
+  html.quantum-mode .wentools-header::after,
+  html.quantum-mode .quantum-card-glow {
+    animation: none;
+  }
 }
 
-html.quantum-mode .bg-secondary-orange,
-html.quantum-mode .bg-primary-orange {
-  background-color: var(--pq-primary) !important;
-  color: #020617 !important;
+/* ===========================================================================
+ * Cypher layer
+ * The brand's ( brackets ) become the system: reticle corners on hover,
+ * bracketed labels, plus terminal details and a little film grain.
+ * ========================================================================= */
+
+/* Mono section label, e.g. "( manifesto )" */
+.wt-label {
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: rgb(var(--brand));
 }
 
-/* 8. Complete Hover Border Quantum Overrides */
-html.quantum-mode .group:hover,
-html.quantum-mode .button-link:hover,
-html.quantum-mode .hover\:border-amber-400:hover,
-html.quantum-mode .hover\:border-amber-400\/20:hover,
-html.quantum-mode .hover\:border-amber-400\/30:hover,
-html.quantum-mode .hover\:border-amber-400\/40:hover,
-html.quantum-mode .hover\:border-amber-500:hover,
-html.quantum-mode .hover\:border-amber-500\/20:hover,
-html.quantum-mode .hover\:border-amber-500\/30:hover,
-html.quantum-mode .hover\:border-amber-500\/50:hover,
-html.quantum-mode .hover\:border-orange-400:hover,
-html.quantum-mode .hover\:border-orange-500:hover,
-html.quantum-mode .hover\:border-orange-500\/20:hover,
-html.quantum-mode .hover\:border-orange-500\/30:hover,
-html.quantum-mode .hover\:border-orange-500\/40:hover,
-html.quantum-mode .hover\:border-orange-500\/50:hover,
-html.quantum-mode .hover\:border-primary-orange:hover,
-html.quantum-mode .hover\:border-primary-yellow:hover {
-  border-color: var(--pq-primary) !important;
-  box-shadow: 0 0 25px var(--pq-glow) !important;
+/* Blinking block caret */
+.wt-caret {
+  display: inline-block;
+  width: 0.6em;
+  height: 1.1em;
+  margin-left: 2px;
+  vertical-align: -0.18em;
+  background: rgb(var(--brand));
+  animation: wtBlink 1.05s steps(1) infinite;
+}
+@keyframes wtBlink {
+  50% { opacity: 0; }
 }
 
-/* 9. Complete Amber & Yellow Background & Shadow Quantum Overrides */
-html.quantum-mode .bg-amber-300,
-html.quantum-mode .bg-amber-400,
-html.quantum-mode .bg-amber-500,
-html.quantum-mode .bg-yellow-400 {
-  background: linear-gradient(135deg, var(--pq-primary), var(--pq-secondary)) !important;
-  color: #020617 !important;
+/* Reticle: four corner brackets that tighten in on hover (see Reticle.tsx).
+   Corner radius is concentric with the host card: --wt-r is the card radius,
+   --wt-in the hover inset. */
+.wt-reticle {
+  --rest: calc(var(--wt-in, 6px) + 8px);
+  --inset: var(--rest);
+  --rad: max(0px, calc(var(--wt-r, 16px) - var(--inset)));
+  position: absolute;
+  inset: var(--inset);
+  pointer-events: none;
+  opacity: 0;
+  transition:
+    inset 0.35s cubic-bezier(0.2, 0.7, 0.2, 1),
+    opacity 0.25s ease;
+}
+.group:hover > .wt-reticle,
+.group:focus-visible > .wt-reticle {
+  --inset: var(--wt-in, 6px);
+  opacity: 1;
+}
+.wt-reticle-c {
+  position: absolute;
+  width: max(16px, calc(var(--rad) + 8px));
+  height: max(16px, calc(var(--rad) + 8px));
+  border: 0 solid rgb(var(--brand));
+}
+.wt-reticle-tl { top: 0; left: 0; border-top-width: 1.5px; border-left-width: 1.5px; border-top-left-radius: var(--rad); }
+.wt-reticle-tr { top: 0; right: 0; border-top-width: 1.5px; border-right-width: 1.5px; border-top-right-radius: var(--rad); }
+.wt-reticle-bl { bottom: 0; left: 0; border-bottom-width: 1.5px; border-left-width: 1.5px; border-bottom-left-radius: var(--rad); }
+.wt-reticle-br { bottom: 0; right: 0; border-bottom-width: 1.5px; border-right-width: 1.5px; border-bottom-right-radius: var(--rad); }
+
+/* Redacted strike for "gatekeepers" */
+.wt-strike {
+  position: relative;
+  color: rgb(var(--hairline) / 0.35);
+}
+.wt-strike::after {
+  content: "";
+  position: absolute;
+  left: -2%;
+  right: -2%;
+  top: 55%;
+  height: 0.09em;
+  background: linear-gradient(90deg, rgb(var(--brand)), rgb(var(--brand-2)));
+  transform: rotate(-2deg);
 }
 
-html.quantum-mode .bg-amber-400\/10,
-html.quantum-mode .bg-amber-500\/5,
-html.quantum-mode .bg-amber-500\/10,
-html.quantum-mode .bg-amber-500\/20,
-html.quantum-mode .bg-orange-500\/10,
-html.quantum-mode .bg-orange-500\/15,
-html.quantum-mode .bg-orange-500\/20,
-html.quantum-mode .bg-orange-500\/30,
-html.quantum-mode .bg-orange-500\/40,
-html.quantum-mode .bg-amber-950\/20,
-html.quantum-mode .bg-amber-900\/10 {
-  background-color: var(--pq-glow-subtle) !important;
-  color: var(--pq-primary) !important;
+/* New block sliding onto the chain */
+@keyframes wtBlockIn {
+  from { opacity: 0; transform: translateX(-16px); box-shadow: 0 0 0 0 rgb(var(--brand) / 0.6); }
+  60% { box-shadow: 0 0 24px -4px rgb(var(--brand) / 0.6); }
+  to { opacity: 1; transform: none; box-shadow: 0 0 0 0 rgb(var(--brand) / 0); }
+}
+.wt-block-in {
+  animation: wtBlockIn 0.6s cubic-bezier(0.2, 0.7, 0.2, 1) both;
 }
 
-html.quantum-mode .bg-orange-500,
-html.quantum-mode .bg-orange-600 {
-  background: linear-gradient(135deg, var(--pq-primary), var(--pq-secondary)) !important;
-  color: #020617 !important;
+@keyframes wtTickIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: none; }
+}
+.wt-tick-in {
+  display: inline-block;
+  animation: wtTickIn 0.35s ease both;
 }
 
-html.quantum-mode .shadow-orange-500\/10,
-html.quantum-mode .shadow-orange-500\/20,
-html.quantum-mode .shadow-orange-500\/25,
-html.quantum-mode .shadow-orange-500\/30,
-html.quantum-mode .shadow-orange-500\/40 {
-  box-shadow: 0 0 20px var(--pq-glow) !important;
+/* Film grain over everything, very faint */
+.wt-grain {
+  position: fixed;
+  inset: -50%;
+  z-index: 60;
+  pointer-events: none;
+  opacity: 0.045;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  animation: wtGrain 1.2s steps(6) infinite;
+}
+@keyframes wtGrain {
+  0% { transform: translate(0, 0); }
+  20% { transform: translate(-3%, 2%); }
+  40% { transform: translate(2%, -3%); }
+  60% { transform: translate(-2%, -1%); }
+  80% { transform: translate(3%, 3%); }
+  100% { transform: translate(0, 0); }
 }
 
-html.quantum-mode .hover\:bg-amber-300:hover,
-html.quantum-mode .hover\:bg-amber-400:hover,
-html.quantum-mode .hover\:bg-amber-500:hover,
-html.quantum-mode .hover\:bg-amber-400\/10:hover {
-  background: var(--pq-primary) !important;
-  color: #020617 !important;
-  box-shadow: 0 0 20px var(--pq-glow) !important;
+/* Logo glitch on hover: brand-colored channel split */
+@keyframes wtGlitch {
+  0% { text-shadow: 2px 0 rgb(var(--brand)), -2px 0 rgb(var(--brand-2)); transform: translate(0); }
+  25% { text-shadow: -2px 0 rgb(var(--brand)), 2px 0 rgb(var(--brand-2)); transform: translate(1px, -1px); }
+  50% { text-shadow: 1px 1px rgb(var(--brand)), -1px -1px rgb(var(--brand-2)); transform: translate(-1px, 1px); }
+  75% { text-shadow: -1px 0 rgb(var(--brand)), 1px 0 rgb(var(--brand-2)); transform: translate(0); }
+  100% { text-shadow: none; transform: translate(0); }
+}
+.wentools-logo:hover .wt-wordmark-text {
+  animation: wtGlitch 0.35s steps(2) 1;
 }
 
-html.quantum-mode .shadow-amber-400\/20,
-html.quantum-mode .shadow-amber-400\/10,
-html.quantum-mode .shadow-amber-500\/20,
-html.quantum-mode .shadow-amber-500\/10,
-html.quantum-mode .shadow-primary-yellow\/20 {
-  box-shadow: 0 0 20px var(--pq-glow) !important;
+/* Hero brackets: the logo's ( ) scaled up to frame the headline */
+.wt-hero-bracket {
+  height: 1.15em;
+  width: auto;
+  flex-shrink: 0;
+  filter: drop-shadow(0 0 24px rgb(var(--brand) / 0.35));
 }
 
-html.quantum-mode .accent-primary-yellow,
-html.quantum-mode .accent-yellow-400,
-html.quantum-mode .accent-amber-400 {
-  accent-color: var(--pq-primary) !important;
+/* Faint scanlines, used inside the hero only */
+.wt-scanlines {
+  background-image: repeating-linear-gradient(
+    0deg,
+    rgb(var(--hairline) / 0.025) 0px,
+    rgb(var(--hairline) / 0.025) 1px,
+    transparent 1px,
+    transparent 3px
+  );
 }
 
-html.quantum-mode .bg-primary-yellow {
-  background: linear-gradient(135deg, var(--pq-primary), var(--pq-secondary)) !important;
-  color: #020617 !important;
+/* ===========================================================================
+ * Sub-page layer (scoped by the .wt-page wrapper from PageShell)
+ * The tool pages were built over time with many heading and label styles.
+ * These rules give them one voice without touching each page: display
+ * headings, mono labels, themed focus states, and the ambient backdrop.
+ * They intentionally out-rank single utility classes.
+ * ========================================================================= */
+
+/* Let the ambient glow and grid show through page roots */
+.wt-page > .bg-primary-black {
+  background-color: transparent;
 }
 
-html.quantum-mode .bg-primary-yellow\/10 {
-  background-color: var(--pq-glow-subtle) !important;
+/* Headings: display face, no faux-italic, no forced caps on titles */
+.wt-page h1 {
+  font-family: "Space Grotesk", Inter, sans-serif;
+  font-style: normal;
+  font-weight: 700;
+  text-transform: none;
+  letter-spacing: -0.035em;
+  line-height: 1.05;
+}
+.wt-page :is(h2, h3, h4) {
+  font-family: "Space Grotesk", Inter, sans-serif;
+  font-style: normal;
+  letter-spacing: -0.015em;
+}
+.wt-page :is(.font-black.italic, .italic.font-extrabold) {
+  font-style: normal;
 }
 
+/* Small caps-style labels become mono, terminal-like */
+.wt-page
+  :is(h2, h3, h4, p, span, label, div).uppercase:is(
+    .text-xs, .text-xxs, .text-\[9px\], .text-\[10px\], .text-\[11px\]
+  ) {
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+}
+.wt-page :is(h2, h3, h4).uppercase:not(.text-xs, .text-sm) {
+  text-transform: none;
+}
 
+/* Form controls: themed focus, brand caret, mono values */
+.wt-page
+  :is(
+    input:not([type="checkbox"], [type="radio"], [type="range"], [type="file"]),
+    textarea,
+    select
+  ) {
+  caret-color: rgb(var(--brand));
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.wt-page
+  :is(
+    input:not([type="checkbox"], [type="radio"], [type="range"], [type="file"]),
+    textarea,
+    select
+  ):focus {
+  outline: none;
+  border-color: rgb(var(--brand) / 0.7);
+  box-shadow: 0 0 0 4px rgb(var(--brand) / 0.14);
+}
+.wt-page :is(input[type="number"], textarea) {
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+}
+.wt-page :is(input, textarea)::placeholder {
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+}
+.wt-page input[type="file"]::file-selector-button {
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  border: 1px solid rgb(var(--brand) / 0.4);
+  background: rgb(var(--brand) / 0.1);
+  color: rgb(var(--brand));
+  border-radius: 0.6rem;
+  padding: 0.4rem 0.8rem;
+  margin-right: 0.75rem;
+  cursor: pointer;
+}
+
+/* Plain page titles (the older tools) get the same presence as the suites */
+.wt-page h1.text-2xl {
+  font-size: clamp(2rem, 5vw, 3rem);
+  margin-top: 2.5rem;
+  margin-bottom: 0.5rem;
+}
+
+/* Flat brand buttons (solid orange/amber fills) match the primary CTA style */
+.wt-page button:is(.bg-primary-orange, .bg-secondary-orange, .bg-amber-400, .bg-amber-500, .bg-orange-500):not(:disabled) {
+  color: rgb(12 10 8);
+  background-image: linear-gradient(135deg, rgb(var(--brand)), rgb(var(--brand-2)));
+  border-radius: 0.75rem;
+  font-weight: 600;
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.3),
+    0 8px 28px -12px rgb(var(--brand) / 0.9);
+  transition: transform 0.15s ease, filter 0.15s ease, box-shadow 0.2s ease;
+}
+.wt-page button:is(.bg-primary-orange, .bg-secondary-orange, .bg-amber-400, .bg-amber-500, .bg-orange-500):not(:disabled):hover {
+  transform: translateY(-1px);
+  filter: brightness(1.07);
+}
+.wt-page button:is(.bg-primary-orange, .bg-secondary-orange, .bg-amber-400, .bg-amber-500, .bg-orange-500):not(:disabled):active {
+  transform: scale(0.97);
+}
+
+/* Tables (wallet, auditors, snapshots) */
+.wt-page th {
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+}
+.wt-page td {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Code and hashes */
+.wt-page :is(code, pre, kbd) {
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wt-caret,
+  .wt-grain,
+  .wt-block-in,
+  .wt-tick-in,
+  .wentools-logo:hover .wt-wordmark-text {
+    animation: none;
+  }
+  .wt-reticle {
+    transition: none;
+  }
+}
+
+/* Static frame: reticle corners always visible on main tool panels */
+.wt-frame > .wt-reticle {
+  --inset: var(--wt-in, 12px);
+  opacity: 0.5;
+}
+.wt-frame:focus-within > .wt-reticle {
+  opacity: 0.9;
+}

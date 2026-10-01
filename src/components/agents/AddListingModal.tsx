@@ -148,7 +148,7 @@ export function AddListingModal({ open, onClose, onSuccess, existingListing, net
           </div>
           <button
             onClick={onClose}
-            className="p-2 rounded-xl hover:bg-neutral-800 text-neutral-500 hover:text-white transition-all"
+            className="p-2 rounded-xl hover:bg-banner-grey text-neutral-500 hover:text-white transition-all"
           >
             <IoClose className="text-xl" />
           </button>

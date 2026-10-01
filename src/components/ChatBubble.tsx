@@ -27,7 +27,7 @@ export function ChatBubble({ isActive, unreadCount = 0 }: ChatBubbleProps) {
     <button
       onClick={() => navigate("/p2p-chat")}
       className={`fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full
-        bg-gradient-to-r from-primary-orange to-[#e06b10]
+        bg-gradient-to-r from-primary-orange to-orange-600
         shadow-lg shadow-primary-orange/30 flex items-center justify-center
         hover:scale-110 transition-transform duration-200
         ${pulse ? "animate-bounce" : ""}`}

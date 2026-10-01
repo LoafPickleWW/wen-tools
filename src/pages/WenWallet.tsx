@@ -1,3 +1,6 @@
+import { IoWallet } from "react-icons/io5";
+import { ToolHero, TermSpinner } from "../components/cypher/ToolKit";
+import { Reticle } from "../components/cypher/Reticle";
 import {
   Button,
   Grid,
@@ -251,14 +254,13 @@ export function WenWallet() {
         description="Browse, manage, send, opt-in, opt-out, and destroy Algorand assets in bulk. Visual asset explorer for creators and collectors."
       />
 
-      <header className="mb-10 border-b border-slate-800 pb-8 w-full">
-        <h1 className="text-4xl md:text-5xl font-black tracking-tight mb-4 bg-gradient-to-r from-white via-slate-400 to-slate-600 bg-clip-text text-transparent italic uppercase">
-          Wen Wallet
-        </h1>
-        <p className="text-lg text-slate-400 max-w-3xl leading-relaxed">
-          visual portfolio asset browser with integrated bulk operations.
-        </p>
-      </header>
+      <ToolHero
+        icon={<IoWallet aria-hidden="true" />}
+        tag="wallet"
+        title="Wen Wallet"
+        description="A visual browser for any Algorand account, with bulk send, opt-in, opt-out and destroy built in."
+        meta={["any address or NFD", "bulk send", "opt-in / opt-out", "destroy"]}
+      />
 
       {/* Top Search Area */}
       <section className="w-full mb-8">
@@ -267,12 +269,14 @@ export function WenWallet() {
 
       {isResolving ? (
         <div className="flex justify-center items-center w-full py-20">
-          <p className="text-slate-400 animate-pulse text-lg font-medium">Resolving domain address...</p>
+          <div className="flex flex-col items-center gap-3"><TermSpinner /><p className="font-mono text-sm text-slate-400">resolving NFD → address…</p></div>
         </div>
       ) : !searchWallet ? (
-        <section className="flex flex-col text-center justify-center items-center py-20 w-full bg-zinc-900/40 border border-zinc-800 rounded-3xl">
-          <h2 className="text-3xl font-black italic text-slate-300 uppercase">
-            No Account Loaded
+        <section className="wt-frame group relative flex flex-col text-center justify-center items-center py-20 w-full bg-banner-grey/40 border border-white/[0.07] rounded-3xl [--wt-r:24px] [--wt-in:12px]">
+          <Reticle />
+          <p className="wt-label">( no account loaded )</p>
+          <h2 className="mt-4 text-3xl font-semibold text-white">
+            Open any wallet
           </h2>
           <p className="text-slate-500 mt-4 max-w-sm">
             Connect your wallet to browse your assets, or type an address/NFD name in the search bar above.
@@ -284,21 +288,22 @@ export function WenWallet() {
       ) : (
         <section className="w-full">
           {/* Account Title details */}
-          <div className="mb-6 p-5 bg-zinc-900/50 border border-zinc-800 rounded-2xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <div className="mb-6 p-5 bg-banner-grey/50 border border-white/[0.07] rounded-2xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4 backdrop-blur">
             <div>
-              <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1">Active Account</p>
-              <h3 className="text-xl font-mono text-amber-400 break-all select-all font-bold">
+              <p className="font-mono text-[11px] text-slate-500 mb-1">// active account</p>
+              <h3 className="text-lg font-mono text-primary-orange break-all select-all font-medium">
                 {resolvedAccountName ? `${resolvedAccountName} (${searchWallet.substring(0, 6)}...)` : searchWallet}
               </h3>
               {!isOwner && (
-                <span className="inline-block mt-2 px-2.5 py-0.5 bg-zinc-800 border border-zinc-700 text-[10px] text-slate-400 uppercase font-mono rounded">
+                <span className="inline-flex items-center gap-1.5 mt-2 px-2 py-0.5 bg-primary-black/50 border border-white/[0.08] text-[10px] text-slate-400 uppercase font-mono rounded-md">
                   Viewing Public Address
                 </span>
               )}
             </div>
             {isOwner && (
-              <div className="px-4 py-2 bg-amber-400/10 border border-amber-400/20 rounded-xl">
-                <p className="text-[10px] font-bold text-amber-500 uppercase tracking-wider">Owner Actions Enabled</p>
+              <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-400/10 border border-emerald-400/20 rounded-xl">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                <p className="font-mono text-[11px] text-emerald-400">signer connected · owner actions on</p>
               </div>
             )}
           </div>
@@ -313,10 +318,10 @@ export function WenWallet() {
 
           <div className="flex flex-col sm:flex-row justify-between gap-3 mb-6 px-2 items-stretch sm:items-center">
             <InputBase
-              placeholder="search within assets..."
+              placeholder="filter assets…"
               inputProps={{ "aria-label": "search by asset id" }}
               onChange={(e) => handleSearch(e.target.value)}
-              className="bg-zinc-800 text-white rounded-xl pl-3 py-1.5 border border-zinc-700 text-sm w-full sm:w-60 focus-within:border-amber-400"
+              className="bg-banner-grey text-white rounded-xl pl-3 py-1.5 border border-white/10 font-mono text-sm w-full sm:w-60 focus-within:border-primary-orange"
               sx={{
                 color: "white",
                 "& input::placeholder": {
@@ -328,9 +333,12 @@ export function WenWallet() {
             <div className="flex flex-row gap-2 justify-between sm:justify-end">
               <Button
                 variant="contained"
-                color="warning"
                 size="medium"
                 sx={{
+                  background: "linear-gradient(135deg, rgb(var(--brand)), rgb(var(--brand-2)))",
+                  color: "#0c0a08",
+                  boxShadow: "0 8px 28px -12px rgb(var(--brand) / 0.9)",
+                  "&:hover": { filter: "brightness(1.07)", boxShadow: "0 8px 28px -12px rgb(var(--brand))" },
                   height: "2.25rem",
                   fontWeight: "bold",
                   fontSize: "0.85rem",
@@ -359,7 +367,7 @@ export function WenWallet() {
                 sx={{
                   height: "2.25rem",
                   color: "white",
-                  backgroundColor: "#262626",
+                  backgroundColor: "rgb(var(--surface))",
                   fontWeight: "bold",
                   fontSize: "0.85rem",
                   minWidth: { xs: "120px", sm: "160px" },
@@ -369,9 +377,9 @@ export function WenWallet() {
                 MenuProps={{
                   PaperProps: {
                     sx: {
-                      bgcolor: "#1e1e1e",
+                      bgcolor: "rgb(var(--surface-3))",
                       color: "white",
-                      border: "1px solid #3f3f46",
+                      border: "1px solid rgb(255 255 255 / 0.1)",
                       borderRadius: "12px",
                       marginTop: "4px",
                       boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -2px rgba(0, 0, 0, 0.5)",
@@ -380,19 +388,19 @@ export function WenWallet() {
                         color: "#e4e4e7",
                         paddingY: "8px",
                         "&:hover": {
-                          bgcolor: "#2d2d30",
+                          bgcolor: "rgb(var(--surface))",
                         },
                         "&.Mui-selected": {
-                          bgcolor: "#3f3f46",
-                          color: "#fbbf24",
+                          bgcolor: "rgb(var(--surface-2))",
+                          color: "rgb(var(--brand))",
                           fontWeight: "bold",
                           "&:hover": {
-                            bgcolor: "#52525b",
+                            bgcolor: "rgb(var(--surface-2))",
                           },
                         },
                       },
                       "& .MuiListSubheader-root": {
-                        bgcolor: "#1e1e1e",
+                        bgcolor: "rgb(var(--surface-3))",
                         color: "#a1a1aa",
                         fontWeight: "bold",
                         fontSize: "11px",

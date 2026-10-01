@@ -1,3 +1,5 @@
+import { ToolHero } from "../components/cypher/ToolKit";
+import { Reticle } from "../components/cypher/Reticle";
 import { useState } from "react";
 import algosdk from "algosdk";
 import Papa from "papaparse";
@@ -444,13 +446,20 @@ export function BatchUpdate() {
         description="Consolidated Algorand bulk metadata updater for ARC-69 and ARC-19 standards."
       />
 
-      <div className="w-full max-w-2xl bg-white/5 backdrop-blur-md rounded-2xl border border-white/10 p-6 md:p-8 mt-6 shadow-2xl">
-        <h1 className="text-3xl font-extrabold bg-gradient-to-r from-orange-400 to-amber-500 bg-clip-text text-transparent mb-2">
-          Bulk Update
-        </h1>
-        <p className="text-gray-300 text-sm mb-6">
-          Update metadata note fields or reserve address CIDs across multiple Algorand assets simultaneously.
-        </p>
+      <ToolHero
+
+        tag="bulk update"
+
+        title="Bulk Update"
+
+        description="Update metadata note fields or reserve address CIDs across many Algorand assets at once."
+
+        meta={["ARC-69 notes","ARC-19 reserve CIDs","CSV"]}
+
+      />
+
+      <div className="w-full max-w-2xl wt-frame relative bg-banner-grey/50 backdrop-blur-md rounded-3xl border border-white/[0.07] p-6 md:p-8 mt-6 shadow-2xl [--wt-r:24px] [--wt-in:12px]">
+<Reticle />
 
         <ConnectButton inmain={true} />
 
@@ -465,7 +474,7 @@ export function BatchUpdate() {
             <label className="block mb-2 text-xs font-semibold text-gray-300 uppercase tracking-wider">
               Asset Standard / Format
             </label>
-            <div className="flex bg-slate-900/80 p-1.5 rounded-xl border border-slate-700 w-full">
+            <div className="flex bg-asset-detail-bg/80 p-1.5 rounded-xl border border-white/[0.12] w-full">
               <button
                 type="button"
                 className={`flex-1 py-2.5 text-xs md:text-sm font-bold rounded-lg transition-all duration-300 ${
@@ -519,7 +528,7 @@ export function BatchUpdate() {
 
           {/* IPFS Pinning Provider Select for ARC-19 */}
           {updateFormat === "ARC19" && (
-            <div className="bg-slate-900/40 p-4 rounded-xl border border-slate-800 animate-fadeIn space-y-4">
+            <div className="bg-asset-detail-bg/40 p-4 rounded-xl border border-white/[0.08] animate-fadeIn space-y-4">
               <IpfsProviderSelect
                 provider={effectiveProvider as IpfsProvider}
                 setProvider={(p) => setPinningProvider(p)}
@@ -544,7 +553,7 @@ export function BatchUpdate() {
               <div className="flex justify-center items-center w-full">
                 <label
                   htmlFor="csv-upload"
-                  className="flex flex-col justify-center items-center w-full h-32 px-4 bg-slate-900/30 rounded-xl border-2 border-slate-700 border-dashed cursor-pointer hover:bg-slate-900/50 hover:border-slate-500 transition"
+                  className="flex flex-col justify-center items-center w-full h-32 px-4 bg-asset-detail-bg/30 rounded-xl border-2 border-white/[0.12] border-dashed cursor-pointer hover:bg-asset-detail-bg/50 hover:border-slate-500 transition"
                 >
                   <div className="flex flex-col justify-center items-center pt-5 pb-6 text-center">
                     <p className="mb-1 text-sm text-gray-300 font-bold">
@@ -565,7 +574,7 @@ export function BatchUpdate() {
                 </label>
               </div>
             ) : (
-              <div className="bg-slate-900/40 p-4 rounded-xl border border-slate-800 flex justify-between items-center animate-fadeIn">
+              <div className="bg-asset-detail-bg/40 p-4 rounded-xl border border-white/[0.08] flex justify-between items-center animate-fadeIn">
                 <div className="text-left">
                   <span className="text-green-400 font-semibold text-sm block">CSV File Loaded Successfully</span>
                   <span className="text-xs text-gray-400">{csvData.length - 1} assets detected in file.</span>
@@ -582,7 +591,7 @@ export function BatchUpdate() {
 
           {/* Action Step Buttons */}
           {csvData !== null && (
-            <div className="pt-4 border-t border-slate-800 space-y-4">
+            <div className="pt-4 border-t border-white/[0.08] space-y-4">
               {isTransactionsFinished ? (
                 <div className="w-full text-center space-y-3 bg-green-500/10 border border-green-500/20 p-4 rounded-xl">
                   <p className="text-green-400 text-sm font-bold animate-pulse">
@@ -600,7 +609,7 @@ export function BatchUpdate() {
                   </p>
                 </div>
               ) : assetTransactions.length > 0 ? (
-                <div className="space-y-4 bg-slate-900/60 border border-slate-800 p-4 rounded-xl">
+                <div className="space-y-4 bg-asset-detail-bg/60 border border-white/[0.08] p-4 rounded-xl">
                   <p className="text-green-400 text-sm font-bold">
                     ✓ Transactions generated successfully!
                   </p>
@@ -611,7 +620,7 @@ export function BatchUpdate() {
                         id="ledger-mode"
                         checked={isLedger}
                         onChange={(e) => setIsLedger(e.target.checked)}
-                        className="w-4 h-4 rounded border-slate-700 bg-slate-900 text-primary-orange focus:ring-primary-orange"
+                        className="w-4 h-4 rounded border-white/[0.12] bg-asset-detail-bg text-primary-orange focus:ring-primary-orange"
                       />
                       <label htmlFor="ledger-mode" className="text-xs text-slate-300 cursor-pointer select-none">
                         Ledger Mode (Sign one-by-one)
@@ -654,7 +663,7 @@ export function BatchUpdate() {
 
       {/* Practitioner Section */}
       <InfinityModeComponent mnemonic={mnemonic} setMnemonic={setMnemonic} />
-      <section className="mt-16 pt-12 border-t border-slate-800 w-full text-left px-4">
+      <section className="mt-16 pt-12 border-t border-white/[0.08] w-full text-left px-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           <div className="space-y-4">
             <h2 className="text-xl font-bold text-white tracking-tight italic">Metadata Update Mechanisms</h2>

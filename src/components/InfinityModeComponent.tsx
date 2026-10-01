@@ -14,7 +14,7 @@ const InfinityModeComponent = ({
   };
 
   return (
-    <div className="w-full bg-[#121214]/60 border border-white/5 rounded-2xl text-white p-4 transition-all duration-300">
+    <div className="w-full bg-primary-black/60 border border-white/5 rounded-2xl text-white p-4 transition-all duration-300">
       <div
         className="accordion-header flex justify-between items-center cursor-pointer select-none"
         onClick={toggleAccordion}
@@ -23,7 +23,7 @@ const InfinityModeComponent = ({
           Infinity Mode (optional)
         </span>
         <div className="has-tooltip my-2 ml-1 hidden md:block">
-          <span className="tooltip rounded-xl shadow-lg p-2 bg-[#1a1a1a] text-[11px] text-red-400 -mt-16 max-w-xs border border-red-500/20">
+          <span className="tooltip rounded-xl shadow-lg p-2 bg-asset-detail-bg text-[11px] text-red-400 -mt-16 max-w-xs border border-red-500/20">
             Wen Tools does not store any information on the website. As
             precautions, you can use burner wallets, rekey to a burner wallet
             and rekey back, or rekey after using.

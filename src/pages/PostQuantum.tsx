@@ -1,3 +1,4 @@
+import { ToolHero } from "../components/cypher/ToolKit";
 import { useState, useEffect, useCallback } from "react";
 import { IoAdd, IoCloudUpload, IoShield } from "react-icons/io5";
 import PQWarningBanner from "../components/falcon/PQWarningBanner";
@@ -42,22 +43,13 @@ export default function PostQuantum() {
         description="Secure your Algorand assets with Falcon-1024 post-quantum signatures. Experimental, client-side cryptographic resilience for the future of decentralized finance."
       />
       {/* Header */}
-      <div className="w-full flex flex-col items-center mt-8 mb-2">
-        <div className="flex items-center gap-3">
-          <IoShield className="text-4xl text-primary-yellow" />
-          <h1 className="text-4xl font-black bg-gradient-to-r from-primary-yellow to-secondary-orange bg-clip-text text-transparent">
-            POST-QUANTUM WALLET
-          </h1>
-        </div>
-        <div className="flex items-center gap-2 mt-2">
-          <p className="text-slate-400 italic">
-            Falcon-1024 signatures on Algorand
-          </p>
-          <span className="text-xxs font-bold uppercase tracking-wider bg-primary-orange/20 text-primary-orange border border-primary-orange/30 px-2 py-0.5 rounded-full">
-            Experimental
-          </span>
-        </div>
-      </div>
+      <ToolHero
+        icon={<IoShield aria-hidden="true" />}
+        tag="post-quantum"
+        title="Post-Quantum Wallet"
+        description="Falcon-1024 signatures on Algorand."
+        meta={["Falcon-1024", "experimental", "client-side"]}
+      />
 
       {/* Warning */}
       <div className="w-full mt-4">

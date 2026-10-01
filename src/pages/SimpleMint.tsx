@@ -1,3 +1,5 @@
+import { ToolHero } from "../components/cypher/ToolKit";
+import { Reticle } from "../components/cypher/Reticle";
 import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 
@@ -253,7 +255,7 @@ export function SimpleMint() {
       <div className="mt-20 w-full max-w-4xl mx-auto px-4">
         <button 
           onClick={() => setShowIntegratorPortal(!showIntegratorPortal)}
-          className="w-full py-4 px-6 bg-primary-black/60 border border-slate-700/50 rounded-xl flex justify-between items-center hover:bg-primary-black/80 transition shadow-lg group"
+          className="w-full py-4 px-6 bg-primary-black/60 border border-white/[0.12] rounded-xl flex justify-between items-center hover:bg-primary-black/80 transition shadow-lg group"
         >
           <span className="text-xl font-bold bg-gradient-to-r from-primary-yellow to-secondary-orange bg-clip-text text-transparent">
             Integrate Wen-Tools into your own site
@@ -264,7 +266,7 @@ export function SimpleMint() {
         </button>
 
         {showIntegratorPortal && (
-          <div className="mt-4 p-8 bg-primary-black/40 border border-slate-700/50 rounded-xl text-left shadow-2xl backdrop-blur-sm animate-fadeIn">
+          <div className="mt-4 p-8 bg-primary-black/40 border border-white/[0.12] rounded-xl text-left shadow-2xl backdrop-blur-sm animate-fadeIn">
             <p className="text-slate-300 mb-6">
               Use Wen-Tools as your backend "minting engine". Perfect for marketplaces, launchpads, or any site that wants to offer decentralized IPFS minting without building the infra.
             </p>
@@ -275,7 +277,7 @@ export function SimpleMint() {
                 <p className="text-sm text-slate-400 mb-3">
                   Fastest way to integrate. Link users directly to Wen-Tools with pre-filled data.
                 </p>
-                <ul className="text-xs space-y-2 text-slate-300 bg-black/30 p-3 rounded-lg border border-slate-800">
+                <ul className="text-xs space-y-2 text-slate-300 bg-black/30 p-3 rounded-lg border border-white/[0.08]">
                   <li><span className="text-primary-yellow font-mono">format</span>: ARC Format (Default: <span className="text-primary-yellow">ARC69</span>)</li>
                   <li><span className="text-primary-yellow font-mono">name</span>: (Required) Asset Name</li>
                   <li><span className="text-primary-yellow font-mono">image_url</span>: Link to your media file</li>
@@ -302,7 +304,7 @@ export function SimpleMint() {
                 <div className="space-y-4">
                   <div>
                     <p className="text-[10px] text-slate-500 uppercase font-bold mb-1">HTML</p>
-                    <pre className="text-[10px] text-blue-300 bg-black/50 p-2 rounded border border-slate-800">
+                    <pre className="text-[10px] text-blue-300 bg-black/50 p-2 rounded border border-white/[0.08]">
 {`<iframe 
   id="wen-tools"
   src="https://wen.tools/simple-mint"
@@ -313,7 +315,7 @@ export function SimpleMint() {
                   </div>
                   <div>
                     <p className="text-[10px] text-slate-500 uppercase font-bold mb-1">JavaScript (Send Request)</p>
-                    <pre className="text-[10px] text-green-400 bg-black/50 p-2 rounded border border-slate-800 overflow-x-auto">
+                    <pre className="text-[10px] text-green-400 bg-black/50 p-2 rounded border border-white/[0.08] overflow-x-auto">
 {`const wen = document.getElementById('wen-tools');
 wen.contentWindow.postMessage({
   type: 'WEN_TOOLS_MINT_REQUEST',
@@ -328,7 +330,7 @@ wen.contentWindow.postMessage({
                   </div>
                   <div>
                     <p className="text-[10px] text-slate-500 uppercase font-bold mb-1">Listen for Success</p>
-                    <pre className="text-[10px] text-purple-400 bg-black/50 p-2 rounded border border-slate-800">
+                    <pre className="text-[10px] text-purple-400 bg-black/50 p-2 rounded border border-white/[0.08]">
 {`window.addEventListener('message', (event) => {
   if (event.data.type === 'WEN_TOOLS_MINT_SUCCESS') {
     console.log('Minted Asset ID:', event.data.assetID);
@@ -356,7 +358,7 @@ wen.contentWindow.postMessage({
           type="text"
           id={`category-${id}`}
           placeholder={type === "traits" ? "Trait type" : type === "filters" ? "Filter type" : "Extra key"}
-          className="w-1/2 bg-slate-900/60 border border-slate-700 text-sm font-medium text-white placeholder:text-slate-500 px-4 py-2.5 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary-orange focus:border-primary-orange transition-all"
+          className="w-1/2 bg-asset-detail-bg/60 border border-white/[0.12] text-sm font-medium text-white placeholder:text-slate-500 px-4 py-2.5 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary-orange focus:border-primary-orange transition-all"
           value={item.category}
           onChange={(e) => {
             const newMetadata = formData[type].map((trait: any) => {
@@ -378,7 +380,7 @@ wen.contentWindow.postMessage({
           id={`name-${id}`}
           type="text"
           placeholder="Value"
-          className="w-1/2 bg-slate-900/60 border border-slate-700 text-sm font-medium text-white placeholder:text-slate-500 px-4 py-2.5 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary-orange focus:border-primary-orange transition-all"
+          className="w-1/2 bg-asset-detail-bg/60 border border-white/[0.12] text-sm font-medium text-white placeholder:text-slate-500 px-4 py-2.5 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary-orange focus:border-primary-orange transition-all"
           value={item.name}
           onChange={(e) => {
             const newMetadata = formData[type].map((trait: any) => {
@@ -856,14 +858,18 @@ wen.contentWindow.postMessage({
         title="Simple Mint" 
         description="The easiest way to mint single or multiple assets on Algorand. A streamlined, practitioner-led minting utility for NFTs and tokens."
       />
-      <h1 className="text-3xl font-extrabold bg-gradient-to-r from-orange-400 to-amber-500 bg-clip-text text-transparent tracking-tight mt-6">
-        {TOOLS.find((tool) => tool.path === window.location.pathname)?.label || "Simple Mint"}
-      </h1>
+      <ToolHero
+        tag="mint"
+        title={TOOLS.find((tool) => tool.path === window.location.pathname)?.label || "Simple Mint"}
+        description="Mint a single asset (NFT or token) with custom properties and automatic IPFS upload."
+        meta={["single asset", "ARC-3 / 19 / 69", "IPFS pinning"]}
+      />
       <ConnectButton inmain={true} />
 
-      <div className="w-full max-w-xl bg-white/5 backdrop-blur-md rounded-2xl border border-white/10 p-6 md:p-8 mt-6 shadow-2xl space-y-6 text-left">
+      <div className="w-full max-w-xl wt-frame relative bg-banner-grey/50 backdrop-blur-md rounded-3xl border border-white/[0.07] p-6 md:p-8 mt-6 shadow-2xl [--wt-r:24px] [--wt-in:12px] space-y-6 text-left">
+<Reticle />
         {/* Mode Selector Tabs */}
-        <div className="flex bg-slate-950/60 p-1.5 rounded-xl border border-slate-800/80 shadow-inner">
+        <div className="flex bg-primary-black/60 p-1.5 rounded-xl border border-white/[0.08] shadow-inner">
           <button
             type="button"
             onClick={() => handleTabChange("nft")}
@@ -889,7 +895,7 @@ wen.contentWindow.postMessage({
         </div>
 
         {/* Custom Settings Toggle */}
-        <div className="flex items-center justify-between p-4 bg-slate-900/60 border border-slate-800 rounded-xl">
+        <div className="flex items-center justify-between p-4 bg-asset-detail-bg/60 border border-white/[0.08] rounded-xl">
           <div>
             <h3 className="text-sm font-bold text-white">Custom Settings</h3>
             <p className="text-xs text-slate-400">
@@ -918,7 +924,7 @@ wen.contentWindow.postMessage({
                 <input
                   type="text"
                   placeholder="Ex: USAlgo 001"
-                  className="w-full bg-slate-900/60 border border-slate-700 text-sm font-medium text-white placeholder:text-slate-500 px-4 py-3 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary-orange focus:border-primary-orange transition-all"
+                  className="w-full bg-asset-detail-bg/60 border border-white/[0.12] text-sm font-medium text-white placeholder:text-slate-500 px-4 py-3 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary-orange focus:border-primary-orange transition-all"
                   maxLength={32}
                   required
                   value={formData.name}
@@ -938,7 +944,7 @@ wen.contentWindow.postMessage({
                   <input
                     type="text"
                     placeholder="Ex: USA001"
-                    className="w-full bg-slate-900/60 border border-slate-700 text-sm font-medium text-white placeholder:text-slate-500 px-4 py-3 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary-orange focus:border-primary-orange transition-all"
+                    className="w-full bg-asset-detail-bg/60 border border-white/[0.12] text-sm font-medium text-white placeholder:text-slate-500 px-4 py-3 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary-orange focus:border-primary-orange transition-all"
                     maxLength={8}
                     required
                     value={formData.unitName}
@@ -963,7 +969,7 @@ wen.contentWindow.postMessage({
                 name="nftDescription"
                 autoComplete="off"
                 placeholder="Describe your NFT..."
-                className="w-full bg-slate-900/60 border border-slate-700 text-sm font-medium leading-normal text-white placeholder:text-slate-500 px-4 py-3 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary-orange focus:border-primary-orange transition-all min-h-[90px]"
+                className="w-full bg-asset-detail-bg/60 border border-white/[0.12] text-sm font-medium leading-normal text-white placeholder:text-slate-500 px-4 py-3 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary-orange focus:border-primary-orange transition-all min-h-[90px]"
                 maxLength={1000}
                 value={formData.description}
                 onChange={(e) => {
@@ -983,7 +989,7 @@ wen.contentWindow.postMessage({
                     Total supply*
                   </label>
                   <input
-                    className="w-full bg-slate-900/60 border border-slate-700 text-sm font-medium text-white placeholder:text-slate-500 px-4 py-3 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary-orange focus:border-primary-orange transition-all"
+                    className="w-full bg-asset-detail-bg/60 border border-white/[0.12] text-sm font-medium text-white placeholder:text-slate-500 px-4 py-3 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary-orange focus:border-primary-orange transition-all"
                     type="number"
                     max="18446744073709551615"
                     min={1}
@@ -1004,7 +1010,7 @@ wen.contentWindow.postMessage({
                   </label>
                   <input
                     type="number"
-                    className="w-full bg-slate-900/60 border border-slate-700 text-sm font-medium text-white placeholder:text-slate-500 px-4 py-3 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary-orange focus:border-primary-orange transition-all"
+                    className="w-full bg-asset-detail-bg/60 border border-white/[0.12] text-sm font-medium text-white placeholder:text-slate-500 px-4 py-3 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary-orange focus:border-primary-orange transition-all"
                     max={19}
                     min={0}
                     required
@@ -1029,7 +1035,7 @@ wen.contentWindow.postMessage({
                       Select Image / Media*
                     </label>
                     <input
-                      className="block w-full text-sm border border-slate-700 rounded-xl cursor-pointer bg-slate-900/60 text-slate-300 focus:outline-none focus:ring-1 focus:ring-primary-orange focus:border-primary-orange file:mr-4 file:py-2.5 file:px-4 file:rounded-l-xl file:border-0 file:text-xs file:font-semibold file:bg-slate-800 file:text-white hover:file:bg-slate-700 transition-all"
+                      className="block w-full text-sm border border-white/[0.12] rounded-xl cursor-pointer bg-asset-detail-bg/60 text-slate-300 focus:outline-none focus:ring-1 focus:ring-primary-orange focus:border-primary-orange file:mr-4 file:py-2.5 file:px-4 file:rounded-l-xl file:border-0 file:text-xs file:font-semibold file:bg-slate-800 file:text-white hover:file:bg-slate-700 transition-all"
                       id="select_image"
                       type="file"
                       accept="image/*,video/*,audio/*,model/*,.obj,.glb,.gltf,.stl,.3mf,.fbx,.dae"
@@ -1050,7 +1056,7 @@ wen.contentWindow.postMessage({
                       getFileMimeType(formData.image).includes("video") ||
                       getFileMimeType(formData.image).includes("audio") ||
                       getFileMimeType(formData.image).startsWith("model/")) && (
-                      <div className="flex flex-col animate-fadeIn bg-slate-900/40 p-3.5 rounded-xl border border-slate-800 space-y-1.5">
+                      <div className="flex flex-col animate-fadeIn bg-asset-detail-bg/40 p-3.5 rounded-xl border border-white/[0.08] space-y-1.5">
                         <label className="text-xs font-bold text-slate-200">
                           2D Preview Cover Image (Optional)
                         </label>
@@ -1058,7 +1064,7 @@ wen.contentWindow.postMessage({
                           Upload a PNG/JPG cover image for wallet galleries. If omitted, your 3D model/media file is used directly.
                         </p>
                         <input
-                          className="block w-full text-xs border border-slate-700 rounded-lg cursor-pointer bg-slate-900/60 text-slate-300 focus:outline-none file:mr-3 file:py-1.5 file:px-3 file:rounded-l-lg file:border-0 file:text-xs file:font-semibold file:bg-slate-800 file:text-white hover:file:bg-slate-700 transition-all"
+                          className="block w-full text-xs border border-white/[0.12] rounded-lg cursor-pointer bg-asset-detail-bg/60 text-slate-300 focus:outline-none file:mr-3 file:py-1.5 file:px-3 file:rounded-l-lg file:border-0 file:text-xs file:font-semibold file:bg-slate-800 file:text-white hover:file:bg-slate-700 transition-all"
                           id="select_cover_image"
                           type="file"
                           accept="image/*"
@@ -1079,7 +1085,7 @@ wen.contentWindow.postMessage({
                     URL Field
                   </label>
                   <input
-                    className="w-full bg-slate-900/60 border border-slate-700 text-sm font-medium text-white placeholder:text-slate-500 px-4 py-3 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary-orange focus:border-primary-orange transition-all"
+                    className="w-full bg-asset-detail-bg/60 border border-white/[0.12] text-sm font-medium text-white placeholder:text-slate-500 px-4 py-3 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary-orange focus:border-primary-orange transition-all"
                     id="select_image"
                     type="text"
                     value={formData.urlField}
@@ -1100,7 +1106,7 @@ wen.contentWindow.postMessage({
                     Asset format*
                   </label>
                   <select
-                    className="w-full bg-slate-900/60 border border-slate-700 text-sm font-medium text-white px-4 py-3 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary-orange focus:border-primary-orange transition-all"
+                    className="w-full bg-asset-detail-bg/60 border border-white/[0.12] text-sm font-medium text-white px-4 py-3 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary-orange focus:border-primary-orange transition-all"
                     required
                     onChange={(e) => {
                       setFormData({
@@ -1110,10 +1116,10 @@ wen.contentWindow.postMessage({
                     }}
                     value={formData.format}
                   >
-                    <option value="ARC3" className="bg-slate-900 text-white">ARC3 - Unchangeable</option>
-                    <option value="ARC19" className="bg-slate-900 text-white">ARC19 - Changeable Images and Data</option>
-                    <option value="ARC69" className="bg-slate-900 text-white">ARC69 - Changeable Data</option>
-                    <option value="Token" className="bg-slate-900 text-white">Token</option>
+                    <option value="ARC3" className="bg-asset-detail-bg text-white">ARC3 - Unchangeable</option>
+                    <option value="ARC19" className="bg-asset-detail-bg text-white">ARC19 - Changeable Images and Data</option>
+                    <option value="ARC69" className="bg-asset-detail-bg text-white">ARC69 - Changeable Data</option>
+                    <option value="Token" className="bg-asset-detail-bg text-white">Token</option>
                   </select>
                 </div>
               )}
@@ -1142,7 +1148,7 @@ wen.contentWindow.postMessage({
                 <input
                   type="text"
                   placeholder="Ex: My Token"
-                  className="w-full bg-slate-900/60 border border-slate-700 text-sm font-medium text-white placeholder:text-slate-500 px-4 py-3 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary-orange focus:border-primary-orange transition-all"
+                  className="w-full bg-asset-detail-bg/60 border border-white/[0.12] text-sm font-medium text-white placeholder:text-slate-500 px-4 py-3 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary-orange focus:border-primary-orange transition-all"
                   maxLength={32}
                   required
                   value={formData.name}
@@ -1161,7 +1167,7 @@ wen.contentWindow.postMessage({
                 <input
                   type="text"
                   placeholder="Ex: TKN"
-                  className="w-full bg-slate-900/60 border border-slate-700 text-sm font-medium text-white placeholder:text-slate-500 px-4 py-3 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary-orange focus:border-primary-orange transition-all"
+                  className="w-full bg-asset-detail-bg/60 border border-white/[0.12] text-sm font-medium text-white placeholder:text-slate-500 px-4 py-3 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary-orange focus:border-primary-orange transition-all"
                   maxLength={8}
                   required
                   value={formData.unitName}
@@ -1184,7 +1190,7 @@ wen.contentWindow.postMessage({
                   type="text"
                   inputMode="numeric"
                   placeholder="Ex: 1,000,000"
-                  className="w-full bg-slate-900/60 border border-slate-700 text-sm font-medium text-white placeholder:text-slate-500 px-4 py-3 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary-orange focus:border-primary-orange transition-all"
+                  className="w-full bg-asset-detail-bg/60 border border-white/[0.12] text-sm font-medium text-white placeholder:text-slate-500 px-4 py-3 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary-orange focus:border-primary-orange transition-all"
                   required
                   value={formatNumberWithCommas(formData.totalSupply)}
                   onChange={(e) => {
@@ -1203,7 +1209,7 @@ wen.contentWindow.postMessage({
                 <input
                   type="number"
                   placeholder="Ex: 8"
-                  className="w-full bg-slate-900/60 border border-slate-700 text-sm font-medium text-white placeholder:text-slate-500 px-4 py-3 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary-orange focus:border-primary-orange transition-all"
+                  className="w-full bg-asset-detail-bg/60 border border-white/[0.12] text-sm font-medium text-white placeholder:text-slate-500 px-4 py-3 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary-orange focus:border-primary-orange transition-all"
                   max={19}
                   min={0}
                   required
@@ -1223,7 +1229,7 @@ wen.contentWindow.postMessage({
                 URL Field
               </label>
               <input
-                className="w-full bg-slate-900/60 border border-slate-700 text-sm font-medium text-white placeholder:text-slate-500 px-4 py-3 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary-orange focus:border-primary-orange transition-all"
+                className="w-full bg-asset-detail-bg/60 border border-white/[0.12] text-sm font-medium text-white placeholder:text-slate-500 px-4 py-3 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary-orange focus:border-primary-orange transition-all"
                 placeholder="Ex: https://mytoken.com (optional)"
                 type="text"
                 value={formData.urlField}
@@ -1240,12 +1246,12 @@ wen.contentWindow.postMessage({
 
         {/* Advanced configuration options only in Custom Mode */}
         {isCustomMode && (
-          <div className="space-y-6 pt-4 border-t border-slate-800 animate-fadeIn">
+          <div className="space-y-6 pt-4 border-t border-white/[0.08] animate-fadeIn">
             {/* Advanced Flag Toggles */}
-            <div className="bg-slate-900/40 border border-slate-800 rounded-xl p-4 space-y-4">
+            <div className="bg-asset-detail-bg/40 border border-white/[0.08] rounded-xl p-4 space-y-4">
               <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">Asset Management Flags</h4>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <label className="flex items-center justify-between p-3 bg-slate-900/60 border border-slate-800 rounded-lg cursor-pointer hover:bg-slate-900/80 transition-all">
+                <label className="flex items-center justify-between p-3 bg-asset-detail-bg/60 border border-white/[0.08] rounded-lg cursor-pointer hover:bg-asset-detail-bg/80 transition-all">
                   <span className="text-sm font-medium text-gray-200">Freeze</span>
                   <input
                     type="checkbox"
@@ -1262,7 +1268,7 @@ wen.contentWindow.postMessage({
                   <div className="relative w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-orange"></div>
                 </label>
 
-                <label className="flex items-center justify-between p-3 bg-slate-900/60 border border-slate-800 rounded-lg cursor-pointer hover:bg-slate-900/80 transition-all">
+                <label className="flex items-center justify-between p-3 bg-asset-detail-bg/60 border border-white/[0.08] rounded-lg cursor-pointer hover:bg-asset-detail-bg/80 transition-all">
                   <span className="text-sm font-medium text-gray-200">Clawback</span>
                   <input
                     type="checkbox"
@@ -1279,7 +1285,7 @@ wen.contentWindow.postMessage({
                   <div className="relative w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-orange"></div>
                 </label>
 
-                <label className="flex items-center justify-between p-3 bg-slate-900/60 border border-slate-800 rounded-lg cursor-pointer hover:bg-slate-900/80 transition-all">
+                <label className="flex items-center justify-between p-3 bg-asset-detail-bg/60 border border-white/[0.08] rounded-lg cursor-pointer hover:bg-asset-detail-bg/80 transition-all">
                   <span className="text-sm font-medium text-gray-200">Default Frozen</span>
                   <input
                     type="checkbox"
@@ -1305,7 +1311,7 @@ wen.contentWindow.postMessage({
                 <div className="space-y-3 animate-fadeIn">
                   <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">External URL</h4>
                   <div className="flex gap-2">
-                    <div className="w-28 bg-slate-850 border border-slate-700 text-xs font-bold uppercase tracking-wider flex items-center justify-center text-slate-300 rounded-xl px-3 py-2 select-none">
+                    <div className="w-28 bg-slate-850 border border-white/[0.12] text-xs font-bold uppercase tracking-wider flex items-center justify-center text-slate-300 rounded-xl px-3 py-2 select-none">
                       External URL
                     </div>
                     <input
@@ -1314,7 +1320,7 @@ wen.contentWindow.postMessage({
                       type="url"
                       autoComplete="off"
                       placeholder="https://yourwebsite.com (optional)"
-                      className="flex-1 bg-slate-900/60 border border-slate-700 text-sm font-medium text-white placeholder:text-slate-500 px-4 py-2.5 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary-orange focus:border-primary-orange transition-all"
+                      className="flex-1 bg-asset-detail-bg/60 border border-white/[0.12] text-sm font-medium text-white placeholder:text-slate-500 px-4 py-2.5 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary-orange focus:border-primary-orange transition-all"
                       value={formData.external_url}
                       onChange={(e) => {
                         setFormData({ ...formData, external_url: e.target.value });
@@ -1355,7 +1361,7 @@ wen.contentWindow.postMessage({
                   </div>
                 </div>
 
-                <div className="border-t border-slate-800/60 my-4"></div>
+                <div className="border-t border-white/[0.08] my-4"></div>
 
                 {/* Filters */}
                 <div className="space-y-3 animate-fadeIn">
@@ -1389,7 +1395,7 @@ wen.contentWindow.postMessage({
                   </div>
                 </div>
 
-                <div className="border-t border-slate-800/60 my-4"></div>
+                <div className="border-t border-white/[0.08] my-4"></div>
 
                 {/* Extras */}
                 <div className="space-y-3 animate-fadeIn">
@@ -1428,7 +1434,7 @@ wen.contentWindow.postMessage({
         )}
 
         {previewAsset && (
-          <div className="pt-4 border-t border-slate-800 animate-fadeIn">
+          <div className="pt-4 border-t border-white/[0.08] animate-fadeIn">
             <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">Asset Preview</h4>
             <PreviewAssetComponent
               imageUrl={previewAsset.image}
@@ -1438,7 +1444,7 @@ wen.contentWindow.postMessage({
         )}
 
         {/* Action Button Section */}
-        <div className="flex flex-col justify-center items-center w-full pt-4 border-t border-slate-800 space-y-4">
+        <div className="flex flex-col justify-center items-center w-full pt-4 border-t border-white/[0.08] space-y-4">
           {processStep === 4 ? (
             <div className="w-full text-center space-y-3 bg-green-500/10 border border-green-500/20 p-4 rounded-xl">
               <p className="text-green-400 text-sm font-bold">
@@ -1466,7 +1472,7 @@ wen.contentWindow.postMessage({
               </p>
             </div>
           ) : processStep === 2 ? (
-            <div className="w-full space-y-4 bg-slate-900/60 border border-slate-800 p-4 rounded-xl">
+            <div className="w-full space-y-4 bg-asset-detail-bg/60 border border-white/[0.08] p-4 rounded-xl">
               <p className="text-green-400 text-sm font-bold animate-pulse">
                 ✓ Transaction created!
               </p>
@@ -1476,7 +1482,7 @@ wen.contentWindow.postMessage({
                   id="ledger-mode" 
                   checked={isLedger} 
                   onChange={(e) => setIsLedger(e.target.checked)}
-                  className="w-4 h-4 rounded border-slate-700 bg-slate-900 text-primary-orange focus:ring-primary-orange"
+                  className="w-4 h-4 rounded border-white/[0.12] bg-asset-detail-bg text-primary-orange focus:ring-primary-orange"
                 />
                 <label htmlFor="ledger-mode" className="text-xs text-slate-300 cursor-pointer select-none">
                   Ledger Mode (Sign one-by-one)
@@ -1564,7 +1570,7 @@ wen.contentWindow.postMessage({
         ]}
       />
       {/* Practitioner Section: Minting Ethics & Best Practices */}
-      <section className="mt-20 pt-12 border-t border-slate-800 w-full max-w-4xl text-left px-4">
+      <section className="mt-20 pt-12 border-t border-white/[0.08] w-full max-w-4xl text-left px-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
           <div className="space-y-4">
             <h2 className="text-xl font-bold text-white tracking-tight italic">Asset Scarcity & Utility</h2>

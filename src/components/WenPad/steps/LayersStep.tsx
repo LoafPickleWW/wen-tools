@@ -133,7 +133,7 @@ const LayersStep = () => {
   return (
     <div className="flex flex-col lg:flex-row gap-8">
       {/* Left Sidebar: Collection & Layers */}
-      <div className="w-full lg:w-80 flex flex-col gap-6 border-r border-gray-800 pr-0 lg:pr-8">
+      <div className="w-full lg:w-80 flex flex-col gap-6 border-r border-white/[0.08] pr-0 lg:pr-8">
         <div className="flex flex-col gap-4">
           <button 
             onClick={saveProject}
@@ -142,7 +142,7 @@ const LayersStep = () => {
             <MdSave size={20} /> Save Project
           </button>
 
-          <div className="bg-[#010002]/40 p-4 rounded-2xl border border-gray-800 space-y-2">
+          <div className="bg-primary-black/40 p-4 rounded-2xl border border-white/[0.08] space-y-2">
             <h4 className="text-[10px] font-black uppercase tracking-widest text-primary-orange">Quick Stats</h4>
             <div className="flex justify-between text-xs">
               <span className="text-gray-500">Total Layers:</span>
@@ -155,7 +155,7 @@ const LayersStep = () => {
           </div>
 
           {/* Global Trait Search */}
-          <div className="bg-[#010002]/40 p-3.5 rounded-2xl border border-gray-800 space-y-2">
+          <div className="bg-primary-black/40 p-3.5 rounded-2xl border border-white/[0.08] space-y-2">
             <div className="flex items-center justify-between">
               <span className="text-[10px] font-black uppercase tracking-widest text-primary-orange flex items-center gap-1.5">
                 <MdSearch size={14} /> Search Traits
@@ -176,7 +176,7 @@ const LayersStep = () => {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search all traits (e.g. helmet)..."
-                className="w-full bg-gray-900 border border-gray-700/80 rounded-xl pl-9 pr-8 py-2 text-xs focus:outline-none focus:border-primary-orange text-gray-200 placeholder:text-gray-500"
+                className="w-full bg-asset-detail-bg border border-white/[0.12] rounded-xl pl-9 pr-8 py-2 text-xs focus:outline-none focus:border-primary-orange text-gray-200 placeholder:text-gray-500"
               />
               {searchQuery && (
                 <button
@@ -211,11 +211,11 @@ const LayersStep = () => {
                 onChange={(e) => setNewLayerName(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleAddLayer()}
                 placeholder="Layer Name"
-                className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-primary-orange"
+                className="flex-1 bg-banner-grey border border-white/[0.12] rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-primary-orange"
               />
               <button 
                 onClick={handleAddLayer}
-                className="p-2 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors"
+                className="p-2 bg-secondary-gray hover:bg-gray-600 rounded-lg transition-colors"
                 title="Add Layer"
               >
                 <MdAdd size={20} />
@@ -236,8 +236,8 @@ const LayersStep = () => {
                   className={`flex items-center justify-between p-2.5 rounded-xl cursor-pointer transition-all border select-none ${
                     activeLayer === layer.id 
                       ? 'bg-primary-orange/20 border-primary-orange/60 text-white' 
-                      : 'bg-gray-800/90 border-gray-700/60 hover:bg-gray-700/80 text-gray-300'
-                  } ${dragOverIdx === idx ? 'border-t-2 border-t-primary-orange bg-gray-700/60' : ''} ${
+                      : 'bg-banner-grey/90 border-white/[0.12] hover:bg-secondary-gray/80 text-gray-300'
+                  } ${dragOverIdx === idx ? 'border-t-2 border-t-primary-orange bg-secondary-gray/60' : ''} ${
                     draggedIdx === idx ? 'opacity-40' : 'opacity-100'
                   }`}
                 >
@@ -270,7 +270,7 @@ const LayersStep = () => {
                         moveLayer(idx, idx - 1); 
                       }}
                       disabled={idx === 0}
-                      className="p-1 text-gray-400 hover:text-white disabled:opacity-20 disabled:hover:text-gray-400 rounded hover:bg-gray-700 transition-colors"
+                      className="p-1 text-gray-400 hover:text-white disabled:opacity-20 disabled:hover:text-gray-400 rounded hover:bg-secondary-gray transition-colors"
                       title="Move Up (toward background)"
                     >
                       <MdKeyboardArrowUp size={18} />
@@ -282,7 +282,7 @@ const LayersStep = () => {
                         moveLayer(idx, idx + 1); 
                       }}
                       disabled={idx === layers.length - 1}
-                      className="p-1 text-gray-400 hover:text-white disabled:opacity-20 disabled:hover:text-gray-400 rounded hover:bg-gray-700 transition-colors"
+                      className="p-1 text-gray-400 hover:text-white disabled:opacity-20 disabled:hover:text-gray-400 rounded hover:bg-secondary-gray transition-colors"
                       title="Move Down (toward foreground)"
                     >
                       <MdKeyboardArrowDown size={18} />
@@ -317,13 +317,13 @@ const LayersStep = () => {
       <div className="flex-1 min-h-[500px]">
         {searchQuery.trim() ? (
           <div className="space-y-6">
-            <div className="flex flex-wrap items-center justify-between gap-4 pb-3 border-b border-gray-800">
+            <div className="flex flex-wrap items-center justify-between gap-4 pb-3 border-b border-white/[0.08]">
               <div>
                 <div className="flex items-center gap-2.5">
                   <h2 className="text-xl font-bold text-gray-200">
                     Search Results for <span className="text-primary-orange">"{searchQuery.trim()}"</span>
                   </h2>
-                  <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-gray-800 text-gray-300 border border-gray-700">
+                  <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-banner-grey text-gray-300 border border-white/[0.12]">
                     {matchingTraits.length} {matchingTraits.length === 1 ? 'match' : 'matches'}
                   </span>
                 </div>
@@ -335,7 +335,7 @@ const LayersStep = () => {
               <button
                 type="button"
                 onClick={() => setSearchQuery('')}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-300 text-xs font-medium transition-colors border border-gray-700"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-banner-grey hover:bg-secondary-gray text-gray-300 text-xs font-medium transition-colors border border-white/[0.12]"
               >
                 <MdClose size={14} /> Exit Search
               </button>
@@ -346,9 +346,9 @@ const LayersStep = () => {
                 {matchingTraits.map(({ trait, layer }) => (
                   <div 
                     key={`${layer.id}-${trait.id}`} 
-                    className="bg-gray-800/90 rounded-2xl border border-gray-700 overflow-hidden group hover:border-primary-orange/50 transition-all flex flex-col justify-between"
+                    className="bg-banner-grey/90 rounded-2xl border border-white/[0.12] overflow-hidden group hover:border-primary-orange/50 transition-all flex flex-col justify-between"
                   >
-                    <div className="aspect-square bg-gray-900/80 relative flex items-center justify-center p-2">
+                    <div className="aspect-square bg-asset-detail-bg/80 relative flex items-center justify-center p-2">
                       <img 
                         src={getTraitImageUrl(trait)} 
                         alt={trait.name} 
@@ -365,7 +365,7 @@ const LayersStep = () => {
                       </button>
                     </div>
 
-                    <div className="p-3 space-y-2 bg-gray-800">
+                    <div className="p-3 space-y-2 bg-banner-grey">
                       <p className="text-xs font-bold truncate text-gray-200" title={trait.name}>
                         {trait.name}
                       </p>
@@ -385,7 +385,7 @@ const LayersStep = () => {
                           selectLayer(layer.id);
                           setSearchQuery('');
                         }}
-                        className="w-full flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-lg bg-gray-700/60 hover:bg-primary-orange hover:text-white text-gray-300 text-[11px] font-bold transition-all"
+                        className="w-full flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-lg bg-secondary-gray/60 hover:bg-primary-orange hover:text-white text-gray-300 text-[11px] font-bold transition-all"
                       >
                         <MdOpenInNew size={13} /> Go to Layer
                       </button>
@@ -394,8 +394,8 @@ const LayersStep = () => {
                 ))}
               </div>
             ) : (
-              <div className="py-16 px-6 text-center bg-[#010002]/40 rounded-3xl border border-gray-800 space-y-4">
-                <div className="w-16 h-16 mx-auto rounded-full bg-gray-800/80 flex items-center justify-center text-gray-500">
+              <div className="py-16 px-6 text-center bg-primary-black/40 rounded-3xl border border-white/[0.08] space-y-4">
+                <div className="w-16 h-16 mx-auto rounded-full bg-banner-grey/80 flex items-center justify-center text-gray-500">
                   <MdSearchOff size={32} />
                 </div>
                 <div>
@@ -410,7 +410,7 @@ const LayersStep = () => {
                 <button
                   type="button"
                   onClick={() => setSearchQuery('')}
-                  className="px-5 py-2.5 bg-gray-800 hover:bg-gray-700 text-gray-200 rounded-xl text-xs font-bold transition-colors"
+                  className="px-5 py-2.5 bg-banner-grey hover:bg-secondary-gray text-gray-200 rounded-xl text-xs font-bold transition-colors"
                 >
                   Clear Search
                 </button>
@@ -434,7 +434,7 @@ const LayersStep = () => {
             </div>
 
             {/* Layer-Level Category Rules Bar */}
-            <div className="bg-gray-900/60 border border-gray-800 rounded-2xl p-3.5 space-y-2">
+            <div className="bg-asset-detail-bg/60 border border-white/[0.08] rounded-2xl p-3.5 space-y-2">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
                   <span className="text-xs font-bold text-gray-300 flex items-center gap-1.5">
@@ -463,7 +463,7 @@ const LayersStep = () => {
                     <select
                       value={selectedBlockLayerId}
                       onChange={(e) => setSelectedBlockLayerId(e.target.value)}
-                      className="bg-gray-800 border border-gray-700 text-xs text-white rounded-lg px-2 py-1 focus:outline-none focus:border-primary-orange"
+                      className="bg-banner-grey border border-white/[0.12] text-xs text-white rounded-lg px-2 py-1 focus:outline-none focus:border-primary-orange"
                     >
                       {layers
                         .filter(l => l.id !== activeLayerDetails?.id)

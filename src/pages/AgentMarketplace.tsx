@@ -1,3 +1,4 @@
+import { ToolHero } from "../components/cypher/ToolKit";
 import { useState, useEffect, useCallback } from "react";
 import { useWallet, NetworkId } from "@txnlab/use-wallet-react";
 import { useAtom } from "jotai";
@@ -129,17 +130,13 @@ export default function AgentMarketplace() {
       <article className="mx-auto text-white mb-10 flex flex-col items-center max-w-6xl w-full px-4 min-h-screen">
         {/* ── Header ────────────────────────────────────────────────────────── */}
         <div className="w-full flex flex-col items-center mt-12 mb-10">
-          <div className="flex items-center gap-4">
-            <div className="p-2 md:p-3 bg-orange-500 rounded-2xl shadow-lg shadow-orange-500/20">
-              <IoSparkles className="text-3xl md:text-4xl text-black" aria-hidden="true" />
-            </div>
-            <h1 className="text-3xl md:text-5xl font-black tracking-tight bg-gradient-to-r from-orange-300 via-orange-500 to-red-500 bg-clip-text text-transparent py-2">
-              Agent Marketplace
-            </h1>
-          </div>
-          <p className="text-neutral-500 mt-4 text-lg font-medium text-center max-w-2xl">
-            Discover and register AI agents on-chain. The decentralized registry for Algorand's agent economy.
-          </p>
+          <ToolHero
+            icon={<IoSparkles aria-hidden="true" />}
+            tag="agents"
+            title="Agent Marketplace"
+            description="Discover and register AI agents on-chain. The decentralized registry for Algorand's agent economy."
+            meta={["on-chain registry", "x402 payments"]}
+          />
 
           {/* Network toggle */}
           <div className="flex gap-2 mt-4">
@@ -174,10 +171,10 @@ export default function AgentMarketplace() {
                 key={i}
                 className="bg-banner-grey/30 border border-secondary-gray/30 rounded-2xl p-6 animate-pulse"
               >
-                <div className="h-5 bg-neutral-800 rounded-lg w-2/3 mb-3" />
-                <div className="h-3 bg-neutral-800 rounded w-1/3 mb-4" />
-                <div className="h-3 bg-neutral-800/50 rounded w-full mb-2" />
-                <div className="h-3 bg-neutral-800/50 rounded w-4/5" />
+                <div className="h-5 bg-banner-grey rounded-lg w-2/3 mb-3" />
+                <div className="h-3 bg-banner-grey rounded w-1/3 mb-4" />
+                <div className="h-3 bg-banner-grey/50 rounded w-full mb-2" />
+                <div className="h-3 bg-banner-grey/50 rounded w-4/5" />
               </div>
             ))}
           </div>
@@ -218,17 +215,17 @@ export default function AgentMarketplace() {
           </div>
         )}
 
-        <div className="w-full border-t border-neutral-800 pt-8 mt-12">
+        <div className="w-full border-t border-white/[0.08] pt-8 mt-12">
           <AgentLeaderboard network={network} />
         </div>
 
-        <div className="w-full border-t border-neutral-800 pt-8 mt-12 mb-12">
+        <div className="w-full border-t border-white/[0.08] pt-8 mt-12 mb-12">
           <SmartContractViewer />
           
         </div>
 
         {/* ── SEO / Practitioner Content ────────────────────────────────────── */}
-        <section className="mt-20 pt-12 border-t border-neutral-800 w-full">
+        <section className="mt-20 pt-12 border-t border-white/[0.08] w-full">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
             <div className="space-y-4">
               <div className="flex items-center gap-2">
@@ -260,7 +257,7 @@ export default function AgentMarketplace() {
           </div>
         </section>
 
-        <div className="w-full border-t border-neutral-800 pt-8 mt-12 mb-12">
+        <div className="w-full border-t border-white/[0.08] pt-8 mt-12 mb-12">
           <AgentSnippets />
         </div>
       </article>

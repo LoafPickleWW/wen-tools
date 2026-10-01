@@ -1,3 +1,4 @@
+import { ToolHero } from "../cypher/ToolKit";
 import { useState } from 'react';
 import { useProject } from './ProjectContext';
 import { MdEdit, MdCheck, MdClose, MdRestorePage, MdArrowForward } from 'react-icons/md';
@@ -16,12 +17,12 @@ const WenPadGenerator = () => {
     <div className="w-full max-w-7xl mx-auto space-y-6">
       {/* Tool Title (Only on Step 0) */}
       {activeStep === 0 && (
-        <div className="text-center space-y-2 mb-8 animate-in fade-in zoom-in duration-700">
-          <h1 className="text-4xl font-black uppercase tracking-tighter bg-gradient-to-r from-primary-orange to-secondary-orange bg-clip-text text-transparent">
-            Wen Pad
-          </h1>
-          <p className="text-gray-500 font-medium">The ultimate NFT collection generator and launchpad.</p>
-        </div>
+        <ToolHero
+          tag="wenpad"
+          title="WenPad"
+          description="Generate an NFT collection, layered art and metadata, in your browser, then take it straight to minting."
+          meta={["setup", "layers", "customize", "preview", "mint"]}
+        />
       )}
 
       {/* Project Title Header */}
@@ -34,25 +35,25 @@ const WenPadGenerator = () => {
               </h1>
               <button 
                 onClick={() => setIsEditing(true)}
-                className="p-2 bg-gray-800/50 rounded-full text-gray-500 opacity-0 group-hover:opacity-100 transition-all hover:text-primary-orange hover:bg-primary-orange/10"
+                className="p-2 bg-banner-grey/50 rounded-full text-gray-500 opacity-0 group-hover:opacity-100 transition-all hover:text-primary-orange hover:bg-primary-orange/10"
               >
                 <MdEdit size={18} />
               </button>
             </div>
           ) : (
-            <div className="flex flex-wrap items-center justify-center gap-4 bg-[#010002]/40 p-4 rounded-3xl border border-primary-orange/20 backdrop-blur-xl">
+            <div className="flex flex-wrap items-center justify-center gap-4 bg-primary-black/40 p-4 rounded-3xl border border-primary-orange/20 backdrop-blur-xl">
               <div className="flex flex-col gap-1">
                 <label className="text-[10px] font-black uppercase tracking-widest text-primary-orange ml-1">Name</label>
                 <input 
                   {...form.register('name')}
-                  className="bg-[#1A171A] border border-gray-800 rounded-xl px-4 py-2 text-sm focus:border-primary-orange/50 outline-none w-48"
+                  className="bg-asset-detail-bg border border-white/[0.08] rounded-xl px-4 py-2 text-sm focus:border-primary-orange/50 outline-none w-48"
                 />
               </div>
               <div className="flex flex-col gap-1">
                 <label className="text-[10px] font-black uppercase tracking-widest text-primary-orange ml-1">Unit</label>
                 <input 
                   {...form.register('unitName')}
-                  className="bg-[#1A171A] border border-gray-800 rounded-xl px-4 py-2 text-sm focus:border-primary-orange/50 outline-none w-24"
+                  className="bg-asset-detail-bg border border-white/[0.08] rounded-xl px-4 py-2 text-sm focus:border-primary-orange/50 outline-none w-24"
                 />
               </div>
               <div className="flex flex-col gap-1">
@@ -60,7 +61,7 @@ const WenPadGenerator = () => {
                 <input 
                   type="number"
                   {...form.register('size', { valueAsNumber: true })}
-                  className="bg-[#1A171A] border border-gray-800 rounded-xl px-4 py-2 text-sm focus:border-primary-orange/50 outline-none w-24"
+                  className="bg-asset-detail-bg border border-white/[0.08] rounded-xl px-4 py-2 text-sm focus:border-primary-orange/50 outline-none w-24"
                 />
               </div>
               <div className="flex gap-2 pt-4">
@@ -82,7 +83,7 @@ const WenPadGenerator = () => {
           {activeStep > 0 && !isEditing && (
              <div className="flex items-center gap-4 text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em]">
                <span>{project.unitName || 'WEN'}</span>
-               <span className="w-1 h-1 bg-gray-800 rounded-full" />
+               <span className="w-1 h-1 bg-banner-grey rounded-full" />
                <span>{project.size || 0} NFTs</span>
              </div>
           )}
@@ -91,7 +92,7 @@ const WenPadGenerator = () => {
 
       {/* Resume Prompt Card */}
       {resumePrompt && (
-        <div className="relative mx-auto max-w-2xl overflow-hidden rounded-2xl border border-primary-orange/30 bg-[#161318]/95 p-5 sm:p-6 shadow-[0_10px_40px_rgba(0,0,0,0.5)] backdrop-blur-xl animate-in fade-in slide-in-from-top-3 duration-400">
+        <div className="relative mx-auto max-w-2xl overflow-hidden rounded-2xl border border-primary-orange/30 bg-asset-detail-bg/95 p-5 sm:p-6 shadow-[0_10px_40px_rgba(0,0,0,0.5)] backdrop-blur-xl animate-in fade-in slide-in-from-top-3 duration-400">
           {/* Ambient decorative glow */}
           <div className="pointer-events-none absolute -left-10 -top-10 h-32 w-32 rounded-full bg-primary-orange/15 blur-2xl" />
 
@@ -156,7 +157,7 @@ const WenPadGenerator = () => {
 
       <WenPadStepper />
       
-      <div className="bg-[#1A171A] p-8 rounded-3xl border border-gray-800 shadow-2xl backdrop-blur-md">
+      <div className="bg-asset-detail-bg p-8 rounded-3xl border border-white/[0.08] shadow-2xl backdrop-blur-md">
         {activeStep === 0 && <SetupStep />}
         {activeStep === 1 && <LayersStep />}
         {activeStep === 2 && <CustomizeStep />}
