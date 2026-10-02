@@ -48,8 +48,8 @@
     "description": "Freeze or unfreeze holdings of permissioned Algorand assets across many accounts at once."
   },
   "/bulk-claim": {
-    "title": "Bulk Claim ARC-59 Inbox & NFD Vault Assets | wen.tools",
-    "description": "Claim your Algorand assets from ARC-59 asset inboxes and NFD vaults in a single session."
+    "title": "Bulk Claim: ARC-59 Inbox, NFD Vaults & AlgoxNFT | wen.tools",
+    "description": "Claim your Algorand assets from ARC-59 asset inboxes and NFD vaults, and recover NFTs stuck in old AlgoxNFT listings, in a single session."
   },
   "/token-manager": {
     "title": "ARC-62 Token Supply Manager | wen.tools",

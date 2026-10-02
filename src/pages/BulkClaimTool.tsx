@@ -13,6 +13,14 @@ import {
 import { TOOLS } from "../constants";
 import { getIndexerURL, getNfdDomain, SignWithSk, walletSign } from "../utils";
 import { EnhancedTable } from "../components/DataGrid";
+import {
+  ALGOXNFT_ADMIN,
+  buildAlgoxClosePlan,
+  findAlgoxListings,
+  simulateAlgoxClose,
+  submitAlgoxCloses,
+  type AlgoxListing,
+} from "../utils/algoxnft";
 import InfinityModeComponent from "../components/InfinityModeComponent";
 import { HeadCell } from "../types";
 import ConnectButton from "../components/ConnectButton";
@@ -93,17 +101,23 @@ const getAssetDetails = async (asset: any, indexerUrl: string) => {
   };
 };
 
+const ALGOX_TYPE = "AlgoxNFT listing";
+const ALGOX_OPTIN_TYPE = "AlgoxNFT listing · opt-in";
+const isAlgoxRow = (a: { type: string }) => a.type.startsWith("AlgoxNFT");
+
 const INITIAL_STEP = 0;
 const COMPLETED = 1;
 
 export const BlukClaimTool = () => {
-  const { activeAddress, activeNetwork, algodClient, transactionSigner } =
+  const { activeAddress, activeNetwork, algodClient, transactionSigner, signTransactions } =
     useWallet();
   const [mnemonic, setMnemonic] = useState("");
   const [isLoadingAssets, setIsLoadingAssets] = useState(true);
   const [assets, setAssets] = useState<Asset[]>([]);
   const [nfd, setNFD] = useState("");
   const [processStep, setProcessStep] = useState(INITIAL_STEP);
+  // AlgoxNFT escrow details for each table row id
+  const [algoxListings, setAlgoxListings] = useState<Map<number, AlgoxListing>>(new Map());
 
   useEffect(() => {
     const loadAssets = async () => {
@@ -113,21 +127,34 @@ export const BlukClaimTool = () => {
       }
 
       try {
-        const [inboxAssets, userNfd] = await Promise.all([
+        const indexerUrl = getIndexerURL(activeNetwork);
+        const [inboxAssets, userNfd, listings] = await Promise.all([
           getAssetsInAssetInbox(activeAddress, algodClient, activeNetwork),
           getNfdDomain(activeAddress),
+          // Isolated: a failure here must not hide inbox/vault assets
+          findAlgoxListings(activeAddress, algodClient, indexerUrl).catch((e) => {
+            console.error("AlgoxNFT listing scan failed:", e);
+            return [] as AlgoxListing[];
+          }),
         ]);
 
         setNFD(userNfd);
         const vaultAssets = await fetchNFDVaultAssets(userNfd, activeNetwork);
 
-        const indexerUrl = getIndexerURL(activeNetwork);
+        const algoxRows = listings.map((l) => ({
+          assetId: l.assetId,
+          amount: 1,
+          type: l.needsOptIn ? ALGOX_OPTIN_TYPE : ALGOX_TYPE,
+        }));
+        const combined = [...inboxAssets, ...vaultAssets, ...algoxRows];
         const allAssets = await Promise.all(
-          [...inboxAssets, ...vaultAssets].map((asset, index) =>
-            getAssetDetails({ ...asset, id: index }, indexerUrl)
-          )
+          combined.map((asset, index) => getAssetDetails({ ...asset, id: index }, indexerUrl))
         );
 
+        const byRow = new Map<number, AlgoxListing>();
+        const firstAlgoxRow = inboxAssets.length + vaultAssets.length;
+        listings.forEach((l, i) => byRow.set(firstAlgoxRow + i, l));
+        setAlgoxListings(byRow);
         setAssets(allAssets);
       } catch (error) {
         console.error("Error loading assets:", error);
@@ -151,8 +178,22 @@ export const BlukClaimTool = () => {
 
     setDisabled(true);
     try {
-      const vaultAssets = selected.filter((s) => s.type === "vault");
-      const inboxAssets = selected.filter((s) => s.type === "inbox");
+      let claimedAny = false;
+      const algoxSelected = selected.filter(isAlgoxRow);
+      if (algoxSelected.length) {
+        claimedAny = await claimAlgoxListings(algoxSelected);
+      }
+      const otherSelected = selected.filter((s) => !isAlgoxRow(s));
+      if (!otherSelected.length) {
+        if (claimedAny) {
+          showDonationToast();
+          setProcessStep(COMPLETED);
+        }
+        return;
+      }
+
+      const vaultAssets = otherSelected.filter((s) => s.type === "vault");
+      const inboxAssets = otherSelected.filter((s) => s.type === "inbox");
 
       const assetsWithTransactions = await Promise.all([
         ...vaultAssets.map(async (asset) => {
@@ -227,6 +268,44 @@ export const BlukClaimTool = () => {
     }
   };
 
+  /** Verifies, signs (one prompt) and closes the selected AlgoxNFT listings. */
+  const claimAlgoxListings = async (rows: Asset[]): Promise<boolean> => {
+    if (!activeAddress) return false;
+    const params = await algodClient.getTransactionParams().do();
+    const plans = rows
+      .map((r) => algoxListings.get(r.id))
+      .filter((l): l is AlgoxListing => !!l)
+      .map((l) => buildAlgoxClosePlan(l, activeAddress, params));
+
+    toast.info("Verifying AlgoxNFT listings on-chain…", { autoClose: 1500 });
+    const sims = await Promise.all(plans.map((p) => simulateAlgoxClose(algodClient, p)));
+    const ready = plans.filter((_, i) => sims[i].status === "ready");
+    const rejected = sims.filter((r) => r.status === "rejected").length;
+    const accountIssue = sims.find((r) => r.status === "account");
+    if (rejected) {
+      toast.warn(`${rejected} AlgoxNFT listing${rejected > 1 ? "s" : ""} can't be closed this way and ${rejected > 1 ? "were" : "was"} skipped`);
+    }
+    if (accountIssue && accountIssue.status === "account") toast.error(accountIssue.message);
+    if (!ready.length) return false;
+
+    let sign: Parameters<typeof submitAlgoxCloses>[2];
+    if (mnemonic) {
+      if (mnemonic.split(" ").length !== 25) throw new Error("Invalid Mnemonic");
+      sign = { sk: algosdk.mnemonicToSecretKey(mnemonic).sk };
+    } else {
+      toast.info(`Approve ${ready.length} AlgoxNFT claim${ready.length > 1 ? "s" : ""} in your wallet…`);
+      sign = { signer: (groups, indexes) => signTransactions(groups, indexes) };
+    }
+
+    const results = await submitAlgoxCloses(algodClient, ready, sign, (done, total, assetId, ok) => {
+      if (ok) toast.success(`Recovered ${assetId} (${done}/${total})`, { autoClose: 1200 });
+      else toast.error(`Could not recover ${assetId} (${done}/${total})`, { autoClose: 2000 });
+    });
+    const okCount = results.filter((r) => r.txId).length;
+    if (okCount) toast.success(`${okCount} NFT${okCount > 1 ? "s" : ""} recovered from AlgoxNFT`);
+    return okCount > 0;
+  };
+
   const tableConfig = {
     headCells: [
       { id: "assetId", numeric: true, disablePadding: true, label: "Asset ID" },
@@ -257,15 +336,15 @@ export const BlukClaimTool = () => {
       <ToolHero
         tag="bulk claim"
         title={TOOLS.find((tool) => tool.path === window.location.pathname)?.label || "Bulk Claim"}
-        description="Claim your Algorand assets from ARC-59 asset inboxes and NFD vaults in a single session."
-        meta={["ARC-59 inbox", "NFD vaults", "one session"]}
+        description="Claim your Algorand assets from ARC-59 asset inboxes, NFD vaults and old AlgoxNFT listings in a single session."
+        meta={["ARC-59 inbox", "NFD vaults", "AlgoxNFT listings", "auto opt-in"]}
       />
       <ConnectButton inmain={true} />
 
 
 
       {!activeAddress && (
-        <p className="font-mono text-xs text-slate-500">// connect a wallet to scan your inbox and vaults</p>
+        <p className="font-mono text-xs text-slate-500">// connect a wallet to scan your inbox, vaults and old AlgoxNFT listings</p>
       )}
 
       {activeAddress &&
@@ -296,13 +375,13 @@ export const BlukClaimTool = () => {
         )}
 
       {activeAddress && !isLoadingAssets && !assets.length && (
-        <p className="font-mono text-sm text-slate-400">// nothing waiting in your inbox or vaults</p>
+        <p className="font-mono text-sm text-slate-400">// nothing waiting in your inbox, vaults or AlgoxNFT listings</p>
       )}
 
       {activeAddress && isLoadingAssets && (
         <div className="mx-auto mt-4 flex flex-col items-center gap-3">
           <TermSpinner />
-          <p className="font-mono text-xs text-slate-400">scanning inbox &amp; vaults…</p>
+          <p className="font-mono text-xs text-slate-400">scanning inbox, vaults &amp; AlgoxNFT listings…</p>
         </div>
       )}
 
@@ -320,6 +399,17 @@ export const BlukClaimTool = () => {
             <h2 className="text-xl font-bold text-white tracking-tight italic">The NFD Vault Ecosystem</h2>
             <p className="text-sm text-slate-400 leading-relaxed">
               Non-Fungible Domains (NFDs) provide sophisticated vault infrastructure for asset management. Assets sent to an NFD vault are secure and easily accessible via this interface. By consolidating your claims, you maintain a unified view of your on-chain inventory, leveraging the synergy between the NFD protocol and modern Algorand logistics tools.
+            </p>
+          </div>
+          <div className="space-y-4 md:col-span-2">
+            <h2 className="text-xl font-bold text-white tracking-tight">Old AlgoxNFT Listings</h2>
+            <p className="text-sm text-slate-400 leading-relaxed">
+              NFTs listed for sale on AlgoxNFT and never sold are still held by the listing&apos;s escrow. Bulk Claim
+              finds those escrows, checks on-chain that each contract returns the NFT to you, opts you back in to the
+              asset if needed, and closes the listing. You only sign a 0 ALGO permission transaction (plus the opt-in,
+              if one is needed). As written in AlgoxNFT&apos;s contract, the escrow&apos;s leftover ALGO is returned
+              to <span className="font-mono text-slate-300">algoxnft.algo</span>
+              <span className="sr-only"> ({ALGOXNFT_ADMIN})</span>.
             </p>
           </div>
         </div>

@@ -1,6 +1,6 @@
 import { ToolHero } from "../components/cypher/ToolKit";
 import { Reticle } from "../components/cypher/Reticle";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 
 import algosdk from "algosdk";
@@ -739,6 +739,26 @@ wen.contentWindow.postMessage({
     }
   }
 
+  // Read back exactly what the asset-create transaction will mint, so the
+  // number the user signs is the number that lands on-chain.
+  const mintSummary = useMemo(() => {
+    try {
+      const txn: any = batchATC
+        ?.buildGroup()
+        .map((t: any) => t.txn)
+        .find((t: any) => t.type === "acfg");
+      if (!txn) return null;
+      const decimals = Number(txn.assetDecimals ?? 0);
+      const raw = BigInt(txn.assetTotal ?? 0);
+      const scale = 10n ** BigInt(decimals);
+      const whole = formatNumberWithCommas((raw / scale).toString());
+      const frac = decimals ? "." + (raw % scale).toString().padStart(decimals, "0") : "";
+      return { name: txn.assetName as string, unit: txn.assetUnitName as string, decimals, supply: whole + frac };
+    } catch {
+      return null;
+    }
+  }, [batchATC]);
+
   async function sendTransaction() {
     try {
       if (!activeAddress) {
@@ -988,36 +1008,39 @@ wen.contentWindow.postMessage({
                   <label className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-400">
                     Total supply*
                   </label>
+                  {/* Text, not type="number": number inputs silently step on mouse wheel / arrow keys */}
                   <input
                     className="w-full bg-asset-detail-bg/60 border border-white/[0.12] text-sm font-medium text-white placeholder:text-slate-500 px-4 py-3 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary-orange focus:border-primary-orange transition-all"
-                    type="number"
-                    max="18446744073709551615"
-                    min={1}
+                    type="text"
+                    inputMode="numeric"
+                    autoComplete="off"
                     required
                     onChange={(e) => {
                       setFormData({
                         ...formData,
-                        totalSupply: e.target.value,
+                        totalSupply: e.target.value.replace(/\D/g, ""),
                       });
                     }}
                     placeholder="Recommended: 1 for NFTs"
-                    value={formData.totalSupply}
+                    value={formatNumberWithCommas(formData.totalSupply)}
                   />
                 </div>
                 <div className="flex flex-col">
                   <label className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-400">
                     Decimals*
                   </label>
+                  {/* Text, not type="number": number inputs silently step on mouse wheel / arrow keys */}
                   <input
-                    type="number"
+                    type="text"
+                    inputMode="numeric"
+                    autoComplete="off"
                     className="w-full bg-asset-detail-bg/60 border border-white/[0.12] text-sm font-medium text-white placeholder:text-slate-500 px-4 py-3 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary-orange focus:border-primary-orange transition-all"
-                    max={19}
-                    min={0}
                     required
                     onChange={(e) => {
+                      const digits = e.target.value.replace(/\D/g, "").slice(0, 2);
                       setFormData({
                         ...formData,
-                        decimals: e.target.value,
+                        decimals: digits === "" ? "" : String(Math.min(19, parseInt(digits))),
                       });
                     }}
                     value={formData.decimals}
@@ -1206,18 +1229,20 @@ wen.contentWindow.postMessage({
                 <label className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-400">
                   Decimals*
                 </label>
+                {/* Text, not type="number": number inputs silently step on mouse wheel / arrow keys */}
                 <input
-                  type="number"
+                  type="text"
+                  inputMode="numeric"
+                  autoComplete="off"
                   placeholder="Ex: 8"
                   className="w-full bg-asset-detail-bg/60 border border-white/[0.12] text-sm font-medium text-white placeholder:text-slate-500 px-4 py-3 rounded-xl focus:outline-none focus:ring-1 focus:ring-primary-orange focus:border-primary-orange transition-all"
-                  max={19}
-                  min={0}
                   required
                   value={formData.decimals}
                   onChange={(e) => {
+                    const digits = e.target.value.replace(/\D/g, "").slice(0, 2);
                     setFormData({
                       ...formData,
-                      decimals: e.target.value,
+                      decimals: digits === "" ? "" : String(Math.min(19, parseInt(digits))),
                     });
                   }}
                 />
@@ -1476,6 +1501,24 @@ wen.contentWindow.postMessage({
               <p className="text-green-400 text-sm font-bold animate-pulse">
                 ✓ Transaction created!
               </p>
+              {mintSummary && (
+                <div className="rounded-xl border border-white/[0.08] bg-primary-black/50 px-4 py-3 text-left">
+                  <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-primary-orange">// you are about to mint</p>
+                  <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
+                    <dt className="text-slate-500">Asset</dt>
+                    <dd className="truncate text-white">
+                      {mintSummary.name} <span className="font-mono text-slate-400">({mintSummary.unit})</span>
+                    </dd>
+                    <dt className="text-slate-500">Total supply</dt>
+                    <dd className="font-mono tabular-nums text-white">{mintSummary.supply}</dd>
+                    <dt className="text-slate-500">Decimals</dt>
+                    <dd className="font-mono text-white">{mintSummary.decimals}</dd>
+                  </dl>
+                  <p className="mt-2 text-xs text-slate-500">
+                    Read from the transaction you are signing. Supply can&apos;t be changed after minting.
+                  </p>
+                </div>
+              )}
               <div className="flex items-center justify-center gap-2">
                 <input 
                   type="checkbox" 
