@@ -26,6 +26,18 @@ import {
 } from "../types/wallet";
 
 export const IPFS_ENDPOINT = "https://ipfs.algonode.xyz/ipfs";
+/**
+ * Backup gateway when the primary is slow or erroring. ipfs.io and dweb.link
+ * now refuse direct requests (HTTP 429, "service worker gateway only").
+ */
+export const IPFS_FALLBACK = "https://gateway.pinata.cloud/ipfs";
+
+/** For an image that failed on the primary gateway, the same CID on the fallback. */
+export function ipfsFallbackSrc(src: string): string | null {
+  if (!src.includes("ipfs.algonode.xyz/ipfs/")) return null;
+  const path = src.split("/ipfs/")[1]?.split("?")[0]?.replace(/^\/+/, "");
+  return path ? `${IPFS_FALLBACK}/${path}` : null;
+}
 export const PAGE_SIZE = 64;
 export const MAX_SELECT_COUNT = 64;
 export const TX_NOTE = "via wen.tools | wen wallet";

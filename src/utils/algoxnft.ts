@@ -385,3 +385,169 @@ export async function submitAlgoxCloses(
   }
   return results;
 }
+
+/* ========================================================================= */
+/* Newer AlgoxNFT listings: Asalytic composable marketplace (2025)           */
+/*                                                                           */
+/* Listings made through AlgoxNFT later on run on Asalytic's composable      */
+/* marketplace instead of logic-sig escrows. A router app creates one        */
+/* listing app per listing; the listing app's account holds the NFT and its  */
+/* app state records `seller`, `asset` and `price`.                          */
+/*                                                                           */
+/* Cancel = router call `721f5fb8(listingAppId, assetId)` from the seller.   */
+/* It deletes the listing app, which returns the NFT and its ALGO minimum    */
+/* balance to the seller, and the router refunds the rest to the seller.     */
+/* Learned from ~1,200 on-chain cancels and verified by simulation.          */
+/* ========================================================================= */
+
+export const ASALYTIC_ROUTER_APP = 2648336270;
+const SELECTOR_CREATE_LISTING = "5d706844";
+const SELECTOR_CANCEL_LISTING = new Uint8Array([0x72, 0x1f, 0x5f, 0xb8]);
+/** Covers the router call plus its inner transactions (matches on-chain cancels). */
+const CANCEL_FEE = 7000;
+
+export interface AppListing {
+  listingAppId: number;
+  assetId: number;
+  needsOptIn: boolean;
+}
+
+const decodeGlobalState = (state: any[] = []) => {
+  const out: Record<string, { bytes?: Uint8Array; uint?: number }> = {};
+  for (const kv of state) {
+    const key = Buffer.from(kv.key, "base64").toString("utf8");
+    out[key] =
+      kv.value.type === 1
+        ? { bytes: new Uint8Array(Buffer.from(kv.value.bytes, "base64")) }
+        : { uint: Number(kv.value.uint) };
+  }
+  return out;
+};
+
+/** The user's open listings on the marketplace router. */
+export async function findAppListings(
+  seller: string,
+  algod: algosdk.Algodv2,
+  indexerUrl: string
+): Promise<AppListing[]> {
+  // Every listing app the seller created through the router
+  const created = new Set<number>();
+  const collect = (t: any) => {
+    if (t["created-application-index"]) created.add(Number(t["created-application-index"]));
+    for (const i of t["inner-txns"] ?? []) collect(i);
+  };
+  let next = "";
+  for (let page = 0; page < MAX_HISTORY_PAGES; page++) {
+    const url =
+      `${indexerUrl}/v2/transactions?address=${seller}&address-role=sender&application-id=${ASALYTIC_ROUTER_APP}` +
+      `&limit=1000${next ? `&next=${next}` : ""}`;
+    const res = await fetch(url).then((r) => r.json());
+    for (const t of res.transactions ?? []) {
+      const arg0 = t["application-transaction"]?.["application-args"]?.[0];
+      if (arg0 && Buffer.from(arg0, "base64").toString("hex") === SELECTOR_CREATE_LISTING) collect(t);
+    }
+    next = res["next-token"];
+    if (!next || !(res.transactions ?? []).length) break;
+  }
+
+  // Still live, names this seller, and still holds its NFT
+  const checked = await mapLimit([...created], 6, async (appId) => {
+    let app: any;
+    try {
+      app = await algod.getApplicationByID(appId).do();
+    } catch {
+      return null; // deleted: sold or already cancelled
+    }
+    const gs = decodeGlobalState(app.params?.["global-state"]);
+    const sellerBytes = gs.seller?.bytes;
+    const assetId = gs.asset?.uint;
+    if (!sellerBytes || sellerBytes.length !== 32 || !assetId) return null;
+    if (algosdk.encodeAddress(sellerBytes) !== seller) return null;
+    const held = await holdsAsset(algod, algosdk.getApplicationAddress(appId), assetId);
+    if (!held || held < 1) return null;
+    const own = await holdsAsset(algod, seller, assetId);
+    return { listingAppId: appId, assetId, needsOptIn: own === null } as AppListing;
+  });
+  return checked.filter((l): l is AppListing => l !== null);
+}
+
+/** [opt-in if needed, router cancel] as one atomic group. */
+export function buildAppCancelGroup(listing: AppListing, seller: string, params: algosdk.SuggestedParams): Transaction[] {
+  const call = algosdk.makeApplicationNoOpTxnFromObject({
+    from: seller,
+    appIndex: ASALYTIC_ROUTER_APP,
+    appArgs: [SELECTOR_CANCEL_LISTING, algosdk.encodeUint64(listing.listingAppId), algosdk.encodeUint64(listing.assetId)],
+    foreignApps: [listing.listingAppId],
+    foreignAssets: [listing.assetId],
+    suggestedParams: { ...params, flatFee: true, fee: CANCEL_FEE },
+  });
+  if (!listing.needsOptIn) return [call];
+  const optIn = algosdk.makeAssetTransferTxnWithSuggestedParamsFromObject({
+    from: seller,
+    to: seller,
+    amount: 0,
+    assetIndex: listing.assetId,
+    suggestedParams: { ...params, flatFee: true, fee: 1000 },
+  });
+  return algosdk.assignGroupID([optIn, call]);
+}
+
+/** Dry-runs a cancel group exactly as it would be submitted (no signatures). */
+export async function simulateAppCancel(algod: algosdk.Algodv2, group: Transaction[]): Promise<AlgoxSimulation> {
+  let failure: string | undefined;
+  try {
+    const res: any = await algod
+      .simulateTransactions(
+        new algosdk.modelsv2.SimulateRequest({
+          txnGroups: [
+            new algosdk.modelsv2.SimulateRequestTransactionGroup({
+              txns: group.map((t) => algosdk.decodeObj(algosdk.encodeUnsignedSimulateTransaction(t)) as any),
+            }),
+          ],
+          allowEmptySignatures: true,
+        })
+      )
+      .do();
+    failure = res.txnGroups?.[0]?.failureMessage;
+  } catch (e: any) {
+    return { status: "account", message: e?.message ?? "simulation failed" };
+  }
+  if (!failure) return { status: "ready" };
+  if (/below min/i.test(failure)) {
+    return { status: "account", message: "Not enough ALGO to cover your minimum balance and fees. Top up and try again." };
+  }
+  return { status: "rejected", message: failure };
+}
+
+/** Signs all cancel groups in one go (every txn is the user's) and submits them. */
+export async function submitAppCancels(
+  algod: algosdk.Algodv2,
+  groups: { listing: AppListing; txns: Transaction[] }[],
+  sign: { signer: UserSigner } | { sk: Uint8Array },
+  onProgress?: (done: number, total: number, assetId: number, ok: boolean) => void
+): Promise<{ assetId: number; txId?: string; error?: string }[]> {
+  const all = groups.map((g) => g.txns);
+  const flatCount = all.reduce((n, g) => n + g.length, 0);
+  const signed =
+    "sk" in sign
+      ? all.flat().map((t) => t.signTxn(sign.sk))
+      : await sign.signer(all, Array.from({ length: flatCount }, (_, i) => i));
+
+  const results: { assetId: number; txId?: string; error?: string }[] = [];
+  let offset = 0;
+  for (const [i, g] of groups.entries()) {
+    const blobs = signed.slice(offset, offset + g.txns.length);
+    offset += g.txns.length;
+    try {
+      if (blobs.some((b) => !b)) throw new Error("not all transactions were signed");
+      const { txId } = await algod.sendRawTransaction(blobs as Uint8Array[]).do();
+      await algosdk.waitForConfirmation(algod, txId, 6);
+      results.push({ assetId: g.listing.assetId, txId });
+      onProgress?.(i + 1, groups.length, g.listing.assetId, true);
+    } catch (e: any) {
+      results.push({ assetId: g.listing.assetId, error: e?.message ?? String(e) });
+      onProgress?.(i + 1, groups.length, g.listing.assetId, false);
+    }
+  }
+  return results;
+}

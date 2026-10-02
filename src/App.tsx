@@ -73,12 +73,13 @@ axios.interceptors.response.use(
       config &&
       config.url &&
       config.url.includes("https://ipfs.algonode.xyz/ipfs/") &&
-      (!error.response || error.response.status === 504 || error.response.status === 502 || error.code === 'ECONNABORTED' || error.message.includes('timeout') || error.message.includes('Network Error'))
+      (!error.response || [403, 429, 502, 503, 504].includes(error.response.status) || error.code === 'ECONNABORTED' || error.message.includes('timeout') || error.message.includes('Network Error'))
     ) {
       if (!config._retry) {
         config._retry = true;
-        console.warn(`IPFS Gateway timeout/error on Nodely, falling back to ipfs.io for: ${config.url}`);
-        config.url = config.url.replace("https://ipfs.algonode.xyz/ipfs/", "https://ipfs.io/ipfs/");
+        // ipfs.io no longer serves direct requests (HTTP 429), so fall back to Pinata
+        console.warn(`IPFS gateway error on Nodely, falling back to Pinata for: ${config.url}`);
+        config.url = config.url.replace("https://ipfs.algonode.xyz/ipfs/", "https://gateway.pinata.cloud/ipfs/");
         return axios(config);
       }
     }

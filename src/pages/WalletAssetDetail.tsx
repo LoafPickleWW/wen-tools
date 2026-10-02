@@ -13,6 +13,7 @@ import {
 } from "../types/wallet";
 import {
   ipfsToUrl,
+  ipfsFallbackSrc,
   getAssetData,
   shortenAddress,
   getWalletDirectionUrl,
@@ -249,8 +250,15 @@ export default function WalletAssetDetail() {
                 alt={assetData.params.name}
                 src={assetUrl || "/images/wallet/404.webp"}
                 className="max-w-full max-h-full object-contain rounded-xl transition-transform duration-300 group-hover:scale-[1.02]"
-                loading="lazy"
-                onError={() => setAssetUrl("/images/wallet/404.webp")}
+                // The main image is the first thing on the page; lazy loading could
+                // stall it entirely (observed: request never started until forced)
+                loading="eager"
+                decoding="async"
+                onError={(e) => {
+                  // Retry once on the fallback gateway before showing the placeholder
+                  const fallback = ipfsFallbackSrc(e.currentTarget.src);
+                  setAssetUrl(fallback ?? "/images/wallet/404.webp");
+                }}
               />
             </div>
             
@@ -408,7 +416,9 @@ export default function WalletAssetDetail() {
                       return (
                         <div
                           key={trait.category}
-                          className="bg-zinc-950/40 border border-zinc-800/80 p-2.5 rounded-xl flex flex-col justify-between"
+                          className={`bg-zinc-950/40 border border-zinc-800/80 p-2.5 rounded-xl flex flex-col justify-between ${
+                            trait.category === "description" ? "col-span-full" : ""
+                          }`}
                         >
                           <span className="font-bold text-slate-500 text-[10px] uppercase tracking-wider">
                             {trait.category.replace(/_/g, " ")}
@@ -427,14 +437,14 @@ export default function WalletAssetDetail() {
                               {trait.value}
                             </a>
                           ) : (
-                            <span className="text-slate-200 break-all font-semibold mt-1">
-                              {trait.value.length > 80 ? (
-                                <span title={trait.value}>
-                                  {trait.value.substring(0, 80)}...
-                                </span>
-                              ) : (
-                                trait.value
-                              )}
+                            <span
+                              className={`text-slate-200 font-semibold mt-1 ${
+                                trait.category === "description"
+                                  ? "whitespace-pre-line break-words font-normal leading-relaxed"
+                                  : "break-all"
+                              }`}
+                            >
+                              {trait.value}
                             </span>
                           )}
                         </div>

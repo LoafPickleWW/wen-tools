@@ -29,6 +29,7 @@ import {
   getAssetType,
   getWalletDirectionUrl,
   ipfsToUrl,
+  ipfsFallbackSrc,
   getIndexerUrl,
   sendSignedTransaction,
   shortenAddress,
@@ -289,7 +290,11 @@ const AssetImageCard = ({
               image={assetUrl || "/images/wallet/404.webp"}
               className="w-full aspect-square p-1"
               loading="lazy"
-              onError={() => setAssetUrl("/images/wallet/404.webp")}
+              onError={(e) => {
+                // Retry once on the fallback gateway before showing the placeholder
+                const fallback = ipfsFallbackSrc((e.currentTarget as HTMLImageElement).src);
+                setAssetUrl(fallback ?? "/images/wallet/404.webp");
+              }}
             />
             <Checkbox
               checked={toolState.selectedAssets.includes(asset["asset-id"])}

@@ -17,6 +17,11 @@ import {
   ALGOXNFT_ADMIN,
   buildAlgoxClosePlan,
   findAlgoxListings,
+  findAppListings,
+  buildAppCancelGroup,
+  simulateAppCancel,
+  submitAppCancels,
+  type AppListing,
   simulateAlgoxClose,
   submitAlgoxCloses,
   type AlgoxListing,
@@ -118,6 +123,8 @@ export const BlukClaimTool = () => {
   const [processStep, setProcessStep] = useState(INITIAL_STEP);
   // AlgoxNFT escrow details for each table row id
   const [algoxListings, setAlgoxListings] = useState<Map<number, AlgoxListing>>(new Map());
+  // Newer AlgoxNFT listings (Asalytic marketplace listing apps), by table row id
+  const [appListings, setAppListings] = useState<Map<number, AppListing>>(new Map());
 
   useEffect(() => {
     const loadAssets = async () => {
@@ -128,7 +135,7 @@ export const BlukClaimTool = () => {
 
       try {
         const indexerUrl = getIndexerURL(activeNetwork);
-        const [inboxAssets, userNfd, listings] = await Promise.all([
+        const [inboxAssets, userNfd, listings, marketListings] = await Promise.all([
           getAssetsInAssetInbox(activeAddress, algodClient, activeNetwork),
           getNfdDomain(activeAddress),
           // Isolated: a failure here must not hide inbox/vault assets
@@ -136,12 +143,16 @@ export const BlukClaimTool = () => {
             console.error("AlgoxNFT listing scan failed:", e);
             return [] as AlgoxListing[];
           }),
+          findAppListings(activeAddress, algodClient, indexerUrl).catch((e) => {
+            console.error("AlgoxNFT marketplace listing scan failed:", e);
+            return [] as AppListing[];
+          }),
         ]);
 
         setNFD(userNfd);
         const vaultAssets = await fetchNFDVaultAssets(userNfd, activeNetwork);
 
-        const algoxRows = listings.map((l) => ({
+        const algoxRows = [...listings, ...marketListings].map((l) => ({
           assetId: l.assetId,
           amount: 1,
           type: l.needsOptIn ? ALGOX_OPTIN_TYPE : ALGOX_TYPE,
@@ -155,6 +166,9 @@ export const BlukClaimTool = () => {
         const firstAlgoxRow = inboxAssets.length + vaultAssets.length;
         listings.forEach((l, i) => byRow.set(firstAlgoxRow + i, l));
         setAlgoxListings(byRow);
+        const byRowApp = new Map<number, AppListing>();
+        marketListings.forEach((l, i) => byRowApp.set(firstAlgoxRow + listings.length + i, l));
+        setAppListings(byRowApp);
         setAssets(allAssets);
       } catch (error) {
         console.error("Error loading assets:", error);
@@ -268,16 +282,56 @@ export const BlukClaimTool = () => {
     }
   };
 
-  /** Verifies, signs (one prompt) and closes the selected AlgoxNFT listings. */
+  const signerFor = (count: number): { signer: (g: algosdk.Transaction[][], i: number[]) => Promise<(Uint8Array | null)[]> } | { sk: Uint8Array } => {
+    if (mnemonic) {
+      if (mnemonic.split(" ").length !== 25) throw new Error("Invalid Mnemonic");
+      return { sk: algosdk.mnemonicToSecretKey(mnemonic).sk };
+    }
+    toast.info(`Approve ${count} AlgoxNFT claim${count > 1 ? "s" : ""} in your wallet…`);
+    return { signer: (groups, indexes) => signTransactions(groups, indexes) };
+  };
+
+  /** Verifies (simulation), signs and cancels the selected marketplace listings. */
+  const claimAppListings = async (rows: Asset[]): Promise<number> => {
+    if (!activeAddress) return 0;
+    const params = await algodClient.getTransactionParams().do();
+    const groups = rows
+      .map((r) => appListings.get(r.id))
+      .filter((l): l is AppListing => !!l)
+      .map((listing) => ({ listing, txns: buildAppCancelGroup(listing, activeAddress, params) }));
+    if (!groups.length) return 0;
+
+    const sims = await Promise.all(groups.map((g) => simulateAppCancel(algodClient, g.txns)));
+    const ready = groups.filter((_, i) => sims[i].status === "ready");
+    const rejected = sims.filter((r) => r.status === "rejected").length;
+    const accountIssue = sims.find((r) => r.status === "account");
+    if (rejected) toast.warn(`${rejected} AlgoxNFT listing${rejected > 1 ? "s" : ""} couldn't be cancelled and ${rejected > 1 ? "were" : "was"} skipped`);
+    if (accountIssue && accountIssue.status === "account") toast.error(accountIssue.message);
+    if (!ready.length) return 0;
+
+    const results = await submitAppCancels(algodClient, ready, signerFor(ready.length), (done, total, assetId, ok) => {
+      if (ok) toast.success(`Recovered ${assetId} (${done}/${total})`, { autoClose: 1200 });
+      else toast.error(`Could not recover ${assetId} (${done}/${total})`, { autoClose: 2000 });
+    });
+    return results.filter((r) => r.txId).length;
+  };
+
+  /** Verifies, signs (one prompt per listing type) and closes the selected AlgoxNFT listings. */
   const claimAlgoxListings = async (rows: Asset[]): Promise<boolean> => {
     if (!activeAddress) return false;
+    toast.info("Verifying AlgoxNFT listings on-chain…", { autoClose: 1500 });
+    const marketRecovered = await claimAppListings(rows.filter((r) => appListings.has(r.id)));
+    rows = rows.filter((r) => algoxListings.has(r.id));
+    if (!rows.length) {
+      if (marketRecovered) toast.success(`${marketRecovered} NFT${marketRecovered > 1 ? "s" : ""} recovered from AlgoxNFT`);
+      return marketRecovered > 0;
+    }
     const params = await algodClient.getTransactionParams().do();
     const plans = rows
       .map((r) => algoxListings.get(r.id))
       .filter((l): l is AlgoxListing => !!l)
       .map((l) => buildAlgoxClosePlan(l, activeAddress, params));
 
-    toast.info("Verifying AlgoxNFT listings on-chain…", { autoClose: 1500 });
     const sims = await Promise.all(plans.map((p) => simulateAlgoxClose(algodClient, p)));
     const ready = plans.filter((_, i) => sims[i].status === "ready");
     const rejected = sims.filter((r) => r.status === "rejected").length;
@@ -286,22 +340,13 @@ export const BlukClaimTool = () => {
       toast.warn(`${rejected} AlgoxNFT listing${rejected > 1 ? "s" : ""} can't be closed this way and ${rejected > 1 ? "were" : "was"} skipped`);
     }
     if (accountIssue && accountIssue.status === "account") toast.error(accountIssue.message);
-    if (!ready.length) return false;
+    if (!ready.length) return marketRecovered > 0;
 
-    let sign: Parameters<typeof submitAlgoxCloses>[2];
-    if (mnemonic) {
-      if (mnemonic.split(" ").length !== 25) throw new Error("Invalid Mnemonic");
-      sign = { sk: algosdk.mnemonicToSecretKey(mnemonic).sk };
-    } else {
-      toast.info(`Approve ${ready.length} AlgoxNFT claim${ready.length > 1 ? "s" : ""} in your wallet…`);
-      sign = { signer: (groups, indexes) => signTransactions(groups, indexes) };
-    }
-
-    const results = await submitAlgoxCloses(algodClient, ready, sign, (done, total, assetId, ok) => {
+    const results = await submitAlgoxCloses(algodClient, ready, signerFor(ready.length), (done, total, assetId, ok) => {
       if (ok) toast.success(`Recovered ${assetId} (${done}/${total})`, { autoClose: 1200 });
       else toast.error(`Could not recover ${assetId} (${done}/${total})`, { autoClose: 2000 });
     });
-    const okCount = results.filter((r) => r.txId).length;
+    const okCount = results.filter((r) => r.txId).length + marketRecovered;
     if (okCount) toast.success(`${okCount} NFT${okCount > 1 ? "s" : ""} recovered from AlgoxNFT`);
     return okCount > 0;
   };
@@ -404,11 +449,12 @@ export const BlukClaimTool = () => {
           <div className="space-y-4 md:col-span-2">
             <h2 className="text-xl font-bold text-white tracking-tight">Old AlgoxNFT Listings</h2>
             <p className="text-sm text-slate-400 leading-relaxed">
-              NFTs listed for sale on AlgoxNFT and never sold are still held by the listing&apos;s escrow. Bulk Claim
-              finds those escrows, checks on-chain that each contract returns the NFT to you, opts you back in to the
-              asset if needed, and closes the listing. You only sign a 0 ALGO permission transaction (plus the opt-in,
-              if one is needed). As written in AlgoxNFT&apos;s contract, the escrow&apos;s leftover ALGO is returned
-              to <span className="font-mono text-slate-300">algoxnft.algo</span>
+              NFTs listed for sale on AlgoxNFT and never sold are still held on-chain. Bulk Claim finds both kinds of
+              listing, checks each one on-chain before you sign, opts you back in to the asset if needed, and returns
+              the NFT to you. Newer listings (Asalytic composable marketplace) are cancelled through the marketplace
+              itself, which also refunds the listing&apos;s ALGO deposit to you. For older escrow listings you only sign
+              a 0 ALGO permission transaction; as written in that contract, the escrow&apos;s leftover ALGO goes to{" "}
+              <span className="font-mono text-slate-300">algoxnft.algo</span>
               <span className="sr-only"> ({ALGOXNFT_ADMIN})</span>.
             </p>
           </div>

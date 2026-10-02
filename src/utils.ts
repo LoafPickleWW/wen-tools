@@ -2151,7 +2151,7 @@ export async function getARC19AssetData(url: string, reserve: string) {
         cidVersion === 1
           ? CID.createV1(cidCodecCode, mhdigest)
           : CID.createV0(mhdigest);
-      const response = await axios.get(`${IPFS_ENDPOINT}/${cid}`);
+      const response = await axios.get(`${IPFS_ENDPOINT}${cid}`);
       return { data: response.data, cid: cid };
     } else {
       throw new Error("invalid url" + url);
@@ -2174,33 +2174,33 @@ export const getNFTImageUrl = async (
       const { data, cid } = await getARC19AssetData(assetUrl, assetReserve);
       const url = data.image
         ? data.image
-        : `${IPFS_ENDPOINT}/${cid}${optimizer}`;
+        : `${IPFS_ENDPOINT}${cid}${optimizer}`;
       if (url.startsWith("ipfs://"))
-        return `${IPFS_ENDPOINT}/${url.slice(7)}${optimizer}`;
+        return `${IPFS_ENDPOINT}${url.slice(7)}${optimizer}`;
       if (url !== "") return url;
       return "";
     }
     if (assetUrl.endsWith("#arc3")) {
       const url = assetUrl.slice(0, -5);
       if (url.startsWith("ipfs://")) {
-        const response = await axios.get(`${IPFS_ENDPOINT}/${url.slice(7)}`);
+        const response = await axios.get(`${IPFS_ENDPOINT}${url.slice(7)}`);
         if (response.data.image.startsWith("ipfs://")) {
-          return `${IPFS_ENDPOINT}/${response.data.image.slice(7)}${optimizer}`;
+          return `${IPFS_ENDPOINT}${response.data.image.slice(7)}${optimizer}`;
         }
         return response.data.image;
       } else {
         const response = await axios.get(url);
         if (response.data.image.startsWith("ipfs://")) {
-          return `${IPFS_ENDPOINT}/${response.data.image.slice(7)}${optimizer}`;
+          return `${IPFS_ENDPOINT}${response.data.image.slice(7)}${optimizer}`;
         }
         return response.data.image;
       }
     }
     if (assetUrl.startsWith("https://") && assetUrl.includes("ipfs")) {
-      return `${IPFS_ENDPOINT}/${assetUrl.split("/ipfs/")[1]}${optimizer}`;
+      return `${IPFS_ENDPOINT}${assetUrl.split("/ipfs/")[1]}${optimizer}`;
     }
     if (assetUrl.startsWith("ipfs://")) {
-      return `${IPFS_ENDPOINT}/${assetUrl.slice(7)}${optimizer}`;
+      return `${IPFS_ENDPOINT}${assetUrl.slice(7)}${optimizer}`;
     }
     return assetUrl;
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
