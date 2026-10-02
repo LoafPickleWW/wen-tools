@@ -117,10 +117,10 @@ export default function VanityAddressTool() {
           </div>
 
           <div className="flex flex-col items-center justify-center py-4">
-            <div className="text-6xl font-black text-amber-400 mb-1">
+            <div className="wt-gradient-text mb-1 font-mono text-6xl font-medium tabular-nums">
               {count.toLocaleString()}
             </div>
-            <div className="text-slate-500 font-bold tracking-widest uppercase text-xs">
+            <div className="font-mono text-[11px] uppercase tracking-[0.14em] text-slate-500">
               Addresses Scanned
             </div>
           </div>

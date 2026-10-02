@@ -533,7 +533,7 @@ export function P2PChat() {
             </button>
             <div className="flex flex-col gap-3">
               <input type="text" value={remoteRequestId} onChange={(e) => setRemoteRequestId(e.target.value)} placeholder="Session ID..." className="w-full py-3 px-4 bg-banner-grey text-white rounded-xl border border-white/10" />
-              <button onClick={() => joinSession()} className="w-full py-3 bg-[#646cff] text-white rounded-xl font-bold">Join Session</button>
+              <button onClick={() => joinSession()} className="wt-btn wt-btn-ghost w-full py-3">Join Session</button>
             </div>
 
             <div className="mt-8 pt-8 border-t border-white/10">

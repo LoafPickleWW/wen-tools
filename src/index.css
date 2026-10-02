@@ -729,6 +729,11 @@ html.quantum-mode .MuiRadio-root.Mui-checked {
  * They intentionally out-rank single utility classes.
  * ========================================================================= */
 
+/* Older page roots have no side padding, so copy ran edge to edge on phones */
+.wt-page > .mx-auto:not([class*="px-"]) {
+  padding-inline: 1rem;
+}
+
 /* Let the ambient glow and grid show through page roots */
 .wt-page > .bg-primary-black {
   background-color: transparent;
@@ -826,6 +831,37 @@ html.quantum-mode .MuiRadio-root.Mui-checked {
 }
 .wt-page button:is(.bg-primary-orange, .bg-secondary-orange, .bg-amber-400, .bg-amber-500, .bg-orange-500):not(:disabled):active {
   transform: scale(0.97);
+}
+
+/* Disabled brand buttons: a gradient at half opacity turns muddy brown on
+   dark surfaces, so show a clear neutral "not ready" state instead. */
+.wt-page
+  button:disabled:is(
+    [class*="bg-primary-orange"], [class*="bg-secondary-orange"],
+    [class*="from-orange-"], [class*="from-amber-"],
+    [class*="bg-orange-"], [class*="bg-amber-"]
+  ) {
+  background-image: none;
+  background-color: rgb(var(--surface-2) / 0.6);
+  color: rgb(148 163 184 / 0.75);
+  border-color: rgb(var(--hairline) / 0.08);
+  box-shadow: none;
+  filter: none;
+  transform: none;
+  opacity: 1;
+  cursor: not-allowed;
+}
+
+/* Older pages use 2px borders and white "glass" fills; bring them in line
+   with the 1px hairlines and themed surfaces used everywhere else. */
+.wt-page .border-2 {
+  border-width: 1px;
+}
+.wt-page .bg-white\/5 {
+  background-color: rgb(var(--surface) / 0.5);
+}
+.wt-page :is(h2, h3).italic {
+  font-style: normal;
 }
 
 /* Tables (wallet, auditors, snapshots) */

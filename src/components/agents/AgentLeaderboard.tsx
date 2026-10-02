@@ -438,10 +438,10 @@ export function AgentLeaderboard({ network }: AgentLeaderboardProps) {
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-6">
         <div>
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-orange-500/10 rounded-xl border border-orange-500/20">
-              <IoTrophy className="text-xl text-orange-400" />
+            <div className="grid h-8 w-8 place-items-center rounded-lg border border-primary-orange/30 bg-primary-orange/10">
+              <IoTrophy className="text-base text-primary-orange" />
             </div>
-            <h2 className="text-2xl font-black tracking-tight text-white">
+            <h2 className="font-display text-2xl font-semibold tracking-tight text-white">
               Agent Leaderboard
             </h2>
           </div>

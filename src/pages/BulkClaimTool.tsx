@@ -1,3 +1,4 @@
+import { ToolHero, TermSpinner } from "../components/cypher/ToolKit";
 import { showDonationToast } from "../utils";
 import { NetworkId, useWallet } from "@txnlab/use-wallet-react";
 import algosdk, { Transaction } from "algosdk";
@@ -107,7 +108,7 @@ export const BlukClaimTool = () => {
   useEffect(() => {
     const loadAssets = async () => {
       if (!activeAddress) {
-        toast.error("Wallet not connected");
+        setIsLoadingAssets(false);
         return;
       }
 
@@ -248,20 +249,23 @@ export const BlukClaimTool = () => {
   };
 
   return (
-    <div className="mx-auto text-white mb-4 text-center flex flex-col items-center max-w-[40rem] gap-y-2 min-h-screen">
+    <div className="mx-auto text-white mb-4 text-center flex flex-col items-center w-full max-w-[40rem] gap-y-3 px-4 min-h-screen">
       <Meta 
         title="Bulk Claim Tool" 
         description="Consolidate and claim your Algorand assets from ARC-59 Asset Inboxes and NFD Vaults in a single session. Professional asset recovery for active collectors."
       />
-      <h1 className="text-2xl font-bold mt-6">
-        {TOOLS.find((tool) => tool.path === window.location.pathname)?.label}
-      </h1>
+      <ToolHero
+        tag="bulk claim"
+        title={TOOLS.find((tool) => tool.path === window.location.pathname)?.label || "Bulk Claim"}
+        description="Claim your Algorand assets from ARC-59 asset inboxes and NFD vaults in a single session."
+        meta={["ARC-59 inbox", "NFD vaults", "one session"]}
+      />
       <ConnectButton inmain={true} />
 
 
 
       {!activeAddress && (
-        <p className="text-red-500">Please Connect your wallet!</p>
+        <p className="font-mono text-xs text-slate-500">// connect a wallet to scan your inbox and vaults</p>
       )}
 
       {activeAddress &&
@@ -292,13 +296,13 @@ export const BlukClaimTool = () => {
         )}
 
       {activeAddress && !isLoadingAssets && !assets.length && (
-        <p className="text-white">No assets to claim!</p>
+        <p className="font-mono text-sm text-slate-400">// nothing waiting in your inbox or vaults</p>
       )}
 
       {activeAddress && isLoadingAssets && (
-        <div className="mx-auto flex flex-col">
-          <div className="spinner-border animate-spin inline-block mx-auto mt-4 w-8 h-8 border-4 rounded-full" />
-          <p>Fetching Assets to be Claimed...</p>
+        <div className="mx-auto mt-4 flex flex-col items-center gap-3">
+          <TermSpinner />
+          <p className="font-mono text-xs text-slate-400">scanning inbox &amp; vaults…</p>
         </div>
       )}
 

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { AiOutlineInfoCircle } from "react-icons/ai";
+import { LuChevronDown, LuEye, LuEyeOff, LuInfinity } from "react-icons/lu";
 import { InfinityData } from "../types";
 
 const InfinityModeComponent = ({
@@ -8,41 +8,71 @@ const InfinityModeComponent = ({
   description = "Infinity Mode allows for no restrictions to the amount of transactions per upload.",
 }: InfinityData) => {
   const [isOpen, setIsOpen] = useState(false);
+  const [reveal, setReveal] = useState(false);
 
   const toggleAccordion = () => {
     setIsOpen(!isOpen);
   };
 
   return (
-    <div className="w-full bg-primary-black/60 border border-white/5 rounded-2xl text-white p-4 transition-all duration-300">
-      <div
-        className="accordion-header flex justify-between items-center cursor-pointer select-none"
+    <div
+      className={`w-full overflow-hidden rounded-2xl border bg-banner-grey/50 text-left text-white backdrop-blur transition-colors ${
+        isOpen ? "border-primary-orange/40" : "border-white/[0.07]"
+      }`}
+    >
+      <button
+        type="button"
         onClick={toggleAccordion}
+        aria-expanded={isOpen}
+        className="flex w-full items-center gap-3 px-4 py-3 text-left transition hover:bg-white/[0.02]"
       >
-        <span className="flex mx-auto text-center font-bold text-sm text-slate-300 hover:text-white transition-colors">
-          Infinity Mode (optional)
+        <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg border border-primary-orange/30 bg-primary-orange/10 text-primary-orange">
+          <LuInfinity />
         </span>
-        <div className="has-tooltip my-2 ml-1 hidden md:block">
-          <span className="tooltip rounded-xl shadow-lg p-2 bg-asset-detail-bg text-[11px] text-red-400 -mt-16 max-w-xs border border-red-500/20">
-            Wen Tools does not store any information on the website. As
-            precautions, you can use burner wallets, rekey to a burner wallet
-            and rekey back, or rekey after using.
-          </span>
-          <AiOutlineInfoCircle className="text-slate-400 hover:text-white" />
-        </div>
-      </div>
+        <span className="flex-1">
+          <span className="block text-sm font-semibold text-white">Infinity Mode</span>
+          <span className="block font-mono text-[11px] text-slate-500">optional · sign everything in one go</span>
+        </span>
+        <LuChevronDown
+          className={`shrink-0 text-slate-500 transition-transform duration-300 ${isOpen ? "rotate-180" : ""}`}
+        />
+      </button>
+
       {isOpen && (
-        <div className="flex flex-col items-center rounded-xl bg-black/45 border border-white/5 py-3.5 px-4 mt-3 text-sm text-white space-y-2">
-          <input
-            type="text"
-            placeholder="25-words mnemonics"
-            className="w-full bg-[#0a0a0c] text-white border border-white/10 rounded-xl p-3 text-sm focus:border-orange-500/50 outline-none transition-all placeholder:text-slate-600 font-mono text-center"
-            value={mnemonic}
-            onChange={(e) => {
-              setMnemonic(e.target.value.replace(/,/g, " "));
-            }}
-          />
-          <span className="text-xs text-slate-400 leading-relaxed text-center">{description}</span>
+        <div className="space-y-3 border-t border-white/[0.06] px-4 pb-4 pt-3">
+          <div className="relative">
+            {/* Masked by default: this is a seed phrase */}
+            <input
+              type={reveal ? "text" : "password"}
+              autoComplete="off"
+              autoCorrect="off"
+              autoCapitalize="off"
+              spellCheck={false}
+              aria-label="25-word mnemonic"
+              placeholder="25-word mnemonic"
+              className="w-full rounded-xl border border-white/10 bg-primary-black/60 py-3 pl-3 pr-11 font-mono text-sm text-white placeholder:text-slate-600"
+              value={mnemonic}
+              onChange={(e) => {
+                setMnemonic(e.target.value.replace(/,/g, " "));
+              }}
+            />
+            <button
+              type="button"
+              onClick={() => setReveal(!reveal)}
+              aria-label={reveal ? "Hide mnemonic" : "Show mnemonic"}
+              className="absolute right-2 top-1/2 grid h-8 w-8 -translate-y-1/2 place-items-center rounded-lg text-slate-500 transition hover:bg-white/5 hover:text-white"
+            >
+              {reveal ? <LuEyeOff /> : <LuEye />}
+            </button>
+          </div>
+          <p className="text-xs leading-relaxed text-slate-400">{description}</p>
+          <p className="rounded-xl border border-amber-500/25 bg-amber-500/[0.06] px-3 py-2 text-xs leading-relaxed text-amber-100/90">
+            <span className="mb-0.5 block font-mono text-[10px] uppercase tracking-[0.14em] text-amber-400">
+              // opsec
+            </span>
+            Wen Tools does not store any information on the website. As precautions, you can use burner
+            wallets, rekey to a burner wallet and rekey back, or rekey after using.
+          </p>
         </div>
       )}
     </div>

@@ -1,3 +1,5 @@
+import { ToolHero } from "../components/cypher/ToolKit";
+import { Reticle } from "../components/cypher/Reticle";
 import { useEffect, useState } from "react";
 import { ASSET_PREVIEW, IPFS_ENDPOINT, TOOLS } from "../constants";
 import { toast } from "react-toastify";
@@ -714,34 +716,33 @@ export const ARC62ManagerTool = () => {
         title="ARC-62 Manager Tool" 
         description="Monitor and manage Algorand asset circulating supply using the ARC-62 standard. Implement professional tokenomics reporting and transparency for your project."
       />
-      <h1 className="text-2xl font-bold mt-6">
-        {TOOLS.find((tool) => tool.path === window.location.pathname)?.label}
-      </h1>
+      <ToolHero
+        tag="token manager"
+        title={TOOLS.find((tool) => tool.path === window.location.pathname)?.label || "Token Manager"}
+        description="Set and manage your token's circulating supply using the ARC-62 standard."
+        meta={["ARC-62", "circulating supply", "on-chain reporting"]}
+      />
       <ConnectButton inmain={true} />
-      <p className="text-md text-gray-200">
-        Set and manage your token's circulation supply using the ARC62 Standard
-      </p>
 
       {!assetId && (
         <form
           onSubmit={handleSubmit}
-          className="flex flex-col justify-center items-center w-[20rem] mt-4"
+          className="wt-frame group relative mt-6 flex w-full max-w-md flex-col gap-3 rounded-3xl border border-white/[0.07] bg-banner-grey/50 p-6 text-left backdrop-blur [--wt-r:24px] [--wt-in:12px]"
         >
+          <Reticle />
+          <label htmlFor="arc62-asset-id" className="font-mono text-[11px] uppercase tracking-[0.14em] text-slate-500">
+            Asset ID
+          </label>
           <input
+            id="arc62-asset-id"
             type="number"
             value={inputAssetId}
             onChange={(e) => setInputAssetId(e.target.value.trim())}
-            placeholder="Enter asset id"
-            className="w-48 bg-banner-grey text-sm font-medium text-center leading-none text-white placeholder:text-slate-500 px-3 py-2 border rounded-xl border-white/10"
+            placeholder="e.g. 31566704"
+            className="w-full rounded-xl border border-white/10 bg-primary-black/60 px-4 py-3 font-mono text-sm text-white placeholder:text-slate-600"
           />
-          <button
-            type="submit"
-            className={`rounded bg-secondary-orange hover:bg-secondary-orange/80 transition text-black/90 font-semibold px-4 py-1 mt-4 ${
-              assetDetailsLoading ? "opacity-50 cursor-not-allowed" : ""
-            }`}
-            disabled={assetDetailsLoading}
-          >
-            Next
+          <button type="submit" className="wt-btn wt-btn-primary h-11 w-full" disabled={assetDetailsLoading}>
+            {assetDetailsLoading ? "Looking up asset…" : "Look up asset"}
           </button>
         </form>
       )}
