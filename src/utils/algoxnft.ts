@@ -465,6 +465,11 @@ export async function signClaimJobs(
   sign: { signer: BatchSigner } | { sk: Uint8Array }
 ): Promise<SignedClaimJob[]> {
   const steps = jobs.flatMap((j) => j.steps);
+  // Wallets (Pera) merge ungrouped transactions in a multi-group request into
+  // one group, so each step that has no group yet gets its own, even if single.
+  for (const s of steps) {
+    if (s.txns.every((t) => !t.group || t.group.every((b) => b === 0))) algosdk.assignGroupID(s.txns);
+  }
   let userBlobs: (Uint8Array | null)[];
   if ("sk" in sign) {
     userBlobs = steps.flatMap((s) => s.txns.map((t, i) => (s.userSigns.includes(i) ? t.signTxn(sign.sk) : null)));
