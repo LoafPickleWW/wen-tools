@@ -1,22 +1,5 @@
 import * as React from "react";
-import { alpha } from "@mui/material/styles";
-import Box from "@mui/material/Box";
-import Table from "@mui/material/Table";
-import TableBody from "@mui/material/TableBody";
-import TableCell from "@mui/material/TableCell";
-import TableContainer from "@mui/material/TableContainer";
-import TableHead from "@mui/material/TableHead";
-import TablePagination from "@mui/material/TablePagination";
-import TableRow from "@mui/material/TableRow";
-import TableSortLabel from "@mui/material/TableSortLabel";
-import Toolbar from "@mui/material/Toolbar";
-import Typography from "@mui/material/Typography";
-import Paper from "@mui/material/Paper";
-import Checkbox from "@mui/material/Checkbox";
-import Tooltip from "@mui/material/Tooltip";
-import { visuallyHidden } from "@mui/utils";
 import { HeadCell } from "../types";
-import { Button } from "@mui/material";
 
 interface BaseData {
   id: number;
@@ -24,162 +7,6 @@ interface BaseData {
 }
 
 type Order = "asc" | "desc";
-
-function descendingComparator<T>(a: T, b: T, orderBy: keyof T) {
-  if (b[orderBy] < a[orderBy]) {
-    return -1;
-  }
-  if (b[orderBy] > a[orderBy]) {
-    return 1;
-  }
-  return 0;
-}
-
-function getComparator<T extends BaseData>(
-  order: Order,
-  orderBy: keyof T
-): (a: T, b: T) => number {
-  return order === "desc"
-    ? (a, b) => descendingComparator(a, b, orderBy)
-    : (a, b) => -descendingComparator(a, b, orderBy);
-}
-
-interface EnhancedTableHeadProps<T extends BaseData> {
-  numSelected: number;
-  onRequestSort: (event: React.MouseEvent<unknown>, property: keyof T) => void;
-  onSelectAllClick: (event: React.ChangeEvent<HTMLInputElement>) => void;
-  order: Order;
-  orderBy: keyof T;
-  rowCount: number;
-  headCells: HeadCell[];
-}
-
-function EnhancedTableHead<T extends BaseData>(
-  props: EnhancedTableHeadProps<T>
-) {
-  const {
-    onSelectAllClick,
-    order,
-    orderBy,
-    numSelected,
-    rowCount,
-    onRequestSort,
-    headCells,
-  } = props;
-
-  const createSortHandler =
-    (property: keyof T) => (event: React.MouseEvent<unknown>) => {
-      onRequestSort(event, property);
-    };
-
-  return (
-    <TableHead>
-      <TableRow>
-        <TableCell padding="checkbox">
-          <Checkbox
-            color="warning"
-            indeterminate={numSelected > 0 && numSelected < rowCount}
-            checked={rowCount > 0 && numSelected === rowCount}
-            onChange={onSelectAllClick}
-            inputProps={{
-              "aria-label": "select all",
-            }}
-          />
-        </TableCell>
-        {headCells.map((headCell) => (
-          <TableCell
-            key={String(headCell.id)}
-            align="center"
-            padding={headCell.disablePadding ? "none" : "normal"}
-            sortDirection={orderBy === headCell.id ? order : false}
-          >
-            <TableSortLabel
-              active={orderBy === headCell.id}
-              direction={orderBy === headCell.id ? order : "asc"}
-              onClick={createSortHandler(headCell.id)}
-            >
-              {headCell.label}
-              {orderBy === headCell.id ? (
-                <Box component="span" sx={visuallyHidden}>
-                  {order === "desc" ? "sorted descending" : "sorted ascending"}
-                </Box>
-              ) : null}
-            </TableSortLabel>
-          </TableCell>
-        ))}
-      </TableRow>
-    </TableHead>
-  );
-}
-
-interface EnhancedTableToolbarProps<T extends BaseData> {
-  numSelected: number;
-  title: string;
-  selected: T[];
-  actions: {
-    tooltipTitle: string;
-    icon: JSX.Element;
-    onClick: (
-      selected: T[],
-      setDisabled: React.Dispatch<React.SetStateAction<boolean>>
-    ) => void;
-  }[];
-}
-
-function EnhancedTableToolbar<T extends BaseData>(
-  props: EnhancedTableToolbarProps<T>
-) {
-  const { numSelected, title, actions, selected } = props;
-  const [disabled, setDisabled] = React.useState(false);
-  return (
-    <Toolbar
-      sx={[
-        {
-          pl: { sm: 2 },
-          pr: { xs: 1, sm: 1 },
-        },
-        numSelected > 0 && {
-          bgcolor: (theme) =>
-            alpha("#C254414B", theme.palette.action.hoverOpacity),
-        },
-      ]}
-    >
-      {numSelected > 0 ? (
-        <Typography
-          sx={{ flex: "1 1 100%" }}
-          color="inherit"
-          variant="subtitle1"
-          component="div"
-        >
-          {numSelected} selected
-        </Typography>
-      ) : (
-        <Typography
-          sx={{ flex: "1 1 100%" }}
-          variant="h6"
-          id="tableTitle"
-          component="div"
-        >
-          {title}
-        </Typography>
-      )}
-      {numSelected > 0 &&
-        actions.map((action) => (
-          <Tooltip title={action.tooltipTitle} key={action.tooltipTitle}>
-            <Button
-              className={`${
-                disabled ? "!cursor-not-allowed !text-gray-400" : "!text-primary-orange"
-              }`}
-              disabled={disabled}
-              onClick={(_) => action.onClick(selected, setDisabled)}
-            >
-              {action.icon}
-            </Button>
-          </Tooltip>
-        ))}
-    </Toolbar>
-  );
-}
 
 interface EnhancedTableProps<T extends BaseData> {
   title: string;
@@ -193,10 +20,53 @@ interface EnhancedTableProps<T extends BaseData> {
       setDisabled: React.Dispatch<React.SetStateAction<boolean>>
     ) => void;
   }[];
+  /** Column rendered as a chip (e.g. where the asset is held) */
+  chipColumn?: string;
+  /** Column shown as the row's primary label on small screens */
+  primaryColumn?: string;
   initialOrderBy?: keyof T;
   initialOrder?: Order;
   rowsPerPageOptions?: number[];
   defaultRowsPerPage?: number;
+}
+
+const compare = (a: any, b: any) => (a < b ? -1 : a > b ? 1 : 0);
+
+function Check({ state }: { state: "on" | "off" | "some" }) {
+  return (
+    <span
+      aria-hidden
+      className={`grid h-[18px] w-[18px] shrink-0 place-items-center rounded-[5px] border transition-colors ${
+        state === "off"
+          ? "border-white/25 bg-transparent group-hover:border-white/45"
+          : "border-primary-orange bg-primary-orange text-primary-black"
+      }`}
+    >
+      {state === "on" && (
+        <svg viewBox="0 0 12 12" className="h-3 w-3" fill="none" stroke="currentColor" strokeWidth="2.2">
+          <path d="M2.5 6.2l2.3 2.3 4.7-5" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      )}
+      {state === "some" && <span className="h-0.5 w-2 rounded bg-current" />}
+    </span>
+  );
+}
+
+function Chip({ value, short }: { value: string; short?: boolean }) {
+  const algox = /algox/i.test(value);
+  // Compact on phones: "AlgoxNFT listing · opt-in" -> "AlgoxNFT +opt-in"
+  const label = short ? value.replace(/ listing/i, "").replace(/s*·s*/, " +") : value;
+  return (
+    <span
+      className={`inline-flex max-w-full items-center truncate rounded-full border px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.08em] ${
+        algox
+          ? "border-primary-orange/35 bg-primary-orange/10 text-orange-300"
+          : "border-white/10 bg-white/[0.04] text-slate-300"
+      }`}
+    >
+      {label}
+    </span>
+  );
 }
 
 export function EnhancedTable<T extends BaseData>({
@@ -204,160 +74,199 @@ export function EnhancedTable<T extends BaseData>({
   headCells,
   data,
   actions,
+  chipColumn = "type",
+  primaryColumn = "name",
   initialOrderBy = "id" as keyof T,
   initialOrder = "asc",
-  rowsPerPageOptions = [5, 10, 25],
-  defaultRowsPerPage = 5,
+  rowsPerPageOptions = [10, 25, 50],
+  defaultRowsPerPage = 10,
 }: EnhancedTableProps<T>) {
   const [order, setOrder] = React.useState<Order>(initialOrder);
   const [orderBy, setOrderBy] = React.useState<keyof T>(initialOrderBy);
-  const [selected, setSelected] = React.useState<T[]>([]);
+  // Selection by row id, so it survives data refreshes
+  const [selectedIds, setSelectedIds] = React.useState<Set<number>>(new Set());
   const [page, setPage] = React.useState(0);
   const [rowsPerPage, setRowsPerPage] = React.useState(defaultRowsPerPage);
+  const [disabled, setDisabled] = React.useState(false);
 
-  const handleRequestSort = (
-    _: React.MouseEvent<unknown>,
-    property: keyof T
-  ) => {
-    const isAsc = orderBy === property && order === "asc";
-    setOrder(isAsc ? "desc" : "asc");
-    setOrderBy(property);
-  };
-
-  const handleSelectAllClick = (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (event.target.checked) {
-      setSelected(data);
-      return;
-    }
-    setSelected([]);
-  };
-
-  const handleClick = (_: React.MouseEvent<unknown>, row: T) => {
-    let newSelected: T[] = [];
-
-    const isExists = selected.some((item) => item.id === row.id);
-    if (isExists) {
-      newSelected = selected.filter((item) => item.id !== row.id);
-    } else {
-      newSelected = [...selected, row];
-    }
-    setSelected(newSelected);
-  };
-
-  const handleChangePage = (_: unknown, newPage: number) => {
-    setPage(newPage);
-  };
-
-  const handleChangeRowsPerPage = (
-    event: React.ChangeEvent<HTMLInputElement>
-  ) => {
-    setRowsPerPage(parseInt(event.target.value, 10));
+  React.useEffect(() => {
+    const ids = new Set(data.map((d) => d.id));
+    setSelectedIds((prev) => new Set([...prev].filter((id) => ids.has(id))));
     setPage(0);
+  }, [data]);
+
+  const sorted = React.useMemo(() => {
+    const dir = order === "asc" ? 1 : -1;
+    return [...data].sort((a, b) => dir * compare(a[orderBy], b[orderBy]));
+  }, [data, order, orderBy]);
+
+  const pageCount = Math.max(1, Math.ceil(sorted.length / rowsPerPage));
+  const visible = sorted.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
+  const selected = data.filter((d) => selectedIds.has(d.id));
+  const allState = selected.length === 0 ? "off" : selected.length === data.length ? "on" : "some";
+
+  const toggle = (id: number) =>
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  const toggleAll = () => setSelectedIds(allState === "on" ? new Set() : new Set(data.map((d) => d.id)));
+  const sortBy = (id: keyof T) => {
+    setOrder(orderBy === id && order === "asc" ? "desc" : "asc");
+    setOrderBy(id);
   };
 
-  const emptyRows =
-    page > 0 ? Math.max(0, (1 + page) * rowsPerPage - data.length) : 0;
-
-  const visibleRows = React.useMemo(
-    () =>
-      [...data]
-        .sort(getComparator(order, orderBy))
-        .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage),
-    [data, order, orderBy, page, rowsPerPage]
-  );
+  const secondary = headCells.filter((h) => h.id !== primaryColumn && h.id !== chipColumn);
+  const grid = "grid-cols-[28px_minmax(0,1.6fr)_minmax(0,1fr)_64px_minmax(0,1.3fr)]";
+  const cellOf = (row: T, id: string, short = false) =>
+    id === chipColumn ? <Chip value={String(row[id] ?? "")} short={short} /> : row[id];
 
   return (
-    <Box className="max-w-[400px] md:max-w-[1000px]">
-      <Paper sx={{ width: "100%", mb: 2 }}>
-        <EnhancedTableToolbar
-          title={title}
-          selected={selected}
-          numSelected={selected.length}
-          actions={actions}
-        />
-        <TableContainer>
-          <Table
-            sx={{ minWidth: 750 }}
-            aria-labelledby="tableTitle"
-            size="small"
+    <div className="w-full overflow-hidden rounded-2xl border border-white/[0.08] bg-banner-grey/70 text-left shadow-[0_20px_60px_-30px_rgba(0,0,0,0.8)] backdrop-blur">
+      {/* Action bar */}
+      <div className="flex min-h-[56px] items-center gap-3 border-b border-white/[0.06] px-4 py-2.5">
+        <button
+          type="button"
+          onClick={toggleAll}
+          className="group flex items-center gap-2.5 rounded-md py-1 pr-1 focus-visible:outline focus-visible:outline-1 focus-visible:outline-primary-orange"
+          aria-label={allState === "on" ? "Deselect all" : "Select all"}
+        >
+          <Check state={allState} />
+        </button>
+        <div className="min-w-0 flex-1">
+          {selected.length ? (
+            <p className="font-mono text-xs text-white">
+              <span className="text-primary-orange">{selected.length}</span> of {data.length} selected
+            </p>
+          ) : (
+            <p className="truncate font-mono text-[11px] uppercase tracking-[0.14em] text-slate-400">
+              {title} <span className="text-slate-600">· {data.length}</span>
+            </p>
+          )}
+        </div>
+        {actions.map((action) => (
+          <button
+            key={action.tooltipTitle}
+            type="button"
+            title={action.tooltipTitle}
+            disabled={disabled || selected.length === 0}
+            onClick={() => action.onClick(selected, setDisabled)}
+            className="wt-btn wt-btn-primary h-9 px-4 text-sm disabled:cursor-not-allowed disabled:opacity-40"
           >
-            <EnhancedTableHead
-              numSelected={selected.length}
-              order={order}
-              orderBy={orderBy}
-              onSelectAllClick={handleSelectAllClick}
-              onRequestSort={handleRequestSort}
-              rowCount={data.length}
-              headCells={headCells}
-            />
-            <TableBody>
-              {visibleRows.map((row, index) => {
-                const isItemSelected = selected.includes(row);
-                const labelId = `enhanced-table-checkbox-${index}`;
+            {disabled ? "Working…" : action.icon}
+            {!disabled && selected.length > 0 && <span className="ml-1 font-mono text-xs opacity-80">({selected.length})</span>}
+          </button>
+        ))}
+      </div>
 
-                return (
-                  <TableRow
-                    hover
-                    onClick={(event) => handleClick(event, row)}
-                    role="checkbox"
-                    aria-checked={isItemSelected}
-                    tabIndex={-1}
-                    key={row.id}
-                    selected={isItemSelected}
-                    sx={{
-                      cursor: "pointer",
-                      "&.Mui-selected": {
-                        bgcolor: (theme) =>
-                          alpha("#C254414B", theme.palette.action.hoverOpacity),
-                        "&:hover": {
-                          bgcolor: (theme) =>
-                            alpha(
-                              "#C254414B",
-                              theme.palette.action.focusOpacity
-                            ),
-                        },
-                      },
-                    }}
-                  >
-                    <TableCell padding="checkbox">
-                      <Checkbox
-                        color="warning"
-                        checked={isItemSelected}
-                        inputProps={{
-                          "aria-labelledby": labelId,
-                        }}
-                      />
-                    </TableCell>
-                    {headCells.map((headCell) => (
-                      <TableCell key={String(headCell.id)} align="center">
-                        {row[headCell.id]}
-                      </TableCell>
-                    ))}
-                  </TableRow>
-                );
-              })}
-              {emptyRows > 0 && (
-                <TableRow
-                  style={{
-                    height: 33 * emptyRows,
-                  }}
-                >
-                  <TableCell colSpan={headCells.length + 1} />
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </TableContainer>
-        <TablePagination
-          rowsPerPageOptions={rowsPerPageOptions}
-          component="div"
-          count={data.length}
-          rowsPerPage={rowsPerPage}
-          page={page}
-          onPageChange={handleChangePage}
-          onRowsPerPageChange={handleChangeRowsPerPage}
-        />
-      </Paper>
-    </Box>
+      {/* Column headers (desktop) */}
+      <div
+        className={`hidden ${grid} items-center gap-3 border-b border-white/[0.06] px-4 py-2 font-mono text-[10px] uppercase tracking-[0.14em] text-slate-500 sm:grid`}
+      >
+        <span />
+        {[headCells.find((h) => h.id === primaryColumn), ...secondary, headCells.find((h) => h.id === chipColumn)]
+          .filter((h): h is HeadCell => !!h)
+          .map((h) => (
+            <button
+              key={h.id}
+              type="button"
+              onClick={() => sortBy(h.id as keyof T)}
+              className={`flex items-center gap-1 text-left hover:text-slate-300 ${orderBy === h.id ? "text-slate-200" : ""}`}
+            >
+              {h.label}
+              <span className={orderBy === h.id ? "opacity-100" : "opacity-0"}>{order === "asc" ? "↑" : "↓"}</span>
+            </button>
+          ))}
+      </div>
+
+      {/* Rows */}
+      <ul role="listbox" aria-multiselectable="true" aria-label={title}>
+        {visible.map((row) => {
+          const on = selectedIds.has(row.id);
+          return (
+            <li key={row.id} role="option" aria-selected={on}>
+              <button
+                type="button"
+                onClick={() => toggle(row.id)}
+                className={`group w-full border-b border-white/[0.04] px-4 py-3 text-left transition-colors last:border-0 focus-visible:bg-white/[0.04] focus-visible:outline-none ${
+                  on ? "bg-primary-orange/[0.07]" : "hover:bg-white/[0.03]"
+                }`}
+              >
+                {/* Mobile: two-line card row */}
+                <div className="flex items-center gap-3 sm:hidden">
+                  <Check state={on ? "on" : "off"} />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium text-white">{row[primaryColumn] || "Unnamed asset"}</p>
+                    <p className="mt-0.5 truncate font-mono text-[11px] text-slate-500">
+                      {secondary.map((h) => (h.numeric && h.id === "amount" ? `×${row[h.id]}` : row[h.id])).join(" · ")}
+                    </p>
+                  </div>
+                  <div className="max-w-[42%] shrink-0">{cellOf(row, chipColumn, true)}</div>
+                </div>
+                {/* Desktop: grid row */}
+                <div className={`hidden ${grid} items-center gap-3 sm:grid`}>
+                  <Check state={on ? "on" : "off"} />
+                  <span className="truncate text-sm font-medium text-white">{row[primaryColumn] || "Unnamed asset"}</span>
+                  {secondary.map((h) => (
+                    <span key={h.id} className="truncate font-mono text-xs tabular-nums text-slate-400">
+                      {row[h.id]}
+                    </span>
+                  ))}
+                  <span className="min-w-0">{cellOf(row, chipColumn)}</span>
+                </div>
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+
+      {/* Pagination */}
+      {sorted.length > rowsPerPageOptions[0] && (
+        <div className="flex items-center justify-between gap-3 border-t border-white/[0.06] px-4 py-2.5 font-mono text-[11px] text-slate-500">
+          <label className="flex items-center gap-2">
+            rows
+            <select
+              value={rowsPerPage}
+              onChange={(e) => {
+                setRowsPerPage(parseInt(e.target.value, 10));
+                setPage(0);
+              }}
+              className="rounded-md border border-white/10 bg-primary-black px-1.5 py-1 text-slate-300 focus:border-primary-orange focus:outline-none"
+            >
+              {rowsPerPageOptions.map((n) => (
+                <option key={n} value={n}>
+                  {n}
+                </option>
+              ))}
+            </select>
+          </label>
+          <div className="flex items-center gap-1">
+            <span className="mr-2 tabular-nums">
+              {page * rowsPerPage + 1}–{Math.min(sorted.length, (page + 1) * rowsPerPage)} of {sorted.length}
+            </span>
+            <button
+              type="button"
+              aria-label="Previous page"
+              disabled={page === 0}
+              onClick={() => setPage((p) => p - 1)}
+              className="wt-icon-btn h-7 w-7 disabled:opacity-30"
+            >
+              ‹
+            </button>
+            <button
+              type="button"
+              aria-label="Next page"
+              disabled={page >= pageCount - 1}
+              onClick={() => setPage((p) => p + 1)}
+              className="wt-icon-btn h-7 w-7 disabled:opacity-30"
+            >
+              ›
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }

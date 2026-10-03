@@ -125,13 +125,22 @@ export const BlukClaimTool = () => {
   const [algoxListings, setAlgoxListings] = useState<Map<number, AlgoxListing>>(new Map());
   // Newer AlgoxNFT listings (Asalytic marketplace listing apps), by table row id
   const [appListings, setAppListings] = useState<Map<number, AppListing>>(new Map());
+  // A source that could not be scanned (network/rate limit), so "nothing found" isn't claimed
+  const [scanError, setScanError] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
+    // Ignore results from a scan that was superseded (account switch, reconnect)
+    let stale = false;
     const loadAssets = async () => {
       if (!activeAddress) {
         setIsLoadingAssets(false);
         return;
       }
+      setIsLoadingAssets(true);
+      setScanError(false);
+      setAssets([]);
+      let failed = false;
 
       try {
         const indexerUrl = getIndexerURL(activeNetwork);
@@ -141,16 +150,23 @@ export const BlukClaimTool = () => {
           // Isolated: a failure here must not hide inbox/vault assets
           findAlgoxListings(activeAddress, algodClient, indexerUrl).catch((e) => {
             console.error("AlgoxNFT listing scan failed:", e);
+            failed = true;
             return [] as AlgoxListing[];
           }),
           findAppListings(activeAddress, algodClient, indexerUrl).catch((e) => {
             console.error("AlgoxNFT marketplace listing scan failed:", e);
+            failed = true;
             return [] as AppListing[];
           }),
         ]);
+        if (stale) return;
 
         setNFD(userNfd);
-        const vaultAssets = await fetchNFDVaultAssets(userNfd, activeNetwork);
+        const vaultAssets = await fetchNFDVaultAssets(userNfd, activeNetwork).catch((e) => {
+          console.error("NFD vault scan failed:", e);
+          failed = true;
+          return [] as Awaited<ReturnType<typeof fetchNFDVaultAssets>>;
+        });
 
         const algoxRows = [...listings, ...marketListings].map((l) => ({
           assetId: l.assetId,
@@ -161,6 +177,7 @@ export const BlukClaimTool = () => {
         const allAssets = await Promise.all(
           combined.map((asset, index) => getAssetDetails({ ...asset, id: index }, indexerUrl))
         );
+        if (stale) return;
 
         const byRow = new Map<number, AlgoxListing>();
         const firstAlgoxRow = inboxAssets.length + vaultAssets.length;
@@ -170,16 +187,20 @@ export const BlukClaimTool = () => {
         marketListings.forEach((l, i) => byRowApp.set(firstAlgoxRow + listings.length + i, l));
         setAppListings(byRowApp);
         setAssets(allAssets);
+        setScanError(failed);
       } catch (error) {
         console.error("Error loading assets:", error);
-        toast.error("Failed to load assets");
+        if (!stale) setScanError(true);
       } finally {
-        setIsLoadingAssets(false);
+        if (!stale) setIsLoadingAssets(false);
       }
     };
 
     loadAssets();
-  }, [activeAddress, activeNetwork, algodClient]);
+    return () => {
+      stale = true;
+    };
+  }, [activeAddress, activeNetwork, algodClient, reloadKey]);
 
   const handleClaimAssets = async (
     selected: Asset[],
@@ -400,7 +421,7 @@ export const BlukClaimTool = () => {
             actions={tableConfig.actions}
             data={assets}
             headCells={tableConfig.headCells}
-            title="Assets in Inbox & NFD Vault"
+            title="Claimable assets"
           />
         )}
 
@@ -419,7 +440,18 @@ export const BlukClaimTool = () => {
           </div>
         )}
 
-      {activeAddress && !isLoadingAssets && !assets.length && (
+      {activeAddress && !isLoadingAssets && scanError && (
+        <div className="flex w-full items-center justify-between gap-3 rounded-xl border border-amber-500/25 bg-amber-500/[0.06] px-4 py-3 text-left">
+          <p className="font-mono text-xs text-amber-200">
+            // some sources didn&apos;t respond (public node busy), so this list may be incomplete
+          </p>
+          <button type="button" onClick={() => setReloadKey((k) => k + 1)} className="wt-btn wt-btn-ghost h-8 shrink-0 px-3 text-xs">
+            Rescan
+          </button>
+        </div>
+      )}
+
+      {activeAddress && !isLoadingAssets && !assets.length && !scanError && (
         <p className="font-mono text-sm text-slate-400">// nothing waiting in your inbox, vaults or AlgoxNFT listings</p>
       )}
 

@@ -139,12 +139,42 @@ async function mapLimit<T, R>(items: T[], limit: number, fn: (t: T) => Promise<R
   return out;
 }
 
+/**
+ * Public nodes rate-limit bursts. A throttled lookup must be retried, never
+ * read as "not found", or listings silently vanish from one load to the next.
+ */
+const statusOf = (e: any): number | undefined => e?.status ?? e?.response?.status;
+const isNotFound = (e: any) => statusOf(e) === 404;
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+async function withRetry<T>(fn: () => Promise<T>, attempts = 5): Promise<T> {
+  for (let i = 0; ; i++) {
+    try {
+      return await fn();
+    } catch (e) {
+      if (isNotFound(e) || i >= attempts - 1) throw e;
+      await sleep(400 * 2 ** i + Math.random() * 250);
+    }
+  }
+}
+
+/** Indexer GET with retries; throws (instead of returning an empty page) if it keeps failing. */
+async function getJson(url: string): Promise<any> {
+  return withRetry(async () => {
+    const r = await fetch(url);
+    if (!r.ok) throw Object.assign(new Error(`indexer ${r.status}`), { status: r.status === 404 ? 599 : r.status });
+    return r.json();
+  });
+}
+
+/** Holding amount, or null only when the account is genuinely not opted in. */
 async function holdsAsset(algod: algosdk.Algodv2, address: string, assetId: number): Promise<number | null> {
   try {
-    const info: any = await algod.accountAssetInformation(address, assetId).do();
+    const info: any = await withRetry(() => algod.accountAssetInformation(address, assetId).do());
     return Number(info["asset-holding"]?.amount ?? 0);
-  } catch {
-    return null; // not opted in (404) or lookup failed
+  } catch (e) {
+    if (isNotFound(e)) return null;
+    throw e;
   }
 }
 
@@ -171,7 +201,7 @@ export async function findAlgoxListings(
         `&currency-greater-than=${amount - 1}&currency-less-than=${amount + 1}` +
         `&min-round=${ALGOXNFT_MIN_ROUND}&limit=1000` +
         (next ? `&next=${next}` : "");
-      const res = await fetch(url).then((r) => r.json());
+      const res = await getJson(url);
       for (const t of res.transactions ?? []) {
         const receiver = t["payment-transaction"]?.receiver;
         if (t.group && receiver && receiver !== seller) escrows.add(receiver);
@@ -183,19 +213,18 @@ export async function findAlgoxListings(
   await Promise.all(ESCROW_FUNDING_AMOUNTS.map(scan));
   const candidates = [...escrows].slice(0, MAX_CANDIDATES);
 
-  const perEscrow = await mapLimit(candidates, 6, async (escrow) => {
+  const perEscrow = await mapLimit(candidates, 4, async (escrow) => {
     let held: number[] = [];
     try {
-      const info: any = await algod.accountInformation(escrow).do();
+      const info: any = await withRetry(() => algod.accountInformation(escrow).do());
       held = (info.assets ?? []).filter((a: any) => Number(a.amount) >= 1).map((a: any) => Number(a["asset-id"]));
-    } catch {
-      return [];
+    } catch (e) {
+      if (isNotFound(e)) return [];
+      throw e;
     }
     if (!held.length) return [];
 
-    const res = await fetch(`${indexerUrl}/v2/accounts/${escrow}/transactions?sig-type=lsig&limit=1`).then((r) =>
-      r.json()
-    );
+    const res = await getJson(`${indexerUrl}/v2/accounts/${escrow}/transactions?sig-type=lsig&limit=1`);
     const logic: string | undefined = res.transactions?.[0]?.signature?.logicsig?.logic;
     if (!logic) return [];
     const program = new Uint8Array(Buffer.from(logic, "base64"));
@@ -298,6 +327,8 @@ export async function simulateAlgoxClose(algod: algosdk.Algodv2, plan: AlgoxClos
             }),
           ],
           allowEmptySignatures: true,
+          // Rekeyed accounts sign with their auth address, not their own key
+          fixSigners: true,
         })
       )
       .do();
@@ -441,7 +472,7 @@ export async function findAppListings(
     const url =
       `${indexerUrl}/v2/transactions?address=${seller}&address-role=sender&application-id=${ASALYTIC_ROUTER_APP}` +
       `&limit=1000${next ? `&next=${next}` : ""}`;
-    const res = await fetch(url).then((r) => r.json());
+    const res = await getJson(url);
     for (const t of res.transactions ?? []) {
       const arg0 = t["application-transaction"]?.["application-args"]?.[0];
       if (arg0 && Buffer.from(arg0, "base64").toString("hex") === SELECTOR_CREATE_LISTING) collect(t);
@@ -451,12 +482,13 @@ export async function findAppListings(
   }
 
   // Still live, names this seller, and still holds its NFT
-  const checked = await mapLimit([...created], 6, async (appId) => {
+  const checked = await mapLimit([...created], 4, async (appId) => {
     let app: any;
     try {
-      app = await algod.getApplicationByID(appId).do();
-    } catch {
-      return null; // deleted: sold or already cancelled
+      app = await withRetry(() => algod.getApplicationByID(appId).do());
+    } catch (e) {
+      if (isNotFound(e)) return null; // deleted: sold or already cancelled
+      throw e;
     }
     const gs = decodeGlobalState(app.params?.["global-state"]);
     const sellerBytes = gs.seller?.bytes;
@@ -505,6 +537,8 @@ export async function simulateAppCancel(algod: algosdk.Algodv2, group: Transacti
             }),
           ],
           allowEmptySignatures: true,
+          // Rekeyed accounts sign with their auth address, not their own key
+          fixSigners: true,
         })
       )
       .do();
