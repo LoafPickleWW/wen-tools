@@ -373,8 +373,8 @@ export default function ConnectButton({
               </div>
             </div>
 
-            {/* 3. Quantum Mastery & Themes (rendered when PQ account active or scanning) */}
-            {(isScanning || isThemeActive || isPQAccount) && (
+            {/* 3. Quantum Mastery & Themes: only once PQSIG transactions are confirmed */}
+            {isPQAccount && (
               <div className="pt-2.5 border-t border-white/[0.07] space-y-2.5">
                 <div className="flex items-center justify-between text-xs">
                   <div className="flex items-center gap-1.5">

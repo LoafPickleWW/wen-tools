@@ -14,15 +14,16 @@ import {
 
 export type { QuantumTheme, ThemeTierInfo, PQThemeContextType };
 
+const PQ_ACCOUNT_KEY = "wentools_pq_account";
+
 const PQThemeContext = createContext<PQThemeContextType | undefined>(undefined);
 
 export const PQThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { activeAddress } = useWallet();
-  // Start from the last known result so the theme is applied immediately on
-  // reload; the scan below confirms or clears it.
-  const [isPQAccount, setIsPQAccount] = useState<boolean>(
-    () => localStorage.getItem("wentools_pq_active") === "true"
-  );
+  // Hidden until proven: PQ features only appear once a scan confirms PQSIG
+  // transactions. The last confirmed PQ address is remembered so that same
+  // account gets its theme back instantly on reload (never another account).
+  const [isPQAccount, setIsPQAccount] = useState<boolean>(false);
   const [pqTxCount, setPqTxCount] = useState<number>(0);
   const [isScanning, setIsScanning] = useState<boolean>(false);
   const [scanReason, setScanReason] = useState<string | undefined>(undefined);
@@ -59,6 +60,8 @@ export const PQThemeProvider: React.FC<{ children: React.ReactNode }> = ({ child
       const result = await checkIsPQAccount(address, "mainnet", bypassCache);
       setIsPQAccount(result.isPQ);
       setPqTxCount(result.pqTxCount);
+      if (result.isPQ) localStorage.setItem(PQ_ACCOUNT_KEY, address);
+      else if (localStorage.getItem(PQ_ACCOUNT_KEY) === address) localStorage.removeItem(PQ_ACCOUNT_KEY);
       setScanReason(result.reason);
 
       if (result.isPQ) {
@@ -85,6 +88,7 @@ export const PQThemeProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   useEffect(() => {
     if (activeAddress) {
+      setIsPQAccount(localStorage.getItem(PQ_ACCOUNT_KEY) === activeAddress);
       performScan(activeAddress);
     } else {
       setIsPQAccount(false);
