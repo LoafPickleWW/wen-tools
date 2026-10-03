@@ -11,21 +11,25 @@ import {
   getAssetsInAssetInbox,
 } from "../arc59-helpers";
 import { TOOLS } from "../constants";
-import { getIndexerURL, getNfdDomain, SignWithSk, walletSign } from "../utils";
+import { getIndexerURL, getNfdDomain } from "../utils";
 import { EnhancedTable } from "../components/DataGrid";
 import {
   ALGOXNFT_ADMIN,
+  algoxCloseJob,
+  appCancelJob,
   buildAlgoxClosePlan,
+  buildAppCancelGroup,
+  countClaimTxns,
   findAlgoxListings,
   findAppListings,
-  buildAppCancelGroup,
-  simulateAppCancel,
-  submitAppCancels,
-  type AppListing,
+  nodeErrorMessage,
+  signClaimJobs,
   simulateAlgoxClose,
-  submitAlgoxCloses,
+  simulateAppCancel,
+  submitClaimJobs,
   type AlgoxListing,
-  type UserSigner,
+  type AppListing,
+  type ClaimJob,
 } from "../utils/algoxnft";
 import InfinityModeComponent from "../components/InfinityModeComponent";
 import { HeadCell } from "../types";
@@ -40,10 +44,6 @@ interface Asset {
   orgAmount:number;
   decimals:number;
   id: number;
-}
-
-interface AssetWithTransactions extends Asset {
-  txns: Transaction[];
 }
 
 const fetchNFDVaultAssets = async (nfd: string, activeNetwork: NetworkId) => {
@@ -121,14 +121,12 @@ const friendlyClaimError = (error?: string): string => {
   return error.length > 160 ? error.slice(0, 160) + "…" : error;
 };
 const ALGOX_OPTIN_TYPE = "AlgoxNFT listing · opt-in";
-const isAlgoxRow = (a: { type: string }) => a.type.startsWith("AlgoxNFT");
 
 const INITIAL_STEP = 0;
 const COMPLETED = 1;
 
 export const BlukClaimTool = () => {
-  const { activeAddress, activeNetwork, algodClient, transactionSigner, signTransactions } =
-    useWallet();
+  const { activeAddress, activeNetwork, algodClient, signTransactions } = useWallet();
   const [mnemonic, setMnemonic] = useState("");
   const [isLoadingAssets, setIsLoadingAssets] = useState(true);
   const [assets, setAssets] = useState<Asset[]>([]);
@@ -215,6 +213,82 @@ export const BlukClaimTool = () => {
     };
   }, [activeAddress, activeNetwork, algodClient, reloadKey]);
 
+  /** Verifies (simulation) the selected marketplace listings and builds their cancel jobs. */
+  const prepareAppJobs = async (rows: Asset[], params: algosdk.SuggestedParams): Promise<ClaimJob[]> => {
+    if (!activeAddress || !rows.length) return [];
+    const groups = rows
+      .map((r) => appListings.get(r.id))
+      .filter((l): l is AppListing => !!l)
+      .map((listing) => ({ listing, txns: buildAppCancelGroup(listing, activeAddress, params) }));
+
+    const sims = await Promise.all(groups.map((g) => simulateAppCancel(algodClient, g.txns)));
+    const rejected = sims.filter((r) => r.status === "rejected").length;
+    const accountIssue = sims.find((r) => r.status === "account");
+    if (rejected) toast.warn(`${rejected} AlgoxNFT listing${rejected > 1 ? "s" : ""} couldn't be cancelled and ${rejected > 1 ? "were" : "was"} skipped`);
+    if (accountIssue && accountIssue.status === "account") toast.error(accountIssue.message);
+    return groups.filter((_, i) => sims[i].status === "ready").map((g) => appCancelJob(g.listing, g.txns));
+  };
+
+  /** Verifies (simulation) the selected escrow listings and builds their close jobs. */
+  const prepareAlgoxJobs = async (rows: Asset[], params: algosdk.SuggestedParams): Promise<ClaimJob[]> => {
+    if (!activeAddress || !rows.length) return [];
+    const plans = rows
+      .map((r) => algoxListings.get(r.id))
+      .filter((l): l is AlgoxListing => !!l)
+      .map((l) => buildAlgoxClosePlan(l, activeAddress, params));
+
+    const sims = await Promise.all(plans.map((p) => simulateAlgoxClose(algodClient, p)));
+    const rejected = sims.filter((r) => r.status === "rejected").length;
+    const accountIssue = sims.find((r) => r.status === "account");
+    if (rejected) {
+      toast.warn(`${rejected} AlgoxNFT listing${rejected > 1 ? "s" : ""} can't be closed this way and ${rejected > 1 ? "were" : "was"} skipped`);
+    }
+    if (accountIssue && accountIssue.status === "account") toast.error(accountIssue.message);
+    return plans.filter((_, i) => sims[i].status === "ready").map(algoxCloseJob);
+  };
+
+  const prepareVaultJob = async (asset: Asset): Promise<ClaimJob> => {
+    const { data } = await axios.post(
+      `https://api.nf.domains/nfd/vault/sendFrom/${nfd}`,
+      {
+        amount: asset.orgAmount,
+        amountStr: asset.orgAmount.toString(),
+        assets: [asset.assetId],
+        receiver: activeAddress,
+        receiverType: "account",
+        sender: activeAddress,
+        receiverCanSign: true,
+        note:
+          "via wen.tools - free tools for creators and collectors | " +
+          Math.random().toString(36).substring(2),
+      }
+    );
+    const txns: Transaction[] = JSON.parse(data).map((txn: string[]) =>
+      algosdk.decodeUnsignedTransaction(Buffer.from(txn[1], "base64"))
+    );
+    return { assetId: asset.assetId, steps: [{ txns, userSigns: [...txns.keys()] }] };
+  };
+
+  const prepareInboxJob = async (asset: Asset): Promise<ClaimJob> => {
+    const txns = await generateARC59ClaimTxns(BigInt(asset.assetId), activeAddress!, algodClient, activeNetwork);
+    return { assetId: asset.assetId, steps: [{ txns, userSigns: [...txns.keys()] }] };
+  };
+
+  /** A job that can't be built is reported and skipped, never blocking the rest. */
+  const tryPrepare = async (asset: Asset, build: (a: Asset) => Promise<ClaimJob>) => {
+    try {
+      return await build(asset);
+    } catch (e: any) {
+      console.error(`Could not prepare claim for ${asset.assetId}:`, e);
+      toast.error(`Could not prepare ${asset.name || asset.assetId}: ${friendlyClaimError(nodeErrorMessage(e))}`, { autoClose: 8000 });
+      return null;
+    }
+  };
+
+  /**
+   * Builds a transaction group for every selected asset, has the user sign
+   * them all in one wallet prompt, then submits each group.
+   */
   const handleClaimAssets = async (
     selected: Asset[],
     setDisabled: React.Dispatch<React.SetStateAction<boolean>>
@@ -223,170 +297,65 @@ export const BlukClaimTool = () => {
       toast.error("Please connect your wallet");
       return;
     }
+    if (mnemonic && mnemonic.trim().split(/\s+/).length !== 25) {
+      toast.error("Invalid Mnemonic");
+      return;
+    }
 
     setDisabled(true);
     try {
-      let claimedAny = false;
-      const algoxSelected = selected.filter(isAlgoxRow);
-      if (algoxSelected.length) {
-        claimedAny = await claimAlgoxListings(algoxSelected);
-      }
-      const otherSelected = selected.filter((s) => !isAlgoxRow(s));
-      if (!otherSelected.length) {
-        if (claimedAny) {
-          showDonationToast();
-          setProcessStep(COMPLETED);
-        }
-        return;
-      }
-
-      const vaultAssets = otherSelected.filter((s) => s.type === "vault");
-      const inboxAssets = otherSelected.filter((s) => s.type === "inbox");
-
-      const assetsWithTransactions = await Promise.all([
-        ...vaultAssets.map(async (asset) => {
-          const { data } = await axios.post(
-            `https://api.nf.domains/nfd/vault/sendFrom/${nfd}`,
-            {
-              amount: asset.orgAmount,
-              amountStr: asset.orgAmount.toString(),
-              assets: [asset.assetId],
-              receiver: activeAddress,
-              receiverType: "account",
-              sender: activeAddress,
-              receiverCanSign:true,
-              note:
-                "via wen.tools - free tools for creators and collectors | " +
-                Math.random().toString(36).substring(2),
-            }
-          );
-
-          const txns = JSON.parse(data).map((txn: string[]) =>
-            algosdk.decodeUnsignedTransaction(Buffer.from(txn[1], "base64"))
-          );
-
-          console.log(txns, "txns",asset.assetId);
-
-          return { ...asset, txns };
-        }),
-        ...inboxAssets.map(async (asset) => ({
-          ...asset,
-          txns: await generateARC59ClaimTxns(
-            BigInt(asset.assetId),
-            activeAddress,
-            algodClient,
-            activeNetwork
-          ),
-        })),
+      toast.info("Preparing claims…", { autoClose: 1500 });
+      const params = await algodClient.getTransactionParams().do();
+      const [appJobs, algoxJobs, vaultJobs, inboxJobs] = await Promise.all([
+        prepareAppJobs(selected.filter((r) => appListings.has(r.id)), params),
+        prepareAlgoxJobs(selected.filter((r) => algoxListings.has(r.id)), params),
+        Promise.all(selected.filter((s) => s.type === "vault").map((a) => tryPrepare(a, prepareVaultJob))),
+        Promise.all(selected.filter((s) => s.type === "inbox").map((a) => tryPrepare(a, prepareInboxJob))),
       ]);
-
-      const allTransactions = assetsWithTransactions.flatMap(
-        (asset) => asset.txns
-      );
-      if (!allTransactions.length) {
-        toast.error("No assets to claim");
+      const jobs = [...appJobs, ...algoxJobs, ...vaultJobs, ...inboxJobs].filter((j): j is ClaimJob => !!j);
+      if (!jobs.length) {
+        toast.error("None of the selected assets can be claimed right now");
         return;
       }
 
-      if (allTransactions.length > 200 && !mnemonic) {
+      if (countClaimTxns(jobs) > 200 && !mnemonic) {
         toast.error("Please enter your mnemonic using Infinity Mode");
         return;
       }
 
-      const signedTransactions = await processTransactions(
-        allTransactions,
-        mnemonic,
-        transactionSigner
+      if (!mnemonic) toast.info(`Approve ${jobs.length} claim${jobs.length > 1 ? "s" : ""} in your wallet (one signature)…`);
+      const signed = await signClaimJobs(
+        jobs,
+        mnemonic
+          ? { sk: algosdk.mnemonicToSecretKey(mnemonic.trim()).sk }
+          : { signer: (groups, indexes) => signTransactions(groups, indexes) }
       );
+      toast.success("Signed! Submitting…", { autoClose: 1500 });
 
-      await submitTransactions(
-        signedTransactions,
-        assetsWithTransactions,
-        algodClient
-      );
+      const results = await submitClaimJobs(algodClient, signed, (done, total, assetId, ok, error) => {
+        if (ok) toast.success(`Claimed ${assetId} (${done}/${total})`, { autoClose: 1200 });
+        else toast.error(`Could not claim ${assetId} (${done}/${total}): ${friendlyClaimError(error)}`, { autoClose: 8000 });
+      });
 
-      toast.success("All transactions confirmed");
+      const okCount = results.filter((r) => r.txId).length;
+      if (!okCount) return;
       showDonationToast();
-      setProcessStep(COMPLETED);
+      if (okCount === selected.length) {
+        toast.success(`All ${okCount} assets claimed`);
+        setProcessStep(COMPLETED);
+      } else {
+        toast.success(`${okCount} of ${selected.length} assets claimed`);
+        // Rescan so the table shows only what's still waiting
+        setReloadKey((k) => k + 1);
+      }
     } catch (error: any) {
       console.error("Claim error:", error);
-      toast.error(`Failed to claim assets: ${error.message}`);
+      toast.error(`Failed to claim assets: ${friendlyClaimError(nodeErrorMessage(error))}`);
     } finally {
       setDisabled(false);
     }
   };
 
-  const signerFor = (count: number): { signer: UserSigner } | { sk: Uint8Array } => {
-    if (mnemonic) {
-      if (mnemonic.split(" ").length !== 25) throw new Error("Invalid Mnemonic");
-      return { sk: algosdk.mnemonicToSecretKey(mnemonic).sk };
-    }
-    toast.info(`Approve ${count} AlgoxNFT claim${count > 1 ? "s" : ""} in your wallet…`);
-    return {
-      signer: (group: Transaction[], indexes: number[]) =>
-        signTransactions(group, indexes),
-    };
-  };
-
-  /** Verifies (simulation), signs and cancels the selected marketplace listings. */
-  const claimAppListings = async (rows: Asset[]): Promise<number> => {
-    if (!activeAddress) return 0;
-    const params = await algodClient.getTransactionParams().do();
-    const groups = rows
-      .map((r) => appListings.get(r.id))
-      .filter((l): l is AppListing => !!l)
-      .map((listing) => ({ listing, txns: buildAppCancelGroup(listing, activeAddress, params) }));
-    if (!groups.length) return 0;
-
-    const sims = await Promise.all(groups.map((g) => simulateAppCancel(algodClient, g.txns)));
-    const ready = groups.filter((_, i) => sims[i].status === "ready");
-    const rejected = sims.filter((r) => r.status === "rejected").length;
-    const accountIssue = sims.find((r) => r.status === "account");
-    if (rejected) toast.warn(`${rejected} AlgoxNFT listing${rejected > 1 ? "s" : ""} couldn't be cancelled and ${rejected > 1 ? "were" : "was"} skipped`);
-    if (accountIssue && accountIssue.status === "account") toast.error(accountIssue.message);
-    if (!ready.length) return 0;
-
-    const results = await submitAppCancels(algodClient, ready, signerFor(ready.length), (done, total, assetId, ok, error) => {
-      if (ok) toast.success(`Recovered ${assetId} (${done}/${total})`, { autoClose: 1200 });
-      else toast.error(`Could not recover ${assetId} (${done}/${total}): ${friendlyClaimError(error)}`, { autoClose: 8000 });
-    });
-    return results.filter((r) => r.txId).length;
-  };
-
-  /** Verifies, signs (one prompt per listing type) and closes the selected AlgoxNFT listings. */
-  const claimAlgoxListings = async (rows: Asset[]): Promise<boolean> => {
-    if (!activeAddress) return false;
-    toast.info("Verifying AlgoxNFT listings on-chain…", { autoClose: 1500 });
-    const marketRecovered = await claimAppListings(rows.filter((r) => appListings.has(r.id)));
-    rows = rows.filter((r) => algoxListings.has(r.id));
-    if (!rows.length) {
-      if (marketRecovered) toast.success(`${marketRecovered} NFT${marketRecovered > 1 ? "s" : ""} recovered from AlgoxNFT`);
-      return marketRecovered > 0;
-    }
-    const params = await algodClient.getTransactionParams().do();
-    const plans = rows
-      .map((r) => algoxListings.get(r.id))
-      .filter((l): l is AlgoxListing => !!l)
-      .map((l) => buildAlgoxClosePlan(l, activeAddress, params));
-
-    const sims = await Promise.all(plans.map((p) => simulateAlgoxClose(algodClient, p)));
-    const ready = plans.filter((_, i) => sims[i].status === "ready");
-    const rejected = sims.filter((r) => r.status === "rejected").length;
-    const accountIssue = sims.find((r) => r.status === "account");
-    if (rejected) {
-      toast.warn(`${rejected} AlgoxNFT listing${rejected > 1 ? "s" : ""} can't be closed this way and ${rejected > 1 ? "were" : "was"} skipped`);
-    }
-    if (accountIssue && accountIssue.status === "account") toast.error(accountIssue.message);
-    if (!ready.length) return marketRecovered > 0;
-
-    const results = await submitAlgoxCloses(algodClient, ready, signerFor(ready.length), (done, total, assetId, ok, error) => {
-      if (ok) toast.success(`Recovered ${assetId} (${done}/${total})`, { autoClose: 1200 });
-      else toast.error(`Could not recover ${assetId} (${done}/${total}): ${friendlyClaimError(error)}`, { autoClose: 8000 });
-    });
-    const okCount = results.filter((r) => r.txId).length + marketRecovered;
-    if (okCount) toast.success(`${okCount} NFT${okCount > 1 ? "s" : ""} recovered from AlgoxNFT`);
-    return okCount > 0;
-  };
 
   const tableConfig = {
     headCells: [
@@ -510,55 +479,4 @@ export const BlukClaimTool = () => {
       </section>
     </div>
   );
-};
-
-const processTransactions = async (
-  transactions: Transaction[],
-  mnemonic: string,
-  transactionSigner: any
-) => {
-  if (mnemonic) {
-    if (mnemonic.split(" ").length !== 25) {
-      throw new Error("Invalid Mnemonic");
-    }
-    const { sk } = algosdk.mnemonicToSecretKey(mnemonic);
-    return SignWithSk(transactions, sk);
-  }
-
-  toast.info("Waiting for wallet to sign transactions...");
-  const signed = await walletSign(transactions, transactionSigner);
-  toast.success("Transactions signed!");
-  return signed;
-};
-
-const submitTransactions = async (
-  signedTransactions: any[],
-  assetsWithTransactions: AssetWithTransactions[],
-  algodClient: any
-) => {
-  let offset = 0;
-  for (const [index, asset] of assetsWithTransactions.entries()) {
-    const txns = signedTransactions.slice(offset, offset + asset.txns.length);
-    offset += asset.txns.length;
-
-    try {
-      await algodClient.sendRawTransaction(txns).do();
-      toast.success(
-        `Transaction ${index + 1} of ${
-          assetsWithTransactions.length
-        } confirmed!`,
-        {
-          autoClose: 1000,
-        }
-      );
-    } catch (error) {
-      console.error("Transaction error:", error);
-      toast.error(
-        `Transaction ${index + 1} of ${assetsWithTransactions.length} failed!`,
-        {
-          autoClose: 1000,
-        }
-      );
-    }
-  }
 };

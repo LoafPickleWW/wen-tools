@@ -130,7 +130,7 @@ export function isClosableAlgoxEscrow(program: Uint8Array, escrow: string, selle
 /* Discovery                                                                 */
 /* ------------------------------------------------------------------------- */
 
-async function mapLimit<T, R>(items: T[], limit: number, fn: (t: T) => Promise<R>): Promise<R[]> {
+export async function mapLimit<T, R>(items: T[], limit: number, fn: (t: T) => Promise<R>): Promise<R[]> {
   const out: R[] = new Array(items.length);
   let next = 0;
   const workers = Array.from({ length: Math.min(limit, items.length) }, async () => {
@@ -410,68 +410,118 @@ export async function simulateAlgoxClose(algod: algosdk.Algodv2, plan: AlgoxClos
   return { status: "account", message: failure };
 }
 
-export type UserSigner = (group: Transaction[], indexesToSign: number[]) => Promise<(Uint8Array | null)[]>;
+/**
+ * A close plan as claim steps: the opt-in (if needed) goes first on its own,
+ * since the escrow contract only accepts its exact 3-transaction group. The
+ * escrow transactions are signed here by the logic sig; the user signs gtxn 0.
+ */
+export function algoxCloseJob(plan: AlgoxClosePlan): ClaimJob {
+  const steps: ClaimStep[] = [];
+  if (plan.optIn) steps.push({ txns: [plan.optIn], userSigns: [0] });
+  steps.push({
+    txns: plan.group,
+    userSigns: [0],
+    presigned: [undefined, lsigSign(plan.group[1], plan.listing.program), lsigSign(plan.group[2], plan.listing.program)],
+  });
+  return { assetId: plan.listing.assetId, steps };
+}
+
+/* ------------------------------------------------------------------------- */
+/* Batched claims: every group signed in one wallet prompt                   */
+/* ------------------------------------------------------------------------- */
+
+/** One transaction group, submitted atomically. */
+export interface ClaimStep {
+  txns: Transaction[];
+  /** Indexes in `txns` the user signs */
+  userSigns: number[];
+  /** Blobs already signed by someone else (e.g. a logic sig), by index */
+  presigned?: (Uint8Array | undefined)[];
+}
+
+/** Everything needed to claim one asset; steps are confirmed in order. */
+export interface ClaimJob {
+  assetId: number;
+  steps: ClaimStep[];
+}
+
+export interface SignedClaimJob {
+  assetId: number;
+  steps: Uint8Array[][];
+}
+
+/** Signs many groups at once, e.g. use-wallet's `signTransactions`. */
+export type BatchSigner = (groups: Transaction[][], indexesToSign: number[]) => Promise<(Uint8Array | null)[]>;
+
+export const countClaimTxns = (jobs: ClaimJob[]) =>
+  jobs.reduce((n, j) => n + j.steps.reduce((m, s) => m + s.txns.length, 0), 0);
 
 /**
- * Signs and submits each escrow close plan.
- * The user signs permission transactions with their wallet or secret key,
- * while escrow transactions are signed by the logic sig program.
+ * Signs every step of every job in a single request, so the user approves
+ * all selected claims with one signature in their wallet.
  */
-export async function submitAlgoxCloses(
+export async function signClaimJobs(
+  jobs: ClaimJob[],
+  sign: { signer: BatchSigner } | { sk: Uint8Array }
+): Promise<SignedClaimJob[]> {
+  const steps = jobs.flatMap((j) => j.steps);
+  let userBlobs: (Uint8Array | null)[];
+  if ("sk" in sign) {
+    userBlobs = steps.flatMap((s) => s.txns.map((t, i) => (s.userSigns.includes(i) ? t.signTxn(sign.sk) : null)));
+  } else {
+    const indexes: number[] = [];
+    let offset = 0;
+    for (const s of steps) {
+      s.userSigns.forEach((i) => indexes.push(offset + i));
+      offset += s.txns.length;
+    }
+    userBlobs = await sign.signer(
+      steps.map((s) => s.txns),
+      indexes
+    );
+    if (userBlobs.length !== offset) throw new Error("the wallet did not return every transaction");
+  }
+
+  let cursor = 0;
+  return jobs.map((job) => ({
+    assetId: job.assetId,
+    steps: job.steps.map((s) =>
+      s.txns.map((_, i) => {
+        const blob = s.userSigns.includes(i) ? userBlobs[cursor] : s.presigned?.[i];
+        cursor++;
+        if (!blob) throw new Error(`transaction for asset ${job.assetId} was not signed`);
+        return blob;
+      })
+    ),
+  }));
+}
+
+/**
+ * Submits signed jobs a few at a time. A failed job doesn't stop the others;
+ * a failed step stops the rest of its own job (e.g. a close without opt-in).
+ */
+export async function submitClaimJobs(
   algod: algosdk.Algodv2,
-  plans: AlgoxClosePlan[],
-  sign: { signer: UserSigner } | { sk: Uint8Array },
+  jobs: SignedClaimJob[],
   onProgress?: (done: number, total: number, assetId: number, ok: boolean, error?: string) => void
 ): Promise<{ assetId: number; txId?: string; error?: string }[]> {
-  const results: { assetId: number; txId?: string; error?: string }[] = [];
-
-  for (const [i, p] of plans.entries()) {
+  let done = 0;
+  return mapLimit(jobs, 4, async (job) => {
     try {
-      // 1. If seller needs to opt in first, sign and submit opt-in alone
-      if (p.optIn) {
-        let optInBlob: Uint8Array;
-        if ("sk" in sign) {
-          optInBlob = p.optIn.signTxn(sign.sk);
-        } else {
-          const signed = await sign.signer([p.optIn], [0]);
-          const blob = signed.find((b): b is Uint8Array => !!b);
-          if (!blob) throw new Error("opt-in was not signed");
-          optInBlob = blob;
-        }
-        const { txId: optInTxId } = await algod.sendRawTransaction(optInBlob).do();
-        await algosdk.waitForConfirmation(algod, optInTxId, 6);
+      let txId = "";
+      for (const blobs of job.steps) {
+        ({ txId } = await algod.sendRawTransaction(blobs).do());
+        await algosdk.waitForConfirmation(algod, txId, 6);
       }
-
-      // 2. Sign permission (gtxn 0) in the 3-txn escrow close group
-      let permissionBlob: Uint8Array;
-      if ("sk" in sign) {
-        permissionBlob = p.group[0].signTxn(sign.sk);
-      } else {
-        const signed = await sign.signer(p.group, [0]);
-        const blob = signed.find((b): b is Uint8Array => !!b);
-        if (!blob) throw new Error("claim was not signed");
-        permissionBlob = blob;
-      }
-
-      // 3. Assemble and submit full atomic group: [permission, assetClose, algoClose]
-      const closeGroup = [
-        permissionBlob,
-        lsigSign(p.group[1], p.listing.program),
-        lsigSign(p.group[2], p.listing.program),
-      ];
-
-      const { txId } = await algod.sendRawTransaction(closeGroup).do();
-      await algosdk.waitForConfirmation(algod, txId, 6);
-      results.push({ assetId: p.listing.assetId, txId });
-      onProgress?.(i + 1, plans.length, p.listing.assetId, true);
+      onProgress?.(++done, jobs.length, job.assetId, true);
+      return { assetId: job.assetId, txId };
     } catch (e: any) {
       const error = nodeErrorMessage(e);
-      console.error(`AlgoxNFT claim ${p.listing.assetId} failed:`, error);
-      results.push({ assetId: p.listing.assetId, error });
-      onProgress?.(i + 1, plans.length, p.listing.assetId, false, error);
+      console.error(`Claim ${job.assetId} failed:`, error);
+      onProgress?.(++done, jobs.length, job.assetId, false, error);
+      return { assetId: job.assetId, error };
     }
-  }
-  return results;
+  });
 }
 
 /* ========================================================================= */
@@ -605,39 +655,8 @@ export async function simulateAppCancel(algod: algosdk.Algodv2, group: Transacti
   return { status: "rejected", message: failure };
 }
 
-/**
- * Signs and submits each marketplace listing cancel group.
- * Group-by-group signing prevents wallet group ID corruption across multiple listings.
- */
-export async function submitAppCancels(
-  algod: algosdk.Algodv2,
-  groups: { listing: AppListing; txns: Transaction[] }[],
-  sign: { signer: UserSigner } | { sk: Uint8Array },
-  onProgress?: (done: number, total: number, assetId: number, ok: boolean, error?: string) => void
-): Promise<{ assetId: number; txId?: string; error?: string }[]> {
-  const results: { assetId: number; txId?: string; error?: string }[] = [];
-
-  for (const [i, g] of groups.entries()) {
-    try {
-      let blobs: Uint8Array[];
-      if ("sk" in sign) {
-        blobs = g.txns.map((t) => t.signTxn(sign.sk));
-      } else {
-        const signed = await sign.signer(g.txns, Array.from(g.txns.keys()));
-        if (signed.some((b) => !b)) throw new Error("not all transactions were signed");
-        blobs = signed as Uint8Array[];
-      }
-
-      const { txId } = await algod.sendRawTransaction(blobs).do();
-      await algosdk.waitForConfirmation(algod, txId, 6);
-      results.push({ assetId: g.listing.assetId, txId });
-      onProgress?.(i + 1, groups.length, g.listing.assetId, true);
-    } catch (e: any) {
-      const error = nodeErrorMessage(e);
-      console.error(`AlgoxNFT marketplace claim ${g.listing.assetId} failed:`, error);
-      results.push({ assetId: g.listing.assetId, error });
-      onProgress?.(i + 1, groups.length, g.listing.assetId, false, error);
-    }
-  }
-  return results;
-}
+/** A cancel group as a claim job; the user signs every transaction in it. */
+export const appCancelJob = (listing: AppListing, txns: Transaction[]): ClaimJob => ({
+  assetId: listing.assetId,
+  steps: [{ txns, userSigns: [...txns.keys()] }],
+});
