@@ -33,6 +33,10 @@ const ESCROW_FUNDING_AMOUNTS = [10_000, 250_000, 500_000];
 const MAX_HISTORY_PAGES = 15;
 /** Upper bound on escrows checked, to stay light on public nodes. */
 const MAX_CANDIDATES = 300;
+/** Escrows opt in to a single NFT; anything holding more is not one. */
+const MAX_ESCROW_ASSETS = 4;
+/** Rounds after funding in which the escrow's own opt-in is looked for. */
+const ESCROW_OPTIN_WINDOW = 100;
 
 export interface AlgoxListing {
   escrow: string;
@@ -143,28 +147,66 @@ async function mapLimit<T, R>(items: T[], limit: number, fn: (t: T) => Promise<R
  * Public nodes rate-limit bursts. A throttled lookup must be retried, never
  * read as "not found", or listings silently vanish from one load to the next.
  */
+const MAINNET_FALLBACK_INDEXER = "https://mainnet-idx.4160.nodely.dev";
+
 const statusOf = (e: any): number | undefined => e?.status ?? e?.response?.status;
 const isNotFound = (e: any) => statusOf(e) === 404;
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-async function withRetry<T>(fn: () => Promise<T>, attempts = 5): Promise<T> {
+async function withRetry<T>(fn: () => Promise<T>, attempts = 3): Promise<T> {
   for (let i = 0; ; i++) {
     try {
       return await fn();
     } catch (e) {
       if (isNotFound(e) || i >= attempts - 1) throw e;
-      await sleep(400 * 2 ** i + Math.random() * 250);
+      await sleep(350 * 2 ** i + Math.random() * 200);
     }
   }
 }
 
-/** Indexer GET with retries; throws (instead of returning an empty page) if it keeps failing. */
-async function getJson(url: string): Promise<any> {
-  return withRetry(async () => {
-    const r = await fetch(url);
-    if (!r.ok) throw Object.assign(new Error(`indexer ${r.status}`), { status: r.status === 404 ? 599 : r.status });
-    return r.json();
-  });
+/** The node's own reason for rejecting a submission (e.g. "overspend", "txn dead"). */
+export const nodeErrorMessage = (e: any): string => {
+  if (e?.response?.body?.message) return String(e.response.body.message);
+  if (e?.response?.body instanceof Uint8Array) {
+    try {
+      const text = new TextDecoder().decode(e.response.body);
+      const parsed = JSON.parse(text);
+      if (parsed.message) return String(parsed.message);
+    } catch {}
+  }
+  if (e?.response?.text) {
+    try {
+      const parsed = JSON.parse(e.response.text);
+      if (parsed.message) return String(parsed.message);
+    } catch {}
+    return String(e.response.text).trim();
+  }
+  const raw = e?.message ?? String(e);
+  const colonIdx = raw.indexOf("): ");
+  if (colonIdx !== -1) {
+    return raw.slice(colonIdx + 3).trim();
+  }
+  return raw;
+};
+
+/** Indexer GET with retries and automatic fallback to secondary indexer if primary returns 500/errors. */
+async function getJson(url: string, fallbackBase?: string): Promise<any> {
+  try {
+    return await withRetry(async () => {
+      const r = await fetch(url);
+      if (!r.ok) throw Object.assign(new Error(`indexer ${r.status}`), { status: r.status === 404 ? 599 : r.status });
+      return r.json();
+    });
+  } catch (e) {
+    if (fallbackBase) {
+      try {
+        const altUrl = url.replace(/https:\/\/[^/]+/, fallbackBase);
+        const r = await fetch(altUrl);
+        if (r.ok) return r.json();
+      } catch {}
+    }
+    throw e;
+  }
 }
 
 /** Holding amount, or null only when the account is genuinely not opted in. */
@@ -192,7 +234,9 @@ export async function findAlgoxListings(
   algod: algosdk.Algodv2,
   indexerUrl: string
 ): Promise<AlgoxListing[]> {
-  const escrows = new Set<string>();
+  const fallbackBase = indexerUrl.includes("algonode") ? MAINNET_FALLBACK_INDEXER : undefined;
+  // escrow -> round it was funded (its creation group)
+  const escrows = new Map<string, number>();
   const scan = async (amount: number) => {
     let next = "";
     for (let page = 0; page < MAX_HISTORY_PAGES; page++) {
@@ -201,43 +245,62 @@ export async function findAlgoxListings(
         `&currency-greater-than=${amount - 1}&currency-less-than=${amount + 1}` +
         `&min-round=${ALGOXNFT_MIN_ROUND}&limit=1000` +
         (next ? `&next=${next}` : "");
-      const res = await getJson(url);
+      const res = await getJson(url, fallbackBase);
       for (const t of res.transactions ?? []) {
         const receiver = t["payment-transaction"]?.receiver;
-        if (t.group && receiver && receiver !== seller) escrows.add(receiver);
+        if (t.group && receiver && receiver !== seller && !escrows.has(receiver)) escrows.set(receiver, Number(t["confirmed-round"]));
       }
       next = res["next-token"];
       if (!next || !(res.transactions ?? []).length) break;
     }
   };
-  await Promise.all(ESCROW_FUNDING_AMOUNTS.map(scan));
+
+  // Run scans sequentially to avoid triggering indexer rate-limits / 500 timeouts
+  for (const amount of ESCROW_FUNDING_AMOUNTS) {
+    try {
+      await scan(amount);
+    } catch (e) {
+      console.warn(`AlgoxNFT funding scan for amount ${amount} failed:`, e);
+    }
+  }
   const candidates = [...escrows].slice(0, MAX_CANDIDATES);
 
-  const perEscrow = await mapLimit(candidates, 4, async (escrow) => {
-    let held: number[] = [];
+  const perEscrow = await mapLimit(candidates, 4, async ([escrow, fundedRound]) => {
     try {
-      const info: any = await withRetry(() => algod.accountInformation(escrow).do());
-      held = (info.assets ?? []).filter((a: any) => Number(a.amount) >= 1).map((a: any) => Number(a["asset-id"]));
+      let held: number[] = [];
+      try {
+        const info: any = await withRetry(() => algod.accountInformation(escrow).do());
+        const optedIn: any[] = info.assets ?? [];
+        if (optedIn.length > MAX_ESCROW_ASSETS) return [];
+        held = optedIn.filter((a: any) => Number(a.amount) >= 1).map((a: any) => Number(a["asset-id"]));
+      } catch (e) {
+        if (isNotFound(e)) return [];
+        throw e;
+      }
+      if (!held.length) return [];
+
+      const res = await getJson(
+        `${indexerUrl}/v2/accounts/${escrow}/transactions?sig-type=lsig&limit=1` +
+          `&min-round=${fundedRound}&max-round=${fundedRound + ESCROW_OPTIN_WINDOW}`,
+        fallbackBase
+      ).catch(() => ({ transactions: [] }));
+      const logic: string | undefined = res.transactions?.[0]?.signature?.logicsig?.logic;
+      if (!logic) return [];
+      const program = new Uint8Array(Buffer.from(logic, "base64"));
+      if (!isClosableAlgoxEscrow(program, escrow, seller)) return [];
+
+      return Promise.all(
+        held.map(async (assetId) => ({
+          escrow,
+          assetId,
+          program,
+          needsOptIn: (await holdsAsset(algod, seller, assetId)) === null,
+        }))
+      );
     } catch (e) {
-      if (isNotFound(e)) return [];
-      throw e;
+      console.warn(`AlgoxNFT check for escrow ${escrow} failed:`, e);
+      return [];
     }
-    if (!held.length) return [];
-
-    const res = await getJson(`${indexerUrl}/v2/accounts/${escrow}/transactions?sig-type=lsig&limit=1`);
-    const logic: string | undefined = res.transactions?.[0]?.signature?.logicsig?.logic;
-    if (!logic) return [];
-    const program = new Uint8Array(Buffer.from(logic, "base64"));
-    if (!isClosableAlgoxEscrow(program, escrow, seller)) return [];
-
-    return Promise.all(
-      held.map(async (assetId) => ({
-        escrow,
-        assetId,
-        program,
-        needsOptIn: (await holdsAsset(algod, seller, assetId)) === null,
-      }))
-    );
   });
 
   return perEscrow.flat();
@@ -347,71 +410,65 @@ export async function simulateAlgoxClose(algod: algosdk.Algodv2, plan: AlgoxClos
   return { status: "account", message: failure };
 }
 
-export type UserSigner = (groups: Transaction[][], indexesToSign: number[]) => Promise<(Uint8Array | null)[]>;
+export type UserSigner = (group: Transaction[], indexesToSign: number[]) => Promise<(Uint8Array | null)[]>;
 
 /**
- * Signs every plan in one go (one wallet prompt, or locally with a secret
- * key) and submits them. The wallet sees each full group but only signs the
- * user's own transactions; escrow transactions are signed by the logic sig.
+ * Signs and submits each escrow close plan.
+ * The user signs permission transactions with their wallet or secret key,
+ * while escrow transactions are signed by the logic sig program.
  */
 export async function submitAlgoxCloses(
   algod: algosdk.Algodv2,
   plans: AlgoxClosePlan[],
   sign: { signer: UserSigner } | { sk: Uint8Array },
-  onProgress?: (done: number, total: number, assetId: number, ok: boolean) => void
+  onProgress?: (done: number, total: number, assetId: number, ok: boolean, error?: string) => void
 ): Promise<{ assetId: number; txId?: string; error?: string }[]> {
-  // Lay out: [optIn]? then [permission, assetClose, algoClose] per plan
-  const groups: Transaction[][] = [];
-  const indexesToSign: number[] = [];
-  const slots: { optIn?: number; permission: number }[] = [];
-  let flat = 0;
-  for (const p of plans) {
-    const slot: { optIn?: number; permission: number } = { permission: -1 };
-    if (p.optIn) {
-      groups.push([p.optIn]);
-      slot.optIn = flat;
-      indexesToSign.push(flat);
-      flat += 1;
-    }
-    groups.push(p.group);
-    slot.permission = flat;
-    indexesToSign.push(flat);
-    flat += 3;
-    slots.push(slot);
-  }
-
-  let signed: (Uint8Array | null)[];
-  if ("sk" in sign) {
-    signed = groups.flat().map((t, i) => (indexesToSign.includes(i) ? t.signTxn(sign.sk) : null));
-  } else {
-    signed = await sign.signer(groups, indexesToSign);
-  }
-
   const results: { assetId: number; txId?: string; error?: string }[] = [];
+
   for (const [i, p] of plans.entries()) {
-    const slot = slots[i];
     try {
-      if (slot.optIn !== undefined) {
-        const optInBlob = signed[slot.optIn];
-        if (!optInBlob) throw new Error("opt-in was not signed");
-        const { txId } = await algod.sendRawTransaction(optInBlob).do();
-        await algosdk.waitForConfirmation(algod, txId, 6);
+      // 1. If seller needs to opt in first, sign and submit opt-in alone
+      if (p.optIn) {
+        let optInBlob: Uint8Array;
+        if ("sk" in sign) {
+          optInBlob = p.optIn.signTxn(sign.sk);
+        } else {
+          const signed = await sign.signer([p.optIn], [0]);
+          const blob = signed.find((b): b is Uint8Array => !!b);
+          if (!blob) throw new Error("opt-in was not signed");
+          optInBlob = blob;
+        }
+        const { txId: optInTxId } = await algod.sendRawTransaction(optInBlob).do();
+        await algosdk.waitForConfirmation(algod, optInTxId, 6);
       }
-      const permissionBlob = signed[slot.permission];
-      if (!permissionBlob) throw new Error("claim was not signed");
-      const { txId } = await algod
-        .sendRawTransaction([
-          permissionBlob,
-          lsigSign(p.group[1], p.listing.program),
-          lsigSign(p.group[2], p.listing.program),
-        ])
-        .do();
+
+      // 2. Sign permission (gtxn 0) in the 3-txn escrow close group
+      let permissionBlob: Uint8Array;
+      if ("sk" in sign) {
+        permissionBlob = p.group[0].signTxn(sign.sk);
+      } else {
+        const signed = await sign.signer(p.group, [0]);
+        const blob = signed.find((b): b is Uint8Array => !!b);
+        if (!blob) throw new Error("claim was not signed");
+        permissionBlob = blob;
+      }
+
+      // 3. Assemble and submit full atomic group: [permission, assetClose, algoClose]
+      const closeGroup = [
+        permissionBlob,
+        lsigSign(p.group[1], p.listing.program),
+        lsigSign(p.group[2], p.listing.program),
+      ];
+
+      const { txId } = await algod.sendRawTransaction(closeGroup).do();
       await algosdk.waitForConfirmation(algod, txId, 6);
       results.push({ assetId: p.listing.assetId, txId });
       onProgress?.(i + 1, plans.length, p.listing.assetId, true);
     } catch (e: any) {
-      results.push({ assetId: p.listing.assetId, error: e?.message ?? String(e) });
-      onProgress?.(i + 1, plans.length, p.listing.assetId, false);
+      const error = nodeErrorMessage(e);
+      console.error(`AlgoxNFT claim ${p.listing.assetId} failed:`, error);
+      results.push({ assetId: p.listing.assetId, error });
+      onProgress?.(i + 1, plans.length, p.listing.assetId, false, error);
     }
   }
   return results;
@@ -432,7 +489,8 @@ export async function submitAlgoxCloses(
 /* ========================================================================= */
 
 export const ASALYTIC_ROUTER_APP = 2648336270;
-const SELECTOR_CREATE_LISTING = "5d706844";
+/** Pages of 1,000 live listing apps read (about 4,200 live in late 2026). */
+const MAX_LISTING_PAGES = 25;
 const SELECTOR_CANCEL_LISTING = new Uint8Array([0x72, 0x1f, 0x5f, 0xb8]);
 /** Covers the router call plus its inner transactions (matches on-chain cancels). */
 const CANCEL_FEE = 7000;
@@ -461,40 +519,34 @@ export async function findAppListings(
   algod: algosdk.Algodv2,
   indexerUrl: string
 ): Promise<AppListing[]> {
-  // Every listing app the seller created through the router
-  const created = new Set<number>();
-  const collect = (t: any) => {
-    if (t["created-application-index"]) created.add(Number(t["created-application-index"]));
-    for (const i of t["inner-txns"] ?? []) collect(i);
-  };
+  // Listing apps are created by the router's account and deleted when sold or
+  // cancelled, so the live ones are exactly the open listings. The indexer
+  // returns them with their state in a handful of pages.
+  const routerAccount = algosdk.getApplicationAddress(ASALYTIC_ROUTER_APP);
+  const sellerB64 = Buffer.from(algosdk.decodeAddress(seller).publicKey).toString("base64");
+  const mine: { appId: number; assetId: number }[] = [];
   let next = "";
-  for (let page = 0; page < MAX_HISTORY_PAGES; page++) {
-    const url =
-      `${indexerUrl}/v2/transactions?address=${seller}&address-role=sender&application-id=${ASALYTIC_ROUTER_APP}` +
-      `&limit=1000${next ? `&next=${next}` : ""}`;
-    const res = await getJson(url);
-    for (const t of res.transactions ?? []) {
-      const arg0 = t["application-transaction"]?.["application-args"]?.[0];
-      if (arg0 && Buffer.from(arg0, "base64").toString("hex") === SELECTOR_CREATE_LISTING) collect(t);
+  for (let page = 0; page < MAX_LISTING_PAGES; page++) {
+    const res = await getJson(
+      `${indexerUrl}/v2/applications?creator=${routerAccount}&limit=1000${next ? `&next=${next}` : ""}`
+    );
+    for (const app of res.applications ?? []) {
+      const raw: any[] = app.params?.["global-state"] ?? [];
+      // Cheap pre-filter on the raw base64 before decoding
+      if (!raw.some((kv) => kv.value?.bytes === sellerB64)) continue;
+      const gs = decodeGlobalState(raw);
+      const sellerBytes = gs.seller?.bytes;
+      const assetId = gs.asset?.uint;
+      if (!sellerBytes || sellerBytes.length !== 32 || !assetId) continue;
+      if (algosdk.encodeAddress(sellerBytes) !== seller) continue;
+      mine.push({ appId: Number(app.id), assetId });
     }
     next = res["next-token"];
-    if (!next || !(res.transactions ?? []).length) break;
+    if (!next || !(res.applications ?? []).length) break;
   }
 
-  // Still live, names this seller, and still holds its NFT
-  const checked = await mapLimit([...created], 4, async (appId) => {
-    let app: any;
-    try {
-      app = await withRetry(() => algod.getApplicationByID(appId).do());
-    } catch (e) {
-      if (isNotFound(e)) return null; // deleted: sold or already cancelled
-      throw e;
-    }
-    const gs = decodeGlobalState(app.params?.["global-state"]);
-    const sellerBytes = gs.seller?.bytes;
-    const assetId = gs.asset?.uint;
-    if (!sellerBytes || sellerBytes.length !== 32 || !assetId) return null;
-    if (algosdk.encodeAddress(sellerBytes) !== seller) return null;
+  // Still holds its NFT (and whether the seller must opt back in)
+  const checked = await mapLimit(mine, 6, async ({ appId, assetId }) => {
     const held = await holdsAsset(algod, algosdk.getApplicationAddress(appId), assetId);
     if (!held || held < 1) return null;
     const own = await holdsAsset(algod, seller, assetId);
@@ -553,34 +605,38 @@ export async function simulateAppCancel(algod: algosdk.Algodv2, group: Transacti
   return { status: "rejected", message: failure };
 }
 
-/** Signs all cancel groups in one go (every txn is the user's) and submits them. */
+/**
+ * Signs and submits each marketplace listing cancel group.
+ * Group-by-group signing prevents wallet group ID corruption across multiple listings.
+ */
 export async function submitAppCancels(
   algod: algosdk.Algodv2,
   groups: { listing: AppListing; txns: Transaction[] }[],
   sign: { signer: UserSigner } | { sk: Uint8Array },
-  onProgress?: (done: number, total: number, assetId: number, ok: boolean) => void
+  onProgress?: (done: number, total: number, assetId: number, ok: boolean, error?: string) => void
 ): Promise<{ assetId: number; txId?: string; error?: string }[]> {
-  const all = groups.map((g) => g.txns);
-  const flatCount = all.reduce((n, g) => n + g.length, 0);
-  const signed =
-    "sk" in sign
-      ? all.flat().map((t) => t.signTxn(sign.sk))
-      : await sign.signer(all, Array.from({ length: flatCount }, (_, i) => i));
-
   const results: { assetId: number; txId?: string; error?: string }[] = [];
-  let offset = 0;
+
   for (const [i, g] of groups.entries()) {
-    const blobs = signed.slice(offset, offset + g.txns.length);
-    offset += g.txns.length;
     try {
-      if (blobs.some((b) => !b)) throw new Error("not all transactions were signed");
-      const { txId } = await algod.sendRawTransaction(blobs as Uint8Array[]).do();
+      let blobs: Uint8Array[];
+      if ("sk" in sign) {
+        blobs = g.txns.map((t) => t.signTxn(sign.sk));
+      } else {
+        const signed = await sign.signer(g.txns, Array.from(g.txns.keys()));
+        if (signed.some((b) => !b)) throw new Error("not all transactions were signed");
+        blobs = signed as Uint8Array[];
+      }
+
+      const { txId } = await algod.sendRawTransaction(blobs).do();
       await algosdk.waitForConfirmation(algod, txId, 6);
       results.push({ assetId: g.listing.assetId, txId });
       onProgress?.(i + 1, groups.length, g.listing.assetId, true);
     } catch (e: any) {
-      results.push({ assetId: g.listing.assetId, error: e?.message ?? String(e) });
-      onProgress?.(i + 1, groups.length, g.listing.assetId, false);
+      const error = nodeErrorMessage(e);
+      console.error(`AlgoxNFT marketplace claim ${g.listing.assetId} failed:`, error);
+      results.push({ assetId: g.listing.assetId, error });
+      onProgress?.(i + 1, groups.length, g.listing.assetId, false, error);
     }
   }
   return results;

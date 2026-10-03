@@ -25,6 +25,7 @@ import {
   simulateAlgoxClose,
   submitAlgoxCloses,
   type AlgoxListing,
+  type UserSigner,
 } from "../utils/algoxnft";
 import InfinityModeComponent from "../components/InfinityModeComponent";
 import { HeadCell } from "../types";
@@ -107,6 +108,18 @@ const getAssetDetails = async (asset: any, indexerUrl: string) => {
 };
 
 const ALGOX_TYPE = "AlgoxNFT listing";
+
+/** Short, human reason for a failed claim submission. */
+const friendlyClaimError = (error?: string): string => {
+  if (!error) return "unknown error";
+  const auth = error.match(/should have been authorized by (\w{58})/);
+  if (auth) return `this account is rekeyed; sign with the wallet that holds ${auth[1].slice(0, 6)}…${auth[1].slice(-4)}`;
+  if (/txn dead|round outside/i.test(error)) return "the signing request expired, please try again";
+  if (/overspend|below min/i.test(error)) return "not enough ALGO for fees and minimum balance";
+  if (/already in ledger/i.test(error)) return "already claimed";
+  if (/incomplete group/i.test(error)) return "transaction grouping error; please retry";
+  return error.length > 160 ? error.slice(0, 160) + "…" : error;
+};
 const ALGOX_OPTIN_TYPE = "AlgoxNFT listing · opt-in";
 const isAlgoxRow = (a: { type: string }) => a.type.startsWith("AlgoxNFT");
 
@@ -303,13 +316,16 @@ export const BlukClaimTool = () => {
     }
   };
 
-  const signerFor = (count: number): { signer: (g: algosdk.Transaction[][], i: number[]) => Promise<(Uint8Array | null)[]> } | { sk: Uint8Array } => {
+  const signerFor = (count: number): { signer: UserSigner } | { sk: Uint8Array } => {
     if (mnemonic) {
       if (mnemonic.split(" ").length !== 25) throw new Error("Invalid Mnemonic");
       return { sk: algosdk.mnemonicToSecretKey(mnemonic).sk };
     }
     toast.info(`Approve ${count} AlgoxNFT claim${count > 1 ? "s" : ""} in your wallet…`);
-    return { signer: (groups, indexes) => signTransactions(groups, indexes) };
+    return {
+      signer: (group: Transaction[], indexes: number[]) =>
+        signTransactions(group, indexes),
+    };
   };
 
   /** Verifies (simulation), signs and cancels the selected marketplace listings. */
@@ -330,9 +346,9 @@ export const BlukClaimTool = () => {
     if (accountIssue && accountIssue.status === "account") toast.error(accountIssue.message);
     if (!ready.length) return 0;
 
-    const results = await submitAppCancels(algodClient, ready, signerFor(ready.length), (done, total, assetId, ok) => {
+    const results = await submitAppCancels(algodClient, ready, signerFor(ready.length), (done, total, assetId, ok, error) => {
       if (ok) toast.success(`Recovered ${assetId} (${done}/${total})`, { autoClose: 1200 });
-      else toast.error(`Could not recover ${assetId} (${done}/${total})`, { autoClose: 2000 });
+      else toast.error(`Could not recover ${assetId} (${done}/${total}): ${friendlyClaimError(error)}`, { autoClose: 8000 });
     });
     return results.filter((r) => r.txId).length;
   };
@@ -363,9 +379,9 @@ export const BlukClaimTool = () => {
     if (accountIssue && accountIssue.status === "account") toast.error(accountIssue.message);
     if (!ready.length) return marketRecovered > 0;
 
-    const results = await submitAlgoxCloses(algodClient, ready, signerFor(ready.length), (done, total, assetId, ok) => {
+    const results = await submitAlgoxCloses(algodClient, ready, signerFor(ready.length), (done, total, assetId, ok, error) => {
       if (ok) toast.success(`Recovered ${assetId} (${done}/${total})`, { autoClose: 1200 });
-      else toast.error(`Could not recover ${assetId} (${done}/${total})`, { autoClose: 2000 });
+      else toast.error(`Could not recover ${assetId} (${done}/${total}): ${friendlyClaimError(error)}`, { autoClose: 8000 });
     });
     const okCount = results.filter((r) => r.txId).length + marketRecovered;
     if (okCount) toast.success(`${okCount} NFT${okCount > 1 ? "s" : ""} recovered from AlgoxNFT`);
