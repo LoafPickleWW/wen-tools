@@ -61,8 +61,11 @@ const ProjectTransferBar = () => {
         <div className="min-w-0">
           <p className="text-sm font-black text-gray-200">Share this project</p>
           <p className="text-[11px] text-gray-500 leading-relaxed">
-            Export a <span className="text-gray-300">.wenpad.zip</span> with every layer, trait image, rule, preview and trait name.
+            Export a <span className="text-gray-300">.wenpad</span> file with every layer, trait image, rule, preview and trait name.
             A collaborator imports it, makes changes, and sends a new export back.
+          </p>
+          <p className="text-[11px] text-gray-500 leading-relaxed">
+            To import, pick the <span className="text-gray-300">.wenpad</span> file as-is. No need to unzip anything.
           </p>
           {hasToken && includeToken && (
             <p className="mt-1 text-[11px] text-amber-500/90 flex items-start gap-1">
@@ -106,7 +109,7 @@ const ProjectTransferBar = () => {
         <input
           ref={fileInputRef}
           type="file"
-          accept=".zip,application/zip"
+          // No `accept` filter: iOS greys out unknown extensions like .wenpad. The importer validates the contents.
           className="hidden"
           onChange={(e) => handleImport(e.target.files?.[0])}
         />

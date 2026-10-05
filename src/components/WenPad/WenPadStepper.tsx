@@ -50,20 +50,22 @@ const WenPadStepper = () => {
 
   return (
     <nav aria-label="WenPad steps" className="relative mb-8">
-      {/* Progress rail (desktop): fills up to the current step */}
-      <div aria-hidden="true" className="absolute left-[10%] right-[10%] top-[1.35rem] hidden h-px bg-white/[0.08] md:block">
-        <div
-          className="h-full bg-gradient-to-r from-primary-orange to-primary-yellow transition-all duration-500"
-          style={{ width: `${(activeStep / (steps.length - 1)) * 100}%` }}
-        />
-      </div>
       <ol className="relative grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-5 md:gap-3">
-        {steps.map((step) => {
+        {steps.map((step, i) => {
           const isActive = activeStep === step.id;
           const isDone = step.id < activeStep && !step.disabled;
           const locked = step.disabled;
           return (
-            <li key={step.id}>
+            <li key={step.id} className="relative">
+              {/* Connector in the gap to the next card (desktop), aligned to the node centre */}
+              {i < steps.length - 1 && (
+                <span
+                  aria-hidden="true"
+                  className={`absolute -right-3 top-[26px] hidden h-0.5 w-3 rounded-full transition-colors duration-500 md:block ${
+                    step.id < activeStep ? 'bg-primary-orange' : 'bg-white/[0.1]'
+                  }`}
+                />
+              )}
               <button
                 onClick={() => !locked && selectStep(step.id)}
                 disabled={locked}

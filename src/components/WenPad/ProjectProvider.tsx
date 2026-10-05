@@ -958,7 +958,7 @@ export const ProjectProvider = ({ children }: Props) => {
     const filebaseToken = includeFilebaseToken ? localStorage.getItem('filebaseToken') || '' : '';
     const bundle = await exportProjectBundle(values, { filebaseToken: filebaseToken || undefined });
     const safeName = (values.name || 'wenpad-project').replace(/[^a-zA-Z0-9_-]+/g, '_');
-    await downloadBlob(bundle, `${safeName}.wenpad.zip`);
+    await downloadBlob(bundle, `${safeName}.wenpad`);
     return { sizeBytes: bundle.size, includedToken: Boolean(filebaseToken) };
   };
 

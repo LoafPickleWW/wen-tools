@@ -508,9 +508,8 @@ const MintStep = () => {
   return (
     <div className="max-w-2xl mx-auto space-y-8">
       <div className="text-center space-y-2">
-        <div className="relative inline-block">
-          <MdRocketLaunch size={64} className="mx-auto text-primary-orange animate-bounce" />
-          <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-white/[0.08] shadow-lg shadow-green-500/50" />
+        <div className="mx-auto w-20 h-20 rounded-3xl bg-primary-orange/10 border border-primary-orange/30 flex items-center justify-center text-primary-orange shadow-[0_0_40px_-12px_rgb(var(--brand)/0.7)]">
+          <MdRocketLaunch size={40} />
         </div>
         <h2 className="text-4xl font-black bg-gradient-to-b from-white to-gray-500 bg-clip-text text-transparent uppercase tracking-tighter">
           Final Launch

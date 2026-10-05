@@ -1,7 +1,8 @@
 import { zipSync, unzipSync, strToU8, strFromU8 } from 'fflate';
 import { ProjectT, PreviewItemT } from './WenPadTypes';
 
-// A .wenpad.zip bundle holds everything needed to hand a WenPad project to someone else:
+// A .wenpad bundle (a zip under the hood) holds everything needed to hand a WenPad project to someone else.
+// It deliberately isn't named .zip: Safari and "Extract All" would unpack it, and Import needs the single file.
 //   project.json             – the project with trait image bytes stripped out
 //   images/<traitId>.<ext>   – one file per trait image
 //   settings.json            – optional IPFS settings (Filebase token)
@@ -94,7 +95,8 @@ export async function exportProjectBundle(project: ProjectT, settings: BundleSet
   }
 
   const zipped = zipSync(files as any);
-  return new Blob([zipped], { type: 'application/zip' });
+  // Generic type so browsers don't recognise it as a zip and auto-extract or rename it.
+  return new Blob([zipped], { type: 'application/octet-stream' });
 }
 
 export async function importProjectBundle(file: File): Promise<ImportedBundleT> {
@@ -103,7 +105,7 @@ export async function importProjectBundle(file: File): Promise<ImportedBundleT> 
   try {
     entries = unzipSync(buf);
   } catch {
-    throw new Error('This is not a WenPad project bundle (.wenpad.zip).');
+    throw new Error('This is not a WenPad project file (.wenpad). If it was unzipped, ask for the original file.');
   }
 
   if (!entries['project.json']) throw new Error('Bundle is missing project.json.');
