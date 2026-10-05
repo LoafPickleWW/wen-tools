@@ -37,7 +37,15 @@ export type ContextT = {
   addCustom: () => void;
   deleteCustom: (index: string) => void;
   resetOriginalProject: () => void;
-  downloadBackup: () => void;
+  downloadBackup: (includeFilebaseToken?: boolean) => Promise<{ sizeBytes: number; includedToken: boolean }>;
+  importProject: (file: File) => Promise<{
+    layers: number;
+    traits: number;
+    items: number;
+    missingImages: number;
+    importedToken: boolean;
+  } | null>;
+  importVersion: number;
   purgeDeletedTraitAssets: () => number;
   addTraitRule: (sourceLayerId: string, sourceTraitId: string, rule: RuleT) => void;
   deleteTraitRule: (sourceLayerId: string, sourceTraitId: string, ruleIndex: number) => void;

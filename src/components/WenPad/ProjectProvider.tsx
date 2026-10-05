@@ -28,6 +28,7 @@ import {
 } from './ProjectUtils';
 
 import { ProjectContext } from './ProjectContext';
+import { exportProjectBundle, importProjectBundle } from './ProjectTransfer';
 
 const STEP_NAMES = ['Setup', 'Layers', 'Customs', 'Preview', 'Launch'];
 
@@ -51,6 +52,8 @@ export const ProjectProvider = ({ children }: Props) => {
   const [localDataFetched, setLocalDataFetched] = useState<boolean>();
   const [localError, setLocalError] = useState<string>('');
   const [generateIsLoading, setGenerateIsLoading] = useState<boolean>(false);
+  // Bumped on import so step components re-read anything they cache from localStorage (e.g. IPFS tokens).
+  const [importVersion, setImportVersion] = useState(0);
   const [resumePrompt, setResumePrompt] = useState<{
     projectName: string;
     layersCount: number;
@@ -950,9 +953,52 @@ export const ProjectProvider = ({ children }: Props) => {
     setOriginalProject(form.getValues());
   };
 
-  const downloadBackup = () => {
-    const data = new Blob([JSON.stringify(form.getValues(), null, 2)], { type: 'application/json' });
-    downloadBlob(data, 'wenpad-project.json');
+  const downloadBackup = async (includeFilebaseToken = false) => {
+    const values = form.getValues();
+    const filebaseToken = includeFilebaseToken ? localStorage.getItem('filebaseToken') || '' : '';
+    const bundle = await exportProjectBundle(values, { filebaseToken: filebaseToken || undefined });
+    const safeName = (values.name || 'wenpad-project').replace(/[^a-zA-Z0-9_-]+/g, '_');
+    await downloadBlob(bundle, `${safeName}.wenpad.zip`);
+    return { sizeBytes: bundle.size, includedToken: Boolean(filebaseToken) };
+  };
+
+  const importProject = async (file: File) => {
+    const { project: imported, settings, stats } = await importProjectBundle(file);
+
+    const current = form.getValues();
+    const hasCurrent = Boolean(current.name || current.layers?.length || current.previewItems?.length);
+    if (hasCurrent && !window.confirm(
+      `Replace your current project "${current.name || 'Untitled Collection'}" with "${imported.name || 'Untitled Collection'}"?\n\n` +
+      'Your current layers, traits and previews in this browser will be overwritten. Export it first if you want to keep it.'
+    )) {
+      return null;
+    }
+
+    const cleaned = sanitizeProject(imported);
+    // Reuse the current local record so the import replaces it instead of piling up drafts.
+    cleaned.id = current.id;
+    if (activeAddress) cleaned.owner = activeAddress;
+    cleaned.lastModified = Date.now();
+
+    const step = typeof cleaned.lastStep === 'number'
+      ? cleaned.lastStep
+      : cleaned.previewItems?.length ? 3 : cleaned.layers?.length ? 1 : 0;
+
+    if (settings.filebaseToken) {
+      localStorage.setItem('filebaseToken', settings.filebaseToken);
+    }
+
+    clearPreviewCaches();
+    form.reset(cleaned);
+    setOriginalProject(cleaned);
+    setActiveLayer(cleaned.layers[0]?.id || '');
+    setResumePrompt(null);
+    await saveProjectLocally(cleaned);
+    // After saving: saveProjectLocally persists the step from its (stale) closure.
+    selectStep(step);
+    setImportVersion((v) => v + 1);
+
+    return { ...stats, importedToken: Boolean(settings.filebaseToken) };
   };
 
   useEffect(() => {
@@ -969,7 +1015,7 @@ export const ProjectProvider = ({ children }: Props) => {
         hasChanges, customs, saveProject, selectStep, setSortBy,
         resetProject, formatTrait, deleteTrait, deleteLayer, moveLayer,
         generatePreviewItems, autofillRarity, filterPreviewItems,
-        addCustom, deleteCustom, downloadBackup, resetOriginalProject,
+        addCustom, deleteCustom, downloadBackup, importProject, importVersion, resetOriginalProject,
         purgeDeletedTraitAssets, addTraitRule, deleteTraitRule,
         addLayerRule, deleteLayerRule, updateTraitName,
         updatePreviewItemTraitName, updatePreviewItemTrait, updateCustomTraitName,

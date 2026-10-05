@@ -8,9 +8,10 @@ import LayersStep from './steps/LayersStep';
 import CustomizeStep from './steps/CustomizeStep';
 import PreviewStep from './steps/PreviewStep';
 import MintStep from './steps/MintStep';
+import ProjectTransferBar from './ProjectTransferBar';
 
 const WenPadGenerator = () => {
-  const { activeStep, form, project, resumePrompt, acceptResume, dismissResume } = useProject();
+  const { activeStep, form, project, resumePrompt, acceptResume, dismissResume, importVersion } = useProject();
   const [isEditing, setIsEditing] = useState(false);
 
   return (
@@ -156,8 +157,10 @@ const WenPadGenerator = () => {
       )}
 
       <WenPadStepper />
+
+      <ProjectTransferBar />
       
-      <div className="bg-asset-detail-bg p-8 rounded-3xl border border-white/[0.08] shadow-2xl backdrop-blur-md">
+      <div key={importVersion} className="bg-asset-detail-bg p-8 rounded-3xl border border-white/[0.08] shadow-2xl backdrop-blur-md">
         {activeStep === 0 && <SetupStep />}
         {activeStep === 1 && <LayersStep />}
         {activeStep === 2 && <CustomizeStep />}
