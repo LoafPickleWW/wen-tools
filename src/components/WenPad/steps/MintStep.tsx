@@ -57,6 +57,7 @@ const MintStep = () => {
   const [isMinting, setIsMinting] = useState(false);
   const [progress, setProgress] = useState({ current: 0, total: previewItems.length, status: '' });
   const [showMetadataPreview, setShowMetadataPreview] = useState(false);
+  const [showFilebaseHelp, setShowFilebaseHelp] = useState(!filebaseToken);
   const [showRawJson, setShowRawJson] = useState(false);
 
   // Batch minting range states
@@ -700,11 +701,64 @@ const MintStep = () => {
               className="w-full bg-asset-detail-bg/50 border border-white/[0.08] rounded-2xl px-5 py-4 text-sm focus:outline-none focus:border-primary-orange/50 transition-all placeholder:text-gray-700"
             />
             <p className="text-[11px] text-gray-500 ml-1">
-              Filebase offers 5 GB free IPFS storage. Grab your IPFS RPC token from the{' '}
-              <a href="https://console.filebase.com/keys" target="_blank" rel="noreferrer" className="text-gray-400 hover:text-primary-orange underline">
-                Filebase console
-              </a>.
+              Filebase offers 5 GB free IPFS storage. Your token is saved only in this browser and is sent only to Filebase.
             </p>
+
+            <div className="bg-asset-detail-bg/40 border border-white/[0.08] rounded-3xl overflow-hidden">
+              <button
+                type="button"
+                onClick={() => setShowFilebaseHelp(!showFilebaseHelp)}
+                className="w-full px-5 py-4 flex items-center justify-between text-xs font-black text-gray-300 hover:bg-white/[0.02] transition-colors"
+              >
+                <span>{filebaseToken ? 'How to get a Filebase token' : 'New to Filebase? Get started in 4 steps'}</span>
+                {showFilebaseHelp ? <MdExpandLess size={18} /> : <MdExpandMore size={18} />}
+              </button>
+              {showFilebaseHelp && (
+                <div className="px-5 pb-5 space-y-4 text-xs text-gray-400 font-medium leading-relaxed">
+                  <ol className="space-y-3">
+                    <li className="flex gap-3">
+                      <span className="shrink-0 w-6 h-6 rounded-full bg-primary-orange/10 border border-primary-orange/30 text-primary-orange font-black flex items-center justify-center text-[11px]">1</span>
+                      <span>
+                        <span className="text-gray-200 font-bold">Create a free account</span> at{' '}
+                        <a href="https://console.filebase.com/signup" target="_blank" rel="noreferrer" className="text-primary-orange hover:underline">filebase.com</a>{' '}
+                        and confirm your email. No credit card is needed for the free tier.
+                      </span>
+                    </li>
+                    <li className="flex gap-3">
+                      <span className="shrink-0 w-6 h-6 rounded-full bg-primary-orange/10 border border-primary-orange/30 text-primary-orange font-black flex items-center justify-center text-[11px]">2</span>
+                      <span>
+                        <span className="text-gray-200 font-bold">Create an IPFS bucket.</span> Open{' '}
+                        <a href="https://console.filebase.com/buckets" target="_blank" rel="noreferrer" className="text-primary-orange hover:underline">Buckets</a>,
+                        click <span className="text-gray-200">Create Bucket</span>, give it a name (e.g. your collection name) and make sure the storage network is <span className="text-gray-200">IPFS</span>.
+                      </span>
+                    </li>
+                    <li className="flex gap-3">
+                      <span className="shrink-0 w-6 h-6 rounded-full bg-primary-orange/10 border border-primary-orange/30 text-primary-orange font-black flex items-center justify-center text-[11px]">3</span>
+                      <span>
+                        <span className="text-gray-200 font-bold">Generate the IPFS RPC token.</span> Go to{' '}
+                        <a href="https://console.filebase.com/keys" target="_blank" rel="noreferrer" className="text-primary-orange hover:underline">Access Keys</a>,
+                        scroll to the <span className="text-gray-200">IPFS RPC API</span> section, and choose your bucket from the dropdown. Copy the token it generates.
+                      </span>
+                    </li>
+                    <li className="flex gap-3">
+                      <span className="shrink-0 w-6 h-6 rounded-full bg-primary-orange/10 border border-primary-orange/30 text-primary-orange font-black flex items-center justify-center text-[11px]">4</span>
+                      <span>
+                        <span className="text-gray-200 font-bold">Paste it in the field above</span>, then hit mint. Your images and metadata will be pinned into that bucket and you can browse them in the Filebase console afterwards.
+                      </span>
+                    </li>
+                  </ol>
+                  <div className="flex gap-2 p-3 rounded-2xl bg-amber-500/5 border border-amber-500/20 text-amber-500/90">
+                    <MdWarning size={16} className="shrink-0 mt-0.5" />
+                    <span>
+                      Use the <span className="font-bold">IPFS RPC token</span>, not the S3 Key / Secret pair shown at the top of the Access Keys page. Those will fail with an authorization error.
+                    </span>
+                  </div>
+                  <p className="text-gray-500">
+                    Tip: for large collections, mint a small test batch first to confirm your token works before uploading everything.
+                  </p>
+                </div>
+              )}
+            </div>
           </div>
         ) : effectiveProvider === 'Pinata' ? (
           <div className="space-y-3">
