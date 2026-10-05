@@ -506,6 +506,7 @@ export async function createARC3AssetMintArrayV2Batch(
   const txnsArray = [];
   const pinCids = [];
   const algofileUploads: any[] = [];
+  const errors: string[] = [];
   for (let i = 0; i < data_for_txns.length; i++) {
     // create new atomic transaction composer
     const atc = new algosdk.AtomicTransactionComposer();
@@ -592,12 +593,13 @@ export async function createARC3AssetMintArrayV2Batch(
       toast.info(`Asset ${i + 1} of ${data_for_txns.length} uploaded to IPFS`, {
         autoClose: 200,
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
+      errors.push(`Item ${i + 1}: ${error?.message || error}`);
     }
   }
 
-  return { txnsArray, pinCids, algofileUploads };
+  return { txnsArray, pinCids, algofileUploads, errors };
 }
 
 export async function createARC3AssetMintArray(
@@ -840,6 +842,7 @@ export async function createARC19AssetMintArrayV2Batch(
   const txnsArray = [];
   const pinCids = [];
   const algofileUploads: any[] = [];
+  const errors: string[] = [];
   for (let i = 0; i < data_for_txns.length; i++) {
     // create atomic transaction composer
     const atc = new algosdk.AtomicTransactionComposer();
@@ -926,12 +929,13 @@ export async function createARC19AssetMintArrayV2Batch(
       toast.info(`Asset ${i + 1} of ${data_for_txns.length} uploaded to IPFS`, {
         autoClose: 200,
       });
-    } catch (error) {
+    } catch (error: any) {
       console.log(error);
+      errors.push(`Item ${i + 1}: ${error?.message || error}`);
     }
   }
 
-  return { txnsArray, pinCids, algofileUploads };
+  return { txnsArray, pinCids, algofileUploads, errors };
 }
 
 export async function createARC19AssetMintArray(

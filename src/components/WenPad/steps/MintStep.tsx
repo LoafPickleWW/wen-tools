@@ -21,7 +21,6 @@ import {
   createARC19AssetMintArrayV2Batch,
   createAssetMintArray,
   walletSign,
-  getIndexerURL,
   sliceIntoChunks
 } from '../../../utils';
 import { 
@@ -42,7 +41,7 @@ import { buildMintMetadata, renderPreviewToBlob } from '../ProjectUtils';
 
 const MintStep = () => {
   const { project, previewItems } = useProject();
-  const { activeAccount, activeNetwork, transactionSigner } = useWallet();
+  const { activeAccount, activeNetwork, transactionSigner, algodClient } = useWallet();
   const [standard, setStandard] = useState<'ARC3' | 'ARC69' | 'ARC19'>('ARC19');
   const [provider, setProvider] = useState<'Filebase' | 'AlgoFile' | 'Crust' | 'Pinata'>('Filebase');
   const [filebaseToken, setFilebaseToken] = useState(
@@ -138,7 +137,6 @@ const MintStep = () => {
 
     try {
       const mintedData = [];
-      const algodClient = new algosdk.Algodv2('', getIndexerURL(activeNetwork!), '');
       
       // 1. Pinning Step
       if (effectiveProvider === 'AlgoFile') {
@@ -211,6 +209,8 @@ const MintStep = () => {
         imgConfirmRes.items.forEach(it => {
           imageCidsMap.set(it.fileName, it.cid);
         });
+        const missingImage = itemsToMint.find((item) => !imageCidsMap.get(`image_${item.index}.png`));
+        if (missingImage) throw new Error(`AlgoFile did not return a CID for image #${missingImage.index}. Nothing was minted.`);
 
         // 2. Build metadata JSONs
         setProgress({ current: 0, total: totalToMint, status: 'Preparing metadata JSONs...' });
@@ -301,6 +301,8 @@ const MintStep = () => {
           jsonConfirmRes.items.forEach(it => {
             jsonCidsMap.set(it.fileName, it.cid);
           });
+          const missingJson = itemsToMint.find((item) => !jsonCidsMap.get(`metadata_${item.index}.json`));
+          if (missingJson) throw new Error(`AlgoFile did not return a CID for metadata #${missingJson.index}. Nothing was minted.`);
 
           for (let i = 0; i < itemsToMint.length; i++) {
             const item = itemsToMint[i];
@@ -362,6 +364,7 @@ const MintStep = () => {
       
       let txnsGroups: algosdk.Transaction[][] = [];
       let localAlgofileUploads: any[] = [];
+      let buildErrors: string[] = [];
 
       const batchProvider: any = effectiveProvider === 'AlgoFile' ? 'none' : effectiveProvider.toLowerCase();
       const batchToken = effectiveProvider === 'Filebase' ? filebaseToken : effectiveProvider === 'Pinata' ? pinataToken : ipfsToken;
@@ -376,6 +379,7 @@ const MintStep = () => {
           batchToken
         );
         txnsGroups = result.txnsArray;
+        buildErrors = result.errors;
         localAlgofileUploads = [];
       } else if (standard === 'ARC19') {
         const result = await createARC19AssetMintArrayV2Batch(
@@ -387,6 +391,7 @@ const MintStep = () => {
           batchToken
         );
         txnsGroups = result.txnsArray;
+        buildErrors = result.errors;
         localAlgofileUploads = [];
       } else {
         // ARC69
@@ -399,10 +404,18 @@ const MintStep = () => {
         localAlgofileUploads = [];
       }
 
+      // The batch builders skip items that fail (pinning, bad CID, network) instead of throwing,
+      // so make sure every selected item produced a transaction group before asking for signatures.
+      if (txnsGroups.length !== totalToMint) {
+        const reason = buildErrors[0] ? ` First error: ${buildErrors[0]}` : ' See the browser console for details.';
+        throw new Error(`Only ${txnsGroups.length} of ${totalToMint} mint transactions could be prepared, so nothing was sent.${reason}`);
+      }
+
       // 3. Signing Loop
       setProgress({ current: totalToMint, total: totalToMint, status: 'Awaiting signatures...' });
       
       const chunks = sliceIntoChunks(txnsGroups, 16); // Sign in groups of 16
+      const createdAssetIds: number[] = [];
 
       for (let i = 0; i < chunks.length; i++) {
         const chunk = chunks[i];
@@ -413,8 +426,15 @@ const MintStep = () => {
         });
         const signedTxns = await walletSign(chunk, transactionSigner);
         
+        if (signedTxns.length !== chunk.flat().length) {
+          throw new Error(`Wallet returned ${signedTxns.length} of ${chunk.flat().length} signed transactions. Nothing in this batch was sent.`);
+        }
+
+        const createTxIds: string[] = [];
         let offset = 0;
         for (let j = 0; j < chunk.length; j++) {
+          const createTxn = chunk[j].find((t: algosdk.Transaction) => t.type === algosdk.TransactionType.acfg);
+          if (createTxn) createTxIds.push(createTxn.txID());
           const gLen = chunk[j].length;
           const groupBytes = signedTxns.slice(offset, offset + gLen);
           offset += gLen;
@@ -448,10 +468,28 @@ const MintStep = () => {
           }
         }
         
-        toast.success(`Batch ${i + 1} of ${chunks.length} sent!`);
+        // Don't report success until the network has actually created the assets.
+        setProgress({
+          current: Math.round(((i + 1) / chunks.length) * totalToMint),
+          total: totalToMint,
+          status: `Confirming batch ${i + 1} of ${chunks.length} on-chain...`
+        });
+        for (const txId of createTxIds) {
+          const confirmed = await algosdk.waitForConfirmation(algodClient, txId, 10);
+          const assetId = Number(confirmed['asset-index'] || 0);
+          if (!assetId) throw new Error(`Transaction ${txId} confirmed but no asset was created.`);
+          createdAssetIds.push(assetId);
+        }
+
+        toast.success(`Batch ${i + 1} of ${chunks.length} confirmed!`);
       }
 
-      setProgress({ current: totalToMint, total: totalToMint, status: 'Batch Minted!' });
+      if (createdAssetIds.length !== totalToMint) {
+        throw new Error(`Only ${createdAssetIds.length} of ${totalToMint} assets were confirmed on-chain.`);
+      }
+      console.log('WenPad minted asset IDs:', createdAssetIds);
+
+      setProgress({ current: totalToMint, total: totalToMint, status: `Batch Minted! Asset IDs: ${createdAssetIds[0]}${createdAssetIds.length > 1 ? `–${createdAssetIds[createdAssetIds.length - 1]}` : ''}` });
       confetti({
         particleCount: 200,
         spread: 100,

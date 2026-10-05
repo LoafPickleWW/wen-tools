@@ -715,7 +715,8 @@ export function buildMintMetadata(
     };
   }
 
-  return base;
+  // ARC3 / ARC19 metadata: WenPad always renders PNGs.
+  return { ...base, image_mimetype: 'image/png' };
 }
 
 export function buildItemMetadata(
