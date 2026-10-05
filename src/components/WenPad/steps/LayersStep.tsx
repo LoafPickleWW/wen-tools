@@ -12,7 +12,9 @@ import {
   MdClose,
   MdSearchOff,
   MdOpenInNew,
-  MdBlock
+  MdBlock,
+  MdEdit,
+  MdCheck
 } from 'react-icons/md';
 import { v4 as uuid } from 'uuid';
 import TraitPreviewGrid, { getTraitImageUrl } from './TraitPreviewGrid';
@@ -23,7 +25,7 @@ const LayersStep = () => {
     form, layers, activeLayer, selectLayer, 
     deleteLayer, deleteTrait, moveLayer, resetProject, saveProject,
     activeLayerDetails, activeLayerIndex, formatTrait,
-    resetOriginalProject, addLayerRule, deleteLayerRule
+    resetOriginalProject, addLayerRule, deleteLayerRule, renameLayer
   } = useProject();
 
   const [newLayerName, setNewLayerName] = useState('');
@@ -32,6 +34,20 @@ const LayersStep = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [blockingCategoryOpen, setBlockingCategoryOpen] = useState(false);
   const [selectedBlockLayerId, setSelectedBlockLayerId] = useState('');
+  const [editingLayerId, setEditingLayerId] = useState<string | null>(null);
+  const [layerNameDraft, setLayerNameDraft] = useState('');
+
+  const startRenameLayer = (layerId: string, currentName: string) => {
+    selectLayer(layerId);
+    setSearchQuery('');
+    setEditingLayerId(layerId);
+    setLayerNameDraft(currentName);
+  };
+
+  const commitRenameLayer = () => {
+    if (!editingLayerId) return;
+    if (renameLayer(editingLayerId, layerNameDraft)) setEditingLayerId(null);
+  };
 
   const totalTraitsCount = useMemo(() => {
     return layers.reduce((acc, l) => acc + (l.traits?.length || 0), 0);
@@ -263,11 +279,22 @@ const LayersStep = () => {
                   </div>
 
                   <div className="flex items-center gap-0.5">
-                    <button 
+                    <button
                       type="button"
-                      onClick={(e) => { 
-                        e.stopPropagation(); 
-                        moveLayer(idx, idx - 1); 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        startRenameLayer(layer.id, layer.name);
+                      }}
+                      className="p-1 text-gray-400 hover:text-primary-orange rounded hover:bg-secondary-gray transition-colors"
+                      title="Rename Layer"
+                    >
+                      <MdEdit size={15} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        moveLayer(idx, idx - 1);
                       }}
                       disabled={idx === 0}
                       className="p-1 text-gray-400 hover:text-white disabled:opacity-20 disabled:hover:text-gray-400 rounded hover:bg-secondary-gray transition-colors"
@@ -419,8 +446,47 @@ const LayersStep = () => {
           </div>
         ) : activeLayer ? (
           <div className="space-y-6">
-            <div className="flex items-center justify-between">
-              <h2 className="text-2xl font-bold text-primary-orange">{activeLayerDetails?.name}</h2>
+            <div className="flex items-center justify-between gap-4">
+              {editingLayerId === activeLayer ? (
+                <form
+                  className="flex items-center gap-2 flex-1 min-w-0"
+                  onSubmit={(e) => { e.preventDefault(); commitRenameLayer(); }}
+                >
+                  <input
+                    autoFocus
+                    value={layerNameDraft}
+                    onChange={(e) => setLayerNameDraft(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Escape') setEditingLayerId(null); }}
+                    aria-label="Layer name"
+                    className="flex-1 min-w-0 bg-asset-detail-bg border border-primary-orange/50 rounded-xl px-3 py-1.5 text-xl font-bold text-primary-orange outline-none"
+                  />
+                  <button
+                    type="submit"
+                    className="p-2 bg-green-500/20 text-green-500 rounded-xl hover:bg-green-500/30 transition-all"
+                    title="Save name"
+                  >
+                    <MdCheck size={20} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setEditingLayerId(null)}
+                    className="p-2 bg-red-500/20 text-red-500 rounded-xl hover:bg-red-500/30 transition-all"
+                    title="Cancel"
+                  >
+                    <MdClose size={20} />
+                  </button>
+                </form>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => activeLayerDetails && startRenameLayer(activeLayerDetails.id, activeLayerDetails.name)}
+                  className="group flex items-center gap-2 min-w-0 text-left"
+                  title="Rename layer"
+                >
+                  <h2 className="text-2xl font-bold text-primary-orange truncate">{activeLayerDetails?.name}</h2>
+                  <MdEdit size={18} className="shrink-0 text-gray-500 group-hover:text-primary-orange transition-colors" />
+                </button>
+              )}
               <label className="bg-primary-orange/10 hover:bg-primary-orange/20 text-primary-orange border border-primary-orange/30 px-6 py-3 rounded-2xl cursor-pointer transition-all flex items-center gap-2 font-black uppercase tracking-widest text-xs">
                 <MdAdd size={20} /> Upload Traits
                 <input 

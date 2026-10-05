@@ -381,6 +381,50 @@ export const ProjectProvider = ({ children }: Props) => {
     toast.success('Category rule removed');
   };
 
+  // Generated items key their traits by layer name (item.traits[layerName]) and use it as the
+  // metadata trait_type, so a rename has to move those keys too or the items get purged as invalid.
+  const renameLayer = (layerId: string, newName: string) => {
+    const trimmed = newName.trim();
+    if (!trimmed) {
+      toast.error('Layer name cannot be empty');
+      return false;
+    }
+    const currentValues = form.getValues();
+    const layer = currentValues.layers.find((l) => l.id === layerId);
+    if (!layer) return false;
+    const oldName = layer.name;
+    if (oldName === trimmed) return true;
+    if (currentValues.layers.some((l) => l.id !== layerId && l.name.toLowerCase() === trimmed.toLowerCase())) {
+      toast.error(`Another layer is already called "${trimmed}"`);
+      return false;
+    }
+
+    const renameKeys = (items: PreviewItemT[] = []) =>
+      items.map((item) => {
+        if (!item.traits || !item.traits[oldName]) return item;
+        const { [oldName]: moved, ...others } = item.traits;
+        return {
+          ...item,
+          traits: {
+            ...others,
+            [trimmed]: {
+              ...moved,
+              trait_type: moved.trait_type === oldName || !moved.trait_type ? trimmed : moved.trait_type,
+            },
+          },
+        };
+      });
+
+    form.setValue('layers', currentValues.layers.map((l) => (l.id === layerId ? { ...l, name: trimmed } : l)), { shouldDirty: true });
+    form.setValue('previewItems', renameKeys(currentValues.previewItems), { shouldDirty: true });
+    form.setValue('customs', renameKeys(currentValues.customs), { shouldDirty: true });
+    setActiveFilters([]);
+    clearPreviewCaches();
+    resetOriginalProject();
+    toast.success(`Renamed layer to "${trimmed}"`);
+    return true;
+  };
+
   const updateTraitName = (layerId: string, traitId: string, newName: string) => {
     const trimmed = newName.trim();
     if (!trimmed) {
@@ -1017,7 +1061,7 @@ export const ProjectProvider = ({ children }: Props) => {
         generatePreviewItems, autofillRarity, filterPreviewItems,
         addCustom, deleteCustom, downloadBackup, importProject, importVersion, resetOriginalProject,
         purgeDeletedTraitAssets, addTraitRule, deleteTraitRule,
-        addLayerRule, deleteLayerRule, updateTraitName,
+        addLayerRule, deleteLayerRule, updateTraitName, renameLayer,
         updatePreviewItemTraitName, updatePreviewItemTrait, updateCustomTraitName,
         resumePrompt, acceptResume, dismissResume,
       }}
