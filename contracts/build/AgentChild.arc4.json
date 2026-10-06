@@ -1,0 +1,95 @@
+{
+  "name": "AgentChild",
+  "desc": "",
+  "methods": [
+    {
+      "name": "createApplication",
+      "args": [
+        {
+          "name": "name",
+          "type": "string"
+        },
+        {
+          "name": "description",
+          "type": "string"
+        },
+        {
+          "name": "endpoint_url",
+          "type": "string"
+        },
+        {
+          "name": "price_algo",
+          "type": "uint64"
+        },
+        {
+          "name": "category",
+          "type": "string"
+        },
+        {
+          "name": "wallet_address",
+          "type": "address"
+        },
+        {
+          "name": "info_url",
+          "type": "string"
+        }
+      ],
+      "returns": {
+        "type": "void"
+      }
+    },
+    {
+      "name": "update_listing",
+      "args": [
+        {
+          "name": "name",
+          "type": "string"
+        },
+        {
+          "name": "description",
+          "type": "string"
+        },
+        {
+          "name": "endpoint_url",
+          "type": "string"
+        },
+        {
+          "name": "price_algo",
+          "type": "uint64"
+        },
+        {
+          "name": "category",
+          "type": "string"
+        },
+        {
+          "name": "info_url",
+          "type": "string"
+        }
+      ],
+      "returns": {
+        "type": "void"
+      }
+    },
+    {
+      "name": "deactivate_listing",
+      "args": [],
+      "returns": {
+        "type": "void"
+      }
+    },
+    {
+      "name": "activate_listing",
+      "args": [],
+      "returns": {
+        "type": "void"
+      }
+    },
+    {
+      "name": "deleteApplication",
+      "args": [],
+      "returns": {
+        "type": "void"
+      }
+    }
+  ]
+}

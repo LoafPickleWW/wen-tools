@@ -10,7 +10,6 @@ lerna-debug.log*
 node_modules
 dist
 dist-ssr
-contracts/build/
 *.local
 .env
 .env.*
@@ -32,7 +31,6 @@ contracts/build/
 node_modules/
 dist/
 dist-ssr/
-contracts/build/
 vite.config.ts.timestamp-*
 .eslintcache
 coverage/

@@ -1,0 +1,91 @@
+{
+  "name": "AgentFactory",
+  "desc": "",
+  "methods": [
+    {
+      "name": "createApplication",
+      "args": [],
+      "returns": {
+        "type": "void"
+      }
+    },
+    {
+      "name": "create_listing",
+      "args": [
+        {
+          "name": "mbrPayment",
+          "type": "pay"
+        },
+        {
+          "name": "name",
+          "type": "string"
+        },
+        {
+          "name": "description",
+          "type": "string"
+        },
+        {
+          "name": "endpoint_url",
+          "type": "string"
+        },
+        {
+          "name": "price_algo",
+          "type": "uint64"
+        },
+        {
+          "name": "category",
+          "type": "string"
+        },
+        {
+          "name": "info_url",
+          "type": "string"
+        }
+      ],
+      "returns": {
+        "type": "uint64"
+      }
+    },
+    {
+      "name": "get_listing_app",
+      "args": [
+        {
+          "name": "wallet",
+          "type": "address"
+        },
+        {
+          "name": "nonce",
+          "type": "uint64"
+        }
+      ],
+      "returns": {
+        "type": "uint64"
+      }
+    },
+    {
+      "name": "delete_listing",
+      "args": [
+        {
+          "name": "nonce",
+          "type": "uint64"
+        }
+      ],
+      "returns": {
+        "type": "void"
+      }
+    },
+    {
+      "name": "deleteApplication",
+      "args": [],
+      "returns": {
+        "type": "void"
+      }
+    },
+    {
+      "name": "updateApplication",
+      "args": [],
+      "returns": {
+        "type": "void"
+      }
+    }
+  ]
+}

@@ -1,0 +1,355 @@
+{
+  "name": "WenPadSale",
+  "desc": "",
+  "methods": [
+    {
+      "name": "createApplication",
+      "args": [
+        {
+          "name": "saleId",
+          "type": "uint64"
+        },
+        {
+          "name": "admin",
+          "type": "address"
+        },
+        {
+          "name": "distribution",
+          "type": "address"
+        },
+        {
+          "name": "price",
+          "type": "uint64"
+        },
+        {
+          "name": "startRound",
+          "type": "uint64"
+        },
+        {
+          "name": "endRound",
+          "type": "uint64"
+        },
+        {
+          "name": "revealFee",
+          "type": "uint64"
+        },
+        {
+          "name": "deliveryBudget",
+          "type": "uint64"
+        },
+        {
+          "name": "router",
+          "type": "uint64"
+        }
+      ],
+      "returns": {
+        "type": "void"
+      }
+    },
+    {
+      "name": "setPayouts",
+      "desc": "Called once by the factory right after creation (the app needs a balance to hold the box).",
+      "args": [
+        {
+          "name": "payouts",
+          "type": "byte[]"
+        }
+      ],
+      "returns": {
+        "type": "void"
+      }
+    },
+    {
+      "name": "addItems",
+      "desc": "Append asset IDs to the sale list. The payment must cover the box MBR for any new pages.\nThe frontend should only pass assets the distribution wallet holds; any that are not\nheld at reveal time are skipped and dropped from the list.",
+      "args": [
+        {
+          "name": "mbrPay",
+          "type": "pay"
+        },
+        {
+          "name": "assets",
+          "type": "byte[]"
+        }
+      ],
+      "returns": {
+        "type": "void"
+      }
+    },
+    {
+      "name": "register",
+      "desc": "Go live. Must be followed in the same group by the distribution wallet's rekey to this\napp, or called after that rekey has happened. Either way the distribution wallet can\nsign both transactions in one prompt: [register(), pay 0 to self with rekeyTo=app].",
+      "args": [],
+      "returns": {
+        "type": "void"
+      }
+    },
+    {
+      "name": "pause",
+      "args": [],
+      "returns": {
+        "type": "void"
+      }
+    },
+    {
+      "name": "unpause",
+      "args": [],
+      "returns": {
+        "type": "void"
+      }
+    },
+    {
+      "name": "setPrice",
+      "args": [
+        {
+          "name": "price",
+          "type": "uint64"
+        }
+      ],
+      "returns": {
+        "type": "void"
+      }
+    },
+    {
+      "name": "setEndRound",
+      "desc": "The end round can be moved but never removed, so the permissionless release always applies eventually.",
+      "args": [
+        {
+          "name": "endRound",
+          "type": "uint64"
+        }
+      ],
+      "returns": {
+        "type": "void"
+      }
+    },
+    {
+      "name": "commit",
+      "desc": "Reserve one random item. Payment must cover the four line items:\n  price          - creator (held until reveal)\n  revealFee      - whoever calls reveal (keeper bounty)\n  commit box MBR - refundable (2500 + 400 * (9-byte key + 72-byte Commit) = 34,900 today)\n  deliveryBudget - refundable delivery deposit (direct refund or carried to the ARC-59 inbox)\nAnything paid above that is added to the refundable deposit.",
+      "args": [
+        {
+          "name": "payment",
+          "type": "pay"
+        }
+      ],
+      "returns": {
+        "type": "uint64"
+      },
+      "events": [
+        {
+          "name": "Committed",
+          "args": [
+            {
+              "name": "commitId",
+              "type": "uint64"
+            },
+            {
+              "name": "buyer",
+              "type": "address"
+            },
+            {
+              "name": "targetRound",
+              "type": "uint64"
+            }
+          ],
+          "desc": ""
+        }
+      ]
+    },
+    {
+      "name": "reveal",
+      "desc": "Resolve a commit once its target round has passed. Callable by anyone: the result is\nalready fixed by the block seed. The caller receives revealFee as a bounty, which should\nexceed the pooled fees they pay for this call.\n\n\nSecurity invariant: once a draw is made, nothing the buyer controls can make this call\nfail. Otherwise a buyer could let unwanted draws expire and take the refund (free re-roll).\nSo every payment to the buyer goes either to an account that provably exists (opted in\nto the asset) or into the ARC-59 inbox, and the deposit floor covers the worst-case inbox.",
+      "args": [
+        {
+          "name": "commitId",
+          "type": "uint64"
+        }
+      ],
+      "returns": {
+        "type": "void"
+      },
+      "events": [
+        {
+          "name": "Cancelled",
+          "args": [
+            {
+              "name": "commitId",
+              "type": "uint64"
+            },
+            {
+              "name": "buyer",
+              "type": "address"
+            }
+          ],
+          "desc": ""
+        },
+        {
+          "name": "Revealed",
+          "args": [
+            {
+              "name": "commitId",
+              "type": "uint64"
+            },
+            {
+              "name": "buyer",
+              "type": "address"
+            },
+            {
+              "name": "asset",
+              "type": "uint64"
+            },
+            {
+              "name": "inboxCost",
+              "type": "uint64"
+            }
+          ],
+          "desc": ""
+        }
+      ]
+    },
+    {
+      "name": "cancelExpired",
+      "desc": "Refund a commit nobody revealed within REVEAL_WINDOW rounds (its block seed is no longer\nreadable). The reveal bounty makes it profitable for anyone to reveal long before this,\nand the buyer's own page reveals too.",
+      "args": [
+        {
+          "name": "commitId",
+          "type": "uint64"
+        }
+      ],
+      "returns": {
+        "type": "void"
+      },
+      "events": [
+        {
+          "name": "Cancelled",
+          "args": [
+            {
+              "name": "commitId",
+              "type": "uint64"
+            },
+            {
+              "name": "buyer",
+              "type": "address"
+            }
+          ],
+          "desc": ""
+        }
+      ]
+    },
+    {
+      "name": "release",
+      "desc": "Rekey the distribution wallet back to itself. Requires no pending commits (pause first,\nthen let them be revealed). Allowed for the admin at any time, or for anyone once the\nsale has ended or sold out, so the wallet can never be stuck.",
+      "args": [],
+      "returns": {
+        "type": "void"
+      }
+    },
+    {
+      "name": "withdrawProceeds",
+      "desc": "Split accumulated sale proceeds between the payout addresses. Callable by anyone.",
+      "args": [],
+      "returns": {
+        "type": "void"
+      }
+    },
+    {
+      "name": "deleteItemPage",
+      "desc": "Free leftover item pages after release so the app can be deleted. Callable by anyone.",
+      "args": [
+        {
+          "name": "page",
+          "type": "uint64"
+        }
+      ],
+      "returns": {
+        "type": "void"
+      }
+    },
+    {
+      "name": "opUp",
+      "desc": "No-op. Grouped alongside heavy calls (reveal) to pool extra opcode budget.",
+      "args": [],
+      "returns": {
+        "type": "void"
+      }
+    },
+    {
+      "name": "deleteApplication",
+      "desc": "Called by the factory's deleteSale. Pays out proceeds, then closes the account to the\ndistribution wallet, which paid the deposits.",
+      "args": [],
+      "returns": {
+        "type": "void"
+      }
+    }
+  ],
+  "events": [
+    {
+      "name": "Committed",
+      "args": [
+        {
+          "name": "commitId",
+          "type": "uint64"
+        },
+        {
+          "name": "buyer",
+          "type": "address"
+        },
+        {
+          "name": "targetRound",
+          "type": "uint64"
+        }
+      ],
+      "desc": ""
+    },
+    {
+      "name": "Revealed",
+      "args": [
+        {
+          "name": "commitId",
+          "type": "uint64"
+        },
+        {
+          "name": "buyer",
+          "type": "address"
+        },
+        {
+          "name": "asset",
+          "type": "uint64"
+        },
+        {
+          "name": "inboxCost",
+          "type": "uint64"
+        }
+      ],
+      "desc": ""
+    },
+    {
+      "name": "Cancelled",
+      "args": [
+        {
+          "name": "commitId",
+          "type": "uint64"
+        },
+        {
+          "name": "buyer",
+          "type": "address"
+        }
+      ],
+      "desc": ""
+    },
+    {
+      "name": "Released",
+      "args": [
+        {
+          "name": "sold",
+          "type": "uint64"
+        },
+        {
+          "name": "remaining",
+          "type": "uint64"
+        }
+      ],
+      "desc": ""
+    }
+  ]
+}

@@ -1,0 +1,1145 @@
+[
+  {
+    "teal": 1,
+    "source": "contracts\\AgentContracts.algo.ts:77"
+  },
+  {
+    "teal": 2,
+    "source": "contracts\\AgentContracts.algo.ts:77"
+  },
+  {
+    "teal": 3,
+    "source": "contracts\\AgentContracts.algo.ts:77"
+  },
+  {
+    "teal": 15,
+    "source": "contracts\\AgentContracts.algo.ts:77"
+  },
+  {
+    "teal": 16,
+    "source": "contracts\\AgentContracts.algo.ts:77"
+  },
+  {
+    "teal": 17,
+    "source": "contracts\\AgentContracts.algo.ts:77"
+  },
+  {
+    "teal": 18,
+    "source": "contracts\\AgentContracts.algo.ts:77"
+  },
+  {
+    "teal": 19,
+    "source": "contracts\\AgentContracts.algo.ts:77"
+  },
+  {
+    "teal": 20,
+    "source": "contracts\\AgentContracts.algo.ts:77"
+  },
+  {
+    "teal": 21,
+    "source": "contracts\\AgentContracts.algo.ts:77"
+  },
+  {
+    "teal": 25,
+    "source": "contracts\\AgentContracts.algo.ts:77",
+    "errorMessage": "The requested action is not implemented in this contract. Are you using the correct OnComplete? Did you set your app ID?"
+  },
+  {
+    "teal": 30,
+    "source": "contracts\\AgentContracts.algo.ts:82"
+  },
+  {
+    "teal": 31,
+    "source": "contracts\\AgentContracts.algo.ts:82"
+  },
+  {
+    "teal": 32,
+    "source": "contracts\\AgentContracts.algo.ts:82"
+  },
+  {
+    "teal": 36,
+    "source": "contracts\\AgentContracts.algo.ts:82"
+  },
+  {
+    "teal": 40,
+    "source": "contracts\\AgentContracts.algo.ts:83"
+  },
+  {
+    "teal": 41,
+    "source": "contracts\\AgentContracts.algo.ts:83"
+  },
+  {
+    "teal": 42,
+    "source": "contracts\\AgentContracts.algo.ts:83"
+  },
+  {
+    "teal": 46,
+    "source": "contracts\\AgentContracts.algo.ts:84"
+  },
+  {
+    "teal": 47,
+    "source": "contracts\\AgentContracts.algo.ts:84"
+  },
+  {
+    "teal": 48,
+    "source": "contracts\\AgentContracts.algo.ts:84"
+  },
+  {
+    "teal": 49,
+    "source": "contracts\\AgentContracts.algo.ts:82"
+  },
+  {
+    "teal": 54,
+    "source": "contracts\\AgentContracts.algo.ts:87"
+  },
+  {
+    "teal": 57,
+    "source": "contracts\\AgentContracts.algo.ts:94"
+  },
+  {
+    "teal": 58,
+    "source": "contracts\\AgentContracts.algo.ts:94"
+  },
+  {
+    "teal": 61,
+    "source": "contracts\\AgentContracts.algo.ts:93"
+  },
+  {
+    "teal": 62,
+    "source": "contracts\\AgentContracts.algo.ts:93"
+  },
+  {
+    "teal": 65,
+    "source": "contracts\\AgentContracts.algo.ts:92"
+  },
+  {
+    "teal": 66,
+    "source": "contracts\\AgentContracts.algo.ts:92"
+  },
+  {
+    "teal": 69,
+    "source": "contracts\\AgentContracts.algo.ts:91"
+  },
+  {
+    "teal": 70,
+    "source": "contracts\\AgentContracts.algo.ts:91"
+  },
+  {
+    "teal": 73,
+    "source": "contracts\\AgentContracts.algo.ts:90"
+  },
+  {
+    "teal": 74,
+    "source": "contracts\\AgentContracts.algo.ts:90"
+  },
+  {
+    "teal": 77,
+    "source": "contracts\\AgentContracts.algo.ts:89"
+  },
+  {
+    "teal": 78,
+    "source": "contracts\\AgentContracts.algo.ts:89"
+  },
+  {
+    "teal": 81,
+    "source": "contracts\\AgentContracts.algo.ts:88"
+  },
+  {
+    "teal": 82,
+    "source": "contracts\\AgentContracts.algo.ts:88"
+  },
+  {
+    "teal": 83,
+    "source": "contracts\\AgentContracts.algo.ts:88"
+  },
+  {
+    "teal": 84,
+    "source": "contracts\\AgentContracts.algo.ts:88"
+  },
+  {
+    "teal": 85,
+    "source": "contracts\\AgentContracts.algo.ts:88"
+  },
+  {
+    "teal": 86,
+    "source": "contracts\\AgentContracts.algo.ts:88"
+  },
+  {
+    "teal": 87,
+    "source": "contracts\\AgentContracts.algo.ts:88"
+  },
+  {
+    "teal": 90,
+    "source": "contracts\\AgentContracts.algo.ts:88",
+    "errorMessage": "argument 6 (mbrPayment) for create_listing must be a pay transaction"
+  },
+  {
+    "teal": 93,
+    "source": "contracts\\AgentContracts.algo.ts:87"
+  },
+  {
+    "teal": 94,
+    "source": "contracts\\AgentContracts.algo.ts:87"
+  },
+  {
+    "teal": 95,
+    "source": "contracts\\AgentContracts.algo.ts:87"
+  },
+  {
+    "teal": 96,
+    "source": "contracts\\AgentContracts.algo.ts:87"
+  },
+  {
+    "teal": 97,
+    "source": "contracts\\AgentContracts.algo.ts:87"
+  },
+  {
+    "teal": 98,
+    "source": "contracts\\AgentContracts.algo.ts:87"
+  },
+  {
+    "teal": 102,
+    "source": "contracts\\AgentContracts.algo.ts:87"
+  },
+  {
+    "teal": 105,
+    "source": "contracts\\AgentContracts.algo.ts:87"
+  },
+  {
+    "teal": 106,
+    "source": "contracts\\AgentContracts.algo.ts:87"
+  },
+  {
+    "teal": 110,
+    "source": "contracts\\AgentContracts.algo.ts:96"
+  },
+  {
+    "teal": 111,
+    "source": "contracts\\AgentContracts.algo.ts:96"
+  },
+  {
+    "teal": 112,
+    "source": "contracts\\AgentContracts.algo.ts:96"
+  },
+  {
+    "teal": 116,
+    "source": "contracts\\AgentContracts.algo.ts:97"
+  },
+  {
+    "teal": 117,
+    "source": "contracts\\AgentContracts.algo.ts:97"
+  },
+  {
+    "teal": 118,
+    "source": "contracts\\AgentContracts.algo.ts:97"
+  },
+  {
+    "teal": 119,
+    "source": "contracts\\AgentContracts.algo.ts:97"
+  },
+  {
+    "teal": 120,
+    "source": "contracts\\AgentContracts.algo.ts:97"
+  },
+  {
+    "teal": 124,
+    "source": "contracts\\AgentContracts.algo.ts:98"
+  },
+  {
+    "teal": 125,
+    "source": "contracts\\AgentContracts.algo.ts:98"
+  },
+  {
+    "teal": 126,
+    "source": "contracts\\AgentContracts.algo.ts:98"
+  },
+  {
+    "teal": 127,
+    "source": "contracts\\AgentContracts.algo.ts:98"
+  },
+  {
+    "teal": 128,
+    "source": "contracts\\AgentContracts.algo.ts:98"
+  },
+  {
+    "teal": 129,
+    "source": "contracts\\AgentContracts.algo.ts:98"
+  },
+  {
+    "teal": 137,
+    "source": "contracts\\AgentContracts.algo.ts:104"
+  },
+  {
+    "teal": 138,
+    "source": "contracts\\AgentContracts.algo.ts:105"
+  },
+  {
+    "teal": 139,
+    "source": "contracts\\AgentContracts.algo.ts:105"
+  },
+  {
+    "teal": 140,
+    "source": "contracts\\AgentContracts.algo.ts:105"
+  },
+  {
+    "teal": 143,
+    "source": "contracts\\AgentContracts.algo.ts:105",
+    "errorMessage": "transaction verification failed: {\"txn\":\"mbrPayment\",\"field\":\"receiver\",\"expected\":\"this.app.address\"}"
+  },
+  {
+    "teal": 146,
+    "source": "contracts\\AgentContracts.algo.ts:104"
+  },
+  {
+    "teal": 147,
+    "source": "contracts\\AgentContracts.algo.ts:106"
+  },
+  {
+    "teal": 148,
+    "source": "contracts\\AgentContracts.algo.ts:106"
+  },
+  {
+    "teal": 149,
+    "source": "contracts\\AgentContracts.algo.ts:106"
+  },
+  {
+    "teal": 152,
+    "source": "contracts\\AgentContracts.algo.ts:106",
+    "errorMessage": "transaction verification failed: {\"txn\":\"mbrPayment\",\"field\":\"amount\",\"condition\":\"greaterThanEqualTo\",\"expected\":\">=478_700\"}"
+  },
+  {
+    "teal": 163,
+    "source": "contracts\\AgentContracts.algo.ts:109"
+  },
+  {
+    "teal": 164,
+    "source": "contracts\\AgentContracts.algo.ts:109"
+  },
+  {
+    "teal": 165,
+    "source": "contracts\\AgentContracts.algo.ts:109"
+  },
+  {
+    "teal": 166,
+    "source": "contracts\\AgentContracts.algo.ts:109"
+  },
+  {
+    "teal": 167,
+    "source": "contracts\\AgentContracts.algo.ts:109"
+  },
+  {
+    "teal": 172,
+    "source": "contracts\\AgentContracts.algo.ts:110"
+  },
+  {
+    "teal": 177,
+    "source": "contracts\\AgentContracts.algo.ts:111"
+  },
+  {
+    "teal": 181,
+    "source": "contracts\\AgentContracts.algo.ts:112"
+  },
+  {
+    "teal": 182,
+    "source": "contracts\\AgentContracts.algo.ts:112"
+  },
+  {
+    "teal": 183,
+    "source": "contracts\\AgentContracts.algo.ts:112"
+  },
+  {
+    "teal": 184,
+    "source": "contracts\\AgentContracts.algo.ts:112"
+  },
+  {
+    "teal": 185,
+    "source": "contracts\\AgentContracts.algo.ts:112"
+  },
+  {
+    "teal": 186,
+    "source": "contracts\\AgentContracts.algo.ts:112"
+  },
+  {
+    "teal": 187,
+    "source": "contracts\\AgentContracts.algo.ts:112"
+  },
+  {
+    "teal": 188,
+    "source": "contracts\\AgentContracts.algo.ts:112"
+  },
+  {
+    "teal": 189,
+    "source": "contracts\\AgentContracts.algo.ts:112"
+  },
+  {
+    "teal": 190,
+    "source": "contracts\\AgentContracts.algo.ts:112"
+  },
+  {
+    "teal": 191,
+    "source": "contracts\\AgentContracts.algo.ts:112"
+  },
+  {
+    "teal": 192,
+    "source": "contracts\\AgentContracts.algo.ts:112"
+  },
+  {
+    "teal": 193,
+    "source": "contracts\\AgentContracts.algo.ts:112"
+  },
+  {
+    "teal": 194,
+    "source": "contracts\\AgentContracts.algo.ts:112"
+  },
+  {
+    "teal": 195,
+    "source": "contracts\\AgentContracts.algo.ts:112"
+  },
+  {
+    "teal": 196,
+    "source": "contracts\\AgentContracts.algo.ts:112"
+  },
+  {
+    "teal": 197,
+    "source": "contracts\\AgentContracts.algo.ts:112"
+  },
+  {
+    "teal": 198,
+    "source": "contracts\\AgentContracts.algo.ts:112"
+  },
+  {
+    "teal": 199,
+    "source": "contracts\\AgentContracts.algo.ts:112"
+  },
+  {
+    "teal": 200,
+    "source": "contracts\\AgentContracts.algo.ts:112"
+  },
+  {
+    "teal": 201,
+    "source": "contracts\\AgentContracts.algo.ts:112"
+  },
+  {
+    "teal": 202,
+    "source": "contracts\\AgentContracts.algo.ts:112"
+  },
+  {
+    "teal": 203,
+    "source": "contracts\\AgentContracts.algo.ts:112"
+  },
+  {
+    "teal": 204,
+    "source": "contracts\\AgentContracts.algo.ts:112"
+  },
+  {
+    "teal": 205,
+    "source": "contracts\\AgentContracts.algo.ts:112"
+  },
+  {
+    "teal": 206,
+    "source": "contracts\\AgentContracts.algo.ts:112"
+  },
+  {
+    "teal": 207,
+    "source": "contracts\\AgentContracts.algo.ts:112"
+  },
+  {
+    "teal": 208,
+    "source": "contracts\\AgentContracts.algo.ts:112"
+  },
+  {
+    "teal": 209,
+    "source": "contracts\\AgentContracts.algo.ts:112"
+  },
+  {
+    "teal": 210,
+    "source": "contracts\\AgentContracts.algo.ts:112"
+  },
+  {
+    "teal": 211,
+    "source": "contracts\\AgentContracts.algo.ts:112"
+  },
+  {
+    "teal": 212,
+    "source": "contracts\\AgentContracts.algo.ts:112"
+  },
+  {
+    "teal": 213,
+    "source": "contracts\\AgentContracts.algo.ts:112"
+  },
+  {
+    "teal": 214,
+    "source": "contracts\\AgentContracts.algo.ts:112"
+  },
+  {
+    "teal": 215,
+    "source": "contracts\\AgentContracts.algo.ts:112"
+  },
+  {
+    "teal": 216,
+    "source": "contracts\\AgentContracts.algo.ts:112"
+  },
+  {
+    "teal": 217,
+    "source": "contracts\\AgentContracts.algo.ts:112"
+  },
+  {
+    "teal": 218,
+    "source": "contracts\\AgentContracts.algo.ts:112"
+  },
+  {
+    "teal": 219,
+    "source": "contracts\\AgentContracts.algo.ts:112"
+  },
+  {
+    "teal": 220,
+    "source": "contracts\\AgentContracts.algo.ts:112"
+  },
+  {
+    "teal": 221,
+    "source": "contracts\\AgentContracts.algo.ts:112"
+  },
+  {
+    "teal": 222,
+    "source": "contracts\\AgentContracts.algo.ts:112"
+  },
+  {
+    "teal": 223,
+    "source": "contracts\\AgentContracts.algo.ts:112"
+  },
+  {
+    "teal": 224,
+    "source": "contracts\\AgentContracts.algo.ts:112"
+  },
+  {
+    "teal": 225,
+    "source": "contracts\\AgentContracts.algo.ts:112"
+  },
+  {
+    "teal": 229,
+    "source": "contracts\\AgentContracts.algo.ts:113"
+  },
+  {
+    "teal": 230,
+    "source": "contracts\\AgentContracts.algo.ts:113"
+  },
+  {
+    "teal": 234,
+    "source": "contracts\\AgentContracts.algo.ts:114"
+  },
+  {
+    "teal": 235,
+    "source": "contracts\\AgentContracts.algo.ts:114"
+  },
+  {
+    "teal": 239,
+    "source": "contracts\\AgentContracts.algo.ts:115"
+  },
+  {
+    "teal": 240,
+    "source": "contracts\\AgentContracts.algo.ts:115"
+  },
+  {
+    "teal": 243,
+    "source": "contracts\\AgentContracts.algo.ts:109"
+  },
+  {
+    "teal": 247,
+    "source": "contracts\\AgentContracts.algo.ts:118"
+  },
+  {
+    "teal": 248,
+    "source": "contracts\\AgentContracts.algo.ts:118"
+  },
+  {
+    "teal": 252,
+    "source": "contracts\\AgentContracts.algo.ts:120"
+  },
+  {
+    "teal": 253,
+    "source": "contracts\\AgentContracts.algo.ts:120"
+  },
+  {
+    "teal": 254,
+    "source": "contracts\\AgentContracts.algo.ts:120"
+  },
+  {
+    "teal": 255,
+    "source": "contracts\\AgentContracts.algo.ts:120"
+  },
+  {
+    "teal": 259,
+    "source": "contracts\\AgentContracts.algo.ts:121"
+  },
+  {
+    "teal": 260,
+    "source": "contracts\\AgentContracts.algo.ts:121"
+  },
+  {
+    "teal": 261,
+    "source": "contracts\\AgentContracts.algo.ts:121"
+  },
+  {
+    "teal": 262,
+    "source": "contracts\\AgentContracts.algo.ts:121"
+  },
+  {
+    "teal": 263,
+    "source": "contracts\\AgentContracts.algo.ts:121"
+  },
+  {
+    "teal": 264,
+    "source": "contracts\\AgentContracts.algo.ts:121"
+  },
+  {
+    "teal": 268,
+    "source": "contracts\\AgentContracts.algo.ts:122"
+  },
+  {
+    "teal": 269,
+    "source": "contracts\\AgentContracts.algo.ts:122"
+  },
+  {
+    "teal": 270,
+    "source": "contracts\\AgentContracts.algo.ts:122"
+  },
+  {
+    "teal": 271,
+    "source": "contracts\\AgentContracts.algo.ts:122"
+  },
+  {
+    "teal": 272,
+    "source": "contracts\\AgentContracts.algo.ts:122"
+  },
+  {
+    "teal": 276,
+    "source": "contracts\\AgentContracts.algo.ts:124"
+  },
+  {
+    "teal": 279,
+    "source": "contracts\\AgentContracts.algo.ts:87"
+  },
+  {
+    "teal": 282,
+    "source": "contracts\\AgentContracts.algo.ts:87"
+  },
+  {
+    "teal": 283,
+    "source": "contracts\\AgentContracts.algo.ts:87"
+  },
+  {
+    "teal": 288,
+    "source": "contracts\\AgentContracts.algo.ts:127"
+  },
+  {
+    "teal": 291,
+    "source": "contracts\\AgentContracts.algo.ts:127"
+  },
+  {
+    "teal": 292,
+    "source": "contracts\\AgentContracts.algo.ts:127"
+  },
+  {
+    "teal": 295,
+    "source": "contracts\\AgentContracts.algo.ts:127"
+  },
+  {
+    "teal": 296,
+    "source": "contracts\\AgentContracts.algo.ts:127"
+  },
+  {
+    "teal": 297,
+    "source": "contracts\\AgentContracts.algo.ts:127"
+  },
+  {
+    "teal": 298,
+    "source": "contracts\\AgentContracts.algo.ts:127"
+  },
+  {
+    "teal": 299,
+    "source": "contracts\\AgentContracts.algo.ts:127"
+  },
+  {
+    "teal": 302,
+    "source": "contracts\\AgentContracts.algo.ts:127",
+    "errorMessage": "argument 1 (wallet) for get_listing_app must be a address"
+  },
+  {
+    "teal": 305,
+    "source": "contracts\\AgentContracts.algo.ts:127"
+  },
+  {
+    "teal": 306,
+    "source": "contracts\\AgentContracts.algo.ts:127"
+  },
+  {
+    "teal": 307,
+    "source": "contracts\\AgentContracts.algo.ts:127"
+  },
+  {
+    "teal": 308,
+    "source": "contracts\\AgentContracts.algo.ts:127"
+  },
+  {
+    "teal": 309,
+    "source": "contracts\\AgentContracts.algo.ts:127"
+  },
+  {
+    "teal": 310,
+    "source": "contracts\\AgentContracts.algo.ts:127"
+  },
+  {
+    "teal": 314,
+    "source": "contracts\\AgentContracts.algo.ts:127"
+  },
+  {
+    "teal": 317,
+    "source": "contracts\\AgentContracts.algo.ts:127"
+  },
+  {
+    "teal": 321,
+    "source": "contracts\\AgentContracts.algo.ts:128"
+  },
+  {
+    "teal": 322,
+    "source": "contracts\\AgentContracts.algo.ts:128"
+  },
+  {
+    "teal": 323,
+    "source": "contracts\\AgentContracts.algo.ts:128"
+  },
+  {
+    "teal": 324,
+    "source": "contracts\\AgentContracts.algo.ts:128"
+  },
+  {
+    "teal": 325,
+    "source": "contracts\\AgentContracts.algo.ts:128"
+  },
+  {
+    "teal": 329,
+    "source": "contracts\\AgentContracts.algo.ts:129"
+  },
+  {
+    "teal": 330,
+    "source": "contracts\\AgentContracts.algo.ts:129"
+  },
+  {
+    "teal": 331,
+    "source": "contracts\\AgentContracts.algo.ts:129"
+  },
+  {
+    "teal": 332,
+    "source": "contracts\\AgentContracts.algo.ts:129"
+  },
+  {
+    "teal": 333,
+    "source": "contracts\\AgentContracts.algo.ts:129"
+  },
+  {
+    "teal": 337,
+    "source": "contracts\\AgentContracts.algo.ts:130"
+  },
+  {
+    "teal": 338,
+    "source": "contracts\\AgentContracts.algo.ts:130"
+  },
+  {
+    "teal": 341,
+    "source": "contracts\\AgentContracts.algo.ts:130",
+    "errorMessage": "box value does not exist: this.listings(boxKey).value"
+  },
+  {
+    "teal": 342,
+    "source": "contracts\\AgentContracts.algo.ts:130"
+  },
+  {
+    "teal": 345,
+    "source": "contracts\\AgentContracts.algo.ts:127"
+  },
+  {
+    "teal": 346,
+    "source": "contracts\\AgentContracts.algo.ts:127"
+  },
+  {
+    "teal": 351,
+    "source": "contracts\\AgentContracts.algo.ts:133"
+  },
+  {
+    "teal": 352,
+    "source": "contracts\\AgentContracts.algo.ts:133"
+  },
+  {
+    "teal": 355,
+    "source": "contracts\\AgentContracts.algo.ts:133"
+  },
+  {
+    "teal": 356,
+    "source": "contracts\\AgentContracts.algo.ts:133"
+  },
+  {
+    "teal": 357,
+    "source": "contracts\\AgentContracts.algo.ts:133"
+  },
+  {
+    "teal": 361,
+    "source": "contracts\\AgentContracts.algo.ts:133"
+  },
+  {
+    "teal": 364,
+    "source": "contracts\\AgentContracts.algo.ts:133"
+  },
+  {
+    "teal": 365,
+    "source": "contracts\\AgentContracts.algo.ts:133"
+  },
+  {
+    "teal": 369,
+    "source": "contracts\\AgentContracts.algo.ts:134"
+  },
+  {
+    "teal": 370,
+    "source": "contracts\\AgentContracts.algo.ts:134"
+  },
+  {
+    "teal": 371,
+    "source": "contracts\\AgentContracts.algo.ts:134"
+  },
+  {
+    "teal": 372,
+    "source": "contracts\\AgentContracts.algo.ts:134"
+  },
+  {
+    "teal": 373,
+    "source": "contracts\\AgentContracts.algo.ts:134"
+  },
+  {
+    "teal": 377,
+    "source": "contracts\\AgentContracts.algo.ts:135"
+  },
+  {
+    "teal": 378,
+    "source": "contracts\\AgentContracts.algo.ts:135"
+  },
+  {
+    "teal": 379,
+    "source": "contracts\\AgentContracts.algo.ts:135"
+  },
+  {
+    "teal": 380,
+    "source": "contracts\\AgentContracts.algo.ts:135"
+  },
+  {
+    "teal": 381,
+    "source": "contracts\\AgentContracts.algo.ts:135"
+  },
+  {
+    "teal": 385,
+    "source": "contracts\\AgentContracts.algo.ts:136"
+  },
+  {
+    "teal": 386,
+    "source": "contracts\\AgentContracts.algo.ts:136"
+  },
+  {
+    "teal": 389,
+    "source": "contracts\\AgentContracts.algo.ts:136",
+    "errorMessage": "box value does not exist: this.listings(boxKey).value"
+  },
+  {
+    "teal": 390,
+    "source": "contracts\\AgentContracts.algo.ts:136"
+  },
+  {
+    "teal": 391,
+    "source": "contracts\\AgentContracts.algo.ts:136"
+  },
+  {
+    "teal": 399,
+    "source": "contracts\\AgentContracts.algo.ts:139"
+  },
+  {
+    "teal": 400,
+    "source": "contracts\\AgentContracts.algo.ts:139"
+  },
+  {
+    "teal": 401,
+    "source": "contracts\\AgentContracts.algo.ts:139"
+  },
+  {
+    "teal": 402,
+    "source": "contracts\\AgentContracts.algo.ts:139"
+  },
+  {
+    "teal": 403,
+    "source": "contracts\\AgentContracts.algo.ts:139"
+  },
+  {
+    "teal": 407,
+    "source": "contracts\\AgentContracts.algo.ts:140"
+  },
+  {
+    "teal": 408,
+    "source": "contracts\\AgentContracts.algo.ts:140"
+  },
+  {
+    "teal": 412,
+    "source": "contracts\\AgentContracts.algo.ts:141"
+  },
+  {
+    "teal": 413,
+    "source": "contracts\\AgentContracts.algo.ts:141"
+  },
+  {
+    "teal": 417,
+    "source": "contracts\\AgentContracts.algo.ts:142"
+  },
+  {
+    "teal": 418,
+    "source": "contracts\\AgentContracts.algo.ts:142"
+  },
+  {
+    "teal": 421,
+    "source": "contracts\\AgentContracts.algo.ts:139"
+  },
+  {
+    "teal": 429,
+    "source": "contracts\\AgentContracts.algo.ts:146"
+  },
+  {
+    "teal": 430,
+    "source": "contracts\\AgentContracts.algo.ts:146"
+  },
+  {
+    "teal": 431,
+    "source": "contracts\\AgentContracts.algo.ts:146"
+  },
+  {
+    "teal": 435,
+    "source": "contracts\\AgentContracts.algo.ts:147"
+  },
+  {
+    "teal": 436,
+    "source": "contracts\\AgentContracts.algo.ts:147"
+  },
+  {
+    "teal": 440,
+    "source": "contracts\\AgentContracts.algo.ts:148"
+  },
+  {
+    "teal": 441,
+    "source": "contracts\\AgentContracts.algo.ts:148"
+  },
+  {
+    "teal": 445,
+    "source": "contracts\\AgentContracts.algo.ts:149"
+  },
+  {
+    "teal": 446,
+    "source": "contracts\\AgentContracts.algo.ts:149"
+  },
+  {
+    "teal": 449,
+    "source": "contracts\\AgentContracts.algo.ts:146"
+  },
+  {
+    "teal": 453,
+    "source": "contracts\\AgentContracts.algo.ts:152"
+  },
+  {
+    "teal": 454,
+    "source": "contracts\\AgentContracts.algo.ts:152"
+  },
+  {
+    "teal": 458,
+    "source": "contracts\\AgentContracts.algo.ts:153"
+  },
+  {
+    "teal": 459,
+    "source": "contracts\\AgentContracts.algo.ts:153"
+  },
+  {
+    "teal": 460,
+    "source": "contracts\\AgentContracts.algo.ts:153"
+  },
+  {
+    "teal": 461,
+    "source": "contracts\\AgentContracts.algo.ts:153"
+  },
+  {
+    "teal": 462,
+    "source": "contracts\\AgentContracts.algo.ts:153"
+  },
+  {
+    "teal": 463,
+    "source": "contracts\\AgentContracts.algo.ts:153"
+  },
+  {
+    "teal": 464,
+    "source": "contracts\\AgentContracts.algo.ts:133"
+  },
+  {
+    "teal": 469,
+    "source": "contracts\\AgentContracts.algo.ts:156"
+  },
+  {
+    "teal": 470,
+    "source": "contracts\\AgentContracts.algo.ts:156"
+  },
+  {
+    "teal": 471,
+    "source": "contracts\\AgentContracts.algo.ts:156"
+  },
+  {
+    "teal": 475,
+    "source": "contracts\\AgentContracts.algo.ts:156"
+  },
+  {
+    "teal": 479,
+    "source": "contracts\\AgentContracts.algo.ts:157"
+  },
+  {
+    "teal": 480,
+    "source": "contracts\\AgentContracts.algo.ts:157"
+  },
+  {
+    "teal": 481,
+    "source": "contracts\\AgentContracts.algo.ts:157"
+  },
+  {
+    "teal": 482,
+    "source": "contracts\\AgentContracts.algo.ts:157"
+  },
+  {
+    "teal": 483,
+    "source": "contracts\\AgentContracts.algo.ts:157"
+  },
+  {
+    "teal": 484,
+    "source": "contracts\\AgentContracts.algo.ts:157"
+  },
+  {
+    "teal": 485,
+    "source": "contracts\\AgentContracts.algo.ts:156"
+  },
+  {
+    "teal": 490,
+    "source": "contracts\\AgentContracts.algo.ts:160"
+  },
+  {
+    "teal": 491,
+    "source": "contracts\\AgentContracts.algo.ts:160"
+  },
+  {
+    "teal": 492,
+    "source": "contracts\\AgentContracts.algo.ts:160"
+  },
+  {
+    "teal": 496,
+    "source": "contracts\\AgentContracts.algo.ts:160"
+  },
+  {
+    "teal": 500,
+    "source": "contracts\\AgentContracts.algo.ts:161"
+  },
+  {
+    "teal": 501,
+    "source": "contracts\\AgentContracts.algo.ts:161"
+  },
+  {
+    "teal": 502,
+    "source": "contracts\\AgentContracts.algo.ts:161"
+  },
+  {
+    "teal": 503,
+    "source": "contracts\\AgentContracts.algo.ts:161"
+  },
+  {
+    "teal": 504,
+    "source": "contracts\\AgentContracts.algo.ts:161"
+  },
+  {
+    "teal": 505,
+    "source": "contracts\\AgentContracts.algo.ts:161"
+  },
+  {
+    "teal": 506,
+    "source": "contracts\\AgentContracts.algo.ts:160"
+  },
+  {
+    "teal": 509,
+    "source": "contracts\\AgentContracts.algo.ts:77"
+  },
+  {
+    "teal": 510,
+    "source": "contracts\\AgentContracts.algo.ts:77"
+  },
+  {
+    "teal": 511,
+    "source": "contracts\\AgentContracts.algo.ts:77"
+  },
+  {
+    "teal": 514,
+    "source": "contracts\\AgentContracts.algo.ts:77",
+    "errorMessage": "this contract does not implement the given ABI method for create NoOp"
+  },
+  {
+    "teal": 517,
+    "source": "contracts\\AgentContracts.algo.ts:77"
+  },
+  {
+    "teal": 518,
+    "source": "contracts\\AgentContracts.algo.ts:77"
+  },
+  {
+    "teal": 519,
+    "source": "contracts\\AgentContracts.algo.ts:77"
+  },
+  {
+    "teal": 520,
+    "source": "contracts\\AgentContracts.algo.ts:77"
+  },
+  {
+    "teal": 521,
+    "source": "contracts\\AgentContracts.algo.ts:77"
+  },
+  {
+    "teal": 524,
+    "source": "contracts\\AgentContracts.algo.ts:77",
+    "errorMessage": "this contract does not implement the given ABI method for call NoOp"
+  },
+  {
+    "teal": 527,
+    "source": "contracts\\AgentContracts.algo.ts:77"
+  },
+  {
+    "teal": 528,
+    "source": "contracts\\AgentContracts.algo.ts:77"
+  },
+  {
+    "teal": 529,
+    "source": "contracts\\AgentContracts.algo.ts:77"
+  },
+  {
+    "teal": 532,
+    "source": "contracts\\AgentContracts.algo.ts:77",
+    "errorMessage": "this contract does not implement the given ABI method for call UpdateApplication"
+  },
+  {
+    "teal": 535,
+    "source": "contracts\\AgentContracts.algo.ts:77"
+  },
+  {
+    "teal": 536,
+    "source": "contracts\\AgentContracts.algo.ts:77"
+  },
+  {
+    "teal": 537,
+    "source": "contracts\\AgentContracts.algo.ts:77"
+  },
+  {
+    "teal": 540,
+    "source": "contracts\\AgentContracts.algo.ts:77",
+    "errorMessage": "this contract does not implement the given ABI method for call DeleteApplication"
+  }
+]

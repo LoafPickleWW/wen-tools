@@ -1,0 +1,405 @@
+{
+  "name": "WenPadSaleFactory",
+  "desc": "",
+  "methods": [
+    {
+      "name": "createApplication",
+      "args": [
+        {
+          "name": "router",
+          "type": "uint64"
+        }
+      ],
+      "returns": {
+        "type": "void"
+      }
+    },
+    {
+      "name": "createSale",
+      "desc": "Deploy a new sale app. The sender is the distribution wallet: the creator's connected\nwallet that holds the collection and signs the whole setup.  (the manager) controls\nthe sale once live.  is the packed proceeds split (see PAYOUT_ENTRY_BYTES).\nThe payment must cover the factory's MBR increase (child app + index boxes) plus\nCHILD_SEED; any overpayment is refunded.",
+      "args": [
+        {
+          "name": "mbrPay",
+          "type": "pay"
+        },
+        {
+          "name": "admin",
+          "type": "address"
+        },
+        {
+          "name": "payouts",
+          "type": "byte[]"
+        },
+        {
+          "name": "price",
+          "type": "uint64"
+        },
+        {
+          "name": "startRound",
+          "type": "uint64"
+        },
+        {
+          "name": "endRound",
+          "type": "uint64"
+        },
+        {
+          "name": "revealFee",
+          "type": "uint64"
+        },
+        {
+          "name": "deliveryBudget",
+          "type": "uint64"
+        },
+        {
+          "name": "name",
+          "type": "string"
+        },
+        {
+          "name": "unitName",
+          "type": "string"
+        },
+        {
+          "name": "standard",
+          "type": "string"
+        },
+        {
+          "name": "metadataUrl",
+          "type": "string"
+        }
+      ],
+      "returns": {
+        "type": "uint64"
+      },
+      "events": [
+        {
+          "name": "SaleCreated",
+          "args": [
+            {
+              "name": "saleId",
+              "type": "uint64"
+            },
+            {
+              "name": "app",
+              "type": "uint64"
+            },
+            {
+              "name": "admin",
+              "type": "address"
+            },
+            {
+              "name": "distribution",
+              "type": "address"
+            }
+          ],
+          "desc": ""
+        }
+      ]
+    },
+    {
+      "name": "syncSale",
+      "desc": "Called by a sale app whenever its state changes.",
+      "args": [
+        {
+          "name": "saleId",
+          "type": "uint64"
+        },
+        {
+          "name": "price",
+          "type": "uint64"
+        },
+        {
+          "name": "endRound",
+          "type": "uint64"
+        },
+        {
+          "name": "totalItems",
+          "type": "uint64"
+        },
+        {
+          "name": "sold",
+          "type": "uint64"
+        },
+        {
+          "name": "status",
+          "type": "uint64"
+        }
+      ],
+      "returns": {
+        "type": "void"
+      },
+      "events": [
+        {
+          "name": "SaleSynced",
+          "args": [
+            {
+              "name": "saleId",
+              "type": "uint64"
+            },
+            {
+              "name": "status",
+              "type": "uint64"
+            },
+            {
+              "name": "totalItems",
+              "type": "uint64"
+            },
+            {
+              "name": "sold",
+              "type": "uint64"
+            }
+          ],
+          "desc": ""
+        }
+      ]
+    },
+    {
+      "name": "logPurchase",
+      "desc": "Called by a sale app on every delivered item.",
+      "args": [
+        {
+          "name": "saleId",
+          "type": "uint64"
+        },
+        {
+          "name": "asset",
+          "type": "uint64"
+        },
+        {
+          "name": "buyer",
+          "type": "address"
+        },
+        {
+          "name": "price",
+          "type": "uint64"
+        },
+        {
+          "name": "sold",
+          "type": "uint64"
+        },
+        {
+          "name": "remaining",
+          "type": "uint64"
+        }
+      ],
+      "returns": {
+        "type": "void"
+      },
+      "events": [
+        {
+          "name": "Purchase",
+          "args": [
+            {
+              "name": "saleId",
+              "type": "uint64"
+            },
+            {
+              "name": "app",
+              "type": "uint64"
+            },
+            {
+              "name": "asset",
+              "type": "uint64"
+            },
+            {
+              "name": "buyer",
+              "type": "address"
+            },
+            {
+              "name": "price",
+              "type": "uint64"
+            }
+          ],
+          "desc": ""
+        }
+      ]
+    },
+    {
+      "name": "updateMetadata",
+      "desc": "Admin-only. Payment covers any MBR increase; any decrease is refunded.",
+      "args": [
+        {
+          "name": "mbrPay",
+          "type": "pay"
+        },
+        {
+          "name": "saleId",
+          "type": "uint64"
+        },
+        {
+          "name": "name",
+          "type": "string"
+        },
+        {
+          "name": "unitName",
+          "type": "string"
+        },
+        {
+          "name": "standard",
+          "type": "string"
+        },
+        {
+          "name": "metadataUrl",
+          "type": "string"
+        }
+      ],
+      "returns": {
+        "type": "void"
+      },
+      "events": [
+        {
+          "name": "MetadataUpdated",
+          "args": [
+            {
+              "name": "saleId",
+              "type": "uint64"
+            }
+          ],
+          "desc": ""
+        }
+      ]
+    },
+    {
+      "name": "deleteSale",
+      "desc": "Admin or distribution wallet (it can sign again once released). Deletes a released sale app\n(after its item pages are freed) and its index entries, refunding all MBR to the\ndistribution wallet. Purchase history stays in the event logs.",
+      "args": [
+        {
+          "name": "saleId",
+          "type": "uint64"
+        }
+      ],
+      "returns": {
+        "type": "void"
+      },
+      "events": [
+        {
+          "name": "SaleDeleted",
+          "args": [
+            {
+              "name": "saleId",
+              "type": "uint64"
+            }
+          ],
+          "desc": ""
+        }
+      ]
+    },
+    {
+      "name": "getSale",
+      "readonly": true,
+      "args": [
+        {
+          "name": "saleId",
+          "type": "uint64"
+        }
+      ],
+      "returns": {
+        "type": "(uint64,address,address,address,uint64,uint64,uint64,uint64,uint64,uint64,uint64,uint64)"
+      }
+    },
+    {
+      "name": "getSaleMetadata",
+      "readonly": true,
+      "args": [
+        {
+          "name": "saleId",
+          "type": "uint64"
+        }
+      ],
+      "returns": {
+        "type": "(string,string,string,string)"
+      }
+    }
+  ],
+  "events": [
+    {
+      "name": "SaleCreated",
+      "args": [
+        {
+          "name": "saleId",
+          "type": "uint64"
+        },
+        {
+          "name": "app",
+          "type": "uint64"
+        },
+        {
+          "name": "admin",
+          "type": "address"
+        },
+        {
+          "name": "distribution",
+          "type": "address"
+        }
+      ],
+      "desc": ""
+    },
+    {
+      "name": "SaleSynced",
+      "args": [
+        {
+          "name": "saleId",
+          "type": "uint64"
+        },
+        {
+          "name": "status",
+          "type": "uint64"
+        },
+        {
+          "name": "totalItems",
+          "type": "uint64"
+        },
+        {
+          "name": "sold",
+          "type": "uint64"
+        }
+      ],
+      "desc": ""
+    },
+    {
+      "name": "Purchase",
+      "args": [
+        {
+          "name": "saleId",
+          "type": "uint64"
+        },
+        {
+          "name": "app",
+          "type": "uint64"
+        },
+        {
+          "name": "asset",
+          "type": "uint64"
+        },
+        {
+          "name": "buyer",
+          "type": "address"
+        },
+        {
+          "name": "price",
+          "type": "uint64"
+        }
+      ],
+      "desc": ""
+    },
+    {
+      "name": "MetadataUpdated",
+      "args": [
+        {
+          "name": "saleId",
+          "type": "uint64"
+        }
+      ],
+      "desc": ""
+    },
+    {
+      "name": "SaleDeleted",
+      "args": [
+        {
+          "name": "saleId",
+          "type": "uint64"
+        }
+      ],
+      "desc": ""
+    }
+  ]
+}
