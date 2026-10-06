@@ -21,7 +21,7 @@ import {
   createARC19AssetMintArrayV2Batch,
   createAssetMintArray,
   walletSign,
-  sliceIntoChunks
+  chunkGroupsByTxnCount
 } from '../../../utils';
 import { 
   pinImageToCrust, 
@@ -37,7 +37,10 @@ import {
   confirmAlgoFileBatch
 } from '../../../utils/algofile';
 import algosdk from 'algosdk';
+import { Link } from 'react-router-dom';
+import { MdCasino } from 'react-icons/md';
 import { buildMintMetadata, renderPreviewToBlob } from '../ProjectUtils';
+import { saveLastMint, toSaleNetwork } from '../../../utils/wenpadSale';
 
 const MintStep = () => {
   const { project, previewItems } = useProject();
@@ -58,6 +61,7 @@ const MintStep = () => {
   const [showMetadataPreview, setShowMetadataPreview] = useState(false);
   const [showFilebaseHelp, setShowFilebaseHelp] = useState(!filebaseToken);
   const [showRawJson, setShowRawJson] = useState(false);
+  const [mintComplete, setMintComplete] = useState(false);
 
   // Batch minting range states
   const maxItems = previewItems.length;
@@ -414,15 +418,22 @@ const MintStep = () => {
       // 3. Signing Loop
       setProgress({ current: totalToMint, total: totalToMint, status: 'Awaiting signatures...' });
       
-      const chunks = sliceIntoChunks(txnsGroups, 16); // Sign in groups of 16
+      // One wallet prompt per chunk of up to 500 transactions (250 NFTs of 2-txn groups);
+      // walletSign flattens each chunk's groups into a single sign request.
+      const chunks = chunkGroupsByTxnCount(txnsGroups);
       const createdAssetIds: number[] = [];
+      let groupsBefore = 0;
 
       for (let i = 0; i < chunks.length; i++) {
         const chunk = chunks[i];
+        const chunkStart = groupsBefore;
+        groupsBefore += chunk.length;
         setProgress({ 
           current: Math.round(((i + 1) / chunks.length) * totalToMint), 
           total: totalToMint, 
-          status: `Signing batch ${i + 1} of ${chunks.length}...` 
+          status: chunks.length === 1
+            ? `Approve all ${chunk.length} NFTs in your wallet (one request)...`
+            : `Approve batch ${i + 1} of ${chunks.length} in your wallet (${chunk.length} NFTs)...`
         });
         const signedTxns = await walletSign(chunk, transactionSigner);
         
@@ -438,7 +449,7 @@ const MintStep = () => {
           const gLen = chunk[j].length;
           const groupBytes = signedTxns.slice(offset, offset + gLen);
           offset += gLen;
-          const globalIndex = (i * 16) + j;
+          const globalIndex = chunkStart + j;
           await algodClient.sendRawTransaction(groupBytes).do();
           
           if (effectiveProvider === 'AlgoFile' && localAlgofileUploads.length > 0) {
@@ -496,6 +507,18 @@ const MintStep = () => {
         origin: { y: 0.6 }
       });
       toast.success(`Successfully launched ${totalToMint} NFTs (Items #${effectiveStart}–#${effectiveEnd})!`);
+
+      // Hand the collection details to the sale launcher so it can pre-fill
+      saveLastMint({
+        network: toSaleNetwork(activeNetwork),
+        creator: activeAccount.address,
+        name: project.name || '',
+        unitName: project.unitName || '',
+        standard,
+        count: totalToMint,
+        mintedAt: Date.now(),
+      });
+      setMintComplete(true);
 
     } catch (error: any) {
       console.error(error);
@@ -941,6 +964,25 @@ const MintStep = () => {
                  style={{ width: `${(progress.current / progress.total) * 100}%` }}
                />
             </div>
+          </div>
+        )}
+
+        {mintComplete && (
+          <div className="p-6 rounded-3xl border border-primary-orange/40 bg-primary-orange/10 flex flex-col sm:flex-row items-center gap-5 text-left">
+            <MdCasino size={44} className="text-primary-orange shrink-0" />
+            <div className="flex-1 space-y-1">
+              <p className="text-sm font-black text-white uppercase tracking-tight">Now sell it as a random mint</p>
+              <p className="text-xs text-gray-300 leading-relaxed">
+                Launch a Shuffle: buyers pay and receive a random NFT from your collection, handed out by a smart
+                contract. No keys shared with anyone, and your sale shows up on the wen.tools Shuffle page.
+              </p>
+            </div>
+            <Link
+              to="/shuffle?tab=launch"
+              className="shrink-0 px-5 py-3 rounded-2xl bg-primary-orange text-black font-black text-sm uppercase tracking-wider hover:brightness-110 transition-all"
+            >
+              Launch a Shuffle →
+            </Link>
           </div>
         )}
 

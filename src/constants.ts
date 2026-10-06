@@ -197,6 +197,15 @@ export const TOOLS = [
     hideFromLanding: true
   },
   {
+    id: "shuffle",
+    label: "Shuffle",
+    description: "Mint random NFTs from live collections, or launch a non-custodial random-mint sale for yours.",
+    path: "/shuffle",
+    category: "creator",
+    icon: "/icons/wenpad.png",
+    hideFromLanding: true
+  },
+  {
     id: "nft_import",
     label: "NFT Import Tool",
     description: "Import your NFTs from other chains (XRP Ledger, etc.) and re-mint them on Algorand.",

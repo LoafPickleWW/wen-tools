@@ -38,3 +38,5 @@ vite.config.ts.timestamp-*
 coverage/
 .vercel
 
+contracts/test/.state*.json
+contracts/test/short-window/

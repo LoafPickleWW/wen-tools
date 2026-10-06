@@ -218,9 +218,19 @@ export function MintingSuite({ defaultPath = null }: MintingSuiteProps) {
               cta="Launch NFT Import Tool →"
             />
 
-            {/* Path 7: Stablecoin Studio */}
+            {/* Path 7: Shuffle (random-mint sales) */}
             <PathCard
               index={6}
+              onClick={() => navigate("/shuffle?tab=launch")}
+              icon="/icons/wenpad.png"
+              title="Sell as a Random Mint (Shuffle)"
+              description="Buyers pay and receive a random NFT from your collection, handed out by a smart contract. No keys shared, split payouts, on-chain randomness. Experimental."
+              cta="Launch a Shuffle →"
+            />
+
+            {/* Path 8: Stablecoin Studio */}
+            <PathCard
+              index={7}
               onClick={() => navigate("/stablecoin-studio")}
               icon="/icons/devtools.png"
               title="Stablecoin Studio (via Brale)"

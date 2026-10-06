@@ -180,6 +180,10 @@
     "title": "WenPad: Generative NFT Art Generator | wen.tools",
     "description": "Build layered generative NFT artwork and metadata, then mint it on Algorand."
   },
+  "/shuffle": {
+    "title": "Shuffle: Random NFT Mints on Algorand | wen.tools",
+    "description": "Mint random NFTs from live Algorand collections or launch your own non-custodial random-mint sale."
+  },
   "/xgov": {
     "title": "xGov Proposal Voting Tracker | wen.tools",
     "description": "Track Algorand xGov governance proposals and vote on them in bulk."

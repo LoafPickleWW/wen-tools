@@ -4,7 +4,13 @@ import {
   WalletManager,
   WalletProvider,
 } from "@txnlab/use-wallet-react";
-import { Route, Routes, BrowserRouter as Router } from "react-router-dom";
+import { Navigate, Route, Routes, BrowserRouter as Router, useParams } from "react-router-dom";
+
+/** Old Shuffle URLs (/wen-pad/sales/:appId) keep working */
+function RedirectSaleToShuffle() {
+  const { appId } = useParams();
+  return <Navigate to={`/shuffle/${appId}`} replace />;
+}
 import axios from "axios";
 import Home from "./views/home";
 import { ToastContainer } from "react-toastify";
@@ -29,6 +35,7 @@ import ScrollToTop from "./components/ScrollToTop";
 import { Analytics } from "@vercel/analytics/react";
 import { ARC62ManagerTool } from "./pages/ARC62ManagerTool";
 import { WenPad } from './pages/WenPad';
+import { WenPadSales } from './pages/WenPadSales';
 import { XGov } from './pages/XGov';
 import { Jukebox } from './pages/Jukebox';
 import { P2PChat } from './pages/P2PChat';
@@ -188,6 +195,10 @@ function App() {
             />
             <Route path="/really-simple-mint" element={<SimpleMint />} />
             <Route path='/wen-pad' element={<WenPad />} />
+            <Route path='/shuffle' element={<WenPadSales />} />
+            <Route path='/shuffle/:appId' element={<WenPadSales />} />
+            <Route path='/wen-pad/sales' element={<Navigate to='/shuffle' replace />} />
+            <Route path='/wen-pad/sales/:appId' element={<RedirectSaleToShuffle />} />
             <Route path='/xgov' element={<XGov />} />
             <Route path='/jukebox' element={<Jukebox />} />
             <Route path='/p2p-chat' element={<P2PChat />} />

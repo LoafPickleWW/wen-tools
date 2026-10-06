@@ -118,6 +118,30 @@ export function sliceIntoChunks(arr: any[], chunkSize: number) {
   return res;
 }
 
+// Upper bound on transactions per wallet prompt: 500 txns = 250 NFTs of 2-txn mint groups per approval.
+export const MAX_TXNS_PER_SIGN_REQUEST = 500;
+
+/**
+ * Split transaction groups into batches of at most `maxTxns` transactions each, never splitting a group.
+ * Each batch is meant to be one wallet approval.
+ */
+export function chunkGroupsByTxnCount<T>(groups: T[][], maxTxns = MAX_TXNS_PER_SIGN_REQUEST): T[][][] {
+  const batches: T[][][] = [];
+  let current: T[][] = [];
+  let count = 0;
+  for (const group of groups) {
+    if (current.length > 0 && count + group.length > maxTxns) {
+      batches.push(current);
+      current = [];
+      count = 0;
+    }
+    current.push(group);
+    count += group.length;
+  }
+  if (current.length > 0) batches.push(current);
+  return batches;
+}
+
 export async function walletSign(
   txns: algosdk.Transaction[] | algosdk.Transaction[][],
   signer: algosdk.TransactionSigner,
@@ -128,18 +152,24 @@ export async function walletSign(
     : [txns as algosdk.Transaction[]];
   const signedTxns: Uint8Array[] = [];
 
-  for (const group of groups) {
-    if (isLedger) {
+  if (isLedger) {
+    for (const group of groups) {
       // Sequential signing for Ledger to avoid the 16-byte signature bug
       for (let i = 0; i < group.length; i++) {
         const signed = await signer(group, [i]);
         signedTxns.push(signed[0]);
       }
-    } else {
-      // Batch signing for other wallets (single prompt)
-      const signed = await signer(group, Array.from(group.keys()));
-      signedTxns.push(...signed);
     }
+    return signedTxns;
+  }
+
+  // Other wallets: send many groups flattened into one request so the user approves them in a single
+  // prompt (use-wallet forwards the flat list to Pera/Defly/etc. as one sign request; group IDs are
+  // already set on each txn). Groups are never split across requests.
+  for (const batch of chunkGroupsByTxnCount(groups)) {
+    const flat = batch.flat();
+    const signed = await signer(flat, Array.from(flat.keys()));
+    signedTxns.push(...signed);
   }
   return signedTxns;
 }
