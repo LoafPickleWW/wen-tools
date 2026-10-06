@@ -28,6 +28,7 @@ import {
   loadLastMint,
   loadLaunchProgress,
   parseCreateSaleResult,
+  ipfsToHttp,
   saveLaunchProgress,
   signAndSend,
   type CollectionJson,
@@ -36,8 +37,7 @@ import {
   type SaleMetadata,
   type SaleNetwork,
 } from "../../utils/wenpadSale";
-import { pinJSONToFilebase } from "../../filebase";
-import { pinJSONToPinata } from "../../utils";
+import { CollectionFeatureCard } from "./CollectionFeatureCard";
 import {
   hasClawback,
   hasFreeze,
@@ -97,13 +97,9 @@ export function LaunchSaleWizard({ network }: { network: SaleNetwork }) {
   const [website, setWebsite] = useState("");
   const [twitter, setTwitter] = useState("");
   const [discord, setDiscord] = useState("");
-  const [metadataMode, setMetadataMode] = useState<"pin" | "url">("pin");
   const [metadataUrl, setMetadataUrl] = useState("");
-  const [pinProvider, setPinProvider] = useState<"Filebase" | "Pinata">("Filebase");
-  const [pinToken, setPinToken] = useState(
-    () => localStorage.getItem("filebaseToken") || localStorage.getItem("authBasic") || ""
-  );
-  const [pinning, setPinning] = useState(false);
+  const [selectedFeatureAssetId, setSelectedFeatureAssetId] = useState<number | null>(null);
+  const [featureSearch, setFeatureSearch] = useState("");
 
   // Items
   const [candidates, setCandidates] = useState<CandidateAsset[]>([]);
@@ -150,6 +146,34 @@ export function LaunchSaleWizard({ network }: { network: SaleNetwork }) {
     };
   }, [activeAddress, network, resumedDistribution]);
 
+  // Auto-load distribution wallet assets so they are ready for the feature picker & items steps
+  useEffect(() => {
+    if (!distribution || !algosdk.isValidAddress(distribution)) {
+      setCandidates([]);
+      return;
+    }
+    let cancelled = false;
+    setLoadingAssets("Loading wallet assets…");
+    loadDistributionAssets(network, distribution, (msg) => {
+      if (!cancelled) setLoadingAssets(msg);
+    })
+      .then((assets) => {
+        if (!cancelled) {
+          setCandidates(assets);
+          setLoadingAssets("");
+        }
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          console.error("Failed to load assets:", err);
+          setLoadingAssets("");
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [distribution, network]);
+
   // Resume an in-progress launch saved on this device
   useEffect(() => {
     const saved = loadLaunchProgress();
@@ -161,6 +185,19 @@ export function LaunchSaleWizard({ network }: { network: SaleNetwork }) {
   }, [network]);
 
   // ── Derived ────────────────────────────────────────────────────────────────
+
+  const selectableCandidates = useMemo(() => {
+    return candidates.filter((a) => {
+      if (!isSellable(a)) return false;
+      if (!featureSearch.trim()) return true;
+      const q = featureSearch.trim().toLowerCase();
+      return (
+        a.name.toLowerCase().includes(q) ||
+        a.unitName.toLowerCase().includes(q) ||
+        String(a.id).includes(q)
+      );
+    });
+  }, [candidates, featureSearch]);
 
   const filtered = useMemo(
     () =>
@@ -190,7 +227,8 @@ export function LaunchSaleWizard({ network }: { network: SaleNetwork }) {
   const clawbackCount = selectedAssets.filter(hasClawback).length;
   const freezeCount = selectedAssets.filter(hasFreeze).length;
 
-  const metadata: SaleMetadata = { name, unitName, standard, metadataUrl };
+  const effectiveMetadataUrl = metadataUrl.trim() || image.trim();
+  const metadata: SaleMetadata = { name, unitName, standard, metadataUrl: effectiveMetadataUrl };
   const factoryDeposit = estimateCreateSaleMbr(metadata);
   const itemStorage = itemPagesFor(progress?.assetIds.length ?? selectedIds.length) * ITEM_PAGE_MBR;
 
@@ -242,8 +280,8 @@ export function LaunchSaleWizard({ network }: { network: SaleNetwork }) {
     byteLength(name) <= 64 &&
     unitName.trim().length > 0 &&
     byteLength(unitName) <= 8 &&
-    metadataUrl.length > 0 &&
-    byteLength(metadataUrl) <= 256;
+    effectiveMetadataUrl.length > 0 &&
+    byteLength(effectiveMetadataUrl) <= 256;
 
   const price = algoToMicro(Number(priceAlgo) || 0);
   const revealFee = algoToMicro(Number(revealFeeAlgo) || 0);
@@ -259,7 +297,7 @@ export function LaunchSaleWizard({ network }: { network: SaleNetwork }) {
   const updatePayout = (i: number, patch: Partial<{ address: string; percent: string }>) =>
     setPayouts((rows) => rows.map((r, j) => (j === i ? { ...r, ...patch } : r)));
 
-  // ── Step 1: metadata pinning ───────────────────────────────────────────────
+  // ── Step 1: collection metadata ────────────────────────────────────────────
 
   const collectionJson: CollectionJson = {
     name,
@@ -271,23 +309,6 @@ export function LaunchSaleWizard({ network }: { network: SaleNetwork }) {
     standard,
     creator: distribution,
     socials: { twitter: twitter || undefined, discord: discord || undefined },
-  };
-
-  const handlePin = async () => {
-    if (!pinToken) return toast.error(`Enter your ${pinProvider} token`);
-    setPinning(true);
-    try {
-      const json = JSON.stringify(collectionJson);
-      const cid =
-        pinProvider === "Filebase" ? await pinJSONToFilebase(pinToken, json) : await pinJSONToPinata(pinToken, json);
-      localStorage.setItem(pinProvider === "Filebase" ? "filebaseToken" : "pinataToken", pinToken);
-      setMetadataUrl(`ipfs://${cid}`);
-      toast.success("Collection metadata pinned");
-    } catch (err: any) {
-      toast.error(err?.message || "Pinning failed");
-    } finally {
-      setPinning(false);
-    }
   };
 
   // ── Step 2: load assets ────────────────────────────────────────────────────
@@ -302,11 +323,6 @@ export function LaunchSaleWizard({ network }: { network: SaleNetwork }) {
       setLoadingAssets("");
     }
   };
-
-  useEffect(() => {
-    if (step === 2 && candidates.length === 0 && algosdk.isValidAddress(distribution)) handleLoadAssets();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [step]);
 
   // ── Step 4: launch ─────────────────────────────────────────────────────────
 
@@ -346,6 +362,16 @@ export function LaunchSaleWizard({ network }: { network: SaleNetwork }) {
       const next: LaunchProgress = { network, admin, distribution, saleId, appId, assetIds: selectedIds, itemsAdded: 0 };
       setProgress(next);
       saveLaunchProgress(next);
+
+      try {
+        localStorage.setItem(`wenpad:collection:${appId}`, JSON.stringify(collectionJson));
+        fetch("/api/wenpad-collection", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ appId, network, collectionJson }),
+        }).catch(() => {});
+      } catch {}
+
       toast.success(`Shuffle #${saleId} created`);
     } catch (err: any) {
       console.error(err);
@@ -431,16 +457,17 @@ export function LaunchSaleWizard({ network }: { network: SaleNetwork }) {
   }
 
   return (
-    <div className="w-full max-w-3xl mx-auto flex flex-col gap-6 text-left">
+    <div className="w-full max-w-3xl mx-auto flex flex-col gap-6 text-left pb-32 sm:pb-20">
       {/* Stepper */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-1">
+      <div className="flex items-center gap-2 overflow-x-auto pb-2 -mx-1 px-1 scrollbar-none">
         {STEPS.map((label, i) => (
           <button
             key={label}
+            type="button"
             onClick={() => !progress && i < step && setStep(i)}
-            className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap border ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap border shrink-0 transition-all ${
               i === step
-                ? "bg-primary-orange text-black border-primary-orange"
+                ? "bg-primary-orange text-black border-primary-orange shadow-md shadow-orange-500/20"
                 : i < step
                   ? "bg-primary-orange/10 text-primary-orange border-primary-orange/30 cursor-pointer"
                   : "bg-asset-detail-bg/50 text-gray-500 border-white/[0.08]"
@@ -464,7 +491,12 @@ export function LaunchSaleWizard({ network }: { network: SaleNetwork }) {
         <Panel className="space-y-5">
           <div>
             <FieldLabel hint="Holds the NFTs, signs the launch">Collection wallet (connected)</FieldLabel>
-            <input className={inputClass} value={distribution} readOnly placeholder="Connect the wallet that holds your collection" />
+            <input
+              className={`${inputClass} font-mono text-xs sm:text-sm truncate`}
+              value={distribution}
+              readOnly
+              placeholder="Connect the wallet that holds your collection"
+            />
             {walletCheck && (
               <p className={`text-xs mt-1.5 ml-1 ${walletCheck.ok ? "text-green-400" : "text-red-400"}`}>
                 {walletCheck.message}
@@ -475,53 +507,76 @@ export function LaunchSaleWizard({ network }: { network: SaleNetwork }) {
           <div>
             <FieldLabel hint={`Up to ${MAX_PAYOUTS} · fixed once the Shuffle is created`}>Payouts</FieldLabel>
             {managerIsFirstPayout && (
-              <p className="text-[11px] text-primary-orange/90 mb-2 ml-1">
+              <p className="text-[11px] text-primary-orange/90 mb-2 ml-1 leading-relaxed">
                 The first payout address is also the Shuffle manager: it can pause the Shuffle, change the price or end
                 date, and release your collection wallet. Pick a different manager below if you prefer.
               </p>
             )}
-            <div className="space-y-2">
+            <div className="space-y-3">
               {payouts.map((row, i) => (
-                <div key={i} className="flex gap-2">
-                  <div className="relative flex-1">
-                    <input
-                      className={`${inputClass} ${i === 0 && managerIsFirstPayout ? "pr-28" : ""}`}
-                      value={row.address}
-                      onChange={(e) => updatePayout(i, { address: e.target.value })}
-                      placeholder={i === 0 && managerIsFirstPayout ? "Payout + manager address" : "Address that receives proceeds"}
-                    />
-                    {i === 0 && managerIsFirstPayout && (
-                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-primary-orange/15 text-primary-orange border border-primary-orange/30">
-                        Also manager
-                      </span>
+                <div
+                  key={i}
+                  className="flex flex-col sm:flex-row gap-2 p-3 sm:p-0 rounded-2xl bg-asset-detail-bg/30 sm:bg-transparent border sm:border-0 border-white/[0.06]"
+                >
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between mb-1 sm:hidden">
+                      <span className="text-[11px] font-bold text-gray-400">Payout #{i + 1}</span>
+                      {i === 0 && managerIsFirstPayout && (
+                        <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-primary-orange/15 text-primary-orange border border-primary-orange/30">
+                          Also manager
+                        </span>
+                      )}
+                    </div>
+                    <div className="relative">
+                      <input
+                        className={`${inputClass} font-mono text-xs sm:text-sm ${
+                          i === 0 && managerIsFirstPayout ? "sm:pr-28" : ""
+                        }`}
+                        value={row.address}
+                        onChange={(e) => updatePayout(i, { address: e.target.value.trim() })}
+                        placeholder={
+                          i === 0 && managerIsFirstPayout
+                            ? "Payout + manager wallet"
+                            : "Address that receives proceeds"
+                        }
+                      />
+                      {i === 0 && managerIsFirstPayout && (
+                        <span className="hidden sm:inline-block absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-primary-orange/15 text-primary-orange border border-primary-orange/30 pointer-events-none">
+                          Also manager
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 justify-end sm:justify-start">
+                    <div className="relative w-28 shrink-0">
+                      <input
+                        type="number"
+                        min={0}
+                        max={100}
+                        step="0.01"
+                        className={`${inputClass} pr-8`}
+                        value={row.percent}
+                        onChange={(e) => updatePayout(i, { percent: e.target.value })}
+                      />
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-500">%</span>
+                    </div>
+                    {payouts.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => setPayouts((rows) => rows.filter((_, j) => j !== i))}
+                        className={`${secondaryButtonClass} shrink-0 px-3`}
+                        aria-label="Remove payout"
+                      >
+                        ✕
+                      </button>
                     )}
                   </div>
-                  <div className="relative w-28 shrink-0">
-                    <input
-                      type="number"
-                      min={0}
-                      max={100}
-                      step="0.01"
-                      className={`${inputClass} pr-8`}
-                      value={row.percent}
-                      onChange={(e) => updatePayout(i, { percent: e.target.value })}
-                    />
-                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-500">%</span>
-                  </div>
-                  {payouts.length > 1 && (
-                    <button
-                      onClick={() => setPayouts((rows) => rows.filter((_, j) => j !== i))}
-                      className={secondaryButtonClass}
-                      aria-label="Remove payout"
-                    >
-                      ✕
-                    </button>
-                  )}
                 </div>
               ))}
             </div>
             <div className="flex items-center justify-between mt-2">
               <button
+                type="button"
                 disabled={payouts.length >= MAX_PAYOUTS}
                 onClick={() => setPayouts((rows) => [...rows, { address: "", percent: "" }])}
                 className={secondaryButtonClass}
@@ -539,9 +594,10 @@ export function LaunchSaleWizard({ network }: { network: SaleNetwork }) {
 
           <div>
             <FieldLabel hint="Pause, price, end date, release">Shuffle manager</FieldLabel>
-            <label className="flex items-center gap-2 text-sm text-gray-300 mb-2">
+            <label className="flex items-center gap-2 text-sm text-gray-300 mb-2 cursor-pointer select-none">
               <input
                 type="checkbox"
+                className="w-4 h-4 rounded text-primary-orange focus:ring-0"
                 checked={managerIsFirstPayout}
                 onChange={(e) => setManagerIsFirstPayout(e.target.checked)}
               />
@@ -549,14 +605,14 @@ export function LaunchSaleWizard({ network }: { network: SaleNetwork }) {
             </label>
             {!managerIsFirstPayout && (
               <input
-                className={inputClass}
+                className={`${inputClass} font-mono text-xs sm:text-sm`}
                 value={managerInput}
-                onChange={(e) => setManagerInput(e.target.value)}
+                onChange={(e) => setManagerInput(e.target.value.trim())}
                 placeholder="Wallet that manages the Shuffle while it is live"
               />
             )}
             {admin && managerError && <p className="text-xs text-red-400 mt-1.5 ml-1">{managerError}</p>}
-            <p className="text-[11px] text-gray-500 mt-1.5 ml-1">
+            <p className="text-[11px] text-gray-500 mt-1.5 ml-1 leading-relaxed">
               While the Shuffle is live, your collection wallet is controlled by the Shuffle contract and cannot sign, so a
               second wallet you control manages the sale.
             </p>
@@ -570,20 +626,27 @@ export function LaunchSaleWizard({ network }: { network: SaleNetwork }) {
           </Notice>
 
           <ExperimentalNotice />
-          <label className="flex items-start gap-2 text-sm text-gray-300">
+          <label className="flex items-start gap-2.5 text-sm text-gray-300 cursor-pointer select-none py-1">
             <input
               type="checkbox"
-              className="mt-1"
+              className="mt-1 w-4 h-4 rounded text-primary-orange shrink-0"
               checked={riskAccepted}
               onChange={(e) => setRiskAccepted(e.target.checked)}
             />
-            I understand Shuffle is experimental, that my collection wallet will be rekeyed to a smart contract, and
-            that a bug could make the wallet or its assets unrecoverable. This wallet holds no high-value assets.
+            <span>
+              I understand Shuffle is experimental, that my collection wallet will be rekeyed to a smart contract, and
+              that a bug could make the wallet or its assets unrecoverable. This wallet holds no high-value assets.
+            </span>
           </label>
 
-          <div className="flex justify-end">
-            <button disabled={!walletsValid} onClick={() => setStep(1)} className={primaryButtonClass}>
-              Next
+          <div className="flex justify-end pt-2">
+            <button
+              type="button"
+              disabled={!walletsValid}
+              onClick={() => setStep(1)}
+              className={`${primaryButtonClass} w-full sm:w-auto`}
+            >
+              Next: Collection Setup
             </button>
           </div>
         </Panel>
@@ -591,15 +654,35 @@ export function LaunchSaleWizard({ network }: { network: SaleNetwork }) {
 
       {/* ── Step 1: Collection ──────────────────────────────────────────── */}
       {step === 1 && (
-        <Panel className="space-y-5">
+        <Panel className="space-y-6">
+          <div className="border-b border-white/[0.08] pb-4">
+            <h4 className="text-base font-black text-white">Collection Details</h4>
+            <p className="text-xs text-gray-400 mt-1">
+              Your collection is already minted in your wallet. Pick a feature image and add promotional info.
+            </p>
+          </div>
+
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className="sm:col-span-2">
               <FieldLabel hint={`${byteLength(name)}/64`}>Collection name</FieldLabel>
-              <input className={inputClass} value={name} onChange={(e) => setName(e.target.value)} />
+              <input
+                className={inputClass}
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="e.g. Algorand Punks"
+              />
             </div>
             <div>
               <FieldLabel hint={`${byteLength(unitName)}/8`}>Unit name</FieldLabel>
-              <input className={inputClass} value={unitName} onChange={(e) => setUnitName(e.target.value)} />
+              <input
+                className={inputClass}
+                value={unitName}
+                onChange={(e) => {
+                  setUnitName(e.target.value);
+                  if (!unitFilter) setUnitFilter(e.target.value);
+                }}
+                placeholder="e.g. APUNK"
+              />
             </div>
           </div>
 
@@ -609,11 +692,12 @@ export function LaunchSaleWizard({ network }: { network: SaleNetwork }) {
               {["ARC3", "ARC19", "ARC69"].map((s) => (
                 <button
                   key={s}
+                  type="button"
                   onClick={() => setStandard(s)}
-                  className={`h-11 rounded-2xl border text-xs font-black ${
+                  className={`h-11 rounded-2xl border text-xs font-black transition-all cursor-pointer ${
                     standard === s
-                      ? "bg-primary-orange text-black border-primary-orange"
-                      : "bg-asset-detail-bg/50 border-white/[0.08] text-gray-500"
+                      ? "bg-primary-orange text-black border-primary-orange shadow-lg shadow-orange-500/20"
+                      : "bg-asset-detail-bg/50 border-white/[0.08] text-gray-500 hover:text-gray-300"
                   }`}
                 >
                   {s}
@@ -622,97 +706,196 @@ export function LaunchSaleWizard({ network }: { network: SaleNetwork }) {
             </div>
           </div>
 
-          <div className="flex gap-2">
-            {(["pin", "url"] as const).map((m) => (
-              <button
-                key={m}
-                onClick={() => setMetadataMode(m)}
-                className={`${secondaryButtonClass} ${metadataMode === m ? "!border-primary-orange !text-primary-orange" : ""}`}
-              >
-                {m === "pin" ? "Build & pin collection metadata" : "I already have a metadata URL"}
-              </button>
-            ))}
+          {/* Feature image picker from wallet collection */}
+          <div>
+            <FieldLabel hint={candidates.length > 0 ? `${candidates.length} assets held` : undefined}>
+              Feature image
+            </FieldLabel>
+
+            {/* Selected feature preview */}
+            {image ? (
+              <div className="flex flex-col sm:flex-row items-center gap-4 p-4 rounded-2xl bg-asset-detail-bg/60 border border-primary-orange/40 mb-3 shadow-inner">
+                <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl overflow-hidden bg-black/40 border border-white/10 shrink-0 flex items-center justify-center">
+                  <img
+                    src={ipfsToHttp(image)}
+                    alt="Selected feature"
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+                <div className="flex-1 min-w-0 text-left">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-green-500/20 text-green-300 border border-green-500/30">
+                      ✓ Feature image selected
+                    </span>
+                  </div>
+                  <p className="text-xs text-gray-300 truncate font-mono">{image}</p>
+                  <p className="text-[11px] text-gray-500 mt-1">
+                    This artwork represents your Shuffle in the marketplace, cards, and mint headers.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setImage("");
+                    setSelectedFeatureAssetId(null);
+                  }}
+                  className={`${secondaryButtonClass} text-xs shrink-0`}
+                >
+                  Change image
+                </button>
+              </div>
+            ) : null}
+
+            {/* Asset Picker Grid */}
+            <div className="rounded-2xl border border-white/[0.08] bg-black/20 p-3 sm:p-4 space-y-3">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+                <span className="text-xs font-bold text-gray-300">
+                  Pick from your minted NFTs
+                </span>
+                <div className="relative w-full sm:w-48">
+                  <input
+                    className={`${inputClass} !py-1.5 !px-3 text-xs`}
+                    placeholder="Search your NFTs…"
+                    value={featureSearch}
+                    onChange={(e) => setFeatureSearch(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              {loadingAssets && candidates.length === 0 ? (
+                <div className="flex items-center justify-center gap-2 py-8 text-xs text-gray-400">
+                  <MdHourglassEmpty className="animate-spin text-primary-orange text-lg" />
+                  <span>{loadingAssets}</span>
+                </div>
+              ) : selectableCandidates.length === 0 ? (
+                <div className="py-6 text-center text-xs text-gray-500">
+                  {candidates.length === 0
+                    ? "No assets found in the connected wallet yet."
+                    : "No assets match your search filter."}
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 gap-2 max-h-64 overflow-y-auto p-1 scrollbar-thin">
+                  {selectableCandidates.slice(0, 50).map((a) => (
+                    <CollectionFeatureCard
+                      key={a.id}
+                      asset={a}
+                      isSelected={selectedFeatureAssetId === a.id || image === a.url}
+                      onSelect={(asset, resolvedUrl) => {
+                        setSelectedFeatureAssetId(asset.id);
+                        const finalImg = resolvedUrl || asset.url || "";
+                        setImage(finalImg);
+                        if (!name && asset.name) {
+                          setName(asset.name.replace(/\s*#\d+$/, ""));
+                        }
+                        if (!unitName && asset.unitName) {
+                          setUnitName(asset.unitName);
+                          setUnitFilter(asset.unitName);
+                        }
+                        toast.success(`Selected ASA #${asset.id} as feature image`);
+                      }}
+                    />
+                  ))}
+                </div>
+              )}
+
+              {/* Custom image URL toggle / input */}
+              <div className="pt-2 border-t border-white/[0.06]">
+                <details className="group">
+                  <summary className="text-[11px] text-gray-400 hover:text-white cursor-pointer select-none font-bold">
+                    ▸ Or enter custom image / banner URLs manually
+                  </summary>
+                  <div className="pt-3 space-y-3">
+                    <div>
+                      <FieldLabel>Cover image URL</FieldLabel>
+                      <input
+                        className={inputClass}
+                        value={image}
+                        onChange={(e) => setImage(e.target.value.trim())}
+                        placeholder="ipfs://… or https://…"
+                      />
+                    </div>
+                    <div>
+                      <FieldLabel>Banner image URL (optional)</FieldLabel>
+                      <input
+                        className={inputClass}
+                        value={banner}
+                        onChange={(e) => setBanner(e.target.value.trim())}
+                        placeholder="optional banner image URL"
+                      />
+                    </div>
+                    <div>
+                      <FieldLabel hint={`${byteLength(metadataUrl)}/256`}>Custom metadata URL (optional)</FieldLabel>
+                      <input
+                        className={inputClass}
+                        value={metadataUrl}
+                        onChange={(e) => setMetadataUrl(e.target.value.trim())}
+                        placeholder="ipfs://… (optional custom metadata URL)"
+                      />
+                    </div>
+                  </div>
+                </details>
+              </div>
+            </div>
           </div>
 
-          {metadataMode === "pin" ? (
-            <div className="space-y-4">
+          {/* Promotional details */}
+          <div className="border-t border-white/[0.08] pt-4 space-y-4">
+            <div>
+              <FieldLabel>Collection description</FieldLabel>
+              <textarea
+                rows={3}
+                className={inputClass}
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Describe your collection, lore, creator perks, or mint details…"
+              />
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
-                <FieldLabel>Description</FieldLabel>
-                <textarea
-                  rows={4}
+                <FieldLabel>Website URL</FieldLabel>
+                <input
                   className={inputClass}
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
+                  value={website}
+                  onChange={(e) => setWebsite(e.target.value.trim())}
+                  placeholder="https://…"
                 />
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <FieldLabel>Cover image URL</FieldLabel>
-                  <input className={inputClass} value={image} onChange={(e) => setImage(e.target.value)} placeholder="ipfs://… or https://…" />
-                </div>
-                <div>
-                  <FieldLabel>Banner image URL</FieldLabel>
-                  <input className={inputClass} value={banner} onChange={(e) => setBanner(e.target.value)} placeholder="optional" />
-                </div>
-                <div>
-                  <FieldLabel>Website</FieldLabel>
-                  <input className={inputClass} value={website} onChange={(e) => setWebsite(e.target.value)} />
-                </div>
-                <div>
-                  <FieldLabel>X / Twitter</FieldLabel>
-                  <input className={inputClass} value={twitter} onChange={(e) => setTwitter(e.target.value)} />
-                </div>
-                <div>
-                  <FieldLabel>Discord</FieldLabel>
-                  <input className={inputClass} value={discord} onChange={(e) => setDiscord(e.target.value)} />
-                </div>
+              <div>
+                <FieldLabel>X / Twitter</FieldLabel>
+                <input
+                  className={inputClass}
+                  value={twitter}
+                  onChange={(e) => setTwitter(e.target.value.trim())}
+                  placeholder="@handle or URL"
+                />
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
-                <div>
-                  <FieldLabel>Pin with</FieldLabel>
-                  <select
-                    className={inputClass}
-                    value={pinProvider}
-                    onChange={(e) => {
-                      const p = e.target.value as "Filebase" | "Pinata";
-                      setPinProvider(p);
-                      setPinToken(localStorage.getItem(p === "Filebase" ? "filebaseToken" : "pinataToken") || "");
-                    }}
-                  >
-                    <option>Filebase</option>
-                    <option>Pinata</option>
-                  </select>
-                </div>
-                <div className="sm:col-span-2">
-                  <FieldLabel>{pinProvider} token</FieldLabel>
-                  <input type="password" className={inputClass} value={pinToken} onChange={(e) => setPinToken(e.target.value)} />
-                </div>
+              <div>
+                <FieldLabel>Discord</FieldLabel>
+                <input
+                  className={inputClass}
+                  value={discord}
+                  onChange={(e) => setDiscord(e.target.value.trim())}
+                  placeholder="discord.gg/…"
+                />
               </div>
-              <button onClick={handlePin} disabled={pinning || !name} className={secondaryButtonClass}>
-                {pinning ? "Pinning…" : "Pin collection metadata"}
-              </button>
             </div>
-          ) : null}
-
-          <div>
-            <FieldLabel hint={`${byteLength(metadataUrl)}/256`}>Collection metadata URL</FieldLabel>
-            <input
-              className={inputClass}
-              value={metadataUrl}
-              onChange={(e) => setMetadataUrl(e.target.value.trim())}
-              placeholder="ipfs://… (JSON with name, description, image, links)"
-            />
-            <p className="text-[11px] text-gray-500 mt-1.5 ml-1">
-              Stored in the wen.tools Shuffle index so marketplaces and other sites can display your Shuffle.
-            </p>
           </div>
 
-          <div className="flex justify-between">
-            <button onClick={() => setStep(0)} className={secondaryButtonClass}>
+          <div className="flex flex-col-reverse sm:flex-row justify-between gap-3 pt-2">
+            <button type="button" onClick={() => setStep(0)} className={secondaryButtonClass}>
               Back
             </button>
-            <button disabled={!collectionValid} onClick={() => setStep(2)} className={primaryButtonClass}>
-              Next
+            <button
+              type="button"
+              disabled={!collectionValid}
+              onClick={() => {
+                if (!unitFilter && unitName) setUnitFilter(unitName);
+                setStep(2);
+              }}
+              className={primaryButtonClass}
+            >
+              Next: Select Items
             </button>
           </div>
         </Panel>

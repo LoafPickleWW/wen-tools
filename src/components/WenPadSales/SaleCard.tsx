@@ -15,15 +15,15 @@ export function SaleCard({ sale, currentRound }: { sale: SaleListing; currentRou
 
   useEffect(() => {
     let cancelled = false;
-    fetchCollectionJson(sale.metadata.metadataUrl).then((c) => !cancelled && setCollection(c));
+    fetchCollectionJson(sale.metadata.metadataUrl, sale.appId).then((c) => !cancelled && setCollection(c));
     return () => {
       cancelled = true;
     };
-  }, [sale.metadata.metadataUrl]);
+  }, [sale.metadata.metadataUrl, sale.appId]);
 
   const ended = currentRound > 0 && currentRound > sale.endRound;
   const notStarted = currentRound > 0 && currentRound < sale.startRound;
-  const image = ipfsToHttp(collection?.image || "");
+  const image = ipfsToHttp(collection?.image || sale.metadata.metadataUrl || "");
 
   return (
     <Link

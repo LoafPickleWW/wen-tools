@@ -8,7 +8,7 @@ export const shortAddr = (addr: string) => (addr ? `${addr.slice(0, 6)}…${addr
 
 export function Panel({ children, className = "" }: { children: ReactNode; className?: string }) {
   return (
-    <div className={`bg-banner-grey/30 border border-white/[0.12] p-6 rounded-3xl backdrop-blur-md ${className}`}>
+    <div className={`bg-banner-grey/30 border border-white/[0.12] p-4 sm:p-6 rounded-3xl backdrop-blur-md ${className}`}>
       {children}
     </div>
   );

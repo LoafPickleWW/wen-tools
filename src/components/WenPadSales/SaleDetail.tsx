@@ -97,7 +97,7 @@ export function SaleDetail({ network, appId }: { network: SaleNetwork; appId: nu
       setSale(listing);
       setState(saleState);
       setCurrentRound(round);
-      if (listing && !collection) setCollection(await fetchCollectionJson(listing.metadata.metadataUrl));
+      if (listing && !collection) setCollection(await fetchCollectionJson(listing.metadata.metadataUrl, appId));
       if (activeAddress) setMyCommits(await listCommits(network, appId, activeAddress));
     } catch (err) {
       console.error("Failed to load sale:", err);
@@ -201,7 +201,7 @@ export function SaleDetail({ network, appId }: { network: SaleNetwork; appId: nu
   const soldOut = state.remaining - state.pending <= 0;
   const canMint =
     !!activeAddress && state.status === STATUS.LIVE && !ended && !notStarted && !soldOut && phase.kind === "idle";
-  const image = ipfsToHttp(collection?.image || "");
+  const image = ipfsToHttp(collection?.image || sale.metadata.metadataUrl || "");
   const busy = phase.kind === "signing" || phase.kind === "revealing";
 
   return (
@@ -229,16 +229,46 @@ export function SaleDetail({ network, appId }: { network: SaleNetwork; appId: nu
               value={verified === null ? "checking…" : verified ? "✓ matches open-source code" : "✗ does not match published source"}
             />
             <Row label="Distribution wallet" value={shortAddr(state.distribution)} />
-            {collection?.external_url && (
-              <a
-                href={collection.external_url}
-                target="_blank"
-                rel="noreferrer"
-                className="flex items-center gap-1 text-primary-orange font-bold text-xs hover:underline pt-1"
-              >
-                Website <MdOpenInNew />
-              </a>
-            )}
+            <div className="flex flex-wrap items-center gap-3 pt-1">
+              {collection?.external_url && (
+                <a
+                  href={collection.external_url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex items-center gap-1 text-primary-orange font-bold text-xs hover:underline"
+                >
+                  Website <MdOpenInNew />
+                </a>
+              )}
+              {collection?.socials?.twitter && (
+                <a
+                  href={
+                    collection.socials.twitter.startsWith("http")
+                      ? collection.socials.twitter
+                      : `https://x.com/${collection.socials.twitter.replace(/^@/, "")}`
+                  }
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex items-center gap-1 text-primary-orange font-bold text-xs hover:underline"
+                >
+                  X / Twitter <MdOpenInNew />
+                </a>
+              )}
+              {collection?.socials?.discord && (
+                <a
+                  href={
+                    collection.socials.discord.startsWith("http")
+                      ? collection.socials.discord
+                      : `https://discord.gg/${collection.socials.discord}`
+                  }
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex items-center gap-1 text-primary-orange font-bold text-xs hover:underline"
+                >
+                  Discord <MdOpenInNew />
+                </a>
+              )}
+            </div>
           </Panel>
         </div>
 

@@ -12,6 +12,8 @@ export interface CandidateAsset {
   clawback: string;
   freeze: string;
   defaultFrozen: boolean;
+  url?: string;
+  reserve?: string;
 }
 
 const ZERO_ADDRESS = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAY5HFKQ";
@@ -88,6 +90,8 @@ export async function loadDistributionAssets(
         clawback: p.clawback || "",
         freeze: p.freeze || "",
         defaultFrozen: !!p["default-frozen"],
+        url: p.url || "",
+        reserve: p.reserve || "",
       };
     })
     .sort((a, b) => a.id - b.id);

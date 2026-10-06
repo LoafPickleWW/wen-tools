@@ -392,13 +392,45 @@ export async function listCommits(network: SaleNetwork, appId: number, buyer?: s
   return commits.filter((c): c is CommitInfo => c !== null && (!buyer || c.buyer === buyer));
 }
 
-export async function fetchCollectionJson(url: string): Promise<CollectionJson | null> {
+export async function fetchCollectionJson(url: string, appId?: number): Promise<CollectionJson | null> {
+  if (appId) {
+    try {
+      const local = localStorage.getItem(`wenpad:collection:${appId}`);
+      if (local) return JSON.parse(local) as CollectionJson;
+    } catch {}
+    try {
+      const res = await fetch(`/api/wenpad-collection?appId=${appId}`);
+      if (res.ok) {
+        const data = (await res.json()) as CollectionJson;
+        if (data) return data;
+      }
+    } catch {}
+  }
   if (!url) return null;
   try {
     const res = await fetch(ipfsToHttp(url));
-    if (!res.ok) return null;
-    return (await res.json()) as CollectionJson;
+    if (!res.ok) {
+      if (url.startsWith("ipfs://") || url.startsWith("http")) return { image: url };
+      return null;
+    }
+    const contentType = res.headers.get("content-type") || "";
+    if (contentType.includes("image")) {
+      return { image: url };
+    }
+    const data = await res.json();
+    return {
+      name: data.name,
+      description: data.description,
+      image: data.image || data.properties?.image || url,
+      banner_image: data.banner_image,
+      external_url: data.external_url,
+      unit_name: data.unit_name,
+      standard: data.standard,
+      socials: data.socials,
+      ...data,
+    };
   } catch {
+    if (url.startsWith("ipfs://") || url.startsWith("http")) return { image: url };
     return null;
   }
 }
