@@ -25,10 +25,13 @@ import {
   buildRegister,
   buildReveal,
   buildSaleAction,
+  buildUpdateMetadata,
+  buyerLineItems,
   finalizeGroup,
   getAlgod,
   getCommit,
   getFactoryStats,
+  getPayouts,
   getSaleByApp,
   getSaleState,
   listCommits,
@@ -444,7 +447,8 @@ async function main() {
     let st = await getSaleState(NETWORK, state.appId);
     if (st.status !== STATUS.RELEASED) {
       // Only the duplicate of asset 1 can remain: the draw must skip it and refund in full
-      await send(await buildSaleAction(NETWORK, w.admin.addr, state.appId, "unpause"));
+      // Resumable: a previous attempt may have unpaused already
+      if (st.status === STATUS.PAUSED) await send(await buildSaleAction(NETWORK, w.admin.addr, state.appId, "unpause"));
       const before = await balance(w.buyerA.addr);
       const { revealed } = await commitAndReveal(w.buyerA, w.buyerA);
       check(revealed === null, "undeliverable duplicate skipped, no asset revealed");
@@ -472,15 +476,94 @@ async function main() {
     check(toDeployer === expect30 && toAdmin === st.proceeds - expect30,
       `split paid by a third party: ${toAdmin / 1e6} (70% + dust) / ${toDeployer / 1e6} (30%)`);
     check((await getSaleState(NETWORK, state.appId)).proceeds === 0, "proceeds cleared");
-    // The collection wallet can close the sale itself once released; deposits return to it
+    // Anyone can close a released sale (the keeper does it after the last delivery); deposits
+    // still return to the collection wallet
     const distBefore = await balance(w.dist.addr);
-    for (const g of await buildDeleteItemPages(NETWORK, w.dist.addr, state.appId)) await send(g);
-    await send(await buildDeleteSale(NETWORK, FACTORY_ID, w.dist.addr, state.saleId));
-    check((await balance(w.dist.addr)) - distBefore > 1_000_000, "collection wallet closed the sale and got its deposits back");
+    for (const g of await buildDeleteItemPages(NETWORK, w.buyerA.addr, state.appId)) await send(g);
+    await send(await buildDeleteSale(NETWORK, FACTORY_ID, w.buyerA.addr, state.saleId));
+    check((await balance(w.dist.addr)) - distBefore > 1_000_000, "a third party closed the sale; the collection wallet got its deposits back");
     check((await getSaleByApp(NETWORK, FACTORY_ID, state.appId)) === null, "sale removed from factory index");
     await expectFail("sale app deleted", () => algod.getApplicationByID(state.appId).do());
     check((await factorySpare()) === state.factorySpare0, "all factory deposits refunded (factory spare balance unchanged)");
 
+  });
+
+  await step("audit fixes: frozen, maxPrice, owed split, metadata refund", async () => {
+    if ((await spendable(w.dist.addr)) < 1_800_000) await pay(deployer, w.dist.addr, 1_200_000);
+    if ((await spendable(w.buyerA.addr)) < 1_100_000) await pay(deployer, w.buyerA.addr, 1_100_000);
+    if ((await spendable(w.admin.addr)) < 300_000) await pay(deployer, w.admin.addr, 300_000);
+
+    // A default-frozen NFT and a normal one
+    const ft = algosdk.makeAssetCreateTxnWithSuggestedParamsFromObject({
+      from: w.dist.addr, total: 1, decimals: 0, defaultFrozen: true, unitName: "WPZ", assetName: "WenPad Frozen Test",
+      manager: w.dist.addr, freeze: w.dist.addr, suggestedParams: await sp(),
+    });
+    const frozen = Number((await send([ft]))["asset-index"]);
+    const normal = await mintNft(7);
+    await optIn(w.buyerA, normal);
+    // The attack: opt in to the frozen asset so a delivery of it would fail (free re-roll)
+    await optIn(w.buyerA, frozen);
+
+    // 50/50 split with an account that was never funded: a 0.005 ALGO share cannot reach it
+    const ghost = algosdk.generateAccount().addr;
+    const { saleId, appId } = parseCreateSaleResult(
+      await send(await buildCreateSale(NETWORK, FACTORY_ID, w.dist.addr, {
+        ...(await saleParams(50_000)),
+        payouts: [{ address: w.admin.addr, bps: 5_000 }, { address: ghost, bps: 5_000 }],
+      }))
+    );
+    state.appId = appId;
+    await send(await buildAddItemsGroup(NETWORK, w.dist.addr, appId, [frozen, normal], 0));
+    const reg = await buildRegister(NETWORK, w.dist.addr, appId);
+    await send(reg, reg.length - 2);
+
+    // M-2: a commit whose maxPrice is below the current price is rejected
+    const st = await getSaleState(NETWORK, appId);
+    await expectFail("commit with maxPrice below the price", async () => {
+      const p = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
+        from: w.buyerA.addr, to: algosdk.getApplicationAddress(appId), amount: buyerLineItems(st).total, suggestedParams: await sp(),
+      });
+      return abiCall(appId, "commit(pay,uint64)uint64", w.buyerA.addr, [
+        { txn: p, signer: algosdk.makeEmptyTransactionSigner() }, st.price - 1,
+      ]);
+    });
+
+    // H-1: the frozen asset is never delivered, whatever the draw
+    const first = await commitAndReveal(w.buyerA, deployer);
+    check(first.revealed?.assetId === normal, `draw delivered the normal NFT ${normal}`);
+    if ((await getSaleState(NETWORK, appId)).remaining > 0) {
+      const before = await balance(w.buyerA.addr);
+      const second = await commitAndReveal(w.buyerA, deployer);
+      check(second.revealed === null, "frozen asset dropped on the next draw; nothing revealed");
+      check(before - (await balance(w.buyerA.addr)) < 10_000, "buyer refunded in full");
+    }
+    check((await holds(w.buyerA.addr, frozen)) === 0, "default-frozen asset never reached the buyer");
+    check((await getSaleState(NETWORK, appId)).status === STATUS.RELEASED, "sale released");
+
+    // M-1: the unreachable share is owed to that recipient only; repeated withdrawals never re-split it
+    const adminBefore = await balance(w.admin.addr);
+    for (let i = 0; i < 3; i++) await send(await buildSaleAction(NETWORK, w.buyerA.addr, appId, "withdrawProceeds"));
+    check((await balance(w.admin.addr)) - adminBefore === PRICE / 2, "admin got exactly its 50% after 3 withdrawals");
+    const pBox = (await algod.getApplicationBoxByName(appId, new TextEncoder().encode("p")).do()).value;
+    const owed = Number(algosdk.decodeUint64(pBox.slice(48 + 40, 48 + 48), "bigint"));
+    check(pBox.length === 96 && owed === PRICE / 2, `unreachable share of ${owed / 1e6} ALGO kept as owed to that recipient alone`);
+    check((await getSaleState(NETWORK, appId)).proceeds === PRICE / 2, "proceeds = the owed amount");
+    const payouts = await getPayouts(NETWORK, appId);
+    check(payouts.length === 2 && payouts[1].address === ghost && payouts[1].bps === 5_000, "client reads the 48-byte split");
+
+    // L-4: updateMetadata refunds the overpayment (the client pays a worst-case 0.16 ALGO)
+    const adminBeforeMeta = await balance(w.admin.addr);
+    await send(await buildUpdateMetadata(NETWORK, FACTORY_ID, w.admin.addr, saleId, (await saleParams(1)).metadata));
+    const metaCost = adminBeforeMeta - (await balance(w.admin.addr));
+    check(metaCost <= 5_000, `metadata update overpayment refunded (net cost ${metaCost / 1e6} ALGO = fees)`);
+
+    // Option 2: a third party closes it; the unreachable owed amount folds into the collection wallet's refund
+    const distBefore = await balance(w.dist.addr);
+    const adminBeforeClose = await balance(w.admin.addr);
+    await send(await buildDeleteSale(NETWORK, FACTORY_ID, deployer.addr, saleId));
+    check((await getSaleByApp(NETWORK, FACTORY_ID, appId)) === null, "third party closed the sale");
+    check((await balance(w.dist.addr)) > distBefore, "deposits (and the unreachable share) returned to the collection wallet");
+    check((await balance(w.admin.addr)) === adminBeforeClose, "admin was not paid twice at close");
   });
 
   await step("permissionless release after end", async () => {
@@ -504,7 +587,7 @@ async function main() {
 
   await step("cancel expired commit", async () => {
     if (!state.sale3) {
-      await pay(deployer, w.dist.addr, 300_000);
+      if ((await spendable(w.dist.addr)) < 1_250_000) await pay(deployer, w.dist.addr, 300_000);
       const asset = await mintNft(5);
       const conf = await send(await buildCreateSale(NETWORK, FACTORY_ID, w.dist.addr, await saleParams(50_000)));
       state.sale3 = parseCreateSaleResult(conf);
@@ -512,7 +595,7 @@ async function main() {
       await send(await buildAddItemsGroup(NETWORK, w.admin.addr, state.sale3.appId, [asset], 0));
       const reg = await buildRegister(NETWORK, w.dist.addr, state.sale3.appId);
       await send(reg, reg.length - 2);
-      await pay(deployer, w.buyerA.addr, 500_000);
+      if ((await spendable(w.buyerA.addr)) < 480_000) await pay(deployer, w.buyerA.addr, 500_000);
       const cconf = await send(await buildCommit(NETWORK, w.buyerA.addr, await getSaleState(NETWORK, state.sale3.appId)));
       Object.assign(state.sale3, parseCommitResult(cconf));
       saveState();
@@ -638,28 +721,45 @@ async function main() {
     check((await call({ network: "testnet", appId: -1, commitId: 1 })).status === 400, "keeper rejects bad input");
     check((await call({ network: "testnet", appId: ROUTER_ID, commitId: 1 })).status === 404, "keeper refuses non-WenPad apps");
 
-    const asset = await mintNft(6);
-    await optIn(w.buyerA, asset);
+    const assets = [await mintNft(6), await mintNft(8)];
+    for (const a of assets) await optIn(w.buyerA, a);
     const { saleId, appId } = parseCreateSaleResult(
       await send(await buildCreateSale(NETWORK, FACTORY_ID, w.dist.addr, await saleParams(50_000)))
     );
-    await send(await buildAddItemsGroup(NETWORK, w.dist.addr, appId, [asset], 0));
+    await send(await buildAddItemsGroup(NETWORK, w.dist.addr, appId, assets, 0));
     const reg = await buildRegister(NETWORK, w.dist.addr, appId);
     await send(reg, reg.length - 2);
 
-    const { commitId } = parseCommitResult(
+    // C-1: two pending mints. The second can't be revealed before the first, even once its seed exists
+    const first = parseCommitResult(
       await send(await buildCommit(NETWORK, w.buyerA.addr, await getSaleState(NETWORK, appId)))
     );
+    const { commitId, targetRound } = parseCommitResult(
+      await send(await buildCommit(NETWORK, w.buyerA.addr, await getSaleState(NETWORK, appId)))
+    );
+    await waitForRound(algod, targetRound);
+    await expectFail(`reveal commit #${commitId} before #${first.commitId}`, () =>
+      buildReveal(NETWORK, deployer.addr, appId, commitId)
+    );
+    await expectFail(`cancel commit #${commitId} out of order`, () =>
+      buildCancelExpired(NETWORK, deployer.addr, appId, commitId)
+    );
+
+    // Asking the keeper for the second mint resolves the queue in order
     const keeperBefore = await balance(keeper.addr);
     const res = await call({ network: "testnet", appId, commitId });
-    check(res.status === 200 && res.json.assetId === asset, `keeper revealed commit #${commitId} -> asset ${res.json?.assetId}`);
-    check((await holds(w.buyerA.addr, asset)) === 1, "buyer received the NFT with one signature");
-    const earned = (await balance(keeper.addr)) - keeperBefore;
-    check(earned > 0, `keeper earned ${earned / 1e6} ALGO net of fees`);
-    check((await call({ network: "testnet", appId, commitId })).status === 404, "keeper reports an already-revealed commit");
+    check(res.status === 200 && assets.includes(res.json.assetId), `keeper resolved #${first.commitId} then #${commitId} -> asset ${res.json?.assetId}`);
+    check((await holds(w.buyerA.addr, assets[0])) === 1 && (await holds(w.buyerA.addr, assets[1])) === 1,
+      "buyer received both NFTs with one signature per mint");
+    // The reveal sold it out, so the keeper closed it in the same request
+    check(res.json.closed === true, "keeper auto-closed the sold-out Shuffle");
+    check((await getSaleByApp(NETWORK, FACTORY_ID, appId)) === null, `sold-out Shuffle #${saleId} left the index`);
+    await expectFail("sale app deleted after auto-close", () => algod.getApplicationByID(appId).do());
+    const net = (await balance(keeper.addr)) - keeperBefore;
+    check(net > 0, `keeper net ${net / 1e6} ALGO after reveal bounty and close fees`);
+    check((await call({ network: "testnet", appId, commitId })).status === 404, "keeper reports a closed Shuffle");
 
     await pay(keeper, deployer.addr, 0, deployer.addr);
-    await closeSale(appId, saleId, "keeper sale");
   });
 
   console.log(`\n${passed} checks passed this run.`);

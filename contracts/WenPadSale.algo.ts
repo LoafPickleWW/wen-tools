@@ -18,12 +18,14 @@ const REVEAL_DELAY = 1;
 const REVEAL_WINDOW = 1000;
 
 // Seed balance forwarded to each sale app: its base MBR plus the payout split box
-// (2500 + 400 * (1-byte key + up to 200 bytes) = 82,900). Any excess returns on deletion.
+// (2500 + 400 * (1-byte key + up to 240 bytes) = 98,900). Any excess returns on deletion.
 const CHILD_SEED = 200_000;
 
 // Payout splits: packed 40-byte entries (32-byte address + uint64 basis points), 1 to 5 of them,
-// basis points summing to 10,000
+// basis points summing to 10,000. The sale app stores each entry with a trailing uint64 "owed"
+// amount (48 bytes): shares a recipient could not receive yet, kept for that recipient only.
 const PAYOUT_ENTRY_BYTES = 40;
+const PAYOUT_STORED_BYTES = 48;
 const MAX_PAYOUTS = 5;
 const BPS_TOTAL = 10_000;
 
@@ -40,7 +42,7 @@ const MIN_REVEAL_FEE = 20_000;
 const ARC59_INFO_LOG_LENGTH = 37;
 
 // Must match the state declared on WenPadSale
-const CHILD_GLOBAL_UINTS = 15;
+const CHILD_GLOBAL_UINTS = 16;
 const CHILD_GLOBAL_BYTES = 2;
 const CHILD_EXTRA_PAGES = 1;
 
@@ -105,7 +107,7 @@ export class WenPadSale extends Contract {
 
   admin = GlobalStateKey<Address>({ key: 'admin' });
   distribution = GlobalStateKey<Address>({ key: 'distribution' });
-  /** Packed payout split, see PAYOUT_ENTRY_BYTES. Set once by the factory, never changed. */
+  /** Payout split as PAYOUT_STORED_BYTES entries (address, bps, owed). The split is set once by the factory. */
   payouts = BoxKey<bytes>({ key: 'p' });
 
   price = GlobalStateKey<uint64>({ key: 'price' });
@@ -121,6 +123,12 @@ export class WenPadSale extends Contract {
   sold = GlobalStateKey<uint64>({ key: 'sold' });
   proceeds = GlobalStateKey<uint64>({ key: 'proceeds' });
   nextCommit = GlobalStateKey<uint64>({ key: 'next_commit' });
+  /**
+   * The only commit that may be resolved next. Each draw takes from the list the earlier draws
+   * left behind, so commits must resolve in commit order: otherwise whoever reveals could try
+   * every order of the pending commits and pick the one that gives them the item they want.
+   */
+  nextReveal = GlobalStateKey<uint64>({ key: 'next_reveal' });
 
   items = BoxMap<uint64, bytes>({ prefix: 'i' });
   commits = BoxMap<uint64, Commit>({ prefix: 'c' });
@@ -162,6 +170,7 @@ export class WenPadSale extends Contract {
     this.sold.value = 0;
     this.proceeds.value = 0;
     this.nextCommit.value = 1;
+    this.nextReveal.value = 1;
   }
 
   // ---------------------------------------------------------------------------
@@ -172,7 +181,11 @@ export class WenPadSale extends Contract {
   setPayouts(payouts: bytes): void {
     assert(this.txn.sender === this.app.creator);
     assert(!this.payouts.exists);
-    this.payouts.value = payouts;
+    // Widen each 40-byte entry to 48 bytes; the new box is zero-filled, so every owed amount starts at 0
+    this.payouts.create((payouts.length / PAYOUT_ENTRY_BYTES) * PAYOUT_STORED_BYTES);
+    for (let i = 0; i < payouts.length; i = i + PAYOUT_ENTRY_BYTES) {
+      this.payouts.replace((i / PAYOUT_ENTRY_BYTES) * PAYOUT_STORED_BYTES, extract3(payouts, i, PAYOUT_ENTRY_BYTES));
+    }
   }
 
   /**
@@ -280,9 +293,10 @@ export class WenPadSale extends Contract {
    *   revealFee      -> whoever calls reveal (keeper bounty)
    *   commit box MBR -> refundable (2500 + 400 * (9-byte key + 72-byte Commit) = 34,900 today)
    *   deliveryBudget -> refundable delivery deposit (direct refund or carried to the ARC-59 inbox)
-   * Anything paid above that is added to the refundable deposit.
+   * Anything paid above that is added to the refundable deposit. `maxPrice` is the price the
+   * buyer saw, so a price raised while the commit is in flight makes it fail instead of charging more.
    */
-  commit(payment: PayTxn): uint64 {
+  commit(payment: PayTxn, maxPrice: uint64): uint64 {
     assert(this.status.value === STATUS_LIVE);
     assert(globals.round >= this.startRound.value);
     assert(globals.round <= this.endRound.value);
@@ -296,6 +310,7 @@ export class WenPadSale extends Contract {
     const boxMbr = this.app.address.minBalance - preMbr;
 
     const price = this.price.value;
+    assert(price <= maxPrice);
     const revealFee = this.revealFee.value;
     verifyPayTxn(payment, {
       sender: this.txn.sender,
@@ -323,8 +338,9 @@ export class WenPadSale extends Contract {
   }
 
   /**
-   * Resolve a commit once its target round has passed. Callable by anyone: the result is
-   * already fixed by the block seed. The caller receives revealFee as a bounty, which should
+   * Resolve a commit once its target round has passed. Callable by anyone, but only for the
+   * commit at the head of the queue (`next_reveal`), so every result is fixed by the block seeds
+   * alone, never by who reveals first. The caller receives revealFee as a bounty, which should
    * exceed the pooled fees they pay for this call.
    *
    * Security invariant: once a draw is made, nothing the buyer controls can make this call
@@ -333,6 +349,7 @@ export class WenPadSale extends Contract {
    * to the asset) or into the ARC-59 inbox, and the deposit floor covers the worst-case inbox.
    */
   reveal(commitId: uint64): void {
+    assert(commitId === this.nextReveal.value);
     assert(this.commits(commitId).exists);
     // Copy every field out first: TEALScript reads struct fields lazily from the box, so the
     // values would be unreadable after the box is deleted below
@@ -347,7 +364,9 @@ export class WenPadSale extends Contract {
     );
 
     // Draw until we hit an item the distribution wallet actually holds. Items that are not
-    // held (moved out before register, or duplicated) are dropped from the list.
+    // held (moved out before register, or duplicated) are dropped from the list. Default-frozen
+    // assets are dropped too: a buyer could opt in to one so its delivery fails, then take the
+    // expiry refund (a free re-roll).
     let assetId = 0;
     while (assetId === 0 && this.remaining.value > 0) {
       const candidate = this.takeItem(extractUint64(entropy, 0) % this.remaining.value);
@@ -355,7 +374,7 @@ export class WenPadSale extends Contract {
       if (candidate !== 0) {
         const asset = AssetID.fromUint64(candidate);
         if (this.distribution.value.isOptedInToAsset(asset)) {
-          if (this.distribution.value.assetBalance(asset) > 0) {
+          if (this.distribution.value.assetBalance(asset) > 0 && !asset.defaultFrozen) {
             assetId = candidate;
           }
         }
@@ -365,6 +384,7 @@ export class WenPadSale extends Contract {
 
     this.commits(commitId).delete();
     this.pending.value = this.pending.value - 1;
+    this.nextReveal.value = commitId + 1;
 
     if (assetId === 0) {
       // Nothing deliverable was left; refund everything
@@ -372,10 +392,16 @@ export class WenPadSale extends Contract {
       this.Cancelled.log({ commitId: commitId, buyer: buyer });
     } else {
       const asset = AssetID.fromUint64(assetId);
-      const inboxCost = this.deliver(asset, buyer, refundable);
+      const inboxCost = this.deliver(asset, buyer, refundable, price);
+      // If the inbox ever costs more than the deposit (a protocol MBR increase), the shortfall
+      // came out of the price
+      let fromPrice = 0;
+      if (inboxCost > refundable) {
+        fromPrice = inboxCost - refundable;
+      }
 
       this.sold.value = this.sold.value + 1;
-      this.proceeds.value = this.proceeds.value + price;
+      this.proceeds.value = this.proceeds.value + price - fromPrice;
 
       sendPayment({ receiver: this.txn.sender, amount: revealFee, fee: 0 });
 
@@ -400,6 +426,8 @@ export class WenPadSale extends Contract {
    * and the buyer's own page reveals too.
    */
   cancelExpired(commitId: uint64): void {
+    // Same queue as reveal: the head can be cancelled once expired, then later commits proceed
+    assert(commitId === this.nextReveal.value);
     assert(this.commits(commitId).exists);
     // Copy fields before deleting the box (struct fields are read lazily from the box)
     const buyer = this.commits(commitId).value.buyer;
@@ -412,6 +440,7 @@ export class WenPadSale extends Contract {
 
     this.commits(commitId).delete();
     this.pending.value = this.pending.value - 1;
+    this.nextReveal.value = commitId + 1;
 
     this.safeRefund(buyer, amount);
     this.Cancelled.log({ commitId: commitId, buyer: buyer });
@@ -460,8 +489,8 @@ export class WenPadSale extends Contract {
     assert(this.status.value === STATUS_RELEASED);
     assert(this.pending.value === 0);
 
-    // Shares for recipients that cannot receive stay in proceeds and are folded into the
-    // close-out below, so deletion can never be blocked
+    // Amounts owed to recipients that still cannot receive are folded into the close-out
+    // below, so deletion can never be blocked
     if (this.proceeds.value > 0) {
       this.payProceeds();
     }
@@ -508,9 +537,11 @@ export class WenPadSale extends Contract {
    * deposit. If they are opted in, both go directly (the account provably exists, so the
    * refund cannot fail). Otherwise the asset goes through the ARC-59 router: the deposit pays
    * the inbox MBR and everything left over is sent along as additionalReceiverFunds, which
-   * the buyer gets back when they claim. Returns the ALGO spent on inbox MBR.
+   * the buyer gets back when they claim. Returns the ALGO spent on inbox MBR. Should the inbox
+   * cost more than the deposit (protocol MBR increase), the shortfall comes out of `price`, so a
+   * buyer can never make delivery fail by staying un-opted-in.
    */
-  private deliver(asset: AssetID, buyer: Address, refundable: uint64): uint64 {
+  private deliver(asset: AssetID, buyer: Address, refundable: uint64, price: uint64): uint64 {
     const dist = this.distribution.value;
 
     if (buyer.isOptedInToAsset(asset)) {
@@ -539,11 +570,15 @@ export class WenPadSale extends Contract {
     assert(extract3(infoLog, 0, 4) === hex('0x151f7c75'));
 
     const routerMbr = info[1];
-    assert(routerMbr <= refundable);
-    const claimAlgo = refundable - routerMbr;
+    assert(routerMbr <= refundable + price);
+    let funds = refundable;
+    if (routerMbr > refundable) {
+      funds = routerMbr;
+    }
+    const claimAlgo = funds - routerMbr;
 
-    if (refundable > 0) {
-      sendPayment({ receiver: router.address, amount: refundable, fee: 0 });
+    if (funds > 0) {
+      sendPayment({ receiver: router.address, amount: funds, fee: 0 });
     }
 
     if (!info[2]) {
@@ -576,31 +611,43 @@ export class WenPadSale extends Contract {
   }
 
   /**
-   * Pay out all proceeds by the payout split. Rounding dust goes to the first recipient. A
-   * share whose recipient cannot receive (closed account, share below the min balance) stays
-   * in proceeds for a later withdrawal instead of blocking the others.
+   * Pay out proceeds. `proceeds` is the unsplit balance plus every recipient's owed amount. The
+   * unsplit part is divided by the payout split (rounding dust to the first recipient); each
+   * recipient then gets their share plus anything owed to them. A recipient who cannot receive
+   * (closed account, amount below the min balance) keeps it as owed, for them alone, instead of
+   * blocking the others or being re-split.
    */
   private payProceeds(): void {
-    const amount = this.proceeds.value;
-    const split = this.payouts.value;
+    const size = this.payouts.size;
+
+    let owedTotal = 0;
+    for (let i = 0; i < size; i = i + PAYOUT_STORED_BYTES) {
+      owedTotal = owedTotal + btoi(this.payouts.extract(i + 40, 8));
+    }
+    const amount = this.proceeds.value - owedTotal;
 
     let allocated = 0;
-    for (let i = 0; i < split.length; i = i + PAYOUT_ENTRY_BYTES) {
-      allocated = allocated + wideRatio([amount, extractUint64(split, i + 32)], [BPS_TOTAL]);
+    for (let i = 0; i < size; i = i + PAYOUT_STORED_BYTES) {
+      allocated = allocated + wideRatio([amount, btoi(this.payouts.extract(i + 32, 8))], [BPS_TOTAL]);
     }
 
     let retained = 0;
-    for (let i = 0; i < split.length; i = i + PAYOUT_ENTRY_BYTES) {
-      const receiver = castBytes<Address>(extract3(split, i, 32));
-      let share = wideRatio([amount, extractUint64(split, i + 32)], [BPS_TOTAL]);
+    for (let i = 0; i < size; i = i + PAYOUT_STORED_BYTES) {
+      const receiver = castBytes<Address>(this.payouts.extract(i, 32));
+      const owed = btoi(this.payouts.extract(i + 40, 8));
+      let due = wideRatio([amount, btoi(this.payouts.extract(i + 32, 8))], [BPS_TOTAL]) + owed;
       if (i === 0) {
-        share = share + amount - allocated;
+        due = due + amount - allocated;
       }
-      if (share > 0) {
-        if (this.canReceive(receiver, share)) {
-          sendPayment({ receiver: receiver, amount: share, fee: 0 });
+      if (due > 0) {
+        if (this.canReceive(receiver, due)) {
+          sendPayment({ receiver: receiver, amount: due, fee: 0 });
+          if (owed > 0) {
+            this.payouts.replace(i + 40, itob(0));
+          }
         } else {
-          retained = retained + share;
+          retained = retained + due;
+          this.payouts.replace(i + 40, itob(due));
         }
       }
     }
@@ -865,19 +912,23 @@ export class WenPadSaleFactory extends Contract {
     };
     const postMbr = this.app.address.minBalance;
 
-    if (postMbr > preMbr) {
-      assert(mbrPay.amount >= postMbr - preMbr);
-    } else if (preMbr > postMbr) {
-      sendPayment({ receiver: admin, amount: preMbr - postMbr, fee: 0 });
+    // Charge exactly the MBR increase; refund any overpayment and any MBR decrease
+    let refund = mbrPay.amount + preMbr;
+    assert(refund >= postMbr);
+    refund = refund - postMbr;
+    if (refund > 0) {
+      sendPayment({ receiver: admin, amount: refund, fee: 0 });
     }
 
     this.MetadataUpdated.log({ saleId: saleId });
   }
 
   /**
-   * Admin or distribution wallet (it can sign again once released). Deletes a released sale app
-   * (after its item pages are freed) and its index entries, refunding all MBR to the
-   * distribution wallet. Purchase history stays in the event logs.
+   * Callable by anyone (the keeper closes a Shuffle right after its last delivery). Deletes a
+   * released sale app (after its item pages are freed) and its index entries. Nothing can be
+   * redirected: proceeds go to the payout split, all MBR to the distribution wallet, and the
+   * sale app itself refuses deletion unless it is released with nothing pending. Purchase
+   * history stays in the event logs.
    */
   deleteSale(saleId: uint64): void {
     assert(this.sales(saleId).exists);
@@ -885,7 +936,6 @@ export class WenPadSaleFactory extends Contract {
     const admin = this.sales(saleId).value.admin;
     const app = this.sales(saleId).value.app;
     const distribution = this.sales(saleId).value.distribution;
-    assert(this.txn.sender === admin || this.txn.sender === distribution);
 
     const preMbr = this.app.address.minBalance;
 

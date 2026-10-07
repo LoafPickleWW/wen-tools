@@ -9,10 +9,10 @@ import { walletSign } from "../utils";
 export * from "./wenpadSaleCore";
 
 const FACTORY_IDS: Record<SaleNetwork, number> = {
-  // Mainnet 3732112982 is retired (older build, no Shuffles were created on it)
-  mainnet: Number(import.meta.env.VITE_WENPAD_SALE_FACTORY_APP_ID_MAINNET || 3732147516),
-  // Earlier testnet factories (773802844, 773804149, 773804369, 773806155, 773807620) are retired: older builds
-  testnet: Number(import.meta.env.VITE_WENPAD_SALE_FACTORY_APP_ID_TESTNET || 773809724),
+  // Mainnet 3732112982 and 3732147516 are retired (older builds, no live Shuffles on them)
+  mainnet: Number(import.meta.env.VITE_WENPAD_SALE_FACTORY_APP_ID_MAINNET || 3732791636),
+  // Earlier testnet factories (773802844, 773804149, 773804369, 773806155, 773807620, 773809724, 773852089) are retired: older builds
+  testnet: Number(import.meta.env.VITE_WENPAD_SALE_FACTORY_APP_ID_TESTNET || 773855125),
 };
 
 export const getFactoryId = (network: SaleNetwork) => FACTORY_IDS[network];
@@ -55,6 +55,17 @@ export async function requestKeeperReveal(
   } catch {
     return null;
   }
+}
+
+/** Ask the keeper to close a Shuffle that was released (e.g. sold out by a reveal the buyer sent). */
+export function requestKeeperClose(network: SaleNetwork, appId: number) {
+  fetch("/api/wenpad-reveal", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ network, appId }),
+  }).catch(() => {
+    // best effort; the creator can still collect from My shuffles
+  });
 }
 
 // ─── Hand-off from the WenPad mint step to the sale launcher ─────────────────

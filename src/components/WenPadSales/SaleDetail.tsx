@@ -17,9 +17,8 @@ import {
   REVEAL_WINDOW,
   STATUS,
   buildArc59Claim,
-  buildCancelExpired,
   buildCommit,
-  buildReveal,
+  buildQueueStep,
   buyerLineItems,
   fetchCollectionJson,
   findRevealForCommit,
@@ -33,6 +32,8 @@ import {
   listCommits,
   parseCommitResult,
   parseRevealedAsset,
+  planQueueUpTo,
+  requestKeeperClose,
   requestKeeperReveal,
   signAndSend,
   type CollectionJson,
@@ -95,17 +96,20 @@ export function SaleDetail({ network, appId }: { network: SaleNetwork; appId: nu
         getSaleState(network, appId),
         getCurrentRound(network),
       ]);
-      setSale(listing);
+      // The keeper closes a Shuffle right after its last delivery; keep showing the last
+      // known details so the buyer's result and claim button stay on screen
+      if (listing || !sale) setSale(listing);
       setState(saleState);
       setCurrentRound(round);
       if (listing && !collection) setCollection(await fetchCollectionJson(listing.metadata.metadataUrl, appId));
       if (activeAddress) setMyCommits(await listCommits(network, appId, activeAddress));
     } catch (err) {
-      console.error("Failed to load sale:", err);
+      // A closed Shuffle's app no longer exists; keep the last known state
+      if (!state) console.error("Failed to load sale:", err);
     } finally {
       setLoading(false);
     }
-  }, [network, factoryId, appId, activeAddress, collection]);
+  }, [network, factoryId, appId, activeAddress, collection, sale, state]);
 
   useEffect(() => {
     refresh();
@@ -161,7 +165,11 @@ export function SaleDetail({ network, appId }: { network: SaleNetwork; appId: nu
     }
   };
 
-  const handleManualReveal = async (commitId: number) => {
+  /**
+   * Resolve one of my mints from my own wallet. Mints resolve in order, so any earlier pending
+   * mints (anyone's) are resolved first, one signature each; expired ones are cancelled and refunded.
+   */
+  const resolveMine = async (commitId: number) => {
     if (!activeAddress) return;
     try {
       const commit = await getCommit(network, appId, commitId);
@@ -170,9 +178,23 @@ export function SaleDetail({ network, appId }: { network: SaleNetwork; appId: nu
         if (found) return finish(found.assetId);
         throw new Error("This mint was already resolved");
       }
-      const txns = await buildReveal(network, activeAddress, appId, commitId);
-      const confirmation = await signAndSend(network, txns, transactionSigner);
-      const revealed = parseRevealedAsset(confirmation.logs);
+      const steps = await planQueueUpTo(network, appId, commitId);
+      if (steps.length > 1) {
+        toast.info(`${steps.length - 1} earlier mint(s) must be delivered first: ${steps.length} signatures in total.`);
+      }
+      let confirmation: any = null;
+      for (const step of steps) {
+        confirmation = await signAndSend(network, await buildQueueStep(network, activeAddress, appId, step), transactionSigner);
+      }
+      const mine = steps[steps.length - 1];
+      // If this sold the Shuffle out, let the keeper close it and pay everyone out
+      requestKeeperClose(network, appId);
+      if (mine?.action === "cancel") {
+        toast.success("Expired mint cancelled and refunded");
+        refresh();
+        return;
+      }
+      const revealed = confirmation ? parseRevealedAsset(confirmation.logs) : null;
       if (revealed) await finish(revealed.assetId);
       else {
         toast.info("No deliverable item was left; your payment was refunded.");
@@ -184,17 +206,8 @@ export function SaleDetail({ network, appId }: { network: SaleNetwork; appId: nu
     }
   };
 
-  const handleCancelExpired = async (commitId: number) => {
-    if (!activeAddress) return;
-    try {
-      const txns = await buildCancelExpired(network, activeAddress, appId, commitId);
-      await signAndSend(network, txns, transactionSigner);
-      toast.success("Expired mint cancelled and refunded");
-      refresh();
-    } catch (err: any) {
-      toast.error(err?.message || "Cancel failed");
-    }
-  };
+  const handleManualReveal = resolveMine;
+  const handleCancelExpired = resolveMine;
 
   if (loading) {
     return <div className="w-full max-w-5xl h-96 rounded-3xl bg-banner-grey/30 animate-pulse" />;
@@ -203,7 +216,7 @@ export function SaleDetail({ network, appId }: { network: SaleNetwork; appId: nu
   if (!sale || !state) {
     return (
       <Panel className="max-w-xl text-center">
-        <p className="text-gray-300 font-bold">This Shuffle could not be found in the wen.tools Shuffle registry.</p>
+        <p className="text-gray-300 font-bold">This Shuffle has closed, or it isn't in the wen.tools Shuffle registry.</p>
         <Link to="/shuffle" className="text-primary-orange text-sm font-bold hover:underline mt-3 inline-block">
           ← Back to Shuffle
         </Link>

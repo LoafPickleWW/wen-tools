@@ -85,7 +85,9 @@ const FAQ: { q: string; a: ReactNode }[] = [
         While your Shuffle is live, the collection wallet can't sign, so a second wallet you control manages it:
         pausing, changing the price or end date, and releasing. By default that is the first payout address. Proceeds
         can be split between up to 5 addresses by percentage. Splits are locked when the Shuffle is created, so
-        collaborators can trust them. Anyone can trigger the payout.
+        collaborators can trust them. Anyone can trigger the payout. If a payout address can't receive its share
+        (for example a closed account and a share under 0.1 ALGO), that share is held for that address only and paid
+        on a later payout; if it still can't be delivered when the Shuffle closes, it goes to the collection wallet.
       </>
     ),
   },
@@ -95,7 +97,10 @@ const FAQ: { q: string; a: ReactNode }[] = [
       <>
         There is no platform fee. You put down deposits (about 1 ALGO for the contract and registry, plus about 0.42
         ALGO per 128 NFTs for storage), plus small network fees. All deposits come back to your collection wallet
-        when you close the Shuffle. Delivering NFTs costs your wallet nothing: whoever reveals a mint pays those fees.
+        when the Shuffle closes. When it sells out, wen.tools closes it automatically right after the last delivery:
+        proceeds go to your payouts and deposits back to the collection wallet. If it ends with NFTs left, collect
+        with one click in My shuffles. Delivering NFTs costs your wallet nothing: whoever reveals a mint pays those
+        fees.
       </>
     ),
   },
@@ -110,11 +115,27 @@ const FAQ: { q: string; a: ReactNode }[] = [
     ),
   },
   {
+    q: "What do I have to trust?",
+    a: (
+      <>
+        <strong>The manager</strong> can pause the Shuffle, change the price and move the end date. A price change
+        can't overcharge a mint already on its way: each mint carries the price the buyer saw and fails if the
+        price went up. <strong>The creator's asset keys:</strong> if an NFT has a freeze or clawback address, whoever
+        holds it can still freeze or claw it back, as with any Algorand asset; the launch page warns about these.
+        NFTs that are frozen by default can't be sold through Shuffle at all. <strong>The ARC-59 router</strong> used
+        for inbox deliveries is fixed when the factory is deployed. <strong>Block proposers:</strong> see "How is my
+        NFT chosen?" above. Closing a finished Shuffle can be triggered by anyone, but the money can only go to the
+        payout addresses and the collection wallet.
+      </>
+    ),
+  },
+  {
     q: "Is it safe? Has it been audited?",
     a: (
       <>
-        Shuffle is <strong>experimental</strong>. The contracts went through an internal security review and a full
-        test suite on testnet, but they have not had an independent audit. Rekeying always carries risk: a bug could
+        Shuffle is <strong>experimental</strong>. The contracts went through an internal security review, a
+        community review whose findings were fixed, and a full test suite on testnet, but they have not had a
+        professional audit. Rekeying always carries risk: a bug could
         leave the wallet or its assets unrecoverable. Use a dedicated wallet that only holds the collection you are
         selling, never a wallet with high-value assets.
       </>

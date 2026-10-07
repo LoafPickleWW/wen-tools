@@ -260,7 +260,7 @@
     },
     {
       "name": "deleteSale",
-      "desc": "Admin or distribution wallet (it can sign again once released). Deletes a released sale app\n(after its item pages are freed) and its index entries, refunding all MBR to the\ndistribution wallet. Purchase history stays in the event logs.",
+      "desc": "Callable by anyone (the keeper closes a Shuffle right after its last delivery). Deletes a\nreleased sale app (after its item pages are freed) and its index entries. Nothing can be\nredirected: proceeds go to the payout split, all MBR to the distribution wallet, and the\nsale app itself refuses deletion unless it is released with nothing pending. Purchase\nhistory stays in the event logs.",
       "args": [
         {
           "name": "saleId",

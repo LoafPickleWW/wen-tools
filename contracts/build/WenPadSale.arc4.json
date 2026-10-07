@@ -125,11 +125,15 @@
     },
     {
       "name": "commit",
-      "desc": "Reserve one random item. Payment must cover the four line items:\n  price          - creator (held until reveal)\n  revealFee      - whoever calls reveal (keeper bounty)\n  commit box MBR - refundable (2500 + 400 * (9-byte key + 72-byte Commit) = 34,900 today)\n  deliveryBudget - refundable delivery deposit (direct refund or carried to the ARC-59 inbox)\nAnything paid above that is added to the refundable deposit.",
+      "desc": "Reserve one random item. Payment must cover the four line items:\n  price          - creator (held until reveal)\n  revealFee      - whoever calls reveal (keeper bounty)\n  commit box MBR - refundable (2500 + 400 * (9-byte key + 72-byte Commit) = 34,900 today)\n  deliveryBudget - refundable delivery deposit (direct refund or carried to the ARC-59 inbox)\nAnything paid above that is added to the refundable deposit.  is the price the\nbuyer saw, so a price raised while the commit is in flight makes it fail instead of charging more.",
       "args": [
         {
           "name": "payment",
           "type": "pay"
+        },
+        {
+          "name": "maxPrice",
+          "type": "uint64"
         }
       ],
       "returns": {
@@ -158,7 +162,7 @@
     },
     {
       "name": "reveal",
-      "desc": "Resolve a commit once its target round has passed. Callable by anyone: the result is\nalready fixed by the block seed. The caller receives revealFee as a bounty, which should\nexceed the pooled fees they pay for this call.\n\n\nSecurity invariant: once a draw is made, nothing the buyer controls can make this call\nfail. Otherwise a buyer could let unwanted draws expire and take the refund (free re-roll).\nSo every payment to the buyer goes either to an account that provably exists (opted in\nto the asset) or into the ARC-59 inbox, and the deposit floor covers the worst-case inbox.",
+      "desc": "Resolve a commit once its target round has passed. Callable by anyone, but only for the\ncommit at the head of the queue (), so every result is fixed by the block seeds\nalone, never by who reveals first. The caller receives revealFee as a bounty, which should\nexceed the pooled fees they pay for this call.\n\n\nSecurity invariant: once a draw is made, nothing the buyer controls can make this call\nfail. Otherwise a buyer could let unwanted draws expire and take the refund (free re-roll).\nSo every payment to the buyer goes either to an account that provably exists (opted in\nto the asset) or into the ARC-59 inbox, and the deposit floor covers the worst-case inbox.",
       "args": [
         {
           "name": "commitId",

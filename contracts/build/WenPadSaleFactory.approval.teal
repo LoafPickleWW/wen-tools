@@ -39,25 +39,25 @@ switch *call_NoOp *NOT_IMPLEMENTED *NOT_IMPLEMENTED *NOT_IMPLEMENTED *NOT_IMPLEM
 createApplication:
 	proto 1 0
 
-	// contracts\WenPadSale.algo.ts:687
+	// contracts\WenPadSale.algo.ts:734
 	// this.totalSales.value = 0
 	bytec 2 //  "total_sales"
 	intc 1 // 0
 	app_global_put
 
-	// contracts\WenPadSale.algo.ts:688
+	// contracts\WenPadSale.algo.ts:735
 	// this.totalVolume.value = 0
 	bytec 5 //  "total_volume"
 	intc 1 // 0
 	app_global_put
 
-	// contracts\WenPadSale.algo.ts:689
+	// contracts\WenPadSale.algo.ts:736
 	// this.nextSaleId.value = 1
 	bytec 6 //  "next_sale_id"
 	intc 0 // 1
 	app_global_put
 
-	// contracts\WenPadSale.algo.ts:690
+	// contracts\WenPadSale.algo.ts:737
 	// this.router.value = router
 	bytec 8 //  "arc59"
 	frame_dig -1 // router: AppID
@@ -153,26 +153,26 @@ createSale:
 	bytec 0 // 0x
 	dupn 8
 
-	// contracts\WenPadSale.algo.ts:714
+	// contracts\WenPadSale.algo.ts:761
 	// distribution = this.txn.sender
 	txn Sender
 	frame_bury 0 // distribution: address
 
-	// contracts\WenPadSale.algo.ts:718
+	// contracts\WenPadSale.algo.ts:765
 	// assert(admin !== distribution)
 	frame_dig -2 // admin: Address
 	frame_dig 0 // distribution: address
 	!=
 	assert
 
-	// contracts\WenPadSale.algo.ts:719
+	// contracts\WenPadSale.algo.ts:766
 	// assert(admin !== globals.zeroAddress)
 	frame_dig -2 // admin: Address
 	global ZeroAddress
 	!=
 	assert
 
-	// contracts\WenPadSale.algo.ts:722
+	// contracts\WenPadSale.algo.ts:769
 	// assert(payouts.length > 0)
 	frame_dig -3 // payouts: bytes
 	len
@@ -180,7 +180,7 @@ createSale:
 	>
 	assert
 
-	// contracts\WenPadSale.algo.ts:723
+	// contracts\WenPadSale.algo.ts:770
 	// assert(payouts.length <= PAYOUT_ENTRY_BYTES * MAX_PAYOUTS)
 	frame_dig -3 // payouts: bytes
 	len
@@ -188,7 +188,7 @@ createSale:
 	<=
 	assert
 
-	// contracts\WenPadSale.algo.ts:724
+	// contracts\WenPadSale.algo.ts:771
 	// assert(payouts.length % PAYOUT_ENTRY_BYTES === 0)
 	frame_dig -3 // payouts: bytes
 	len
@@ -198,18 +198,18 @@ createSale:
 	==
 	assert
 
-	// contracts\WenPadSale.algo.ts:725
+	// contracts\WenPadSale.algo.ts:772
 	// totalBps = 0
 	intc 1 // 0
 	frame_bury 1 // totalBps: uint64
 
-	// contracts\WenPadSale.algo.ts:726
+	// contracts\WenPadSale.algo.ts:773
 	// for (let i = 0; i < payouts.length; i = i + PAYOUT_ENTRY_BYTES)
 	intc 1 // 0
 	frame_bury 2 // i: uint64
 
 *for_0:
-	// contracts\WenPadSale.algo.ts:726
+	// contracts\WenPadSale.algo.ts:773
 	// i < payouts.length
 	frame_dig 2 // i: uint64
 	frame_dig -3 // payouts: bytes
@@ -217,7 +217,7 @@ createSale:
 	<
 	bz *for_0_end
 
-	// contracts\WenPadSale.algo.ts:728
+	// contracts\WenPadSale.algo.ts:775
 	// assert(castBytes<Address>(extract3(payouts, i, 32)) !== globals.zeroAddress)
 	frame_dig -3 // payouts: bytes
 	frame_dig 2 // i: uint64
@@ -227,7 +227,7 @@ createSale:
 	!=
 	assert
 
-	// contracts\WenPadSale.algo.ts:729
+	// contracts\WenPadSale.algo.ts:776
 	// bps = extractUint64(payouts, i + 32)
 	frame_dig -3 // payouts: bytes
 	frame_dig 2 // i: uint64
@@ -236,14 +236,14 @@ createSale:
 	extract_uint64
 	frame_bury 3 // bps: uint64
 
-	// contracts\WenPadSale.algo.ts:730
+	// contracts\WenPadSale.algo.ts:777
 	// assert(bps > 0)
 	frame_dig 3 // bps: uint64
 	intc 1 // 0
 	>
 	assert
 
-	// contracts\WenPadSale.algo.ts:731
+	// contracts\WenPadSale.algo.ts:778
 	// totalBps = totalBps + bps
 	frame_dig 1 // totalBps: uint64
 	frame_dig 3 // bps: uint64
@@ -251,7 +251,7 @@ createSale:
 	frame_bury 1 // totalBps: uint64
 
 *for_0_continue:
-	// contracts\WenPadSale.algo.ts:726
+	// contracts\WenPadSale.algo.ts:773
 	// i = i + PAYOUT_ENTRY_BYTES
 	frame_dig 2 // i: uint64
 	intc 5 // 40
@@ -260,48 +260,48 @@ createSale:
 	b *for_0
 
 *for_0_end:
-	// contracts\WenPadSale.algo.ts:733
+	// contracts\WenPadSale.algo.ts:780
 	// assert(totalBps === BPS_TOTAL)
 	frame_dig 1 // totalBps: uint64
 	pushint 10000
 	==
 	assert
 
-	// contracts\WenPadSale.algo.ts:734
+	// contracts\WenPadSale.algo.ts:781
 	// payout = castBytes<Address>(extract3(payouts, 0, 32))
 	frame_dig -3 // payouts: bytes
 	extract 0 32
 	frame_bury 4 // payout: address
 
-	// contracts\WenPadSale.algo.ts:736
+	// contracts\WenPadSale.algo.ts:783
 	// assert(endRound > startRound)
 	frame_dig -6 // endRound: uint64
 	frame_dig -5 // startRound: uint64
 	>
 	assert
 
-	// contracts\WenPadSale.algo.ts:737
+	// contracts\WenPadSale.algo.ts:784
 	// assert(endRound > globals.round)
 	frame_dig -6 // endRound: uint64
 	global Round
 	>
 	assert
 
-	// contracts\WenPadSale.algo.ts:738
+	// contracts\WenPadSale.algo.ts:785
 	// assert(revealFee >= MIN_REVEAL_FEE)
 	frame_dig -7 // revealFee: uint64
 	pushint 20000
 	>=
 	assert
 
-	// contracts\WenPadSale.algo.ts:739
+	// contracts\WenPadSale.algo.ts:786
 	// assert(deliveryBudget >= MIN_DELIVERY_BUDGET)
 	frame_dig -8 // deliveryBudget: uint64
 	pushint 400000
 	>=
 	assert
 
-	// contracts\WenPadSale.algo.ts:740
+	// contracts\WenPadSale.algo.ts:787
 	// assert(name.length <= 64)
 	frame_dig -9 // name: string
 	len
@@ -309,7 +309,7 @@ createSale:
 	<=
 	assert
 
-	// contracts\WenPadSale.algo.ts:741
+	// contracts\WenPadSale.algo.ts:788
 	// assert(unitName.length <= 8)
 	frame_dig -10 // unitName: string
 	len
@@ -317,7 +317,7 @@ createSale:
 	<=
 	assert
 
-	// contracts\WenPadSale.algo.ts:742
+	// contracts\WenPadSale.algo.ts:789
 	// assert(standard.length <= 8)
 	frame_dig -11 // standard: string
 	len
@@ -325,7 +325,7 @@ createSale:
 	<=
 	assert
 
-	// contracts\WenPadSale.algo.ts:743
+	// contracts\WenPadSale.algo.ts:790
 	// assert(metadataUrl.length <= 256)
 	frame_dig -12 // metadataUrl: string
 	len
@@ -333,7 +333,7 @@ createSale:
 	<=
 	assert
 
-	// contracts\WenPadSale.algo.ts:744
+	// contracts\WenPadSale.algo.ts:791
 	// verifyPayTxn(mbrPay, {
 	//       sender: distribution,
 	//       receiver: this.app.address,
@@ -376,20 +376,20 @@ createSale:
 	// transaction verification failed: {"txn":"mbrPay","field":"rekeyTo","expected":"globals.zeroAddress"}
 	assert
 
-	// contracts\WenPadSale.algo.ts:751
+	// contracts\WenPadSale.algo.ts:798
 	// preMbr = this.app.address.minBalance
 	global CurrentApplicationAddress
 	acct_params_get AcctMinBalance
 	pop
 	frame_bury 5 // preMbr: uint64
 
-	// contracts\WenPadSale.algo.ts:752
+	// contracts\WenPadSale.algo.ts:799
 	// saleId = this.nextSaleId.value
 	bytec 6 //  "next_sale_id"
 	app_global_get
 	frame_bury 6 // saleId: uint64
 
-	// contracts\WenPadSale.algo.ts:754
+	// contracts\WenPadSale.algo.ts:801
 	// sendMethodCall<typeof WenPadSale.prototype.createApplication>({
 	//       approvalProgram: WenPadSale.approvalProgram(),
 	//       clearStateProgram: WenPadSale.clearProgram(),
@@ -415,32 +415,32 @@ createSale:
 	pushbytes 0xde3c8b45 // method "createApplication(uint64,address,address,uint64,uint64,uint64,uint64,uint64,uint64)void"
 	itxn_field ApplicationArgs
 
-	// contracts\WenPadSale.algo.ts:755
+	// contracts\WenPadSale.algo.ts:802
 	// approvalProgram: WenPadSale.approvalProgram()
 	PENDING_COMPILE_APPROVAL: WenPadSale
 	itxn_field ApprovalProgram
 
-	// contracts\WenPadSale.algo.ts:756
+	// contracts\WenPadSale.algo.ts:803
 	// clearStateProgram: WenPadSale.clearProgram()
 	PENDING_COMPILE_CLEAR: WenPadSale
 	itxn_field ClearStateProgram
 
-	// contracts\WenPadSale.algo.ts:757
+	// contracts\WenPadSale.algo.ts:804
 	// globalNumUint: CHILD_GLOBAL_UINTS
-	pushint 15
+	pushint 16
 	itxn_field GlobalNumUint
 
-	// contracts\WenPadSale.algo.ts:758
+	// contracts\WenPadSale.algo.ts:805
 	// globalNumByteSlice: CHILD_GLOBAL_BYTES
 	pushint 2
 	itxn_field GlobalNumByteSlice
 
-	// contracts\WenPadSale.algo.ts:759
+	// contracts\WenPadSale.algo.ts:806
 	// extraProgramPages: CHILD_EXTRA_PAGES
 	intc 0 // 1
 	itxn_field ExtraProgramPages
 
-	// contracts\WenPadSale.algo.ts:760
+	// contracts\WenPadSale.algo.ts:807
 	// methodArgs: [
 	//         saleId,
 	//         admin,
@@ -479,7 +479,7 @@ createSale:
 	itob
 	itxn_field ApplicationArgs
 
-	// contracts\WenPadSale.algo.ts:771
+	// contracts\WenPadSale.algo.ts:818
 	// fee: 0
 	intc 1 // 0
 	itxn_field Fee
@@ -487,30 +487,30 @@ createSale:
 	// Submit inner transaction
 	itxn_submit
 
-	// contracts\WenPadSale.algo.ts:773
+	// contracts\WenPadSale.algo.ts:820
 	// app = this.itxn.createdApplicationID
 	itxn CreatedApplicationID
 	frame_bury 7 // app: uint64
 
-	// contracts\WenPadSale.algo.ts:775
+	// contracts\WenPadSale.algo.ts:822
 	// sendPayment({ receiver: app.address, amount: CHILD_SEED, fee: 0 })
 	itxn_begin
 	intc 0 //  pay
 	itxn_field TypeEnum
 
-	// contracts\WenPadSale.algo.ts:775
+	// contracts\WenPadSale.algo.ts:822
 	// receiver: app.address
 	frame_dig 7 // app: uint64
 	app_params_get AppAddress
 	pop
 	itxn_field Receiver
 
-	// contracts\WenPadSale.algo.ts:775
+	// contracts\WenPadSale.algo.ts:822
 	// amount: CHILD_SEED
 	intc 6 // 200000
 	itxn_field Amount
 
-	// contracts\WenPadSale.algo.ts:775
+	// contracts\WenPadSale.algo.ts:822
 	// fee: 0
 	intc 1 // 0
 	itxn_field Fee
@@ -518,7 +518,7 @@ createSale:
 	// Submit inner transaction
 	itxn_submit
 
-	// contracts\WenPadSale.algo.ts:776
+	// contracts\WenPadSale.algo.ts:823
 	// sendMethodCall<typeof WenPadSale.prototype.setPayouts>({
 	//       applicationID: app,
 	//       methodArgs: [payouts],
@@ -530,12 +530,12 @@ createSale:
 	pushbytes 0xcaa41ff4 // method "setPayouts(byte[])void"
 	itxn_field ApplicationArgs
 
-	// contracts\WenPadSale.algo.ts:777
+	// contracts\WenPadSale.algo.ts:824
 	// applicationID: app
 	frame_dig 7 // app: uint64
 	itxn_field ApplicationID
 
-	// contracts\WenPadSale.algo.ts:778
+	// contracts\WenPadSale.algo.ts:825
 	// methodArgs: [payouts]
 	frame_dig -3 // payouts: bytes
 	dup
@@ -546,7 +546,7 @@ createSale:
 	concat
 	itxn_field ApplicationArgs
 
-	// contracts\WenPadSale.algo.ts:779
+	// contracts\WenPadSale.algo.ts:826
 	// fee: 0
 	intc 1 // 0
 	itxn_field Fee
@@ -554,7 +554,7 @@ createSale:
 	// Submit inner transaction
 	itxn_submit
 
-	// contracts\WenPadSale.algo.ts:782
+	// contracts\WenPadSale.algo.ts:829
 	// this.sales(saleId).value = {
 	//       app: app,
 	//       admin: admin,
@@ -603,7 +603,7 @@ createSale:
 	concat
 	box_put
 
-	// contracts\WenPadSale.algo.ts:796
+	// contracts\WenPadSale.algo.ts:843
 	// this.metadata(saleId).value = {
 	//       name: name,
 	//       unitName: unitName,
@@ -656,7 +656,7 @@ createSale:
 	concat // concat head and tail
 	box_put
 
-	// contracts\WenPadSale.algo.ts:802
+	// contracts\WenPadSale.algo.ts:849
 	// this.creatorSales(concat(admin, itob(saleId))).value = app
 	bytec 10 //  "c"
 	frame_dig -2 // admin: Address
@@ -668,7 +668,7 @@ createSale:
 	itob
 	box_put
 
-	// contracts\WenPadSale.algo.ts:804
+	// contracts\WenPadSale.algo.ts:851
 	// this.nextSaleId.value = saleId + 1
 	bytec 6 //  "next_sale_id"
 	frame_dig 6 // saleId: uint64
@@ -676,7 +676,7 @@ createSale:
 	+
 	app_global_put
 
-	// contracts\WenPadSale.algo.ts:805
+	// contracts\WenPadSale.algo.ts:852
 	// this.totalSales.value = this.totalSales.value + 1
 	bytec 2 //  "total_sales"
 	dup
@@ -685,7 +685,7 @@ createSale:
 	+
 	app_global_put
 
-	// contracts\WenPadSale.algo.ts:808
+	// contracts\WenPadSale.algo.ts:855
 	// required = this.app.address.minBalance - preMbr + CHILD_SEED
 	global CurrentApplicationAddress
 	acct_params_get AcctMinBalance
@@ -696,7 +696,7 @@ createSale:
 	+
 	frame_bury 8 // required: uint64
 
-	// contracts\WenPadSale.algo.ts:809
+	// contracts\WenPadSale.algo.ts:856
 	// assert(mbrPay.amount >= required)
 	frame_dig -1 // mbrPay: PayTxn
 	gtxns Amount
@@ -705,7 +705,7 @@ createSale:
 	assert
 
 	// *if0_condition
-	// contracts\WenPadSale.algo.ts:810
+	// contracts\WenPadSale.algo.ts:857
 	// mbrPay.amount > required
 	frame_dig -1 // mbrPay: PayTxn
 	gtxns Amount
@@ -714,18 +714,18 @@ createSale:
 	bz *if0_end
 
 	// *if0_consequent
-	// contracts\WenPadSale.algo.ts:811
+	// contracts\WenPadSale.algo.ts:858
 	// sendPayment({ receiver: distribution, amount: mbrPay.amount - required, fee: 0 })
 	itxn_begin
 	intc 0 //  pay
 	itxn_field TypeEnum
 
-	// contracts\WenPadSale.algo.ts:811
+	// contracts\WenPadSale.algo.ts:858
 	// receiver: distribution
 	frame_dig 0 // distribution: address
 	itxn_field Receiver
 
-	// contracts\WenPadSale.algo.ts:811
+	// contracts\WenPadSale.algo.ts:858
 	// amount: mbrPay.amount - required
 	frame_dig -1 // mbrPay: PayTxn
 	gtxns Amount
@@ -733,7 +733,7 @@ createSale:
 	-
 	itxn_field Amount
 
-	// contracts\WenPadSale.algo.ts:811
+	// contracts\WenPadSale.algo.ts:858
 	// fee: 0
 	intc 1 // 0
 	itxn_field Fee
@@ -742,7 +742,7 @@ createSale:
 	itxn_submit
 
 *if0_end:
-	// contracts\WenPadSale.algo.ts:814
+	// contracts\WenPadSale.algo.ts:861
 	// this.SaleCreated.log({ saleId: saleId, app: app, admin: admin, distribution: distribution })
 	pushbytes 0x95f8a5c9 // SaleCreated(uint64,uint64,address,address)
 	frame_dig 6 // saleId: uint64
@@ -757,7 +757,7 @@ createSale:
 	concat
 	log
 
-	// contracts\WenPadSale.algo.ts:815
+	// contracts\WenPadSale.algo.ts:862
 	// return saleId;
 	frame_dig 6 // saleId: uint64
 
@@ -805,12 +805,12 @@ createSale:
 syncSale:
 	proto 6 0
 
-	// contracts\WenPadSale.algo.ts:820
+	// contracts\WenPadSale.algo.ts:867
 	// this.assertCallerIsSale(saleId)
 	frame_dig -1 // saleId: uint64
 	callsub assertCallerIsSale
 
-	// contracts\WenPadSale.algo.ts:821
+	// contracts\WenPadSale.algo.ts:868
 	// this.sales(saleId).value.price = price
 	pushint 104 // headOffset
 	frame_dig -2 // price: uint64
@@ -822,7 +822,7 @@ syncSale:
 	cover 2
 	box_replace
 
-	// contracts\WenPadSale.algo.ts:822
+	// contracts\WenPadSale.algo.ts:869
 	// this.sales(saleId).value.endRound = endRound
 	pushint 120 // headOffset
 	frame_dig -3 // endRound: uint64
@@ -834,7 +834,7 @@ syncSale:
 	cover 2
 	box_replace
 
-	// contracts\WenPadSale.algo.ts:823
+	// contracts\WenPadSale.algo.ts:870
 	// this.sales(saleId).value.totalItems = totalItems
 	pushint 128 // headOffset
 	frame_dig -4 // totalItems: uint64
@@ -846,7 +846,7 @@ syncSale:
 	cover 2
 	box_replace
 
-	// contracts\WenPadSale.algo.ts:824
+	// contracts\WenPadSale.algo.ts:871
 	// this.sales(saleId).value.sold = sold
 	intc 9 //  headOffset
 	frame_dig -5 // sold: uint64
@@ -858,7 +858,7 @@ syncSale:
 	cover 2
 	box_replace
 
-	// contracts\WenPadSale.algo.ts:825
+	// contracts\WenPadSale.algo.ts:872
 	// this.sales(saleId).value.status = status
 	pushint 144 // headOffset
 	frame_dig -6 // status: uint64
@@ -870,7 +870,7 @@ syncSale:
 	cover 2
 	box_replace
 
-	// contracts\WenPadSale.algo.ts:827
+	// contracts\WenPadSale.algo.ts:874
 	// this.SaleSynced.log({ saleId: saleId, status: status, totalItems: totalItems, sold: sold })
 	pushbytes 0x9a8f46ac // SaleSynced(uint64,uint64,uint64,uint64)
 	frame_dig -1 // saleId: uint64
@@ -931,12 +931,12 @@ syncSale:
 logPurchase:
 	proto 6 0
 
-	// contracts\WenPadSale.algo.ts:832
+	// contracts\WenPadSale.algo.ts:879
 	// this.assertCallerIsSale(saleId)
 	frame_dig -1 // saleId: uint64
 	callsub assertCallerIsSale
 
-	// contracts\WenPadSale.algo.ts:833
+	// contracts\WenPadSale.algo.ts:880
 	// this.sales(saleId).value.sold = sold
 	intc 9 //  headOffset
 	frame_dig -5 // sold: uint64
@@ -948,7 +948,7 @@ logPurchase:
 	cover 2
 	box_replace
 
-	// contracts\WenPadSale.algo.ts:834
+	// contracts\WenPadSale.algo.ts:881
 	// this.sales(saleId).value.volume = this.sales(saleId).value.volume + price
 	intc 10 //  headOffset
 	dup
@@ -970,7 +970,7 @@ logPurchase:
 	cover 2
 	box_replace
 
-	// contracts\WenPadSale.algo.ts:835
+	// contracts\WenPadSale.algo.ts:882
 	// this.totalVolume.value = this.totalVolume.value + price
 	bytec 5 //  "total_volume"
 	dup
@@ -979,7 +979,7 @@ logPurchase:
 	+
 	app_global_put
 
-	// contracts\WenPadSale.algo.ts:837
+	// contracts\WenPadSale.algo.ts:884
 	// this.Purchase.log({ saleId: saleId, app: globals.callerApplicationID, asset: asset, buyer: buyer, price: price })
 	pushbytes 0xd0b832f5 // Purchase(uint64,uint64,uint64,address,uint64)
 	frame_dig -1 // saleId: uint64
@@ -1046,9 +1046,9 @@ updateMetadata:
 
 	// Push empty bytes after the frame pointer to reserve space for local variables
 	bytec 0 // 0x
-	dupn 2
+	dupn 3
 
-	// contracts\WenPadSale.algo.ts:849
+	// contracts\WenPadSale.algo.ts:896
 	// assert(this.sales(saleId).exists)
 	bytec 1 //  "s"
 	frame_dig -2 // saleId: uint64
@@ -1059,7 +1059,7 @@ updateMetadata:
 	pop
 	assert
 
-	// contracts\WenPadSale.algo.ts:850
+	// contracts\WenPadSale.algo.ts:897
 	// admin = this.sales(saleId).value.admin
 	intc 2 //  headOffset
 	intc 3 // 32
@@ -1071,14 +1071,14 @@ updateMetadata:
 	box_extract
 	frame_bury 0 // admin: address
 
-	// contracts\WenPadSale.algo.ts:851
+	// contracts\WenPadSale.algo.ts:898
 	// assert(this.txn.sender === admin)
 	txn Sender
 	frame_dig 0 // admin: address
 	==
 	assert
 
-	// contracts\WenPadSale.algo.ts:852
+	// contracts\WenPadSale.algo.ts:899
 	// assert(name.length <= 64)
 	frame_dig -3 // name: string
 	len
@@ -1086,7 +1086,7 @@ updateMetadata:
 	<=
 	assert
 
-	// contracts\WenPadSale.algo.ts:853
+	// contracts\WenPadSale.algo.ts:900
 	// assert(unitName.length <= 8)
 	frame_dig -4 // unitName: string
 	len
@@ -1094,7 +1094,7 @@ updateMetadata:
 	<=
 	assert
 
-	// contracts\WenPadSale.algo.ts:854
+	// contracts\WenPadSale.algo.ts:901
 	// assert(standard.length <= 8)
 	frame_dig -5 // standard: string
 	len
@@ -1102,7 +1102,7 @@ updateMetadata:
 	<=
 	assert
 
-	// contracts\WenPadSale.algo.ts:855
+	// contracts\WenPadSale.algo.ts:902
 	// assert(metadataUrl.length <= 256)
 	frame_dig -6 // metadataUrl: string
 	len
@@ -1110,7 +1110,7 @@ updateMetadata:
 	<=
 	assert
 
-	// contracts\WenPadSale.algo.ts:856
+	// contracts\WenPadSale.algo.ts:903
 	// verifyPayTxn(mbrPay, { sender: admin, receiver: this.app.address })
 	// verify sender
 	frame_dig -1 // mbrPay: PayTxn
@@ -1130,14 +1130,14 @@ updateMetadata:
 	// transaction verification failed: {"txn":"mbrPay","field":"receiver","expected":"this.app.address"}
 	assert
 
-	// contracts\WenPadSale.algo.ts:858
+	// contracts\WenPadSale.algo.ts:905
 	// preMbr = this.app.address.minBalance
 	global CurrentApplicationAddress
 	acct_params_get AcctMinBalance
 	pop
 	frame_bury 1 // preMbr: uint64
 
-	// contracts\WenPadSale.algo.ts:859
+	// contracts\WenPadSale.algo.ts:906
 	// this.metadata(saleId).delete()
 	bytec 3 //  "m"
 	frame_dig -2 // saleId: uint64
@@ -1145,7 +1145,7 @@ updateMetadata:
 	concat
 	box_del
 
-	// contracts\WenPadSale.algo.ts:860
+	// contracts\WenPadSale.algo.ts:907
 	// this.metadata(saleId).value = {
 	//       name: name,
 	//       unitName: unitName,
@@ -1198,61 +1198,61 @@ updateMetadata:
 	concat // concat head and tail
 	box_put
 
-	// contracts\WenPadSale.algo.ts:866
+	// contracts\WenPadSale.algo.ts:913
 	// postMbr = this.app.address.minBalance
 	global CurrentApplicationAddress
 	acct_params_get AcctMinBalance
 	pop
 	frame_bury 2 // postMbr: uint64
 
-	// *if1_condition
-	// contracts\WenPadSale.algo.ts:868
-	// postMbr > preMbr
-	frame_dig 2 // postMbr: uint64
-	frame_dig 1 // preMbr: uint64
-	>
-	bz *if1_elseif1_condition
-
-	// *if1_consequent
-	// contracts\WenPadSale.algo.ts:869
-	// assert(mbrPay.amount >= postMbr - preMbr)
+	// contracts\WenPadSale.algo.ts:916
+	// refund = mbrPay.amount + preMbr
 	frame_dig -1 // mbrPay: PayTxn
 	gtxns Amount
-	frame_dig 2 // postMbr: uint64
 	frame_dig 1 // preMbr: uint64
-	-
+	+
+	frame_bury 3 // refund: uint64
+
+	// contracts\WenPadSale.algo.ts:917
+	// assert(refund >= postMbr)
+	frame_dig 3 // refund: uint64
+	frame_dig 2 // postMbr: uint64
 	>=
 	assert
-	b *if1_end
 
-*if1_elseif1_condition:
-	// contracts\WenPadSale.algo.ts:870
-	// preMbr > postMbr
-	frame_dig 1 // preMbr: uint64
+	// contracts\WenPadSale.algo.ts:918
+	// refund = refund - postMbr
+	frame_dig 3 // refund: uint64
 	frame_dig 2 // postMbr: uint64
+	-
+	frame_bury 3 // refund: uint64
+
+	// *if1_condition
+	// contracts\WenPadSale.algo.ts:919
+	// refund > 0
+	frame_dig 3 // refund: uint64
+	intc 1 // 0
 	>
 	bz *if1_end
 
-	// *if1_elseif1_consequent
-	// contracts\WenPadSale.algo.ts:871
-	// sendPayment({ receiver: admin, amount: preMbr - postMbr, fee: 0 })
+	// *if1_consequent
+	// contracts\WenPadSale.algo.ts:920
+	// sendPayment({ receiver: admin, amount: refund, fee: 0 })
 	itxn_begin
 	intc 0 //  pay
 	itxn_field TypeEnum
 
-	// contracts\WenPadSale.algo.ts:871
+	// contracts\WenPadSale.algo.ts:920
 	// receiver: admin
 	frame_dig 0 // admin: address
 	itxn_field Receiver
 
-	// contracts\WenPadSale.algo.ts:871
-	// amount: preMbr - postMbr
-	frame_dig 1 // preMbr: uint64
-	frame_dig 2 // postMbr: uint64
-	-
+	// contracts\WenPadSale.algo.ts:920
+	// amount: refund
+	frame_dig 3 // refund: uint64
 	itxn_field Amount
 
-	// contracts\WenPadSale.algo.ts:871
+	// contracts\WenPadSale.algo.ts:920
 	// fee: 0
 	intc 1 // 0
 	itxn_field Fee
@@ -1261,7 +1261,7 @@ updateMetadata:
 	itxn_submit
 
 *if1_end:
-	// contracts\WenPadSale.algo.ts:874
+	// contracts\WenPadSale.algo.ts:923
 	// this.MetadataUpdated.log({ saleId: saleId })
 	pushbytes 0xdea91bb0 // MetadataUpdated(uint64)
 	frame_dig -2 // saleId: uint64
@@ -1283,9 +1283,11 @@ updateMetadata:
 
 // deleteSale(saleId: uint64): void
 //
-// Admin or distribution wallet (it can sign again once released). Deletes a released sale app
-// (after its item pages are freed) and its index entries, refunding all MBR to the
-// distribution wallet. Purchase history stays in the event logs.
+// Callable by anyone (the keeper closes a Shuffle right after its last delivery). Deletes a
+// released sale app (after its item pages are freed) and its index entries. Nothing can be
+// redirected: proceeds go to the payout split, all MBR to the distribution wallet, and the
+// sale app itself refuses deletion unless it is released with nothing pending. Purchase
+// history stays in the event logs.
 deleteSale:
 	proto 1 0
 
@@ -1293,7 +1295,7 @@ deleteSale:
 	bytec 0 // 0x
 	dupn 3
 
-	// contracts\WenPadSale.algo.ts:883
+	// contracts\WenPadSale.algo.ts:934
 	// assert(this.sales(saleId).exists)
 	bytec 1 //  "s"
 	frame_dig -1 // saleId: uint64
@@ -1304,7 +1306,7 @@ deleteSale:
 	pop
 	assert
 
-	// contracts\WenPadSale.algo.ts:885
+	// contracts\WenPadSale.algo.ts:936
 	// admin = this.sales(saleId).value.admin
 	intc 2 //  headOffset
 	intc 3 // 32
@@ -1316,7 +1318,7 @@ deleteSale:
 	box_extract
 	frame_bury 0 // admin: address
 
-	// contracts\WenPadSale.algo.ts:886
+	// contracts\WenPadSale.algo.ts:937
 	// app = this.sales(saleId).value.app
 	intc 1 // 0
 	intc 2 // 8
@@ -1329,7 +1331,7 @@ deleteSale:
 	btoi
 	frame_bury 1 // app: uint64
 
-	// contracts\WenPadSale.algo.ts:887
+	// contracts\WenPadSale.algo.ts:938
 	// distribution = this.sales(saleId).value.distribution
 	intc 5 //  headOffset
 	intc 3 // 32
@@ -1341,29 +1343,14 @@ deleteSale:
 	box_extract
 	frame_bury 2 // distribution: address
 
-	// contracts\WenPadSale.algo.ts:888
-	// assert(this.txn.sender === admin || this.txn.sender === distribution)
-	txn Sender
-	frame_dig 0 // admin: address
-	==
-	dup
-	bnz *skip_or0
-	txn Sender
-	frame_dig 2 // distribution: address
-	==
-	||
-
-*skip_or0:
-	assert
-
-	// contracts\WenPadSale.algo.ts:890
+	// contracts\WenPadSale.algo.ts:940
 	// preMbr = this.app.address.minBalance
 	global CurrentApplicationAddress
 	acct_params_get AcctMinBalance
 	pop
 	frame_bury 3 // preMbr: uint64
 
-	// contracts\WenPadSale.algo.ts:892
+	// contracts\WenPadSale.algo.ts:942
 	// sendMethodCall<typeof WenPadSale.prototype.deleteApplication>({
 	//       applicationID: app,
 	//       onCompletion: OnCompletion.DeleteApplication,
@@ -1375,17 +1362,17 @@ deleteSale:
 	pushbytes 0x2487c32c // method "deleteApplication()void"
 	itxn_field ApplicationArgs
 
-	// contracts\WenPadSale.algo.ts:893
+	// contracts\WenPadSale.algo.ts:943
 	// applicationID: app
 	frame_dig 1 // app: uint64
 	itxn_field ApplicationID
 
-	// contracts\WenPadSale.algo.ts:894
+	// contracts\WenPadSale.algo.ts:944
 	// onCompletion: OnCompletion.DeleteApplication
 	pushint 5 // DeleteApplication
 	itxn_field OnCompletion
 
-	// contracts\WenPadSale.algo.ts:895
+	// contracts\WenPadSale.algo.ts:945
 	// fee: 0
 	intc 1 // 0
 	itxn_field Fee
@@ -1393,7 +1380,7 @@ deleteSale:
 	// Submit inner transaction
 	itxn_submit
 
-	// contracts\WenPadSale.algo.ts:898
+	// contracts\WenPadSale.algo.ts:948
 	// this.sales(saleId).delete()
 	bytec 1 //  "s"
 	frame_dig -1 // saleId: uint64
@@ -1401,7 +1388,7 @@ deleteSale:
 	concat
 	box_del
 
-	// contracts\WenPadSale.algo.ts:899
+	// contracts\WenPadSale.algo.ts:949
 	// this.metadata(saleId).delete()
 	bytec 3 //  "m"
 	frame_dig -1 // saleId: uint64
@@ -1409,7 +1396,7 @@ deleteSale:
 	concat
 	box_del
 
-	// contracts\WenPadSale.algo.ts:900
+	// contracts\WenPadSale.algo.ts:950
 	// this.creatorSales(concat(admin, itob(saleId))).delete()
 	bytec 10 //  "c"
 	frame_dig 0 // admin: address
@@ -1419,7 +1406,7 @@ deleteSale:
 	concat
 	box_del
 
-	// contracts\WenPadSale.algo.ts:901
+	// contracts\WenPadSale.algo.ts:951
 	// this.totalSales.value = this.totalSales.value - 1
 	bytec 2 //  "total_sales"
 	dup
@@ -1428,18 +1415,18 @@ deleteSale:
 	-
 	app_global_put
 
-	// contracts\WenPadSale.algo.ts:904
+	// contracts\WenPadSale.algo.ts:954
 	// sendPayment({ receiver: distribution, amount: preMbr - this.app.address.minBalance, fee: 0 })
 	itxn_begin
 	intc 0 //  pay
 	itxn_field TypeEnum
 
-	// contracts\WenPadSale.algo.ts:904
+	// contracts\WenPadSale.algo.ts:954
 	// receiver: distribution
 	frame_dig 2 // distribution: address
 	itxn_field Receiver
 
-	// contracts\WenPadSale.algo.ts:904
+	// contracts\WenPadSale.algo.ts:954
 	// amount: preMbr - this.app.address.minBalance
 	frame_dig 3 // preMbr: uint64
 	global CurrentApplicationAddress
@@ -1448,7 +1435,7 @@ deleteSale:
 	-
 	itxn_field Amount
 
-	// contracts\WenPadSale.algo.ts:904
+	// contracts\WenPadSale.algo.ts:954
 	// fee: 0
 	intc 1 // 0
 	itxn_field Fee
@@ -1456,7 +1443,7 @@ deleteSale:
 	// Submit inner transaction
 	itxn_submit
 
-	// contracts\WenPadSale.algo.ts:906
+	// contracts\WenPadSale.algo.ts:956
 	// this.SaleDeleted.log({ saleId: saleId })
 	pushbytes 0xcd86afc5 // SaleDeleted(uint64)
 	frame_dig -1 // saleId: uint64
@@ -1485,7 +1472,7 @@ deleteSale:
 getSale:
 	proto 1 1
 
-	// contracts\WenPadSale.algo.ts:915
+	// contracts\WenPadSale.algo.ts:965
 	// return this.sales(saleId).value;
 	bytec 1 //  "s"
 	frame_dig -1 // saleId: uint64
@@ -1517,7 +1504,7 @@ getSale:
 getSaleMetadata:
 	proto 1 1
 
-	// contracts\WenPadSale.algo.ts:920
+	// contracts\WenPadSale.algo.ts:970
 	// return this.metadata(saleId).value;
 	bytec 3 //  "m"
 	frame_dig -1 // saleId: uint64
@@ -1535,7 +1522,7 @@ getSaleMetadata:
 assertCallerIsSale:
 	proto 1 0
 
-	// contracts\WenPadSale.algo.ts:925
+	// contracts\WenPadSale.algo.ts:975
 	// assert(this.sales(saleId).exists)
 	bytec 1 //  "s"
 	frame_dig -1 // saleId: uint64
@@ -1546,7 +1533,7 @@ assertCallerIsSale:
 	pop
 	assert
 
-	// contracts\WenPadSale.algo.ts:926
+	// contracts\WenPadSale.algo.ts:976
 	// assert(this.sales(saleId).value.app === globals.callerApplicationID)
 	intc 1 // 0
 	intc 2 // 8

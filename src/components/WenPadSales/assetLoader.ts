@@ -21,8 +21,8 @@ const ZERO_ADDRESS = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAY5
 export const hasClawback = (a: CandidateAsset) => !!a.clawback && a.clawback !== ZERO_ADDRESS;
 export const hasFreeze = (a: CandidateAsset) => !!a.freeze && a.freeze !== ZERO_ADDRESS;
 export const isNft = (a: CandidateAsset) => a.total === 1 && a.decimals === 0;
-/** Usable as a sale item: held, transferable */
-export const isSellable = (a: CandidateAsset) => a.amount >= 1 && !a.holdingFrozen;
+/** Usable as a sale item: held, transferable, and not default-frozen (the contract skips those: a buyer could otherwise force a failed delivery and a refund) */
+export const isSellable = (a: CandidateAsset) => a.amount >= 1 && !a.holdingFrozen && !a.defaultFrozen;
 
 async function paginate(url: string, key: string, onPage?: (n: number) => void): Promise<any[]> {
   const out: any[] = [];

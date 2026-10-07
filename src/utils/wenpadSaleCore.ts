@@ -51,8 +51,8 @@ export const ITEM_PAGE_MBR = boxMbr(9, 1024);
 /** Commit box: 9-byte key + (address, 5 x uint64) */
 export const COMMIT_BOX_MBR = boxMbr(9, 72);
 const CHILD_SEED = 200_000;
-// Child app MBR charged to the factory: 2 pages + 15 uints + 2 byte slices
-const CHILD_APP_MBR = 100_000 * 2 + 28_500 * 15 + 50_000 * 2;
+// Child app MBR charged to the factory: 2 pages + 16 uints + 2 byte slices (must match CHILD_GLOBAL_UINTS)
+const CHILD_APP_MBR = 100_000 * 2 + 28_500 * 16 + 50_000 * 2;
 
 /** Payout split limits (must match the contract) */
 export const MAX_PAYOUTS = 5;
@@ -77,7 +77,7 @@ const M = {
   unpause: method("unpause()void"),
   setPrice: method("setPrice(uint64)void"),
   setEndRound: method("setEndRound(uint64)void"),
-  commit: method("commit(pay)uint64"),
+  commit: method("commit(pay,uint64)uint64"),
   reveal: method("reveal(uint64)void"),
   cancelExpired: method("cancelExpired(uint64)void"),
   release: method("release()void"),
@@ -153,6 +153,8 @@ export interface SaleState {
   sold: number;
   proceeds: number;
   nextCommit: number;
+  /** Head of the reveal queue: commits resolve strictly in order. 0 on older sale apps (no queue). */
+  nextReveal: number;
 }
 
 export interface CommitInfo {
@@ -335,6 +337,7 @@ export async function getSaleState(network: SaleNetwork, appId: number): Promise
     sold: n("sold"),
     proceeds: n("proceeds"),
     nextCommit: n("next_commit"),
+    nextReveal: n("next_reveal"),
   };
 }
 
@@ -346,12 +349,16 @@ export function packPayouts(payouts: PayoutSplit[]): Uint8Array {
   return concatBytes(...payouts.map((p) => concatBytes(algosdk.decodeAddress(p.address).publicKey, u64(p.bps))));
 }
 
-/** Read a sale's payout split from its `p` box. */
+/**
+ * Read a sale's payout split from its `p` box. Current sale apps store 48-byte entries
+ * (address, bps, owed); older ones 40-byte entries. With at most 5 payouts the lengths never collide.
+ */
 export async function getPayouts(network: SaleNetwork, appId: number): Promise<PayoutSplit[]> {
   try {
     const box = await getAlgod(network).getApplicationBoxByName(appId, new TextEncoder().encode("p")).do();
     const out: PayoutSplit[] = [];
-    for (let i = 0; i < box.value.length; i += 40) {
+    const stride = box.value.length % 48 === 0 ? 48 : 40;
+    for (let i = 0; i < box.value.length; i += stride) {
       out.push({
         address: algosdk.encodeAddress(box.value.slice(i, i + 32)),
         bps: num(algosdk.decodeUint64(box.value.slice(i + 32, i + 40), "bigint")),
@@ -899,7 +906,11 @@ export async function buildCommit(network: SaleNetwork, buyer: string, state: Sa
   const algod = getAlgod(network);
   const sp = await algod.getTransactionParams().do();
   const pay = payTxn(buyer, algosdk.getApplicationAddress(state.appId), buyerLineItems(state).total, sp);
-  return finalizeGroup(algod, methodCall(state.appId, M.commit, buyer, sp, [{ txn: pay, signer: emptySigner }]));
+  // maxPrice = the price the buyer was shown: a price raised in the meantime fails the commit
+  return finalizeGroup(
+    algod,
+    methodCall(state.appId, M.commit, buyer, sp, [{ txn: pay, signer: emptySigner }, state.price])
+  );
 }
 
 /** commitId (ABI return) and target round from a confirmed commit call. */
@@ -960,6 +971,41 @@ export async function buildCancelExpired(network: SaleNetwork, caller: string, a
   const algod = getAlgod(network);
   const sp = await algod.getTransactionParams().do();
   return finalizeGroup(algod, methodCall(appId, M.cancelExpired, caller, sp, [commitId]));
+}
+
+export interface QueueStep {
+  commitId: number;
+  targetRound: number;
+  /** Expired commits (seed no longer readable) are cancelled and refunded instead */
+  action: "reveal" | "cancel";
+}
+
+/**
+ * Commits resolve strictly in commit order (`next_reveal`), so revealing `commitId` first needs
+ * every earlier pending commit resolved. Returns those steps, ending with `commitId` itself.
+ */
+export async function planQueueUpTo(network: SaleNetwork, appId: number, commitId: number): Promise<QueueStep[]> {
+  const [state, round] = await Promise.all([getSaleState(network, appId), getCurrentRound(network)]);
+  // Older sale apps have no queue: any commit can be revealed directly
+  const start = state.nextReveal || commitId;
+  const steps: QueueStep[] = [];
+  for (let id = start; id <= commitId; id++) {
+    const c = await getCommit(network, appId, id);
+    if (!c) continue;
+    steps.push({
+      commitId: id,
+      targetRound: c.targetRound,
+      action: round > c.targetRound + REVEAL_WINDOW ? "cancel" : "reveal",
+    });
+  }
+  return steps;
+}
+
+/** Build the group for one queue step. */
+export function buildQueueStep(network: SaleNetwork, caller: string, appId: number, step: QueueStep) {
+  return step.action === "cancel"
+    ? buildCancelExpired(network, caller, appId, step.commitId)
+    : buildReveal(network, caller, appId, step.commitId);
 }
 
 /** Wait until the chain is past `round` (the reveal needs that round's block seed). */

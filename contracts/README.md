@@ -88,23 +88,23 @@ keeper, set the following in Vercel:
 - **Admin (manager):** a different wallet that controls the sale while it is live. A separate
   wallet is needed because the collection wallet can't sign once rekeyed.
 - **Payouts:** 1–5 addresses with shares in basis points summing to 10,000. They are fixed at
-  creation and stored packed in the sale app's `p` box, 40 bytes per entry (32-byte address +
-  uint64 bps).
+  creation. `createSale` takes them packed as 40-byte entries (32-byte address + uint64 bps);
+  the sale app's `p` box stores 48 bytes per entry, adding a uint64 amount owed to that recipient.
 
 | Step | Who signs | Call |
 |------|-----------|------|
 | 1 | Collection wallet | `factory.createSale(mbrPay, admin, payouts, price, startRound, endRound, revealFee, deliveryBudget, name, unitName, standard, metadataUrl)` |
 | 2 | Collection wallet (or admin) | `sale.addItems(mbrPay, packedAssetIds)`: packed big-endian uint64s, up to 250 per call, 8 calls per group |
 | 3 | Collection wallet | one group: `[sale.register(), pay 0 to self with rekeyTo = sale address]` |
-| 4 | Buyer | one group: `[pay total, sale.commit(pay)]` (see line items below) |
-| 5 | Anyone (keeper, buyer) | `sale.reveal(commitId)` once `targetRound` has passed (about 2 rounds) |
+| 4 | Buyer | one group: `[pay total, sale.commit(pay, maxPrice)]` (see line items below); fails if the price went above `maxPrice` |
+| 5 | Anyone (keeper, buyer) | `sale.reveal(commitId)` once `targetRound` has passed (about 2 rounds), strictly in commit order (`next_reveal`) |
 | 6 | Admin anytime / anyone after end or sell-out | `sale.release()` rekeys the collection wallet back to itself |
 | 7 | Anyone | `sale.withdrawProceeds()` splits proceeds between the payouts (rounding dust goes to the first) |
-| 8 | Anyone, then admin or collection wallet | `sale.deleteItemPage(page)`, then `factory.deleteSale(saleId)`. Deposits return to the collection wallet. |
+| 8 | Anyone (the keeper does it after a sell-out) | `sale.deleteItemPage(page)`, then `factory.deleteSale(saleId)`. Proceeds go to the payouts, deposits to the collection wallet. |
 
 If a payout recipient can't receive its share (closed account, share below the 0.1 ALGO minimum),
-the share stays in proceeds instead of blocking the others. A later withdrawal re-splits it, and
-on deletion it goes to the collection wallet.
+the share is recorded as owed to that recipient instead of blocking the others. A later withdrawal
+pays it to that recipient only; on deletion, anything still unpayable goes to the collection wallet.
 
 ## What the buyer pays
 

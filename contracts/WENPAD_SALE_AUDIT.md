@@ -31,7 +31,7 @@ flaw in what it sends from that wallet can drain the creator's collection.
 | Closing asset | Yes | No inner transaction sets `assetCloseTo`. Every distribution transfer is `assetAmount: 1`. |
 | Group size check | Checked | Transaction arguments are positional (`groupIndex - 1`) and type-checked, so one payment cannot satisfy two calls. register uses `groupIndex + 1` explicitly. No absolute group indices are used. |
 | Time-based replay | No | No periodic payments. Commits are one-shot boxes. |
-| Access control on update/delete | Yes | Neither contract can be updated. The factory cannot be deleted. The sale app can only be deleted by its creator (the factory), through `deleteSale` (admin only), after release, with no pending commits and no boxes. |
+| Access control on update/delete | Yes | Neither contract can be updated. The factory cannot be deleted. The sale app can only be deleted by its creator (the factory), through `deleteSale` (callable by anyone since v5), after release, with no pending commits and no boxes. Every payout destination is fixed, so a third-party close cannot redirect funds. |
 | Asset ID check | Yes | Items come from the admin's list. At reveal, the app checks the distribution wallet holds the drawn asset and skips it if not. |
 | DoS via asset opt-out | Yes | A buyer who opts out between commit and reveal just moves to the ARC-59 path. The distribution wallet cannot opt out: it is rekeyed, and the app never sends opt-outs. |
 | Inner transaction fee | Yes | Every `send*` sets `fee: 0`. |
@@ -60,16 +60,17 @@ flaw in what it sends from that wallet can drain the creator's collection.
   to about one write per page: roughly 2,000 items per signature instead of about 190. The draw
   skips an asset ID of 0 without looking it up, because that lookup would fail and stall the reveal.
 - **Roles.** The collection wallet sends `createSale` and may call `addItems` during setup; the
-  admin must differ from it. After release, `deleteSale` may be called by the admin or the
-  collection wallet, and deposits return to the collection wallet, which paid them.
+  admin must differ from it. After release, `deleteSale` may be called by anyone (v5; before
+  that only the admin or the collection wallet), and deposits return to the collection wallet,
+  which paid them.
 - **Split payouts.** 1–5 entries, validated on-chain: non-zero addresses, shares > 0, summing to
   10,000 bps. They are written once by the factory through `setPayouts`, which only the creator
   (the factory) may call, and only if the box doesn't exist yet. `payProceeds`:
   - computes shares with `wideRatio`, so there's no overflow;
   - gives rounding dust to the first recipient;
-  - uses the `canReceive` guard, so one closed recipient never blocks the others. Its share stays
-    in proceeds and is folded into the close-out on deletion.
-  - Accepted quirk: a retained share is re-split across all recipients on the next withdrawal.
+  - uses the `canReceive` guard, so one closed recipient never blocks the others. Since v5 its
+    share is recorded as owed to that recipient alone (see C2-M1 below) and is folded into the
+    close-out on deletion if it still can't be paid.
   - Paying the factory address is possible, but would strand that share. The UI prevents it, and
     it is the creator's own choice.
 
@@ -85,9 +86,43 @@ deposits back. A buyer whose inbox already existed paid only 0.2 ALGO for ARC-59
 per Shuffle and in the factory total. The on-page verifier confirmed the deployed bytecode
 matches the published source.
 
-**Mainnet: factory 3732147516.** Its bytecode is identical to testnet factory 773809724, and it
-points at ARC-59 router 2449590623. The earlier mainnet factory 3732112982 (an older build, never
-used) is retired.
+**Testnet v6 (factory 773855125, community-review fixes incl. ordered reveals):** every step
+passed, including new tests for each fix: out-of-order reveal and cancel rejected, the keeper
+resolving a two-commit queue in order and auto-closing the sold-out Shuffle (keeper net +0.022
+ALGO), a default-frozen asset never delivered despite the buyer opting in, a commit with maxPrice
+below the price rejected, an unreachable 50% share kept as owed across three withdrawals (the
+other recipient paid exactly 50%), the metadata overpayment refunded, a third-party close, and the
+real 1,000-round expiry cancel. (Factory 773852089, the same build without ordered reveals, is retired.)
+
+**Mainnet: factory 3732791636** (Oct 2026). Same build as testnet 773855125 (4,592-byte factory,
+2,941-byte sale program), pointing at ARC-59 router 2449590623; the page's verifier confirms the
+on-chain bytecode matches the published source. Earlier mainnet factories 3732112982 and
+3732147516 (older builds, no live Shuffles) are retired.
+
+### Community review (Oct 2026) and v5 changes
+
+An external community review (@Mufasa, Oct 6 2026) reported 13 items. Dispositions:
+
+| ID | Finding | Disposition |
+|----|---------|-------------|
+| C-1 | Draw depends on reveal order (`seed % remaining` over a list other reveals change) | **Fixed in v5:** commits resolve strictly in commit order (`commitId == next_reveal` in `reveal` and `cancelExpired`), so every outcome depends on block seeds alone. The keeper resolves the queue in order and no longer refuses a reveal that costs a little more than its bounty, so one costly reveal can't stall it. |
+| H-1 | Default-frozen assets let a buyer force a failed delivery and take the expiry refund | **Fixed in v5:** the draw drops default-frozen assets like unheld ones; the launch wizard excludes them. Freeze/clawback addresses are *not* dropped: only the creator holds those keys, which is creator trust (documented), not a buyer attack. |
+| M-1 | A retained payout share is re-split across all recipients on each withdrawal | **Fixed in v5:** the `p` box stores 48-byte entries (address, bps, owed); an unpaid share is owed to that recipient only. |
+| M-2 | No maximum price on commit; the manager could raise the price on an in-flight commit that overpaid | **Fixed in v5:** `commit(pay, maxPrice)` asserts `price <= maxPrice`; the client passes the price shown. |
+| M-3 | Commits accepted while the wallet isn't controlled by the app | **Not an issue.** After the rekey only the sale app can sign for the wallet, so nothing later in the group (or ever) can rekey it away; `register` requires the rekey. |
+| M-4 | Long runs of unheld items could exhaust the reveal budget | **Accepted.** Only the creator can load items and the wizard lists held assets only; worst case the creator breaks their own Shuffle and buyers get refunds. |
+| M-5 | A protocol MBR increase could make the inbox cost exceed the deposit | **Fixed in v5:** the shortfall is covered from the price instead of failing. |
+| L-1 | Manager can extend the end round indefinitely | **Accepted.** The manager is chosen by the creator (default: the first payout) and can release at any time anyway. |
+| L-2 | Block seed is visible to the target round's proposer | **Accepted** (see residual risks). |
+| L-3 | Reveal bounty close to pooled fees | **Accepted.** wen.tools runs its own keeper. |
+| L-4 | `updateMetadata` kept overpayments | **Fixed in v5:** the overpayment and any MBR decrease are refunded. |
+| I-1 | Creator index keyed by admin | **Already handled:** My shuffles matches the manager or the collection wallet. |
+| I-2 | Trust assumptions | **Documented** in the page FAQ ("What do I have to trust?"). |
+
+**Also in v5 (requested):** `deleteSale` is permissionless, and the keeper closes a released
+Shuffle right after its last delivery, so creators don't have to collect by hand. Funds can only
+go to the payout split (proceeds) and the collection wallet (deposits); the sale app still refuses
+deletion unless it is released with nothing pending and no boxes left.
 
 **Client-side bug found on testnet:** `finalizeGroup` produced groups with a stale group ID,
 because `atc.simulate()` writes a group onto the same transaction objects. Every
