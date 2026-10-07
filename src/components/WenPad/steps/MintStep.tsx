@@ -83,6 +83,7 @@ const MintStep = () => {
   // Live wallet balance and spendable ALGO tracking
   const [walletBalance, setWalletBalance] = useState<{ amount: number; minBalance: number; spendable: number } | null>(null);
   const [isFetchingBalance, setIsFetchingBalance] = useState(false);
+  const [detectedMinted, setDetectedMinted] = useState<number>(0);
 
   const fetchBalance = useCallback(async () => {
     if (!activeAccount?.address || !algodClient) {
@@ -100,16 +101,50 @@ const MintStep = () => {
         minBalance: minBal / 1e6,
         spendable,
       });
+
+      // Detect already created assets for this collection in the wallet
+      const createdAssets = acctInfo['created-assets'] || [];
+      const projName = (project.name || '').trim().toLowerCase();
+      const projUnit = (project.unitName || '').trim().toLowerCase();
+      let maxMinted = 0;
+      for (const ca of createdAssets) {
+        const name = (ca.params?.name || '').trim();
+        const unit = (ca.params?.['unit-name'] || '').trim().toLowerCase();
+        const match = name.match(/#(\d+)$/);
+        if (match) {
+          const num = parseInt(match[1], 10);
+          if (
+            (projName && name.toLowerCase().startsWith(projName)) ||
+            (projUnit && unit === projUnit)
+          ) {
+            if (num > maxMinted) maxMinted = num;
+          }
+        }
+      }
+      if (maxMinted > 0) {
+        setDetectedMinted(maxMinted);
+      }
     } catch (e) {
       console.error("Failed to fetch wallet balance:", e);
     } finally {
       setIsFetchingBalance(false);
     }
-  }, [activeAccount?.address, algodClient]);
+  }, [activeAccount?.address, algodClient, project.name, project.unitName]);
 
   useEffect(() => {
     fetchBalance();
   }, [fetchBalance]);
+
+  // If already-minted assets are detected and user is still at item 1, automatically resume from next item
+  useEffect(() => {
+    if (detectedMinted > 0 && startItem <= detectedMinted) {
+      const nextStart = detectedMinted + 1;
+      const batchSize = 250;
+      const nextEnd = Math.min(maxItems, nextStart + batchSize - 1);
+      setStartItem(nextStart);
+      setEndItem(nextEnd);
+    }
+  }, [detectedMinted, maxItems]);
 
   const requiredBatchAlgo = Number((selectedCount * 0.102).toFixed(3));
   const hasInsufficientBalance = walletBalance !== null && walletBalance.spendable < requiredBatchAlgo;
@@ -488,14 +523,36 @@ const MintStep = () => {
 
         const createTxIds: string[] = [];
         let offset = 0;
+        let submitError: any = null;
+
         for (let j = 0; j < chunk.length; j++) {
           const createTxn = chunk[j].find((t: algosdk.Transaction) => t.type === algosdk.TransactionType.acfg);
-          if (createTxn) createTxIds.push(createTxn.txID());
           const gLen = chunk[j].length;
           const groupBytes = signedTxns.slice(offset, offset + gLen);
           offset += gLen;
           const globalIndex = chunkStart + j;
-          await algodClient.sendRawTransaction(groupBytes).do();
+
+          // Attempt send with retry and throttling to prevent RPC rate limiting
+          let sent = false;
+          let attemptErr: any = null;
+          for (let attempt = 0; attempt < 3; attempt++) {
+            try {
+              await algodClient.sendRawTransaction(groupBytes).do();
+              sent = true;
+              if (createTxn) createTxIds.push(createTxn.txID());
+              break;
+            } catch (err: any) {
+              attemptErr = err;
+              console.warn(`Retry attempt ${attempt + 1} for item index ${globalIndex}:`, err);
+              await new Promise((r) => setTimeout(r, 400 * (attempt + 1)));
+            }
+          }
+
+          if (!sent) {
+            submitError = attemptErr;
+            console.error(`Failed to submit item index ${globalIndex}:`, attemptErr);
+            break; // Stop submitting further transactions, but proceed to confirm already submitted ones
+          }
           
           if (effectiveProvider === 'AlgoFile' && localAlgofileUploads.length > 0) {
             const upload = localAlgofileUploads.find((u) => u.groupIndex === globalIndex);
@@ -522,25 +579,48 @@ const MintStep = () => {
               }
             }
           }
+
+          // Gentle throttle (60ms) between transaction submissions to prevent RPC burst drop
+          await new Promise((r) => setTimeout(r, 60));
         }
         
-        // Don't report success until the network has actually created the assets.
-        setProgress({
-          current: Math.round(((i + 1) / chunks.length) * totalToMint),
-          total: totalToMint,
-          status: `Confirming batch ${i + 1} of ${chunks.length} on-chain...`
-        });
-        for (const txId of createTxIds) {
-          const confirmed = await algosdk.waitForConfirmation(algodClient, txId, 10);
-          const assetId = Number(confirmed['asset-index'] || 0);
-          if (!assetId) throw new Error(`Transaction ${txId} confirmed but no asset was created.`);
-          createdAssetIds.push(assetId);
+        // Wait for confirmation on all transactions that WERE submitted
+        if (createTxIds.length > 0) {
+          setProgress({
+            current: Math.round(((i + 1) / chunks.length) * totalToMint),
+            total: totalToMint,
+            status: `Confirming ${createTxIds.length} minted NFTs on-chain...`
+          });
+          for (const txId of createTxIds) {
+            try {
+              const confirmed = await algosdk.waitForConfirmation(algodClient, txId, 10);
+              const assetId = Number(confirmed['asset-index'] || 0);
+              if (assetId) createdAssetIds.push(assetId);
+            } catch (confErr) {
+              console.error(`Confirmation error for txId ${txId}:`, confErr);
+            }
+          }
+        }
+
+        if (submitError) {
+          const mintedCount = createdAssetIds.length;
+          const nextStart = effectiveStart + mintedCount;
+          setStartItem(nextStart);
+          setEndItem(Math.min(maxItems, nextStart + 250 - 1));
+          throw new Error(
+            mintedCount > 0
+              ? `Minting paused: ${mintedCount} NFTs were successfully minted on-chain (#${effectiveStart}–#${nextStart - 1}). Stopped at #${nextStart}: ${parseAlgodError(submitError)}`
+              : parseAlgodError(submitError)
+          );
         }
 
         toast.success(`Batch ${i + 1} of ${chunks.length} confirmed!`);
       }
 
       if (createdAssetIds.length !== totalToMint) {
+        const nextStart = effectiveStart + createdAssetIds.length;
+        setStartItem(nextStart);
+        setEndItem(Math.min(maxItems, nextStart + 250 - 1));
         throw new Error(`Only ${createdAssetIds.length} of ${totalToMint} assets were confirmed on-chain.`);
       }
       console.log('WenPad minted asset IDs:', createdAssetIds);
@@ -564,6 +644,12 @@ const MintStep = () => {
         mintedAt: Date.now(),
       });
       setMintComplete(true);
+      // Advance range to next batch for immediate continuous minting
+      const nextBatchStart = effectiveEnd + 1;
+      if (nextBatchStart <= maxItems) {
+        setStartItem(nextBatchStart);
+        setEndItem(Math.min(maxItems, nextBatchStart + 250 - 1));
+      }
 
     } catch (error: any) {
       console.error('WenPad Mint Error:', error);
@@ -1031,6 +1117,29 @@ const MintStep = () => {
             >
               Launch a Shuffle →
             </Link>
+          </div>
+        )}
+
+        {detectedMinted > 0 && (
+          <div className="bg-primary-orange/10 border border-primary-orange/30 p-4 rounded-3xl flex items-center justify-between text-xs">
+            <div className="flex items-center gap-3">
+              <span className="text-xl">🎉</span>
+              <div>
+                <p className="font-bold text-white">
+                  Detected {detectedMinted} already-minted NFT{detectedMinted > 1 ? 's' : ''} (#1–#{detectedMinted})
+                </p>
+                <p className="text-gray-400 text-[11px]">
+                  Batch launch automatically resumed at #{detectedMinted + 1}.
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => selectPreset(1, Math.min(maxItems, 250))}
+              className="text-[10px] text-gray-400 hover:text-white underline shrink-0 ml-2"
+            >
+              Reset to #1
+            </button>
           </div>
         )}
 
