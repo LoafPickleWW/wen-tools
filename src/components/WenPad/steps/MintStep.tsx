@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useProject } from '../ProjectContext';
 import { 
   MdRocketLaunch, 
@@ -21,7 +21,8 @@ import {
   createARC19AssetMintArrayV2Batch,
   createAssetMintArray,
   walletSign,
-  chunkGroupsByTxnCount
+  chunkGroupsByTxnCount,
+  parseAlgodError
 } from '../../../utils';
 import { 
   pinImageToCrust, 
@@ -78,6 +79,40 @@ const MintStep = () => {
   const effectiveStart = Math.max(1, Math.min(startItem, maxItems || 1));
   const effectiveEnd = Math.max(effectiveStart, Math.min(endItem, maxItems || 1));
   const selectedCount = maxItems > 0 ? (effectiveEnd - effectiveStart + 1) : 0;
+
+  // Live wallet balance and spendable ALGO tracking
+  const [walletBalance, setWalletBalance] = useState<{ amount: number; minBalance: number; spendable: number } | null>(null);
+  const [isFetchingBalance, setIsFetchingBalance] = useState(false);
+
+  const fetchBalance = useCallback(async () => {
+    if (!activeAccount?.address || !algodClient) {
+      setWalletBalance(null);
+      return;
+    }
+    try {
+      setIsFetchingBalance(true);
+      const acctInfo: any = await algodClient.accountInformation(activeAccount.address).do();
+      const amount = Number(acctInfo.amount || 0);
+      const minBal = Number(acctInfo['min-balance'] || 100000);
+      const spendable = Math.max(0, (amount - minBal) / 1e6);
+      setWalletBalance({
+        amount: amount / 1e6,
+        minBalance: minBal / 1e6,
+        spendable,
+      });
+    } catch (e) {
+      console.error("Failed to fetch wallet balance:", e);
+    } finally {
+      setIsFetchingBalance(false);
+    }
+  }, [activeAccount?.address, algodClient]);
+
+  useEffect(() => {
+    fetchBalance();
+  }, [fetchBalance]);
+
+  const requiredBatchAlgo = Number((selectedCount * 0.102).toFixed(3));
+  const hasInsufficientBalance = walletBalance !== null && walletBalance.spendable < requiredBatchAlgo;
 
   const selectPreset = (start: number, end: number) => {
     setStartItem(Math.max(1, start));
@@ -137,6 +172,15 @@ const MintStep = () => {
     if (itemsToMint.length === 0) return toast.error('Selected mint range is empty');
 
     const totalToMint = itemsToMint.length;
+
+    // Pre-flight check: ensure wallet has sufficient spendable ALGO
+    const batchCost = Number((totalToMint * 0.102).toFixed(3));
+    if (walletBalance && walletBalance.spendable < batchCost) {
+      return toast.error(
+        `Insufficient ALGO in wallet: You have ${walletBalance.spendable.toFixed(2)} ALGO spendable, but launching this batch of ${totalToMint} NFTs requires at least ~${batchCost.toFixed(2)} ALGO (0.1 ALGO minimum balance per item + network fees). Please add ALGO to your wallet.`
+      );
+    }
+
     setIsMinting(true);
     setProgress({ current: 0, total: totalToMint, status: `Starting batch launch (${totalToMint} NFTs)...` });
 
@@ -522,10 +566,11 @@ const MintStep = () => {
       setMintComplete(true);
 
     } catch (error: any) {
-      console.error(error);
-      toast.error(error.message || 'Minting failed');
+      console.error('WenPad Mint Error:', error);
+      toast.error(parseAlgodError(error));
     } finally {
       setIsMinting(false);
+      fetchBalance();
     }
   };
 
@@ -989,6 +1034,40 @@ const MintStep = () => {
           </div>
         )}
 
+        {walletBalance && (
+          <div className={`p-4 rounded-3xl border flex items-center justify-between text-xs transition-all ${
+            hasInsufficientBalance
+              ? 'bg-red-500/10 border-red-500/30 text-red-300'
+              : 'bg-emerald-500/5 border-emerald-500/20 text-emerald-300/90'
+          }`}>
+            <div className="flex items-center gap-2.5">
+              {hasInsufficientBalance ? (
+                <MdWarning className="text-red-400 shrink-0 text-base" />
+              ) : (
+                <MdCheckCircle className="text-emerald-400 shrink-0 text-base" />
+              )}
+              <div>
+                <span className="font-bold">
+                  Wallet Spendable: {walletBalance.spendable.toFixed(2)} ALGO
+                </span>
+                <span className="text-[11px] opacity-75 block">
+                  {hasInsufficientBalance
+                    ? `Needs at least ~${requiredBatchAlgo.toFixed(2)} ALGO for this batch (${(requiredBatchAlgo - walletBalance.spendable).toFixed(2)} ALGO needed)`
+                    : `Batch cost requirement: ~${requiredBatchAlgo.toFixed(2)} ALGO (sufficient)`}
+                </span>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={fetchBalance}
+              disabled={isFetchingBalance}
+              className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-xl bg-white/5 hover:bg-white/10 text-white transition-all shrink-0 ml-2 disabled:opacity-50"
+            >
+              {isFetchingBalance ? 'Checking...' : 'Refresh'}
+            </button>
+          </div>
+        )}
+
         {!activeAccount && (
           <div className="flex items-center justify-center gap-2 text-red-400 text-xs font-black uppercase tracking-tighter animate-pulse">
             <MdError size={18} /> Wallet Disconnected
@@ -1001,10 +1080,10 @@ const MintStep = () => {
         <div className="space-y-1">
           <p className="text-[10px] font-black uppercase tracking-widest text-yellow-500/80">Pro Tip</p>
           <p className="text-xs text-yellow-200/60 leading-relaxed font-medium">
-            Standard minting costs approximately 0.101 ALGO per item. Ensure your wallet balance covers this batch (~{(selectedCount * 0.101).toFixed(2)} ALGO for {selectedCount} items) plus network fees.
+            Standard minting costs approximately 0.102 ALGO per item (0.100 ALGO Minimum Balance Requirement + ~0.002 ALGO network fees). Ensure your wallet balance covers this batch (~{(selectedCount * 0.102).toFixed(2)} ALGO for {selectedCount} items).
             {maxItems > selectedCount && (
               <span className="block mt-1 text-yellow-300/80">
-                Total collection ({maxItems} items): ~{(maxItems * 0.101).toFixed(2)} ALGO.
+                Total collection ({maxItems} items): ~{(maxItems * 0.102).toFixed(2)} ALGO.
               </span>
             )}
           </p>

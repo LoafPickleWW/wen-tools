@@ -462,7 +462,7 @@ export async function createARC3AssetMintArrayV2(
 
       const suggestedParams = await algodClient.getTransactionParams().do();
       suggestedParams.flatFee = true;
-      suggestedParams.fee = 2000 * 4; // set fee
+      suggestedParams.fee = Math.max(suggestedParams.fee || 1000, suggestedParams.minFee || 1000, 1000); // standard network fee
 
       // build ATC (no longer includes Crust pin txns)
       await buildAssetMintAtomicTransactionComposer(
@@ -599,7 +599,7 @@ export async function createARC3AssetMintArrayV2Batch(
 
       const suggestedParams = await algodClient.getTransactionParams().do();
       suggestedParams.flatFee = true;
-      suggestedParams.fee = 2000 * 4; // set fee
+      suggestedParams.fee = Math.max(suggestedParams.fee || 1000, suggestedParams.minFee || 1000, 1000); // standard network fee
 
       // build ATC
       await buildAssetMintAtomicTransactionComposer(
@@ -804,7 +804,7 @@ export async function createARC19AssetMintArrayV2(
 
       const suggestedParams = await algodClient.getTransactionParams().do();
       suggestedParams.flatFee = true;
-      suggestedParams.fee = 2000 * 4; // set fee
+      suggestedParams.fee = Math.max(suggestedParams.fee || 1000, suggestedParams.minFee || 1000, 1000); // standard network fee
 
       // build ATC
       await buildAssetMintAtomicTransactionComposer(
@@ -935,7 +935,7 @@ export async function createARC19AssetMintArrayV2Batch(
 
       const suggestedParams = await algodClient.getTransactionParams().do();
       suggestedParams.flatFee = true;
-      suggestedParams.fee = 2000 * 4; // set fee
+      suggestedParams.fee = Math.max(suggestedParams.fee || 1000, suggestedParams.minFee || 1000, 1000); // standard network fee
 
       // build ATC
       await buildAssetMintAtomicTransactionComposer(
@@ -2522,5 +2522,86 @@ export function showDonationToast() {
   ];
   const randomIndex = Math.floor(Math.random() * messages.length);
   toast.info(messages[randomIndex]);
+}
+
+/**
+ * Sanitizes and extracts clean human-readable error messages from Algorand / Algod node errors.
+ * Removes internal Go struct dumps ({_struct:{} Sig:[...] ... Txn:...}) returned on HTTP 400.
+ */
+export function parseAlgodError(error: any): string {
+  if (!error) return "An unknown error occurred during transaction processing.";
+
+  let msg = typeof error === "string" ? error : error?.message || error?.toString?.() || "";
+
+  if (error?.response?.body?.message) {
+    msg = error.response.body.message;
+  } else if (error?.response?.text) {
+    try {
+      const parsed = JSON.parse(error.response.text);
+      if (parsed.message) msg = parsed.message;
+    } catch {
+      msg = error.response.text;
+    }
+  }
+
+  const lower = msg.toLowerCase();
+
+  // 1. Overspend / Minimum balance failure
+  if (
+    lower.includes("overspend") ||
+    lower.includes("cannot satisfy min balance") ||
+    lower.includes("below min balance") ||
+    lower.includes("below min")
+  ) {
+    return "Insufficient ALGO in wallet: Your account does not have enough spendable ALGO to cover the minimum balance requirement (0.1 ALGO per minted NFT) plus transaction fees. Please add more ALGO to your wallet and try again.";
+  }
+
+  // 2. Fee below minimum
+  if (lower.includes("fee") && lower.includes("below minimum")) {
+    return "Transaction fee is below the network minimum requirement. Please refresh and try again.";
+  }
+
+  // 3. Dead / Expired transaction
+  if (
+    lower.includes("txn dead") ||
+    lower.includes("past lastvalid") ||
+    lower.includes("round is past")
+  ) {
+    return "Transaction approval timed out: Signing took too long and the network rounds expired. Please try again.";
+  }
+
+  // 4. User rejected in wallet
+  if (
+    lower.includes("user rejected") ||
+    lower.includes("cancelled") ||
+    lower.includes("canceled") ||
+    lower.includes("declined")
+  ) {
+    return "Transaction signing was cancelled by the user.";
+  }
+
+  // 5. Clean up Algorand Go struct dump:
+  // e.g. "TransactionPool.Remember: transaction W2P...: <reason>: {_struct:{} Sig:[...] ... Txn:{...}}"
+  let cleaned = msg;
+
+  const structMarkers = ["{_struct:", "Sig:[", "Txn:{", "{: {"];
+  for (const marker of structMarkers) {
+    const idx = cleaned.indexOf(marker);
+    if (idx !== -1) {
+      cleaned = cleaned.substring(0, idx).trim();
+      break;
+    }
+  }
+
+  // Strip standard Algod error prefixes
+  cleaned = cleaned.replace(/^.*TransactionPool\.Remember:\s*(?:transaction\s+[A-Z0-9]+:\s*)?/i, "");
+  cleaned = cleaned.replace(/^transaction\s+[A-Z0-9]+:\s*/i, "");
+  cleaned = cleaned.replace(/[:\s{},]+$/, "").trim();
+
+  if (cleaned.length > 5) {
+    return cleaned;
+  }
+
+  return "Transaction rejected by Algorand node. Please check your wallet balance and network connection.";
 }
 
