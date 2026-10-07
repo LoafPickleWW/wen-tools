@@ -30,6 +30,7 @@ export async function signAndSend(
   signer: algosdk.TransactionSigner,
   confirmIndex = txns.length - 1
 ): Promise<any> {
+  if (txns.length === 0) throw new Error("Nothing to sign");
   const algod = getAlgod(network);
   const signed = await walletSign(txns, signer);
   if (!signed || signed.length !== txns.length) throw new Error("Transaction signing was cancelled");

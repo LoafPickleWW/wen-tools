@@ -6,8 +6,6 @@ import type algosdk from "algosdk";
 import {
   STATUS,
   algoToMicro,
-  buildDeleteItemPages,
-  buildDeleteSale,
   buildSaleAction,
   buildSetEndRound,
   buildSetPrice,
@@ -15,7 +13,9 @@ import {
   dateToRound,
   getCurrentRound,
   getFactoryId,
+  getCollectEstimate,
   getPayouts,
+  planCollect,
   getSaleState,
   listSales,
   roundToDate,
@@ -35,6 +35,7 @@ import {
   formatAlgo,
   inputClass,
   roundsToRelative,
+  primaryButtonClass,
   secondaryButtonClass,
   shortAddr,
 } from "./shared";
@@ -116,19 +117,30 @@ function ManageSale({
     getPayouts(network, sale.appId).then(setPayouts);
   }, [network, sale.appId, sale.status, sale.sold]);
 
-  const run = async (label: string, build: () => Promise<algosdk.Transaction[] | algosdk.Transaction[][]>) => {
-    if (!activeAddress) return;
+  /** Build, sign and send one group or a list of groups. Returns whether it succeeded. */
+  const run = async (
+    label: string,
+    build: () => Promise<algosdk.Transaction[] | algosdk.Transaction[][]>,
+    { appDeleted = false, quiet = false } = {}
+  ) => {
+    if (!activeAddress) return false;
     setBusy(label);
     try {
       const built = await build();
-      const groups = Array.isArray(built[0]) ? (built as algosdk.Transaction[][]) : [built as algosdk.Transaction[]];
+      // Never hand the wallet an empty group (e.g. a sold-out Shuffle has no item storage left to free)
+      const groups = (
+        Array.isArray(built[0]) ? (built as algosdk.Transaction[][]) : [built as algosdk.Transaction[]]
+      ).filter((g) => g.length > 0);
       for (const group of groups) await signAndSend(network, group, transactionSigner);
-      toast.success(`${label} done`);
-      setState(await getSaleState(network, sale.appId));
+      if (!quiet || groups.length > 0) toast.success(`${label} done`);
+      // A deleted Shuffle app has no state left to read; just refresh the list
+      if (!appDeleted) setState(await getSaleState(network, sale.appId));
       onChange();
+      return true;
     } catch (err: any) {
       console.error(err);
       toast.error(err?.message || `${label} failed`);
+      return false;
     } finally {
       setBusy("");
     }
@@ -154,10 +166,40 @@ function ManageSale({
     onResume();
   };
 
-  const closeSale = async () => {
-    if (!confirm("Close this Shuffle? This frees its storage, deletes the Shuffle app and refunds all deposits.")) return;
-    await run("Free item storage", () => buildDeleteItemPages(network, activeAddress!, sale.appId));
-    await run("Close Shuffle", () => buildDeleteSale(network, factoryId, activeAddress!, sale.saleId));
+  // A finished Shuffle (sold out, ended, or released) with nothing pending can be collected in one go:
+  // release if needed, free leftover storage, pay out proceeds and refund every deposit.
+  const soldOut = state?.remaining === 0;
+  const finished = released || ended || soldOut;
+  const canSignCollect =
+    activeAddress === sale.admin || (activeAddress === sale.distribution && (released || ended || soldOut));
+  const collectable = !!state && finished && state.pending === 0 && canSignCollect;
+
+  const [estimate, setEstimate] = useState<{ proceeds: number; deposits: number } | null>(null);
+  useEffect(() => {
+    if (!collectable) return;
+    let cancelled = false;
+    getCollectEstimate(network, sale)
+      .then((e) => !cancelled && setEstimate(e))
+      .catch(() => !cancelled && setEstimate(null));
+    return () => {
+      cancelled = true;
+    };
+  }, [collectable, network, sale]);
+
+  const collect = async () => {
+    if (!activeAddress) return;
+    setBusy("Collecting");
+    try {
+      const steps = await planCollect(network, factoryId, activeAddress, sale);
+      for (const build of steps) await signAndSend(network, await build(), transactionSigner);
+      toast.success("Collected! Proceeds paid out and deposits returned to your collection wallet.");
+      onChange();
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err?.message || "Collect failed");
+    } finally {
+      setBusy("");
+    }
   };
 
   return (
@@ -193,6 +235,27 @@ function ManageSale({
         </div>
         <ProgressBar value={sale.sold} total={sale.totalItems} />
       </div>
+
+      {collectable && (
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3 p-4 rounded-2xl border border-green-500/30 bg-green-500/10">
+          <div className="flex-1 text-xs text-gray-300 space-y-0.5">
+            <p className="text-sm font-black text-white">
+              {soldOut ? "Sold out!" : "This Shuffle has finished."} Collect{" "}
+              {estimate ? formatAlgo(estimate.proceeds + estimate.deposits, 3) : "your ALGO"}
+            </p>
+            {estimate && (
+              <p>
+                {formatAlgo(estimate.proceeds, 3)} proceeds to your payouts · {formatAlgo(estimate.deposits, 3)} deposits back
+                to your collection wallet
+              </p>
+            )}
+            <p className="text-gray-500">One signature. This closes the Shuffle and removes it from the listings.</p>
+          </div>
+          <button onClick={collect} disabled={!!busy} className={`${primaryButtonClass} shrink-0`}>
+            {busy === "Collecting" ? "Collecting…" : "Collect"}
+          </button>
+        </div>
+      )}
 
       {open && state && (
         <div className="space-y-4 border-t border-white/[0.08] pt-4">
@@ -275,11 +338,6 @@ function ManageSale({
                 className={secondaryButtonClass}
               >
                 Release wallet & end Shuffle
-              </button>
-            )}
-            {released && (
-              <button disabled={!!busy} onClick={closeSale} className={secondaryButtonClass}>
-                Close Shuffle & reclaim deposits
               </button>
             )}
           </div>

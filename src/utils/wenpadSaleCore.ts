@@ -808,6 +808,61 @@ export async function buildDeleteItemPages(network: SaleNetwork, sender: string,
   return groups;
 }
 
+/**
+ * What collecting a finished Shuffle returns: proceeds (to the payout split) and deposits (to the
+ * collection wallet: the Shuffle app's balance plus what the factory holds for its app and index).
+ */
+export async function getCollectEstimate(network: SaleNetwork, sale: SaleListing) {
+  const algod = getAlgod(network);
+  const [state, account] = await Promise.all([
+    getSaleState(network, sale.appId),
+    algod.accountInformation(algosdk.getApplicationAddress(sale.appId)).do(),
+  ]);
+  const factoryHeld = estimateCreateSaleMbr(sale.metadata) - CHILD_SEED;
+  return { proceeds: state.proceeds, deposits: Number(account.amount) - state.proceeds + factoryHeld };
+}
+
+/**
+ * Plan the steps to collect a finished Shuffle in as few signatures as possible:
+ * [release (if needed), free leftover item pages, factory.deleteSale] in one group, split only when
+ * more than ~14 item pages are left. Each step is built after the previous one confirms, because
+ * simulation depends on it (pages can only be freed once released).
+ */
+export async function planCollect(
+  network: SaleNetwork,
+  factoryId: number,
+  sender: string,
+  sale: Pick<SaleListing, "appId" | "saleId">
+): Promise<Array<() => Promise<algosdk.Transaction[]>>> {
+  const algod = getAlgod(network);
+  const state = await getSaleState(network, sale.appId);
+  const { boxes } = await algod.getApplicationBoxes(sale.appId).max(10_000).do();
+  const pages = boxes
+    .map((b) => b.name)
+    .filter((name) => name.length === 9 && name[0] === "i".charCodeAt(0))
+    .map((name) => num(algosdk.decodeUint64(name.slice(1), "bigint")));
+
+  const group = (release: boolean, chunk: number[], close: boolean) => async () => {
+    const sp = await algod.getTransactionParams().do();
+    return finalizeGroup(algod, [
+      ...(release ? methodCall(sale.appId, M.release, sender, sp) : []),
+      ...chunk.flatMap((page) => methodCall(sale.appId, M.deleteItemPage, sender, sp, [page])),
+      ...(close ? methodCall(factoryId, M.deleteSale, sender, sp, [sale.saleId]) : []),
+    ]);
+  };
+
+  const steps: Array<() => Promise<algosdk.Transaction[]>> = [];
+  let needsRelease = state.status !== STATUS.RELEASED;
+  const remaining = [...pages];
+  // 16 transactions per group; keep one slot for deleteSale in the final group
+  while (remaining.length > 15 - (needsRelease ? 1 : 0)) {
+    steps.push(group(needsRelease, remaining.splice(0, 16 - (needsRelease ? 1 : 0)), false));
+    needsRelease = false;
+  }
+  steps.push(group(needsRelease, remaining, true));
+  return steps;
+}
+
 export async function buildDeleteSale(network: SaleNetwork, factoryId: number, admin: string, saleId: number) {
   const algod = getAlgod(network);
   const sp = await algod.getTransactionParams().do();
