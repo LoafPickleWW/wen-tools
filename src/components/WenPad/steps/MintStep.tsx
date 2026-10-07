@@ -40,6 +40,7 @@ import algosdk from 'algosdk';
 import { Link } from 'react-router-dom';
 import { MdCasino } from 'react-icons/md';
 import { buildMintMetadata, renderPreviewToBlob } from '../ProjectUtils';
+import FilebasePurge from '../FilebasePurge';
 import { saveLastMint, toSaleNetwork } from '../../../utils/wenpadSale';
 
 const MintStep = () => {
@@ -819,6 +820,8 @@ const MintStep = () => {
                 </div>
               )}
             </div>
+
+            <FilebasePurge token={filebaseToken} />
           </div>
         ) : effectiveProvider === 'Pinata' ? (
           <div className="space-y-3">
