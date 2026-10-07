@@ -28,7 +28,7 @@ const FAQ: { q: string; a: ReactNode }[] = [
     q: "What do I pay as a buyer?",
     a: (
       <>
-        Four line items, shown before you sign: the mint price (to the creator), a small reveal fee (pays whoever
+        Four line items, shown before you sign: the mint price (to the creator), a small delivery fee (pays whoever
         draws your NFT on-chain), and two refundable deposits. If you are already opted in to the NFT you draw, the
         deposits come straight back. Otherwise the NFT goes to your ARC-59 inbox: part of the deposit pays for the
         inbox (up to about 0.33 ALGO, one time, less if you already have one) and the rest travels with the NFT, so
@@ -51,7 +51,7 @@ const FAQ: { q: string; a: ReactNode }[] = [
     a: (
       <>
         You sign once; your NFT is drawn about two blocks later (a few seconds), automatically. If the automatic
-        reveal doesn't happen, the page lets you reveal it yourself, and you receive the reveal fee back. Anyone can
+        delivery doesn't happen, the page asks you to confirm once more, and you receive the delivery fee back. Anyone can
         reveal any pending mint, so they don't stay stuck. In the rare case nobody reveals a mint for about 45
         minutes, it can be cancelled for a full refund.
       </>

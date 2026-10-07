@@ -16,6 +16,7 @@ import {
 import {
   REVEAL_WINDOW,
   STATUS,
+  buildArc59Claim,
   buildCancelExpired,
   buildCommit,
   buildReveal,
@@ -142,6 +143,21 @@ export function SaleDetail({ network, appId }: { network: SaleNetwork; appId: nu
       console.error(err);
       toast.error(err?.message || "Mint failed");
       setPhase({ kind: "idle" });
+    }
+  };
+
+  const [claiming, setClaiming] = useState(false);
+  const handleClaim = async (assetId: number) => {
+    if (!activeAddress) return;
+    setClaiming(true);
+    try {
+      await signAndSend(network, await buildArc59Claim(network, activeAddress, assetId), transactionSigner);
+      toast.success("Claimed! The NFT is now in your wallet.");
+      setPhase({ kind: "done", assetId, inWallet: true });
+    } catch (err: any) {
+      toast.error(err?.message || "Claim failed");
+    } finally {
+      setClaiming(false);
     }
   };
 
@@ -304,7 +320,7 @@ export function SaleDetail({ network, appId }: { network: SaleNetwork; appId: nu
           <Panel className="space-y-3">
             <p className="text-[10px] font-black text-primary-orange uppercase tracking-[0.2em]">What you pay per mint</p>
             <LineItem label="Mint price" sub="Goes to the creator" value={items.price} />
-            <LineItem label="Reveal fee" sub="Pays whoever draws your NFT on-chain" value={items.revealFee} />
+            <LineItem label="Delivery fee" sub="Covers the network fees to send you the NFT" value={items.revealFee} />
             <LineItem label="Storage deposit" sub="Refundable — returned with your NFT" value={items.storageDeposit} />
             <LineItem
               label="Delivery deposit (ARC-59)"
@@ -354,11 +370,11 @@ export function SaleDetail({ network, appId }: { network: SaleNetwork; appId: nu
           {phase.kind === "manual" && (
             <Panel className="space-y-3">
               <p className="text-sm text-gray-300">
-                Your mint is reserved, but the automatic reveal did not go through. Reveal it yourself — you will
-                also receive the reveal fee back.
+                Your NFT has been drawn, but automatic delivery didn't go through. Confirm once more to have it sent
+                to you. You get the delivery fee back for doing it yourself.
               </p>
               <button onClick={() => handleManualReveal(phase.commitId)} className={primaryButtonClass}>
-                Reveal my NFT
+                Receive my NFT
               </button>
             </Panel>
           )}
@@ -371,15 +387,23 @@ export function SaleDetail({ network, appId }: { network: SaleNetwork; appId: nu
               {phase.inWallet ? (
                 <p className="text-sm text-gray-300">It is in your wallet, and your deposit has been refunded.</p>
               ) : (
-                <p className="text-sm text-gray-300 flex items-start gap-2">
-                  <MdInbox className="mt-0.5 shrink-0 text-primary-orange" />
-                  It was delivered to your ARC-59 inbox along with the rest of your deposit. Claim it from your wallet
-                  (Pera shows the inbox) or with the{" "}
-                  <Link to="/bulk-claim" className="text-primary-orange font-bold hover:underline">
-                    claim tool
-                  </Link>
-                  .
-                </p>
+                <div className="space-y-3">
+                  <p className="text-sm text-gray-300 flex items-start gap-2">
+                    <MdInbox className="mt-0.5 shrink-0 text-primary-orange" />
+                    It's waiting in your ARC-59 inbox with the rest of your deposit. Claim it now to move it into your
+                    wallet (this opts you in and returns the leftover deposit).
+                  </p>
+                  <button onClick={() => handleClaim(phase.assetId)} disabled={claiming} className={primaryButtonClass}>
+                    <MdInbox /> {claiming ? "Claiming…" : "Claim my NFT"}
+                  </button>
+                  <p className="text-[11px] text-gray-500">
+                    You can also claim later from your wallet (Pera shows the inbox) or the{" "}
+                    <Link to="/bulk-claim" className="text-primary-orange font-bold hover:underline">
+                      claim tool
+                    </Link>
+                    .
+                  </p>
+                </div>
               )}
               <div className="flex flex-wrap gap-2">
                 <Link to={`/wallet/asset/${phase.assetId}`} className={secondaryButtonClass}>
@@ -410,7 +434,7 @@ export function SaleDetail({ network, appId }: { network: SaleNetwork; appId: nu
                       </button>
                     ) : (
                       <button onClick={() => handleManualReveal(c.commitId)} className={secondaryButtonClass}>
-                        Reveal
+                        Receive NFT
                       </button>
                     )}
                   </div>

@@ -38,7 +38,9 @@ import {
   type SaleNetwork,
 } from "../../utils/wenpadSale";
 import { CollectionFeatureCard } from "./CollectionFeatureCard";
+import { AssetThumb } from "./AssetThumb";
 import {
+  detectStandard,
   hasClawback,
   hasFreeze,
   isNft,
@@ -84,13 +86,51 @@ export function LaunchSaleWizard({ network }: { network: SaleNetwork }) {
   const [payouts, setPayouts] = useState<{ address: string; percent: string }[]>([{ address: "", percent: "100" }]);
   const [managerIsFirstPayout, setManagerIsFirstPayout] = useState(true);
   const [managerInput, setManagerInput] = useState("");
-  const admin = managerIsFirstPayout ? payouts[0]?.address.trim() || "" : managerInput.trim();
+
+  // NFD support: payout and manager fields accept name.algo, resolved to the NFD's deposit address
+  const [nfdResolved, setNfdResolved] = useState<Record<string, string | null>>({});
+  const isNfd = (raw: string) => /\.algo$/i.test(raw.trim());
+  const resolveAddress = (raw: string) => (isNfd(raw) ? nfdResolved[raw.trim().toLowerCase()] || "" : raw.trim());
+  useEffect(() => {
+    const names = [...payouts.map((p) => p.address), managerInput]
+      .filter(isNfd)
+      .map((n) => n.trim().toLowerCase())
+      .filter((n) => !(n in nfdResolved));
+    if (names.length === 0) return;
+    const timer = setTimeout(() => {
+      const api = network === "testnet" ? "https://api.testnet.nf.domains" : "https://api.nf.domains";
+      names.forEach(async (name) => {
+        let address: string | null = null;
+        try {
+          const res = await fetch(`${api}/nfd/${encodeURIComponent(name)}?view=tiny`);
+          if (res.ok) address = (await res.json()).depositAccount || null;
+        } catch {
+          // treated as not found
+        }
+        setNfdResolved((m) => ({ ...m, [name]: address }));
+      });
+    }, 400);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [payouts, managerInput, network]);
+
+  const admin = resolveAddress(managerIsFirstPayout ? payouts[0]?.address || "" : managerInput);
+
+  /** Resolution status shown under an address field that holds an NFD name */
+  const nfdHint = (raw: string) => {
+    if (!isNfd(raw)) return null;
+    const resolved = nfdResolved[raw.trim().toLowerCase()];
+    return (
+      <p className={`text-[11px] mt-1 ml-1 font-mono ${resolved ? "text-green-400" : resolved === null ? "text-red-400" : "text-gray-500"}`}>
+        {resolved ? `→ ${resolved.slice(0, 8)}…${resolved.slice(-6)}` : resolved === null ? "NFD not found or has no deposit address" : "Resolving NFD…"}
+      </p>
+    );
+  };
   const [walletCheck, setWalletCheck] = useState<{ ok: boolean; message: string } | null>(null);
 
   // Collection
   const [name, setName] = useState(lastMint?.name || "");
   const [unitName, setUnitName] = useState(lastMint?.unitName || "");
-  const [standard, setStandard] = useState(lastMint?.standard || "ARC19");
   const [description, setDescription] = useState("");
   const [image, setImage] = useState("");
   const [banner, setBanner] = useState("");
@@ -116,8 +156,6 @@ export function LaunchSaleWizard({ network }: { network: SaleNetwork }) {
   const [startMode, setStartMode] = useState<"now" | "scheduled">("now");
   const [startAt, setStartAt] = useState(toLocalInput(new Date(Date.now() + 3600_000)));
   const [endAt, setEndAt] = useState(toLocalInput(new Date(Date.now() + 7 * 86_400_000)));
-  const [revealFeeAlgo, setRevealFeeAlgo] = useState("0.025");
-  const [deliveryAlgo, setDeliveryAlgo] = useState("0.4");
 
   // Launch
   const [progress, setProgress] = useState<LaunchProgress | null>(null);
@@ -224,6 +262,14 @@ export function LaunchSaleWizard({ network }: { network: SaleNetwork }) {
     return selectedIds.map((id) => byId.get(id)).filter((a): a is CandidateAsset => !!a);
   }, [selectedIds, candidates]);
 
+  // Standard comes from the NFTs being sold, not a picker: selected items first, else the wallet's
+  // matching assets (for the collection JSON pinned before items are chosen), else the last mint
+  const standard =
+    detectStandard(selectedAssets) ??
+    detectStandard(candidates.filter((a) => !unitFilter || a.unitName.toLowerCase().startsWith(unitFilter.toLowerCase()))) ??
+    lastMint?.standard ??
+    "ARC69";
+
   const clawbackCount = selectedAssets.filter(hasClawback).length;
   const freezeCount = selectedAssets.filter(hasFreeze).length;
 
@@ -255,12 +301,12 @@ export function LaunchSaleWizard({ network }: { network: SaleNetwork }) {
   // ── Step validation ────────────────────────────────────────────────────────
 
   const payoutSplits: PayoutSplit[] = payouts.map((p) => ({
-    address: p.address.trim(),
+    address: resolveAddress(p.address),
     bps: Math.round((Number(p.percent) || 0) * 100),
   }));
   const totalBps = payoutSplits.reduce((n, p) => n + p.bps, 0);
   const payoutErrors = [
-    payoutSplits.some((p) => !algosdk.isValidAddress(p.address)) && "Every payout needs a valid address.",
+    payoutSplits.some((p) => !algosdk.isValidAddress(p.address)) && "Every payout needs a valid address or NFD.",
     payoutSplits.some((p) => p.bps <= 0) && "Every share must be above 0%.",
     totalBps !== BPS_TOTAL && `Shares add up to ${totalBps / 100}%, not 100%.`,
     new Set(payoutSplits.map((p) => p.address)).size !== payoutSplits.length && "Each payout address can only appear once.",
@@ -284,12 +330,12 @@ export function LaunchSaleWizard({ network }: { network: SaleNetwork }) {
     byteLength(effectiveMetadataUrl) <= 256;
 
   const price = algoToMicro(Number(priceAlgo) || 0);
-  const revealFee = algoToMicro(Number(revealFeeAlgo) || 0);
-  const deliveryBudget = algoToMicro(Number(deliveryAlgo) || 0);
+  // Buyer fees are not creator-set: always the contract minimums (enough to cover reveal fees and
+  // the worst-case ARC-59 inbox; the deposit part is refunded to buyers)
+  const revealFee = MIN_REVEAL_FEE;
+  const deliveryBudget = MIN_DELIVERY_BUDGET;
   const settingsValid =
     Number(priceAlgo) >= 0 &&
-    revealFee >= MIN_REVEAL_FEE &&
-    deliveryBudget >= MIN_DELIVERY_BUDGET &&
     new Date(endAt).getTime() > (startMode === "now" ? Date.now() : new Date(startAt).getTime());
 
   // ── Step 0: wallet checks ──────────────────────────────────────────────────
@@ -536,8 +582,8 @@ export function LaunchSaleWizard({ network }: { network: SaleNetwork }) {
                         onChange={(e) => updatePayout(i, { address: e.target.value.trim() })}
                         placeholder={
                           i === 0 && managerIsFirstPayout
-                            ? "Payout + manager wallet"
-                            : "Address that receives proceeds"
+                            ? "Payout + manager wallet or NFD"
+                            : "Address or NFD (name.algo)"
                         }
                       />
                       {i === 0 && managerIsFirstPayout && (
@@ -546,6 +592,7 @@ export function LaunchSaleWizard({ network }: { network: SaleNetwork }) {
                         </span>
                       )}
                     </div>
+                    {nfdHint(row.address)}
                   </div>
                   <div className="flex items-center gap-2 justify-end sm:justify-start">
                     <div className="relative w-28 shrink-0">
@@ -608,9 +655,10 @@ export function LaunchSaleWizard({ network }: { network: SaleNetwork }) {
                 className={`${inputClass} font-mono text-xs sm:text-sm`}
                 value={managerInput}
                 onChange={(e) => setManagerInput(e.target.value.trim())}
-                placeholder="Wallet that manages the Shuffle while it is live"
+                placeholder="Manager wallet address or NFD (name.algo)"
               />
             )}
+            {!managerIsFirstPayout && nfdHint(managerInput)}
             {admin && managerError && <p className="text-xs text-red-400 mt-1.5 ml-1">{managerError}</p>}
             <p className="text-[11px] text-gray-500 mt-1.5 ml-1 leading-relaxed">
               While the Shuffle is live, your collection wallet is controlled by the Shuffle contract and cannot sign, so a
@@ -683,26 +731,6 @@ export function LaunchSaleWizard({ network }: { network: SaleNetwork }) {
                 }}
                 placeholder="e.g. APUNK"
               />
-            </div>
-          </div>
-
-          <div>
-            <FieldLabel>NFT standard</FieldLabel>
-            <div className="grid grid-cols-3 gap-2">
-              {["ARC3", "ARC19", "ARC69"].map((s) => (
-                <button
-                  key={s}
-                  type="button"
-                  onClick={() => setStandard(s)}
-                  className={`h-11 rounded-2xl border text-xs font-black transition-all cursor-pointer ${
-                    standard === s
-                      ? "bg-primary-orange text-black border-primary-orange shadow-lg shadow-orange-500/20"
-                      : "bg-asset-detail-bg/50 border-white/[0.08] text-gray-500 hover:text-gray-300"
-                  }`}
-                >
-                  {s}
-                </button>
-              ))}
             </div>
           </div>
 
@@ -960,9 +988,10 @@ export function LaunchSaleWizard({ network }: { network: SaleNetwork }) {
                           setExcluded(next);
                         }}
                       />
+                      <AssetThumb asset={a} />
                       <span className="text-gray-200 truncate flex-1">{a.name || "(unnamed)"}</span>
                       <span className="text-gray-500 font-mono text-xs">{a.unitName}</span>
-                      <span className="text-gray-600 font-mono text-xs">{a.id}</span>
+                      <span className="text-gray-600 font-mono text-xs hidden sm:inline">{a.id}</span>
                     </label>
                   ))
                 )}
@@ -988,7 +1017,14 @@ export function LaunchSaleWizard({ network }: { network: SaleNetwork }) {
           )}
 
           <div className="flex items-center justify-between text-sm">
-            <span className="font-bold text-white">{selectedIds.length} items selected</span>
+            <span className="font-bold text-white">
+              {selectedIds.length} items selected
+              {selectedAssets.length > 0 && (
+                <span className="ml-2 text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-primary-orange/15 text-primary-orange border border-primary-orange/30">
+                  {standard} detected
+                </span>
+              )}
+            </span>
             <span className="text-gray-500">Item storage: {formatAlgo(itemStorage, 3)} (refundable)</span>
           </div>
 
@@ -1047,19 +1083,21 @@ export function LaunchSaleWizard({ network }: { network: SaleNetwork }) {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <FieldLabel hint={`min ${MIN_REVEAL_FEE / 1e6}`}>Reveal fee (ALGO)</FieldLabel>
-              <input type="number" step="0.005" className={inputClass} value={revealFeeAlgo} onChange={(e) => setRevealFeeAlgo(e.target.value)} />
-              <p className="text-[11px] text-gray-500 mt-1.5 ml-1">Paid by buyers to whoever reveals their draw. Covers network fees.</p>
+          <div className="rounded-2xl border border-white/[0.08] bg-asset-detail-bg/40 p-4 text-xs text-gray-400 space-y-1.5">
+            <p className="text-[10px] font-black text-primary-orange uppercase tracking-[0.2em]">
+              Buyer fees (set automatically)
+            </p>
+            <div className="flex justify-between">
+              <span>Delivery fee: covers the network fees to send the NFT</span>
+              <span className="font-bold text-gray-200">{formatAlgo(revealFee, 3)}</span>
             </div>
-            <div>
-              <FieldLabel hint={`min ${MIN_DELIVERY_BUDGET / 1e6}`}>Delivery deposit (ALGO)</FieldLabel>
-              <input type="number" step="0.05" className={inputClass} value={deliveryAlgo} onChange={(e) => setDeliveryAlgo(e.target.value)} />
-              <p className="text-[11px] text-gray-500 mt-1.5 ml-1">
-                Refundable. Covers the buyer's ARC-59 inbox if they are not opted in; the rest returns to them.
-              </p>
+            <div className="flex justify-between">
+              <span>Refundable deposit: covers an ARC-59 inbox if needed, the rest returns to the buyer</span>
+              <span className="font-bold text-gray-200">{formatAlgo(deliveryBudget, 3)}</span>
             </div>
+            <p className="text-[11px] text-gray-500 pt-1">
+              These are the lowest amounts the contract allows. Your mint price goes to your payouts in full.
+            </p>
           </div>
 
           <div className="flex justify-between">

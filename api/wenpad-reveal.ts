@@ -8,7 +8,7 @@ import {
   parseRevealedAsset,
   waitForRound,
   type SaleNetwork,
-} from "../src/utils/wenpadSaleCore";
+} from "../src/utils/wenpadSaleCore.js";
 
 /**
  * POST /api/wenpad-reveal { network, appId, commitId }

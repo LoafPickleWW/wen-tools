@@ -595,6 +595,8 @@ export async function finalizeGroup(
         txnGroups: [],
         allowEmptySignatures: true,
         allowUnnamedResources: true,
+        // Rekeyed senders sign with their auth address; without this simulate rejects them
+        fixSigners: true,
       })
     );
     const group = simulateResponse.txnGroups[0];
@@ -867,6 +869,36 @@ export async function buildReveal(network: SaleNetwork, caller: string, appId: n
   const sp = await algod.getTransactionParams().do();
   sp.lastRound = sp.firstRound + REVEAL_VALIDITY_ROUNDS;
   return finalizeGroup(algod, methodCall(appId, M.reveal, caller, sp, [commitId]), { appId, sender: caller });
+}
+
+/**
+ * Claim an NFT from the buyer's ARC-59 inbox: [opt-in (if needed), arc59_claim(asset)].
+ * The router sends the NFT plus any leftover inbox ALGO (the rest of the delivery deposit).
+ */
+export async function buildArc59Claim(network: SaleNetwork, receiver: string, assetId: number) {
+  const algod = getAlgod(network);
+  const sp = await algod.getTransactionParams().do();
+  const txns: algosdk.Transaction[] = [];
+  let optedIn = false;
+  try {
+    await algod.accountAssetInformation(receiver, assetId).do();
+    optedIn = true;
+  } catch {
+    // not opted in yet
+  }
+  if (!optedIn) {
+    txns.push(
+      algosdk.makeAssetTransferTxnWithSuggestedParamsFromObject({
+        from: receiver,
+        to: receiver,
+        amount: 0,
+        assetIndex: assetId,
+        suggestedParams: sp,
+      })
+    );
+  }
+  txns.push(...methodCall(ARC59_ROUTER_IDS[network], method("arc59_claim(uint64)void"), receiver, sp, [assetId]));
+  return finalizeGroup(algod, txns);
 }
 
 export async function buildCancelExpired(network: SaleNetwork, caller: string, appId: number, commitId: number) {

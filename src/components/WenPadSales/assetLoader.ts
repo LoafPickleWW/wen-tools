@@ -97,6 +97,22 @@ export async function loadDistributionAssets(
     .sort((a, b) => a.id - b.id);
 }
 
+/** NFT standard of one asset, from its URL conventions: ARC-19 template URL, ARC-3 suffix, else ARC-69. */
+export function assetStandard(a: Pick<CandidateAsset, "url" | "name">): "ARC3" | "ARC19" | "ARC69" {
+  const url = (a.url || "").toLowerCase();
+  if (url.startsWith("template-ipfs://")) return "ARC19";
+  if (url.endsWith("#arc3") || (a.name || "").toLowerCase().endsWith("@arc3")) return "ARC3";
+  return "ARC69";
+}
+
+/** Most common standard among the given assets (null if there are none). */
+export function detectStandard(assets: Pick<CandidateAsset, "url" | "name">[]): "ARC3" | "ARC19" | "ARC69" | null {
+  if (assets.length === 0) return null;
+  const counts = new Map<string, number>();
+  for (const a of assets) counts.set(assetStandard(a), (counts.get(assetStandard(a)) || 0) + 1);
+  return [...counts.entries()].sort((x, y) => y[1] - x[1])[0][0] as "ARC3" | "ARC19" | "ARC69";
+}
+
 /** Parse pasted asset IDs (comma, space or newline separated), de-duplicated in order. */
 export function parseAssetIds(text: string): number[] {
   const seen = new Set<number>();
