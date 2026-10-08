@@ -40,8 +40,9 @@ import {
 import algosdk from 'algosdk';
 import { Link } from 'react-router-dom';
 import { MdCasino } from 'react-icons/md';
-import { buildMintMetadata, renderPreviewToBlob } from '../ProjectUtils';
+import { buildMintMetadata, getMintNameIssues, renderPreviewToBlob } from '../ProjectUtils';
 import FilebasePurge from '../FilebasePurge';
+import MintedCleanup from '../MintedCleanup';
 import { saveLastMint, toSaleNetwork } from '../../../utils/wenpadSale';
 
 const MintStep = () => {
@@ -79,6 +80,12 @@ const MintStep = () => {
   const effectiveStart = Math.max(1, Math.min(startItem, maxItems || 1));
   const effectiveEnd = Math.max(effectiveStart, Math.min(endItem, maxItems || 1));
   const selectedCount = maxItems > 0 ? (effectiveEnd - effectiveStart + 1) : 0;
+
+  // Names over Algorand's ASA limits would only fail at submit time, after storage is already paid for.
+  const highestSelectedIndex = previewItems
+    .slice(effectiveStart - 1, effectiveEnd)
+    .reduce((max, item) => Math.max(max, item.index), 0);
+  const nameIssues = getMintNameIssues(project.name, project.unitName, highestSelectedIndex);
 
   // Live wallet balance and spendable ALGO tracking
   const [walletBalance, setWalletBalance] = useState<{ amount: number; minBalance: number; spendable: number } | null>(null);
@@ -121,9 +128,8 @@ const MintStep = () => {
           }
         }
       }
-      if (maxMinted > 0) {
-        setDetectedMinted(maxMinted);
-      }
+      // Also reset to 0 so the banner clears after previously minted NFTs are deleted.
+      setDetectedMinted(maxMinted);
     } catch (e) {
       console.error("Failed to fetch wallet balance:", e);
     } finally {
@@ -207,6 +213,8 @@ const MintStep = () => {
     if (itemsToMint.length === 0) return toast.error('Selected mint range is empty');
 
     const totalToMint = itemsToMint.length;
+
+    if (nameIssues.length > 0) return toast.error(nameIssues.join(' '));
 
     // Pre-flight check: ensure wallet has sufficient spendable ALGO
     const batchCost = Number((totalToMint * 0.102).toFixed(3));
@@ -1066,9 +1074,14 @@ const MintStep = () => {
       )}
 
       <div className="flex flex-col gap-4">
-        <button 
+        {nameIssues.length > 0 && (
+          <div className="bg-red-500/10 border border-red-500/30 rounded-2xl p-4 text-xs text-red-300 space-y-1">
+            {nameIssues.map((issue) => <p key={issue}>{issue}</p>)}
+          </div>
+        )}
+        <button
           onClick={handleMint}
-          disabled={isMinting || !activeAccount || selectedCount === 0}
+          disabled={isMinting || !activeAccount || selectedCount === 0 || nameIssues.length > 0}
           className="group relative w-full overflow-hidden bg-white text-black font-black py-5 rounded-3xl shadow-2xl transition-all hover:scale-[1.01] active:scale-[0.99] disabled:opacity-30 disabled:grayscale disabled:hover:scale-100 cursor-pointer"
         >
           <div className="absolute inset-0 bg-gradient-to-r from-primary-orange to-secondary-orange opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -1142,6 +1155,11 @@ const MintStep = () => {
             </button>
           </div>
         )}
+
+        <MintedCleanup
+          defaultUnitName={project.unitName || ''}
+          onDeleted={() => { selectPreset(1, Math.min(maxItems, 250)); fetchBalance(); }}
+        />
 
         {walletBalance && (
           <div className={`p-4 rounded-3xl border flex items-center justify-between text-xs transition-all ${

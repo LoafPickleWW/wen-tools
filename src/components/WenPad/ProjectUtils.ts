@@ -692,6 +692,38 @@ export function sanitizeProject(project: ProjectT): ProjectT {
   return cleanedProject;
 }
 
+// Algorand protocol limits (in UTF-8 bytes) for ASA config fields.
+export const MAX_ASSET_NAME_BYTES = 32;
+export const MAX_UNIT_NAME_BYTES = 8;
+
+export const utf8ByteLength = (value: string) => new TextEncoder().encode(value).length;
+
+export const buildAssetName = (projectName: string | undefined, index: number) =>
+  `${projectName ? projectName + ' ' : ''}#${index}`;
+
+/**
+ * Returns human-readable problems that would make the chain reject the mint, or [] if
+ * the names are valid. Checking the highest index is enough since it has the most digits.
+ */
+export function getMintNameIssues(projectName: string | undefined, unitName: string | undefined, highestIndex: number): string[] {
+  const issues: string[] = [];
+  const longestName = buildAssetName(projectName, highestIndex);
+  const nameBytes = utf8ByteLength(longestName);
+  if (nameBytes > MAX_ASSET_NAME_BYTES) {
+    // Room left for the collection name after the " #<number>" suffix.
+    const maxNameBytes = MAX_ASSET_NAME_BYTES - ` #${highestIndex}`.length;
+    issues.push(
+      `Asset name "${longestName}" is ${nameBytes} bytes; Algorand allows at most ${MAX_ASSET_NAME_BYTES}. ` +
+      `Shorten the collection name to ${maxNameBytes} characters or fewer.`
+    );
+  }
+  const unitBytes = utf8ByteLength(unitName || '');
+  if (unitBytes > MAX_UNIT_NAME_BYTES) {
+    issues.push(`Unit name "${unitName}" is ${unitBytes} bytes; Algorand allows at most ${MAX_UNIT_NAME_BYTES}.`);
+  }
+  return issues;
+}
+
 export function buildMintMetadata(
   item: PreviewItemT,
   project: ProjectT,
@@ -771,7 +803,7 @@ export function buildItemMetadata(
   }
 
   return {
-    name: `${project.name ? project.name + ' ' : ''}#${item.index}`,
+    name: buildAssetName(project.name, item.index),
     description: project.description || '',
     image: imgName,
     external_url: project.website || '',
