@@ -10,7 +10,10 @@ import {
   MdExpandLess,
   MdWarning,
   MdArrowForward,
-  MdArrowBack
+  MdArrowBack,
+  MdAutoAwesome,
+  MdOpenInNew,
+  MdCasino
 } from 'react-icons/md';
 import { useWallet } from '@txnlab/use-wallet-react';
 import { toast } from 'react-toastify';
@@ -39,14 +42,13 @@ import {
 } from '../../../utils/algofile';
 import algosdk from 'algosdk';
 import { Link } from 'react-router-dom';
-import { MdCasino } from 'react-icons/md';
 import { buildAssetName, buildMintMetadata, getMintNameIssues, parseEditionNumber, renderPreviewToBlob } from '../ProjectUtils';
 import FilebasePurge from '../FilebasePurge';
 import MintedCleanup from '../MintedCleanup';
 import { saveLastMint, toSaleNetwork } from '../../../utils/wenpadSale';
 
 const MintStep = () => {
-  const { project, previewItems } = useProject();
+  const { project, previewItems, selectStep } = useProject();
   const { activeAccount, activeNetwork, transactionSigner, algodClient } = useWallet();
   const [standard, setStandard] = useState<'ARC3' | 'ARC69' | 'ARC19'>('ARC19');
   const [provider, setProvider] = useState<'Filebase' | 'AlgoFile' | 'Crust' | 'Pinata'>('Filebase');
@@ -70,6 +72,9 @@ const MintStep = () => {
   const maxItems = previewItems.length;
   const [startItem, setStartItem] = useState<number>(1);
   const [endItem, setEndItem] = useState<number>(() => (previewItems.length > 0 ? Math.min(previewItems.length, 500) : 1));
+  const [startInput, setStartInput] = useState<string>(() => String(startItem));
+  const [endInput, setEndInput] = useState<string>(() => String(endItem));
+  const [showManualMintControls, setShowManualMintControls] = useState(false);
 
   useEffect(() => {
     if (previewItems.length > 0) {
@@ -77,9 +82,65 @@ const MintStep = () => {
     }
   }, [previewItems.length]);
 
-  const effectiveStart = Math.max(1, Math.min(startItem, maxItems || 1));
-  const effectiveEnd = Math.max(effectiveStart, Math.min(endItem, maxItems || 1));
-  const selectedCount = maxItems > 0 ? (effectiveEnd - effectiveStart + 1) : 0;
+  // Keep text inputs in sync when startItem or endItem changes via presets / navigation / auto-resume
+  useEffect(() => {
+    setStartInput(String(startItem));
+  }, [startItem]);
+
+  useEffect(() => {
+    setEndInput(String(endItem));
+  }, [endItem]);
+
+  const parsedStart = parseInt(startInput, 10);
+  const parsedEnd = parseInt(endInput, 10);
+  const hasStartError = !isNaN(parsedStart) && (parsedStart < 1 || (maxItems > 0 && parsedStart > maxItems));
+  const hasEndError = !isNaN(parsedEnd) && (parsedEnd < 1 || (maxItems > 0 && parsedEnd > maxItems));
+  const isEndLessThanStart = !isNaN(parsedStart) && !isNaN(parsedEnd) && parsedEnd < parsedStart;
+  const isRangeInvalid = isNaN(parsedStart) || isNaN(parsedEnd) || hasStartError || hasEndError || isEndLessThanStart;
+
+  const effectiveStart = !isNaN(parsedStart) ? Math.max(1, Math.min(parsedStart, maxItems || 1)) : 1;
+  const effectiveEnd = !isNaN(parsedEnd) ? Math.max(1, Math.min(parsedEnd, maxItems || 1)) : 1;
+  const selectedCount = (!isRangeInvalid && maxItems > 0 && effectiveEnd >= effectiveStart) 
+    ? (effectiveEnd - effectiveStart + 1) 
+    : 0;
+
+  const handleStartInputChange = (val: string) => {
+    setStartInput(val);
+    const parsed = parseInt(val, 10);
+    if (!isNaN(parsed)) {
+      setStartItem(parsed);
+    }
+  };
+
+  const handleStartInputBlur = () => {
+    let parsed = parseInt(startInput, 10);
+    if (isNaN(parsed) || parsed < 1) {
+      parsed = 1;
+    } else if (maxItems > 0 && parsed > maxItems) {
+      parsed = maxItems;
+    }
+    setStartItem(parsed);
+    setStartInput(String(parsed));
+  };
+
+  const handleEndInputChange = (val: string) => {
+    setEndInput(val);
+    const parsed = parseInt(val, 10);
+    if (!isNaN(parsed)) {
+      setEndItem(parsed);
+    }
+  };
+
+  const handleEndInputBlur = () => {
+    let parsed = parseInt(endInput, 10);
+    if (isNaN(parsed)) {
+      parsed = Math.min(maxItems || 1, Math.max(1, startItem));
+    } else if (maxItems > 0 && parsed > maxItems) {
+      parsed = maxItems;
+    }
+    setEndItem(parsed);
+    setEndInput(String(parsed));
+  };
 
   // Names over Algorand's ASA limits would only fail at submit time, after storage is already paid for.
   const highestSelectedIndex = previewItems
@@ -140,23 +201,30 @@ const MintStep = () => {
     fetchBalance();
   }, [fetchBalance]);
 
-  // If already-minted assets are detected and user is still at item 1, automatically resume from next item
+  // If already-minted assets are detected and not all items are minted, automatically resume from next item
   useEffect(() => {
-    if (detectedMinted > 0 && startItem <= detectedMinted) {
+    if (detectedMinted > 0 && maxItems > 0 && detectedMinted < maxItems && startItem <= detectedMinted) {
       const nextStart = detectedMinted + 1;
       const batchSize = 250;
       const nextEnd = Math.min(maxItems, nextStart + batchSize - 1);
       setStartItem(nextStart);
       setEndItem(nextEnd);
+      setStartInput(String(nextStart));
+      setEndInput(String(nextEnd));
     }
   }, [detectedMinted, maxItems]);
 
+  const isCollectionFullyMinted = maxItems > 0 && (detectedMinted >= maxItems || (mintComplete && effectiveEnd >= maxItems));
   const requiredBatchAlgo = Number((selectedCount * 0.102).toFixed(3));
   const hasInsufficientBalance = walletBalance !== null && walletBalance.spendable < requiredBatchAlgo;
 
   const selectPreset = (start: number, end: number) => {
-    setStartItem(Math.max(1, start));
-    setEndItem(Math.min(maxItems, end));
+    const s = Math.max(1, start);
+    const e = Math.min(maxItems, end);
+    setStartItem(s);
+    setEndItem(e);
+    setStartInput(String(s));
+    setEndInput(String(e));
   };
 
   const handleNextBatch = () => {
@@ -169,6 +237,8 @@ const MintStep = () => {
     const nextEnd = Math.min(maxItems, nextStart + batchSize - 1);
     setStartItem(nextStart);
     setEndItem(nextEnd);
+    setStartInput(String(nextStart));
+    setEndInput(String(nextEnd));
   };
 
   const handlePrevBatch = () => {
@@ -181,6 +251,8 @@ const MintStep = () => {
     const prevEnd = prevStart + batchSize - 1;
     setStartItem(prevStart);
     setEndItem(prevEnd);
+    setStartInput(String(prevStart));
+    setEndInput(String(prevEnd));
   };
 
   const sampleItem = previewItems.length > 0 ? previewItems[0] : null;
@@ -207,6 +279,13 @@ const MintStep = () => {
       return toast.error(`Please provide your ${effectiveProvider} API token`);
     }
     if (previewItems.length === 0) return toast.error('No items to mint');
+
+    if (isRangeInvalid || selectedCount === 0) {
+      if (isEndLessThanStart) {
+        return toast.error(`Ending item #${parsedEnd} must be greater than or equal to starting item #${parsedStart}`);
+      }
+      return toast.error('Please enter a valid item range');
+    }
 
     const itemsToMint = previewItems.slice(effectiveStart - 1, effectiveEnd);
     if (itemsToMint.length === 0) return toast.error('Selected mint range is empty');
@@ -656,6 +735,8 @@ const MintStep = () => {
       if (nextBatchStart <= maxItems) {
         setStartItem(nextBatchStart);
         setEndItem(Math.min(maxItems, nextBatchStart + 250 - 1));
+        setStartInput(String(nextBatchStart));
+        setEndInput(String(Math.min(maxItems, nextBatchStart + 250 - 1)));
       }
 
     } catch (error: any) {
@@ -667,8 +748,170 @@ const MintStep = () => {
     }
   };
 
+  if (isCollectionFullyMinted && !showManualMintControls) {
+    return (
+      <div className="max-w-2xl mx-auto space-y-8 animate-fade-in">
+        {/* Celebratory Hero */}
+        <div className="text-center space-y-3">
+          <div className="mx-auto w-24 h-24 rounded-3xl bg-gradient-to-tr from-emerald-500/20 via-primary-orange/15 to-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shadow-[0_0_50px_-10px_rgba(16,185,129,0.35)]">
+            <MdCheckCircle size={52} className="text-emerald-400 drop-shadow-[0_0_12px_rgba(16,185,129,0.5)]" />
+          </div>
+          <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/25 text-emerald-400 text-[11px] font-black tracking-widest uppercase">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            Collection 100% Minted On-Chain
+          </div>
+          <h2 className="text-4xl font-black bg-gradient-to-b from-white via-gray-100 to-gray-400 bg-clip-text text-transparent uppercase tracking-tighter">
+            Mint Finished!
+          </h2>
+          <p className="text-gray-300 text-sm max-w-lg mx-auto leading-relaxed">
+            All <span className="font-bold text-white">{maxItems} of {maxItems}</span> items in{' '}
+            <span className="text-primary-orange font-bold">"{project.name || 'Your Collection'}"</span> have been minted on Algorand.
+          </p>
+        </div>
+
+        {/* Collection Summary Stats */}
+        <div className="bg-banner-grey/30 border border-white/[0.12] p-6 rounded-3xl backdrop-blur-md space-y-6">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="p-3.5 rounded-2xl bg-primary-black/60 border border-white/[0.08] text-center">
+              <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Minted</span>
+              <span className="text-lg font-black text-emerald-400">{maxItems} / {maxItems}</span>
+            </div>
+            <div className="p-3.5 rounded-2xl bg-primary-black/60 border border-white/[0.08] text-center">
+              <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Standard</span>
+              <span className="text-lg font-black text-white">{standard}</span>
+            </div>
+            <div className="p-3.5 rounded-2xl bg-primary-black/60 border border-white/[0.08] text-center">
+              <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Unit Name</span>
+              <span className="text-lg font-black text-primary-orange truncate block" title={project.unitName || ''}>
+                {project.unitName || '-'}
+              </span>
+            </div>
+            <div className="p-3.5 rounded-2xl bg-primary-black/60 border border-white/[0.08] text-center">
+              <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Spendable</span>
+              <span className="text-lg font-black text-white">
+                {walletBalance ? `${walletBalance.spendable.toFixed(1)} ALGO` : '...'}
+              </span>
+            </div>
+          </div>
+
+          {/* Next Steps Grid */}
+          <div className="space-y-3">
+            <h3 className="text-xs font-black uppercase tracking-[0.2em] text-gray-400 px-1">
+              Next Steps & Actions
+            </h3>
+
+            {/* Launch Shuffle Sale Card */}
+            <div className="p-5 rounded-2xl border border-primary-orange/40 bg-gradient-to-r from-primary-orange/15 via-primary-orange/5 to-transparent flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div className="flex items-start gap-4">
+                <div className="w-12 h-12 rounded-2xl bg-primary-orange/20 border border-primary-orange/30 flex items-center justify-center shrink-0 text-primary-orange">
+                  <MdCasino size={28} />
+                </div>
+                <div className="space-y-1">
+                  <h4 className="text-sm font-black text-white uppercase tracking-tight">Launch a Random Mint Shuffle</h4>
+                  <p className="text-xs text-gray-300 leading-relaxed max-w-md">
+                    Sell your minted NFTs via smart contract. Buyers send ALGO and automatically receive a random asset with zero escrow key trust.
+                  </p>
+                </div>
+              </div>
+              <Link
+                to="/shuffle?tab=launch"
+                className="shrink-0 w-full sm:w-auto px-5 py-3 rounded-2xl bg-primary-orange hover:bg-orange-400 text-black font-black text-xs uppercase tracking-wider transition-all shadow-lg shadow-primary-orange/20 text-center"
+              >
+                Launch Shuffle Sale →
+              </Link>
+            </div>
+
+            {/* Generate More Card */}
+            <div className="p-5 rounded-2xl border border-white/[0.12] bg-primary-black/60 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div className="flex items-start gap-4">
+                <div className="w-12 h-12 rounded-2xl bg-purple-500/20 border border-purple-500/30 flex items-center justify-center shrink-0 text-purple-300">
+                  <MdAutoAwesome size={28} />
+                </div>
+                <div className="space-y-1">
+                  <h4 className="text-sm font-black text-white uppercase tracking-tight">Generate More to Continue</h4>
+                  <p className="text-xs text-gray-400 leading-relaxed max-w-md">
+                    Want to expand this collection? Increase your collection size in Setup or generate more combinations in Preview to mint beyond {maxItems} items.
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 w-full sm:w-auto shrink-0">
+                <button
+                  type="button"
+                  onClick={() => selectStep(3)}
+                  className="flex-1 sm:flex-initial px-4 py-2.5 rounded-xl border border-purple-500/30 bg-purple-500/10 hover:bg-purple-500/20 text-purple-200 text-xs font-bold transition-all cursor-pointer text-center"
+                >
+                  Generate More (Preview)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => selectStep(0)}
+                  className="flex-1 sm:flex-initial px-3 py-2.5 rounded-xl border border-white/[0.08] bg-white/5 hover:bg-white/10 text-gray-300 text-xs font-bold transition-all cursor-pointer text-center"
+                  title="Adjust collection size in Setup"
+                >
+                  Collection Size (Setup)
+                </button>
+              </div>
+            </div>
+
+            {/* View On Explorer Card */}
+            {activeAccount?.address && (
+              <div className="p-4 rounded-2xl border border-white/[0.08] bg-primary-black/40 flex items-center justify-between gap-3 text-xs">
+                <div className="flex items-center gap-2.5 text-gray-300 min-w-0">
+                  <MdOpenInNew className="text-primary-orange shrink-0" size={18} />
+                  <span className="truncate">View created collection assets on Pera Explorer</span>
+                </div>
+                <a
+                  href={`https://${activeNetwork === 'testnet' ? 'testnet.' : ''}explorer.perawallet.app/address/${activeAccount.address}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="shrink-0 px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-gray-200 border border-white/[0.08] text-[11px] font-bold inline-flex items-center gap-1.5 transition-all"
+                >
+                  <span>Open Explorer</span>
+                  <MdOpenInNew size={12} />
+                </a>
+              </div>
+            )}
+          </div>
+
+          {/* Minted Cleanup for burning/opt-out if needed */}
+          <MintedCleanup
+            defaultUnitName={project.unitName || ''}
+            onDeleted={() => { selectPreset(1, Math.min(maxItems, 250)); fetchBalance(); }}
+          />
+
+          {/* Manual controls toggle */}
+          <div className="pt-2 text-center border-t border-white/[0.06]">
+            <button
+              type="button"
+              onClick={() => setShowManualMintControls(true)}
+              className="text-xs text-gray-400 hover:text-primary-orange underline underline-offset-4 transition-colors cursor-pointer"
+            >
+              Need to re-mint or configure a custom range? Open manual mint controls &rarr;
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-2xl mx-auto space-y-8">
+      {isCollectionFullyMinted && showManualMintControls && (
+        <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+          <div className="flex items-center gap-2.5 text-emerald-300 font-medium">
+            <MdCheckCircle className="shrink-0 text-base" />
+            <span>All {maxItems} items in this collection are already minted on-chain.</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setShowManualMintControls(false)}
+            className="px-3.5 py-1.5 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-200 font-bold border border-emerald-500/30 text-xs shrink-0 cursor-pointer transition-all"
+          >
+            ← Back to Mint Finished Overview
+          </button>
+        </div>
+      )}
+
       <div className="text-center space-y-2">
         <div className="mx-auto w-20 h-20 rounded-3xl bg-primary-orange/10 border border-primary-orange/30 flex items-center justify-center text-primary-orange shadow-[0_0_40px_-12px_rgb(var(--brand)/0.7)]">
           <MdRocketLaunch size={40} />
@@ -787,23 +1030,46 @@ const MintStep = () => {
                 type="number"
                 min={1}
                 max={maxItems}
-                value={startItem}
-                onChange={(e) => setStartItem(Math.max(1, parseInt(e.target.value) || 1))}
-                className="w-full bg-asset-detail-bg/70 border border-white/[0.08] rounded-xl px-4 py-2.5 text-sm text-white font-bold focus:border-primary-orange/50 outline-none"
+                value={startInput}
+                onChange={(e) => handleStartInputChange(e.target.value)}
+                onBlur={handleStartInputBlur}
+                className={`w-full bg-asset-detail-bg/70 border rounded-xl px-4 py-2.5 text-sm text-white font-bold outline-none transition-colors ${
+                  hasStartError ? 'border-red-500/60 focus:border-red-500' : 'border-white/[0.08] focus:border-primary-orange/50'
+                }`}
               />
+              {hasStartError && (
+                <p className="text-[11px] text-red-400 font-medium ml-1">
+                  Starting number must be between 1 and {maxItems}
+                </p>
+              )}
             </div>
             <div className="flex flex-col gap-1.5">
               <label className="text-[10px] font-black uppercase tracking-wider text-gray-400 ml-1">
-                To Item # ({effectiveStart} to {maxItems})
+                To Item # (up to {maxItems})
               </label>
               <input
                 type="number"
-                min={effectiveStart}
+                min={1}
                 max={maxItems}
-                value={endItem}
-                onChange={(e) => setEndItem(Math.max(effectiveStart, parseInt(e.target.value) || effectiveStart))}
-                className="w-full bg-asset-detail-bg/70 border border-white/[0.08] rounded-xl px-4 py-2.5 text-sm text-white font-bold focus:border-primary-orange/50 outline-none"
+                value={endInput}
+                onChange={(e) => handleEndInputChange(e.target.value)}
+                onBlur={handleEndInputBlur}
+                className={`w-full bg-asset-detail-bg/70 border rounded-xl px-4 py-2.5 text-sm text-white font-bold outline-none transition-colors ${
+                  isEndLessThanStart || hasEndError
+                    ? 'border-amber-500/60 focus:border-amber-500'
+                    : 'border-white/[0.08] focus:border-primary-orange/50'
+                }`}
               />
+              {isEndLessThanStart ? (
+                <p className="text-[11px] text-amber-400 font-medium ml-1 flex items-center gap-1">
+                  <MdWarning size={14} className="shrink-0" />
+                  To Item (#{parsedEnd}) must be greater than or equal to From Item (#{parsedStart})
+                </p>
+              ) : hasEndError ? (
+                <p className="text-[11px] text-red-400 font-medium ml-1">
+                  Ending number must be between 1 and {maxItems}
+                </p>
+              ) : null}
             </div>
           </div>
 
@@ -1080,7 +1346,7 @@ const MintStep = () => {
         )}
         <button
           onClick={handleMint}
-          disabled={isMinting || !activeAccount || selectedCount === 0 || nameIssues.length > 0}
+          disabled={isMinting || !activeAccount || selectedCount === 0 || isRangeInvalid || nameIssues.length > 0}
           className="group relative w-full overflow-hidden bg-white text-black font-black py-5 rounded-3xl shadow-2xl transition-all hover:scale-[1.01] active:scale-[0.99] disabled:opacity-30 disabled:grayscale disabled:hover:scale-100 cursor-pointer"
         >
           <div className="absolute inset-0 bg-gradient-to-r from-primary-orange to-secondary-orange opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -1092,6 +1358,10 @@ const MintStep = () => {
             )}
             {isMinting
               ? `LAUNCHING BATCH (${progress.current}/${progress.total})...`
+              : isEndLessThanStart
+              ? `INVALID RANGE: TO ITEM < FROM ITEM`
+              : isRangeInvalid
+              ? `ENTER A VALID ITEM RANGE`
               : selectedCount === maxItems
               ? `LAUNCH ALL ${maxItems} NFTS`
               : `LAUNCH BATCH (${selectedCount} NFTS: #${effectiveStart}–#${effectiveEnd})`}
@@ -1132,7 +1402,7 @@ const MintStep = () => {
           </div>
         )}
 
-        {detectedMinted > 0 && (
+        {detectedMinted > 0 && detectedMinted < maxItems && (
           <div className="bg-primary-orange/10 border border-primary-orange/30 p-4 rounded-3xl flex items-center justify-between text-xs">
             <div className="flex items-center gap-3">
               <span className="text-xl">🎉</span>
@@ -1148,7 +1418,7 @@ const MintStep = () => {
             <button
               type="button"
               onClick={() => selectPreset(1, Math.min(maxItems, 250))}
-              className="text-[10px] text-gray-400 hover:text-white underline shrink-0 ml-2"
+              className="text-[10px] text-gray-400 hover:text-white underline shrink-0 ml-2 cursor-pointer"
             >
               Reset to #1
             </button>
@@ -1197,6 +1467,18 @@ const MintStep = () => {
         {!activeAccount && (
           <div className="flex items-center justify-center gap-2 text-red-400 text-xs font-black uppercase tracking-tighter animate-pulse">
             <MdError size={18} /> Wallet Disconnected
+          </div>
+        )}
+
+        {isCollectionFullyMinted && showManualMintControls && (
+          <div className="text-center pt-2">
+            <button
+              type="button"
+              onClick={() => setShowManualMintControls(false)}
+              className="text-xs text-gray-400 hover:text-emerald-400 underline underline-offset-4 cursor-pointer transition-colors"
+            >
+              ← Return to Mint Finished Overview
+            </button>
           </div>
         )}
       </div>
