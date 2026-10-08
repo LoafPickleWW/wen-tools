@@ -13,33 +13,29 @@ import {
   MenuItem,
   MenuList,
 } from "@mui/material";
-import React, { MouseEvent, useEffect, useState } from "react";
+import React, { MouseEvent, useState } from "react";
 import { IoMdMore } from "react-icons/io";
 import { toast } from "react-toastify";
 import { useWallet } from "@txnlab/use-wallet-react";
-import { AssetsType, SingleAssetDataResponse } from "../../types/wallet";
+import { AssetsType } from "../../types/wallet";
 import {
   copyAssetIds,
   createAssetDestroyTransactions,
   createAssetOptInTransactions,
   createAssetOptoutTransactions,
   createDeletedAssetOptoutTransactions,
-  getAssetData,
   getAssetDirectionUrl,
   getAssetType,
   getWalletDirectionUrl,
-  ipfsToUrl,
   ipfsFallbackSrc,
-  getIndexerUrl,
   sendSignedTransaction,
   shortenAddress,
   formatWithCommas,
-  MAX_SELECT_COUNT,
 } from "../../utils/wallet";
 import { walletSign } from "../../utils";
-import useWalletAssetStore from "../../store/walletAssetStore";
 import useWalletToolStore from "../../store/walletToolStore";
 import AssetSendDialog from "./AssetSendDialog";
+import { toggleAssetSelection, useAssetData } from "./useAssetData";
 
 interface AssetImageCardProps {
   asset: AssetsType;
@@ -52,12 +48,9 @@ const AssetImageCard = ({
   page,
   setFilteredAssets,
 }: AssetImageCardProps) => {
-  const { activeAddress, algodClient, transactionSigner, activeNetwork } = useWallet();
-  const [assetData, setAssetData] = useState<SingleAssetDataResponse>();
-  const [assetUrl, setAssetUrl] = useState<string>("/images/wallet/loading.gif");
+  const { activeAddress, algodClient, transactionSigner } = useWallet();
+  const { assetData, assetUrl, setAssetUrl, indexerUrl } = useAssetData(asset["asset-id"]);
   const toolState = useWalletToolStore((state) => state);
-
-  const indexerUrl = getIndexerUrl(activeNetwork);
 
   const AssetCardOptions = () => {
     const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
@@ -241,48 +234,11 @@ const AssetImageCard = ({
     );
   };
 
-  useEffect(() => {
-    async function getData() {
-      const stateData = useWalletAssetStore
-        .getState()
-        .assets.find((a) => a.index === asset["asset-id"]);
-      if (stateData) {
-        setAssetData(stateData);
-        const url = await ipfsToUrl(
-          stateData.params.url,
-          stateData.params.reserve
-        );
-        setAssetUrl(url);
-        return;
-      }
-      const response = await getAssetData(asset["asset-id"], indexerUrl);
-      setAssetData(response);
-      useWalletAssetStore.getState().addAsset(response);
-      const url = await ipfsToUrl(response.params.url, response.params.reserve);
-      setAssetUrl(url);
-    }
-    if (!asset["asset-id"]) return;
-    getData();
-  }, [asset, indexerUrl]);
-
-  const handleCardClick = (assetId: number) => {
-    const selectedAssets = toolState.selectedAssets;
-    if (selectedAssets.includes(assetId)) {
-      toolState.removeSelectedAsset(assetId);
-      return;
-    }
-    if (selectedAssets.length < MAX_SELECT_COUNT) {
-      toolState.addSelectedAsset(assetId);
-    } else {
-      toast.info(`You can only select ${MAX_SELECT_COUNT} assets at a time.`);
-    }
-  };
-
   return (
     <>
       {assetData && (
         <Card sx={{ minHeight: "100%", backgroundColor: "#1c191c", border: "1px solid #2d292d" }}>
-          <CardActionArea onClick={() => handleCardClick(asset["asset-id"])}>
+          <CardActionArea onClick={() => toggleAssetSelection(asset["asset-id"])}>
             <CardMedia
               component="img"
               alt={assetData.params.name}

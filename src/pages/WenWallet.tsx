@@ -1,4 +1,4 @@
-import { IoWallet } from "react-icons/io5";
+import { IoGrid, IoList, IoWallet } from "react-icons/io5";
 import { ToolHero, TermSpinner } from "../components/cypher/ToolKit";
 import { Reticle } from "../components/cypher/Reticle";
 import {
@@ -9,6 +9,7 @@ import {
   OutlinedInput,
   Select,
   SelectChangeEvent,
+  useMediaQuery,
 } from "@mui/material";
 import { isValidAddress } from "algosdk";
 import Fuse from "fuse.js";
@@ -18,6 +19,7 @@ import { useWallet } from "@txnlab/use-wallet-react";
 import { toast } from "react-toastify";
 
 import AssetImageCard from "../components/wallet/AssetCard";
+import AssetListRow from "../components/wallet/AssetListRow";
 import GridPagination from "../components/wallet/GridPagination";
 import SearchWalletInput from "../components/wallet/SearchWalletInput";
 import TopArea from "../components/wallet/TopArea";
@@ -49,6 +51,16 @@ const HOME_TOOLS = [
   { name: "Multi Copy", id: "asset-copy" },
 ];
 
+const VIEW_MODE_KEY = "wenwallet_view_mode";
+
+function readViewMode(): "grid" | "list" {
+  try {
+    return localStorage.getItem(VIEW_MODE_KEY) === "list" ? "list" : "grid";
+  } catch {
+    return "grid";
+  }
+}
+
 const ACCOUNT_TOOLS = [
   { name: "Multi Opt-in", id: "asset-opt-in" },
   { name: "Multi Copy", id: "asset-copy" },
@@ -67,6 +79,19 @@ export function WenWallet() {
   const [totalPages, setTotalPages] = useState(1);
   const [orderBy, setOrderBy] = useState("newest");
   const [isResolving, setIsResolving] = useState(false);
+  const [viewMode, setViewMode] = useState<"grid" | "list">(readViewMode);
+  // List view is a mobile-only option; matches Tailwind's sm breakpoint.
+  const isMobile = useMediaQuery("(max-width: 639.98px)");
+  const showList = isMobile && viewMode === "list";
+
+  const changeViewMode = (mode: "grid" | "list") => {
+    setViewMode(mode);
+    try {
+      localStorage.setItem(VIEW_MODE_KEY, mode);
+    } catch {
+      // storage unavailable; keep the in-memory choice
+    }
+  };
 
   const indexerUrl = getIndexerUrl(activeNetwork);
   const fuse = new Fuse(assets, fuseSearchOptions);
@@ -331,6 +356,31 @@ export function WenWallet() {
               }}
             />
             <div className="flex flex-row gap-2 justify-between sm:justify-end">
+              <div
+                className="flex sm:hidden shrink-0 rounded-[10px] border border-white/10 bg-banner-grey overflow-hidden"
+                role="group"
+                aria-label="Asset view"
+              >
+                {([
+                  { mode: "grid", Icon: IoGrid, label: "Grid view" },
+                  { mode: "list", Icon: IoList, label: "List view" },
+                ] as const).map(({ mode, Icon, label }) => (
+                  <button
+                    key={mode}
+                    type="button"
+                    aria-label={label}
+                    aria-pressed={viewMode === mode}
+                    onClick={() => changeViewMode(mode)}
+                    className={`h-9 w-9 flex items-center justify-center transition ${
+                      viewMode === mode
+                        ? "bg-primary-orange text-[#0c0a08]"
+                        : "text-slate-400 hover:text-white"
+                    }`}
+                  >
+                    <Icon size={16} />
+                  </button>
+                ))}
+              </div>
               <Button
                 variant="contained"
                 size="medium"
@@ -436,19 +486,29 @@ export function WenWallet() {
             </div>
           </div>
 
-          <Grid container spacing={3} sx={{ paddingX: "8px", marginBottom: 4 }}>
-            {filteredAssets
-              .slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
-              .map((asset) => (
-                <Grid item xs={12} sm={6} md={4} lg={3} xl={2} key={asset["asset-id"]}>
-                  <AssetImageCard
-                    asset={asset}
-                    page={isOwner ? "home" : "account"}
-                    setFilteredAssets={setFilteredAssets}
-                  />
-                </Grid>
-              ))}
-          </Grid>
+          {showList ? (
+            <ul className="flex flex-col gap-1.5 px-2 mb-8">
+              {filteredAssets
+                .slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
+                .map((asset) => (
+                  <AssetListRow key={asset["asset-id"]} asset={asset} />
+                ))}
+            </ul>
+          ) : (
+            <Grid container spacing={3} sx={{ paddingX: "8px", marginBottom: 4 }}>
+              {filteredAssets
+                .slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
+                .map((asset) => (
+                  <Grid item xs={12} sm={6} md={4} lg={3} xl={2} key={asset["asset-id"]}>
+                    <AssetImageCard
+                      asset={asset}
+                      page={isOwner ? "home" : "account"}
+                      setFilteredAssets={setFilteredAssets}
+                    />
+                  </Grid>
+                ))}
+            </Grid>
+          )}
 
           <GridPagination
             currentPage={currentPage}
