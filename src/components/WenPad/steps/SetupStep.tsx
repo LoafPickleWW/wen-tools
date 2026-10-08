@@ -1,12 +1,16 @@
 import { useWatch } from 'react-hook-form';
 import { useProject } from '../ProjectContext';
-import { getMintNameIssues } from '../ProjectUtils';
+import { buildAssetName, getMintNameIssues } from '../ProjectUtils';
 import { MdRocketLaunch, MdArrowForward } from 'react-icons/md';
 
 const SetupStep = () => {
   const { form, selectStep } = useProject();
-  const [name, unitName, size] = useWatch({ control: form.control, name: ['name', 'unitName', 'size'] });
-  const nameIssues = getMintNameIssues(name, unitName, Math.max(1, Number(size) || 1));
+  const [name, unitName, size, includeHashInName] = useWatch({
+    control: form.control,
+    name: ['name', 'unitName', 'size', 'includeHashInName'],
+  });
+  const naming = { name, unitName, includeHashInName };
+  const nameIssues = getMintNameIssues(naming, Math.max(1, Number(size) || 1));
 
   return (
     <div className="max-w-3xl mx-auto space-y-8 py-10">
@@ -28,6 +32,17 @@ const SetupStep = () => {
             placeholder="e.g. Astro Punks"
             className="w-full bg-asset-detail-bg border border-white/[0.08] rounded-2xl px-6 py-4 text-lg font-bold focus:outline-none focus:border-primary-orange/50 transition-all placeholder:text-gray-700"
           />
+          <label className="flex flex-wrap items-center gap-2 pt-2 ml-1 text-xs text-gray-400 cursor-pointer">
+            <input
+              type="checkbox"
+              // Unset on older projects, which keep the "#".
+              checked={includeHashInName !== false}
+              onChange={(e) => form.setValue('includeHashInName', e.target.checked, { shouldDirty: true })}
+              className="accent-primary-orange"
+            />
+            Include # before the number in NFT names
+            <span className="text-gray-600">e.g. {buildAssetName({ ...naming, name: name || 'Astro Punks' }, 1)}</span>
+          </label>
         </div>
 
         <div className="space-y-1">

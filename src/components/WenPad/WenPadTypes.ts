@@ -8,6 +8,8 @@ export type ProjectT = {
   owner?: string;
   name: string;
   unitName: string;
+  // Asset names end in "#<n>" when true or unset, and just "<n>" when false.
+  includeHashInName?: boolean;
   description: string;
   website: string;
   size: number;

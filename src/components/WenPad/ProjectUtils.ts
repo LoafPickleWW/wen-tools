@@ -698,20 +698,33 @@ export const MAX_UNIT_NAME_BYTES = 8;
 
 export const utf8ByteLength = (value: string) => new TextEncoder().encode(value).length;
 
-export const buildAssetName = (projectName: string | undefined, index: number) =>
-  `${projectName ? projectName + ' ' : ''}#${index}`;
+type NamingT = Partial<Pick<ProjectT, 'name' | 'unitName' | 'includeHashInName'>>;
+
+// Projects saved before the option existed have it undefined, which keeps the "#".
+const numberSuffix = (naming: NamingT, index: number) =>
+  `${naming.includeHashInName === false ? '' : '#'}${index}`;
+
+export const buildAssetName = (naming: NamingT, index: number) =>
+  `${naming.name ? naming.name + ' ' : ''}${numberSuffix(naming, index)}`;
+
+/** Reads the edition number from the end of a minted asset name, with or without the "#". */
+export const parseEditionNumber = (assetName: string): number | null => {
+  const match = assetName.trim().match(/(?:^|[\s#])(\d+)$/);
+  return match ? parseInt(match[1], 10) : null;
+};
 
 /**
  * Returns human-readable problems that would make the chain reject the mint, or [] if
  * the names are valid. Checking the highest index is enough since it has the most digits.
  */
-export function getMintNameIssues(projectName: string | undefined, unitName: string | undefined, highestIndex: number): string[] {
+export function getMintNameIssues(naming: NamingT, highestIndex: number): string[] {
   const issues: string[] = [];
-  const longestName = buildAssetName(projectName, highestIndex);
+  const { unitName } = naming;
+  const longestName = buildAssetName(naming, highestIndex);
   const nameBytes = utf8ByteLength(longestName);
   if (nameBytes > MAX_ASSET_NAME_BYTES) {
     // Room left for the collection name after the " #<number>" suffix.
-    const maxNameBytes = MAX_ASSET_NAME_BYTES - ` #${highestIndex}`.length;
+    const maxNameBytes = MAX_ASSET_NAME_BYTES - ` ${numberSuffix(naming, highestIndex)}`.length;
     issues.push(
       `Asset name "${longestName}" is ${nameBytes} bytes; Algorand allows at most ${MAX_ASSET_NAME_BYTES}. ` +
       `Shorten the collection name to ${maxNameBytes} characters or fewer.`
@@ -803,7 +816,7 @@ export function buildItemMetadata(
   }
 
   return {
-    name: buildAssetName(project.name, item.index),
+    name: buildAssetName(project, item.index),
     description: project.description || '',
     image: imgName,
     external_url: project.website || '',

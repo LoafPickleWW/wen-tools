@@ -4,6 +4,7 @@ import algosdk from 'algosdk';
 import { useWallet } from '@txnlab/use-wallet-react';
 import { MdDeleteForever, MdExpandLess, MdExpandMore, MdWarning } from 'react-icons/md';
 import { chunkGroupsByTxnCount, parseAlgodError, walletSign } from '../../utils';
+import { parseEditionNumber } from './ProjectUtils';
 
 type Props = {
   defaultUnitName: string;
@@ -69,8 +70,8 @@ const MintedCleanup = ({ defaultUnitName, onDeleted }: Props) => {
       for (const ca of acct['created-assets'] || []) {
         const params = ca.params || {};
         const name: string = (params.name || '').trim();
-        const match = name.match(/#(\d+)$/);
-        if (!match) continue;
+        const number = parseEditionNumber(name);
+        if (number === null) continue;
         if (unit && (params['unit-name'] || '').trim().toLowerCase() !== unit) continue;
         if (prefix && !name.toLowerCase().startsWith(prefix)) continue;
 
@@ -79,7 +80,7 @@ const MintedCleanup = ({ defaultUnitName, onDeleted }: Props) => {
         let blockedReason: string | null = null;
         if (params.manager !== activeAccount.address) blockedReason = 'No manager (or a different manager) is set';
         else if ((holdings.get(id) || 0) !== total) blockedReason = 'Not all units are in this wallet (sold or transferred)';
-        results.push({ id, name, number: parseInt(match[1], 10), blockedReason });
+        results.push({ id, name, number, blockedReason });
       }
       results.sort((a, b) => a.number - b.number || a.id - b.id);
 

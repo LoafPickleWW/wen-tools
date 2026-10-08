@@ -40,7 +40,7 @@ import {
 import algosdk from 'algosdk';
 import { Link } from 'react-router-dom';
 import { MdCasino } from 'react-icons/md';
-import { buildMintMetadata, getMintNameIssues, renderPreviewToBlob } from '../ProjectUtils';
+import { buildAssetName, buildMintMetadata, getMintNameIssues, parseEditionNumber, renderPreviewToBlob } from '../ProjectUtils';
 import FilebasePurge from '../FilebasePurge';
 import MintedCleanup from '../MintedCleanup';
 import { saveLastMint, toSaleNetwork } from '../../../utils/wenpadSale';
@@ -85,7 +85,7 @@ const MintStep = () => {
   const highestSelectedIndex = previewItems
     .slice(effectiveStart - 1, effectiveEnd)
     .reduce((max, item) => Math.max(max, item.index), 0);
-  const nameIssues = getMintNameIssues(project.name, project.unitName, highestSelectedIndex);
+  const nameIssues = getMintNameIssues(project, highestSelectedIndex);
 
   // Live wallet balance and spendable ALGO tracking
   const [walletBalance, setWalletBalance] = useState<{ amount: number; minBalance: number; spendable: number } | null>(null);
@@ -117,9 +117,8 @@ const MintStep = () => {
       for (const ca of createdAssets) {
         const name = (ca.params?.name || '').trim();
         const unit = (ca.params?.['unit-name'] || '').trim().toLowerCase();
-        const match = name.match(/#(\d+)$/);
-        if (match) {
-          const num = parseInt(match[1], 10);
+        const num = parseEditionNumber(name);
+        if (num !== null) {
           if (
             (projName && name.toLowerCase().startsWith(projName)) ||
             (projUnit && unit === projUnit)
@@ -324,7 +323,7 @@ const MintStep = () => {
             const imgFileName = `image_${item.index}.png`;
             const imageCid = imageCidsMap.get(imgFileName) || '';
             const assetData: any = {
-              asset_name: metadataList[i].name || `${project.name ? project.name + ' ' : ''}#${item.index}`,
+              asset_name: metadataList[i].name || buildAssetName(project, item.index),
               unit_name: project.unitName,
               total_supply: 1,
               decimals: 0,
@@ -433,7 +432,7 @@ const MintStep = () => {
           const metadata = buildMintMetadata(item, project, imageCid, standard);
 
           const assetData: any = {
-            asset_name: metadata.name || `${project.name ? project.name + ' ' : ''}#${item.index}`,
+            asset_name: metadata.name || buildAssetName(project, item.index),
             unit_name: project.unitName,
             total_supply: 1,
             decimals: 0,
