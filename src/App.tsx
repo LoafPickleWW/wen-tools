@@ -41,6 +41,7 @@ import { Jukebox } from './pages/Jukebox';
 import { P2PChat } from './pages/P2PChat';
 import { BeaconChat } from './pages/BeaconChat';
 import PostQuantum from './pages/PostQuantum';
+import PQTxPrinter from './pages/PQTxPrinter';
 import { BeaconDropTool } from './pages/BeaconDropTool';
 import WenDeployTool from './pages/WenDeployTool';
 import AnchorSetupTool from './pages/AnchorSetupTool';
@@ -204,6 +205,7 @@ function App() {
             <Route path='/p2p-chat' element={<P2PChat />} />
             <Route path='/beacon-chat' element={<BeaconChat />} />
             <Route path='/post-quantum' element={<PostQuantum />} />
+            <Route path='/pq-printer' element={<PQTxPrinter />} />
             <Route path='/beacon-drop' element={<BeaconDropTool />} />
             <Route path='/deploy' element={<WenDeployTool />} />
             <Route path='/anchor-setup' element={<AnchorSetupTool />} />

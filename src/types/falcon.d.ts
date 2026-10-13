@@ -2,6 +2,7 @@ declare module "falcon-signatures" {
   export default class Falcon {
     constructor();
     keypair(): Promise<{ publicKey: Uint8Array; secretKey: Uint8Array }>;
+    sign(message: Uint8Array | string, secretKey: Uint8Array | string): Promise<Uint8Array>;
     static bytesToHex(bytes: Uint8Array): string;
     static hexToBytes(hex: string): Uint8Array;
   }

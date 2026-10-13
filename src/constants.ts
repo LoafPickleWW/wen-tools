@@ -485,5 +485,13 @@ export const TOOLS = [
     path: "/anchor-setup",
     category: "protocols",
     icon: "/icons/devtools.png"
+  },
+  {
+    id: "pq_tx_printer",
+    label: "PQ Tx Printer",
+    description: "Fund a native Falcon-1024 post-quantum account and watch it print quantum-safe transactions until the fees run dry.",
+    path: "/pq-printer",
+    category: "protocols",
+    icon: "/icons/pqwallet.png"
   }
 ];

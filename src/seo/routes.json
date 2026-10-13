@@ -208,6 +208,10 @@
     "title": "Post-Quantum Algorand Wallet (Falcon-1024) | wen.tools",
     "description": "Secure Algorand assets with Falcon-1024 post-quantum signatures."
   },
+  "/pq-printer": {
+    "title": "PQ Tx Printer: Native Post-Quantum Algorand Transactions | wen.tools",
+    "description": "Fund a native Falcon-1024 Algorand account and watch it print post-quantum transactions until it runs out of fees."
+  },
   "/deploy": {
     "title": "WEN.DEPLOY: Host Static Sites on IPFS from GitHub | wen.tools",
     "description": "Decentralized hosting for static sites. Build and deploy from GitHub to IPFS and ARC-19."
