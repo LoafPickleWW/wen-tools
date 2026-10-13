@@ -375,6 +375,27 @@ export default function PQTxPrinter() {
         account and refunds the 0.1 ALGO minimum balance.
       </Callout>
 
+      <div className="mt-3 w-full">
+        <Callout tone="warn" label="before you start">
+          <ul className="list-disc space-y-1 pl-4">
+            <li>
+              <strong>This browser is the printer.</strong> It holds the printer's key and signs every
+              transaction. Your wallet only signs the one payment that loads it, and no server or
+              contract is involved.
+            </li>
+            <li>
+              <strong>Keep this tab open while printing.</strong> Closing it or letting the device sleep
+              pauses the printer. Come back to this page in the same browser to resume.
+            </li>
+            <li>
+              <strong>Only this browser can spend the printer's balance.</strong> Clearing site data or
+              switching devices strands whatever is left, so use <em>Backup key</em> if you load more
+              than you'd be happy to lose.
+            </li>
+          </ul>
+        </Callout>
+      </div>
+
       {!session ? (
         <section className="mt-8 flex w-full flex-col items-center gap-4 rounded-2xl border border-white/[0.07] bg-banner-grey/50 p-8 text-center backdrop-blur">
           <IoPrint className="text-5xl text-primary-orange" aria-hidden="true" />
@@ -513,7 +534,9 @@ export default function PQTxPrinter() {
                     </button>
                     <TermSpinner />
                     <span className="text-sm text-slate-400">
-                      {phase === "closing" ? "closing out & refunding…" : "printing…"}
+                      {phase === "closing"
+                        ? "closing out & refunding…"
+                        : "printing… keep this tab open"}
                     </span>
                   </>
                 ) : (
