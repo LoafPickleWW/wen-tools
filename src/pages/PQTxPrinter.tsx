@@ -498,7 +498,7 @@ export default function PQTxPrinter() {
       />
 
       <div className="mb-6 w-full">
-        <PQLeaderboard liveBatches={liveBatches} feePerTx={fee} />
+        <PQLeaderboard liveBatches={liveBatches} feePerTx={fee} refreshKey={holdersKey} />
       </div>
 
       <Callout label="how it works">

@@ -33,6 +33,8 @@ const ALGO_BASELINE = { round: 66_012_077, pqTxs: 1_602_448 };
 /** Per-request work budgets, to stay well within the function timeout. */
 const QRL_MAX_CHUNKS = 5; // × 90 blocks
 const ALGO_MAX_PAGES = 12; // × 1000 txns
+/** Round span per indexer query; the pqsig filter needs a bounded range to stay fast. */
+const ALGO_MAX_WINDOW = 100_000;
 const REFRESH_MS = 30_000;
 /**
  * Hard wall-clock budget for catching up. Vercel kills the function at 10s, and a
@@ -44,9 +46,21 @@ const REDIS_TIMEOUT_MS = 1_500;
 
 const STATE_KEY = "pqlb:v1";
 
+// Solana: Blueshift WinterWallet (Winternitz one-time signatures, verified on-chain).
+// Counts successful transactions that invoke the program; failed txns and program deploys excluded.
+const SOLANA_RPC = "https://api.mainnet-beta.solana.com";
+const WINTERWALLET_PROGRAM = "winter5vMwvf51xrSVPTxbAAD6qiSTmPeRTSizMCQCa";
+const SOLANA_BASELINE = {
+  until: "4YzekaMAyB7Det5v9v5WqfDarJWLmrmjfh2jAVCbGA6zbfdLkybHBs27RkW9jC2udPytVv8PZLZzzJBqtt2zuvP6",
+  pqTxs: 9,
+};
+/** New program signatures classified per request (each needs a getTransaction call). */
+const SOLANA_MAX_CLASSIFY = 15;
+
 interface State {
   qrl: { height: number; pqTxs: number };
   algo: { round: number; pqTxs: number };
+  sol?: { until: string; pqTxs: number };
   updatedAt: number;
 }
 
@@ -154,22 +168,83 @@ async function countAlgoRange(min: number, max: number, maxPages: number) {
 async function advanceAlgo(algo: State["algo"]): Promise<void> {
   const tip = Number((await fetchJson(`${ALGO_INDEXER}/health`)).round);
   let pagesLeft = ALGO_MAX_PAGES;
-  let window = 20_000;
 
-  // Each window commits on its own, so a run cut short by the budget still saves progress.
+  // Results come back in round order. After each full page, everything before the
+  // page's last round is complete, so commit it and resume from that round: progress
+  // is saved page by page, however dense a burst of printing is.
   while (algo.round < tip && pagesLeft > 0 && timeLeft() > 1_000) {
     const from = algo.round + 1;
-    const to = Math.min(tip, algo.round + window);
-    const r = await countAlgoRange(from, to, pagesLeft);
-    if (!r) {
-      // Busy stretch: shrink the window and try again.
-      if (window <= 250) break;
-      window = Math.floor(window / 4);
+    const to = Math.min(tip, algo.round + ALGO_MAX_WINDOW);
+    const res = await fetchJson(
+      `${ALGO_INDEXER}/v2/transactions?sig-type=pqsig&min-round=${from}&max-round=${to}&limit=1000`,
+    );
+    pagesLeft--;
+    const txns: { "confirmed-round": number }[] = res.transactions ?? [];
+
+    if (txns.length < 1000) {
+      algo.pqTxs += txns.length;
+      algo.round = to;
       continue;
     }
-    pagesLeft -= r.pages;
-    algo.round = to;
-    algo.pqTxs += r.count;
+
+    const first = txns[0]["confirmed-round"];
+    const last = txns[txns.length - 1]["confirmed-round"];
+    if (first === last) {
+      // A single round holds 1000+ PQ txns: page through just that round.
+      const r = await countAlgoRange(last, last, pagesLeft);
+      if (!r) break;
+      pagesLeft -= r.pages;
+      algo.pqTxs += r.count;
+      algo.round = last;
+      continue;
+    }
+    algo.pqTxs += txns.filter((t) => t["confirmed-round"] < last).length;
+    algo.round = last - 1;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Solana (WinterWallet)
+// ---------------------------------------------------------------------------
+
+function jsonRpc(url: string, method: string, params: unknown[]) {
+  return fetchJson(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }),
+  }).then((r) => {
+    if (r.error) throw new Error(`${method}: ${r.error.message}`);
+    return r.result;
+  });
+}
+
+async function advanceSolana(sol: NonNullable<State["sol"]>): Promise<void> {
+  // Newest first; everything after our cursor.
+  const sigs: { signature: string; err: unknown }[] = await jsonRpc(SOLANA_RPC, "getSignaturesForAddress", [
+    WINTERWALLET_PROGRAM,
+    { until: sol.until, limit: 1000 },
+  ]);
+  // Process oldest first so the cursor can stop partway and resume next time.
+  for (const s of sigs.reverse().slice(0, SOLANA_MAX_CLASSIFY)) {
+    if (timeLeft() < 1_000) break;
+    if (!s.err) {
+      const tx = await jsonRpc(SOLANA_RPC, "getTransaction", [
+        s.signature,
+        { encoding: "json", maxSupportedTransactionVersion: 0 },
+      ]);
+      if (!tx) break; // not yet available from this node: retry later
+      const keys: string[] = [
+        ...tx.transaction.message.accountKeys,
+        ...(tx.meta?.loadedAddresses?.writable ?? []),
+        ...(tx.meta?.loadedAddresses?.readonly ?? []),
+      ];
+      const invokes = (ix: { programIdIndex: number }) => keys[ix.programIdIndex] === WINTERWALLET_PROGRAM;
+      const invoked =
+        tx.transaction.message.instructions.some(invokes) ||
+        (tx.meta?.innerInstructions ?? []).some((g: any) => g.instructions.some(invokes));
+      if (invoked) sol.pqTxs += 1; // deploys/upgrades reference the program without invoking it
+    }
+    sol.until = s.signature;
   }
 }
 
@@ -223,6 +298,7 @@ async function loadState(client: Redis | null): Promise<State> {
   // A redeploy with newer baselines supersedes an older stored cursor.
   if (s.qrl.height < QRL_BASELINE.height) s.qrl = { ...QRL_BASELINE };
   if (s.algo.round < ALGO_BASELINE.round) s.algo = { ...ALGO_BASELINE };
+  s.sol ??= { ...SOLANA_BASELINE };
   return s;
 }
 
@@ -236,6 +312,7 @@ async function getState(): Promise<State> {
       await Promise.all([
         advanceQrl(s.qrl).catch((e) => console.error("QRL advance failed", e)),
         advanceAlgo(s.algo).catch((e) => console.error("Algorand advance failed", e)),
+        advanceSolana(s.sol!).catch((e) => console.error("Solana advance failed", e)),
       ]);
       s.updatedAt = Date.now();
       if (client) {
@@ -267,18 +344,44 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           name: "QRL",
           scheme: "XMSS",
           since: "2018-06-26",
+          status: "live",
           pqTxs: state.qrl.pqTxs,
           cursor: state.qrl.height,
           cursorLabel: "block",
+          note: "Every transaction except the one coinbase per block (all others are XMSS-signed).",
+          source: "https://explorer.theqrl.org",
         },
         {
           id: "algorand",
           name: "Algorand",
           scheme: "Falcon-1024",
           since: "2026-08-22",
+          status: "live",
           pqTxs: state.algo.pqTxs,
           cursor: state.algo.round,
           cursorLabel: "round",
+          note: "Native pqsig transactions since Algorand 5.0 (consensus v42).",
+          source: "https://algorand.co/blog/getting-ahead-of-the-elliptic-curve-whats-in-the-next-consensus-upgrade",
+        },
+        {
+          id: "solana",
+          name: "Solana",
+          scheme: "Winternitz",
+          since: "2026-04-27",
+          status: "live",
+          pqTxs: state.sol!.pqTxs,
+          note: "Successful calls to Blueshift's WinterWallet program (winter5vMw…CQCa).",
+          source: `https://solscan.io/account/${WINTERWALLET_PROGRAM}`,
+        },
+        {
+          id: "bitcoin",
+          name: "Bitcoin",
+          scheme: "QSB (hash-based)",
+          since: "2026-08-26",
+          status: "fixed",
+          pqTxs: 1,
+          note: "StarkWare's experimental quantum-safe transaction, block 964,199.",
+          source: "https://mempool.space/tx/305a24ffea912b9cf428f29ebf952321c96dab5bab284fc0d0801562f5abab07",
         },
       ],
     });

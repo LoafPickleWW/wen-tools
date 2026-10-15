@@ -302,17 +302,30 @@ function testAgentPlugin(): Plugin {
   };
 }
 
+// Mirrors vercel.json: only /deploy (WebContainer) is cross-origin isolated. Site-wide
+// COOP same-origin cuts window.opener for wallet popups like Lute.
+function deployIsolationPlugin(): Plugin {
+  return {
+    name: "deploy-isolation",
+    configureServer(server) {
+      server.middlewares.use((req, res, next) => {
+        if (req.url && /^\/deploy(\?|$)/.test(req.url)) {
+          res.setHeader("Cross-Origin-Embedder-Policy", "credentialless");
+          res.setHeader("Cross-Origin-Opener-Policy", "same-origin");
+        }
+        next();
+      });
+    },
+  };
+}
+
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react(), nodePolyfills(), basicSsl(), testAgentPlugin()],
+  plugins: [react(), nodePolyfills(), basicSsl(), testAgentPlugin(), deployIsolationPlugin()],
   optimizeDeps: {
     exclude: ["falcon-signatures"],
   },
   server: {
-    headers: {
-      "Cross-Origin-Embedder-Policy": "credentialless",
-      "Cross-Origin-Opener-Policy": "same-origin",
-    },
     proxy: {
       '/api/xrpl-mainnet': {
         target: 'https://s2-clio.ripple.com:51234',

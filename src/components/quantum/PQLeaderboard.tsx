@@ -1,13 +1,16 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 interface ChainRow {
   id: string;
   name: string;
   scheme: string;
   since: string;
-  pqTxs: number;
-  cursor: number;
-  cursorLabel: string;
+  pqTxs: number | null;
+  status?: "live" | "fixed" | "partial" | "untracked";
+  note?: string;
+  source?: string;
+  cursor?: number;
+  cursorLabel?: string;
 }
 
 interface LeaderboardData {
@@ -22,6 +25,8 @@ export interface LiveBatch {
 }
 
 const POLL_MS = 30_000;
+/** After a forced refresh, check again once the server's next scan window has passed. */
+const FOLLOW_UP_MS = 35_000;
 
 function fmt(n: number) {
   return Math.round(n).toLocaleString();
@@ -30,32 +35,47 @@ function fmt(n: number) {
 export function PQLeaderboard({
   liveBatches = [],
   feePerTx,
+  refreshKey = 0,
 }: {
   liveBatches?: LiveBatch[];
   /** Printer cost per PQ txn in microAlgos, to price the gap in ALGO. */
   feePerTx: number;
+  /** Bump to force a fresh fetch, e.g. when a printer run completes */
+  refreshKey?: number;
 }) {
   const [data, setData] = useState<LeaderboardData | null>(null);
   const [failed, setFailed] = useState(false);
+  const alive = useRef(true);
+
+  /** `fresh` adds a query string so the CDN's 30s cache can't serve a stale copy. */
+  const load = useCallback((fresh = false) => {
+    fetch(fresh ? `/api/pq-leaderboard?fresh=${Date.now()}` : "/api/pq-leaderboard")
+      .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
+      .then((d: LeaderboardData) => {
+        if (!alive.current) return;
+        setData(d);
+        setFailed(false);
+      })
+      .catch(() => alive.current && setFailed(true));
+  }, []);
 
   useEffect(() => {
-    let alive = true;
-    const load = () =>
-      fetch("/api/pq-leaderboard")
-        .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
-        .then((d: LeaderboardData) => {
-          if (!alive) return;
-          setData(d);
-          setFailed(false);
-        })
-        .catch(() => alive && setFailed(true));
+    alive.current = true;
     load();
-    const t = setInterval(load, POLL_MS);
+    const t = setInterval(() => load(), POLL_MS);
     return () => {
-      alive = false;
+      alive.current = false;
       clearInterval(t);
     };
-  }, []);
+  }, [load]);
+
+  // Printer run finished: refresh now, and once more after the server's next scan.
+  useEffect(() => {
+    if (!refreshKey) return;
+    load(true);
+    const t = setTimeout(() => load(true), FOLLOW_UP_MS);
+    return () => clearTimeout(t);
+  }, [refreshKey, load]);
 
   const rows = useMemo(() => {
     if (!data) return [];
@@ -63,9 +83,9 @@ export function PQLeaderboard({
       .map((c) => {
         const live =
           c.id === "algorand"
-            ? liveBatches.filter((b) => b.round > c.cursor).reduce((n, b) => n + b.count, 0)
+            ? liveBatches.filter((b) => b.round > (c.cursor ?? Infinity)).reduce((n, b) => n + b.count, 0)
             : 0;
-        return { ...c, live, total: c.pqTxs + live };
+        return { ...c, live, total: (c.pqTxs ?? -1) + live };
       })
       .sort((a, b) => b.total - a.total);
   }, [data, liveBatches]);
@@ -90,7 +110,7 @@ export function PQLeaderboard({
 
       <ol>
         {rows.map((r, i) => {
-          const pct = leader.total ? (r.total / leader.total) * 100 : 0;
+          const pct = leader.total && r.total > 0 ? (r.total / leader.total) * 100 : 0;
           const isAlgo = r.id === "algorand";
           return (
             <li key={r.id} className="border-b border-white/[0.04] px-5 py-3 last:border-0">
@@ -101,26 +121,43 @@ export function PQLeaderboard({
                   #{i + 1}
                 </span>
                 <div className="min-w-0 flex-1">
-                  <span className={`font-bold ${isAlgo ? "text-primary-orange" : "text-white"}`}>{r.name}</span>
+                  <a
+                    href={r.source}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title={r.note}
+                    className={`font-bold underline-offset-2 hover:underline ${isAlgo ? "text-primary-orange" : "text-white"}`}
+                  >
+                    {r.name}
+                  </a>
                   <span className="ml-2 font-mono text-[11px] text-slate-500">
                     {r.scheme} · since {r.since.slice(0, 4)}
+                    {r.status && r.status !== "live" && (
+                      <span className="ml-1.5 rounded border border-white/10 px-1 text-[10px] uppercase text-slate-500">
+                        {r.status === "untracked" ? "not tracked" : r.status}
+                      </span>
+                    )}
                   </span>
                 </div>
-                <span className="text-right text-lg font-bold tabular-nums">
-                  {fmt(r.total)}
+                <span
+                  className={`text-right tabular-nums ${r.pqTxs === null ? "text-sm text-slate-500" : "text-lg font-bold"}`}
+                >
+                  {r.pqTxs === null ? "—" : `${fmt(r.total)}${r.status === "partial" ? "+" : ""}`}
                   {r.live > 0 && (
                     <span className="ml-1.5 text-xs font-normal text-emerald-400">+{fmt(r.live)} live</span>
                   )}
                 </span>
               </div>
-              <div className="ml-10 mt-2 h-1.5 overflow-hidden rounded-full bg-primary-black/60">
-                <div
-                  className={`h-full rounded-full transition-all duration-700 ${
-                    isAlgo ? "bg-gradient-to-r from-primary-orange to-primary-yellow" : "bg-slate-500"
-                  }`}
-                  style={{ width: `${Math.max(pct, 0.5)}%` }}
-                />
-              </div>
+              {r.pqTxs !== null && (
+                <div className="ml-10 mt-2 h-1.5 overflow-hidden rounded-full bg-primary-black/60">
+                  <div
+                    className={`h-full rounded-full transition-all duration-700 ${
+                      isAlgo ? "bg-gradient-to-r from-primary-orange to-primary-yellow" : "bg-slate-500"
+                    }`}
+                    style={{ width: `${Math.max(pct, 0.5)}%` }}
+                  />
+                </div>
+              )}
             </li>
           );
         })}
@@ -150,10 +187,9 @@ export function PQLeaderboard({
       )}
 
       <p className="px-5 pb-3 pt-1 text-[11px] leading-relaxed text-slate-600">
-        QRL counts every transaction except the one coinbase per block (all others are XMSS-signed).
-        Algorand counts native Falcon-1024 <code className="text-slate-500">pqsig</code> transactions
-        since Algorand 5.0. Synced to QRL block {fmt(rows.find((r) => r.id === "qrl")?.cursor ?? 0)} and
-        Algorand round {fmt(algo?.cursor ?? 0)}.
+        Counted independently from each chain's own data. Hover a chain to see how; click for the
+        source. <span className="text-slate-500">Fixed</span> = a known one-off. Synced to QRL block{" "}
+        {fmt(rows.find((r) => r.id === "qrl")?.cursor ?? 0)} and Algorand round {fmt(algo?.cursor ?? 0)}.
       </p>
     </section>
   );

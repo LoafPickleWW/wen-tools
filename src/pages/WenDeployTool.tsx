@@ -299,6 +299,26 @@ export default function WenDeployTool() {
   const resolveAsaId = searchParams.get("resolve");
   const oauthCode = searchParams.get("code");
 
+  // WebContainer needs cross-origin isolation, and COOP/COEP are only sent for a full
+  // load of /deploy. Reload when we got here by client-side navigation, and reload
+  // again on the way out so other pages don't stay isolated (that breaks wallet popups).
+  useEffect(() => {
+    if (oauthCode) return;
+    if (!window.crossOriginIsolated) {
+      try {
+        if (sessionStorage.getItem("deploy-isolation-reload")) return; // browser can't isolate; don't loop
+        sessionStorage.setItem("deploy-isolation-reload", "1");
+      } catch { return; }
+      window.location.reload();
+      return;
+    }
+    try { sessionStorage.removeItem("deploy-isolation-reload"); } catch {}
+    return () => {
+      // StrictMode runs this cleanup without leaving the page, so check the route.
+      setTimeout(() => { if (!window.location.pathname.startsWith("/deploy")) window.location.reload(); });
+    };
+  }, []);
+
   // Handle OAuth callback in popup
   useEffect(() => {
     // If we have a code and we're either a popup or have an opener, handle the callback

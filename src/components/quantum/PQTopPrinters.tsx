@@ -5,6 +5,7 @@ import { getExplorerAddressUrl } from "../../utils/falcon";
 
 const POLL_MS = 60_000;
 const TOP_N = 10;
+const INDEXER_LAG_MS = 8_000;
 
 function short(addr: string) {
   return `${addr.slice(0, 6)}…${addr.slice(-4)}`;
@@ -59,9 +60,12 @@ export function PQTopPrinters({
     };
     load();
     const t = setInterval(load, POLL_MS);
+    // After a claim, the indexer can trail algod by a block or two: check again shortly.
+    const followUp = refreshKey ? setTimeout(load, INDEXER_LAG_MS) : undefined;
     return () => {
       alive = false;
       clearInterval(t);
+      clearTimeout(followUp);
     };
   }, [network, deployment.assetId, refreshKey]);
 
