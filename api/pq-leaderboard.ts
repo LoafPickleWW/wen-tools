@@ -34,6 +34,13 @@ const ALGO_BASELINE = { round: 66_012_077, pqTxs: 1_602_448 };
 const QRL_MAX_CHUNKS = 5; // × 90 blocks
 const ALGO_MAX_PAGES = 12; // × 1000 txns
 const REFRESH_MS = 30_000;
+/**
+ * Hard wall-clock budget for catching up. Vercel kills the function at 10s, and a
+ * killed run saves nothing, so stop early and keep whatever progress was made.
+ */
+const WORK_BUDGET_MS = 6_000;
+/** Redis is optional: give up on it quickly rather than hang the request. */
+const REDIS_TIMEOUT_MS = 1_500;
 
 const STATE_KEY = "pqlb:v1";
 
@@ -49,8 +56,21 @@ function baseline(): State {
   return { qrl: { ...QRL_BASELINE }, algo: { ...ALGO_BASELINE }, updatedAt: 0 };
 }
 
+/** Absolute time (ms) after which no new upstream work starts. Set per request. */
+let deadline = 0;
+const timeLeft = () => deadline - Date.now();
+
+function withTimeout<T>(p: Promise<T>, ms: number, what: string): Promise<T> {
+  return Promise.race([
+    p,
+    new Promise<T>((_, reject) => setTimeout(() => reject(new Error(`${what} timed out`)), ms)),
+  ]);
+}
+
 async function fetchJson(url: string, init?: RequestInit): Promise<any> {
-  const res = await fetch(url, { ...init, signal: AbortSignal.timeout(8000) });
+  const ms = Math.min(4_000, timeLeft());
+  if (ms < 500) throw new Error("work budget exhausted");
+  const res = await fetch(url, { ...init, signal: AbortSignal.timeout(ms) });
   if (!res.ok) throw new Error(`${url} -> HTTP ${res.status}`);
   return res.json();
 }
@@ -134,9 +154,10 @@ async function countAlgoRange(min: number, max: number, maxPages: number) {
 async function advanceAlgo(algo: State["algo"]): Promise<void> {
   const tip = Number((await fetchJson(`${ALGO_INDEXER}/health`)).round);
   let pagesLeft = ALGO_MAX_PAGES;
-  let window = 50_000;
+  let window = 20_000;
 
-  while (algo.round < tip && pagesLeft > 0) {
+  // Each window commits on its own, so a run cut short by the budget still saves progress.
+  while (algo.round < tip && pagesLeft > 0 && timeLeft() > 1_000) {
     const from = algo.round + 1;
     const to = Math.min(tip, algo.round + window);
     const r = await countAlgoRange(from, to, pagesLeft);
@@ -156,16 +177,77 @@ async function advanceAlgo(algo: State["algo"]): Promise<void> {
 // Handler
 // ---------------------------------------------------------------------------
 
-async function withRedis<T>(fn: (client: ReturnType<typeof createClient> | null) => Promise<T>) {
+type Redis = ReturnType<typeof createClient>;
+
+function closeRedis(client: Redis) {
+  try {
+    client.destroy();
+  } catch {
+    // already closed (e.g. the connect attempt failed)
+  }
+}
+
+/** Connect to Redis if configured and reachable, else null. Never hangs. */
+async function connectRedis(): Promise<Redis | null> {
   const url = process.env.KV_URL || process.env.REDIS_URL || process.env.STORAGE_URL;
-  if (!url) return fn(null);
-  const client = createClient({ url });
+  if (!url) return null;
+  const client = createClient({
+    url,
+    socket: { connectTimeout: REDIS_TIMEOUT_MS, reconnectStrategy: false },
+  });
   client.on("error", (err) => console.error("Redis Client Error", err));
   try {
-    await client.connect();
-    return await fn(client);
+    await withTimeout(client.connect(), REDIS_TIMEOUT_MS, "redis connect");
+    return client;
+  } catch (err) {
+    console.error("Redis unavailable, using in-memory state", err);
+    closeRedis(client);
+    return null;
+  }
+}
+
+async function loadState(client: Redis | null): Promise<State> {
+  let s = memoryState ?? baseline();
+  if (client) {
+    try {
+      const stored = await withTimeout(client.get(STATE_KEY), REDIS_TIMEOUT_MS, "redis get");
+      if (stored) {
+        const fromRedis: State = JSON.parse(stored.toString());
+        // Prefer whichever copy is further along.
+        if (fromRedis.algo.round >= s.algo.round) s = fromRedis;
+      }
+    } catch (err) {
+      console.error("Redis read failed", err);
+    }
+  }
+  // A redeploy with newer baselines supersedes an older stored cursor.
+  if (s.qrl.height < QRL_BASELINE.height) s.qrl = { ...QRL_BASELINE };
+  if (s.algo.round < ALGO_BASELINE.round) s.algo = { ...ALGO_BASELINE };
+  return s;
+}
+
+async function getState(): Promise<State> {
+  deadline = Date.now() + WORK_BUDGET_MS;
+  const client = await connectRedis();
+  try {
+    let s = await loadState(client);
+    if (Date.now() - s.updatedAt > REFRESH_MS) {
+      s = structuredClone(s);
+      await Promise.all([
+        advanceQrl(s.qrl).catch((e) => console.error("QRL advance failed", e)),
+        advanceAlgo(s.algo).catch((e) => console.error("Algorand advance failed", e)),
+      ]);
+      s.updatedAt = Date.now();
+      if (client) {
+        await withTimeout(client.set(STATE_KEY, JSON.stringify(s)), REDIS_TIMEOUT_MS, "redis set").catch(
+          (err) => console.error("Redis write failed", err),
+        );
+      }
+    }
+    memoryState = s;
+    return s;
   } finally {
-    await client.disconnect().catch(() => {});
+    if (client) closeRedis(client);
   }
 }
 
@@ -174,26 +256,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === "OPTIONS") return res.status(200).end();
 
   try {
-    const state = await withRedis(async (client) => {
-      const stored = client ? await client.get(STATE_KEY) : null;
-      let s: State = stored ? JSON.parse(stored.toString()) : memoryState ?? baseline();
-
-      // A redeploy with newer baselines supersedes an older stored cursor.
-      if (s.qrl.height < QRL_BASELINE.height) s.qrl = { ...QRL_BASELINE };
-      if (s.algo.round < ALGO_BASELINE.round) s.algo = { ...ALGO_BASELINE };
-
-      if (Date.now() - s.updatedAt > REFRESH_MS) {
-        s = structuredClone(s);
-        await Promise.all([
-          advanceQrl(s.qrl).catch((e) => console.error("QRL advance failed", e)),
-          advanceAlgo(s.algo).catch((e) => console.error("Algorand advance failed", e)),
-        ]);
-        s.updatedAt = Date.now();
-        if (client) await client.set(STATE_KEY, JSON.stringify(s));
-      }
-      memoryState = s;
-      return s;
-    });
+    const state = await getState();
 
     res.setHeader("Cache-Control", "public, s-maxage=30, stale-while-revalidate=300");
     return res.status(200).json({
