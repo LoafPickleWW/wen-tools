@@ -8,6 +8,19 @@ function testAgentPlugin(): Plugin {
     configureServer(server) {
       server.middlewares.use(async (req, res, next) => {
         const url = req.url || '';
+        if (url.startsWith('/api/pq-leaderboard')) {
+          // Run the Vercel function in dev with a minimal VercelResponse shim.
+          const { default: handler } = await server.ssrLoadModule('/api/pq-leaderboard.ts');
+          const shim: any = res;
+          shim.status = (code: number) => { res.statusCode = code; return shim; };
+          shim.json = (body: unknown) => {
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify(body));
+            return shim;
+          };
+          await handler(req, shim);
+          return;
+        }
         if (url.startsWith('/api/test-agent')) {
           if (req.method === 'OPTIONS') {
             res.setHeader('Access-Control-Allow-Origin', '*');

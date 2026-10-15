@@ -130,11 +130,13 @@ export interface NativePQSignedTxn {
 export async function signNativePQTransaction(
   txn: algosdk.Transaction,
   account: NativePQAccount,
+  /** Optional off-thread signer (e.g. a worker pool) holding the same key. */
+  signer?: (message: Uint8Array) => Promise<Uint8Array>,
 ): Promise<NativePQSignedTxn> {
-  const signature = await getFalcon().sign(
-    txn.bytesToSign(),
-    Falcon.hexToBytes(account.secretKey),
-  );
+  const message = txn.bytesToSign();
+  const signature = signer
+    ? await signer(message)
+    : await getFalcon().sign(message, Falcon.hexToBytes(account.secretKey));
 
   // Canonical msgpack: zero-valued fields (salt 0) are omitted.
   const pqsig: Record<string, unknown> = {

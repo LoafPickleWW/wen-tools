@@ -1,0 +1,75 @@
+{
+  "name": "PQCoupon",
+  "desc": "",
+  "methods": [
+    {
+      "name": "createApplication",
+      "args": [],
+      "returns": {
+        "type": "void"
+      }
+    },
+    {
+      "name": "bootstrap",
+      "desc": "Create the coupon ASA, held entirely by this app. Creator only, once.\nThe app account must be funded first (base MBR + asset MBR + this inner fee).",
+      "args": [],
+      "returns": {
+        "type": "uint64"
+      }
+    },
+    {
+      "name": "register",
+      "desc": "Register the sender as a PQ printer by revealing the preimage of its address.",
+      "args": [
+        {
+          "name": "pqKey",
+          "type": "byte[]",
+          "desc": "salt (1 byte) followed by the Falcon-1024 public key (1793 bytes)"
+        },
+        {
+          "name": "beneficiary",
+          "type": "address",
+          "desc": "account that receives the coupons on claim; must already be opted in to PQPRINT"
+        },
+        {
+          "name": "mbrPay",
+          "type": "pay",
+          "desc": "exactly PRINTER_BOX_MBR to this app, refunded on claim"
+        }
+      ],
+      "returns": {
+        "type": "void"
+      }
+    },
+    {
+      "name": "print",
+      "desc": "One coupon per call. The call itself is the PQ transaction being rewarded.",
+      "args": [],
+      "returns": {
+        "type": "void"
+      }
+    },
+    {
+      "name": "claim",
+      "desc": "Pay out all coupons to the beneficiary, delete the printer box and refund its MBR.\nIf the beneficiary has opted out since registering, the coupons are forfeited\n(they stay with the app) so the deposit can never be locked. Returns coupons paid.\nThe caller covers the two inner transaction fees.",
+      "args": [],
+      "returns": {
+        "type": "uint64"
+      }
+    },
+    {
+      "name": "pending",
+      "desc": "Read-only: coupons owed to a printer that has not claimed yet.",
+      "readonly": true,
+      "args": [
+        {
+          "name": "printer",
+          "type": "address"
+        }
+      ],
+      "returns": {
+        "type": "uint64"
+      }
+    }
+  ]
+}

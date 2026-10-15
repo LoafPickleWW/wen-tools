@@ -6,6 +6,10 @@ import { toast } from "react-toastify";
 import { IoCopy, IoDownload, IoPlay, IoPrint, IoStop, IoTrash } from "react-icons/io5";
 import { Callout, TermSpinner, ToolHero } from "../components/cypher/ToolKit";
 import { Meta } from "../components/Meta";
+import { PQLeaderboard, type LiveBatch } from "../components/quantum/PQLeaderboard";
+import { PQTopPrinters } from "../components/quantum/PQTopPrinters";
+import { PQCouponSource } from "../components/quantum/PQCouponSource";
+import { PQ_COUPON, getPendingCoupons, isOptedIn } from "../utils/pqCoupon";
 import { generateNativePQAccount, nativePQFee } from "../utils/pqNative";
 import {
   clearSession,
@@ -30,6 +34,8 @@ import {
 
 /** Receipts kept on screen; counters track the full run. */
 const TAPE_LENGTH = 300;
+/** Tape feed tick; each tick prints one line, or a few when the queue backs up. */
+const FEED_INTERVAL_MS = 45;
 const MIN_FEE = 1000;
 /** Bytes a Falcon-1024 public key adds to every PQ transaction. */
 const PQ_PUBLIC_KEY_BYTES = 1793;
@@ -72,10 +78,25 @@ export default function PQTxPrinter() {
   const [phase, setPhase] = useState<Phase>(session?.closed ? "done" : "idle");
   const [receipts, setReceipts] = useState<Receipt[]>([]);
   const [stats, setStats] = useState<Stats>(EMPTY_STATS);
+  /** Mainnet confirmations, fed to the leaderboard before its next server sync. */
+  const [liveBatches, setLiveBatches] = useState<LiveBatch[]>([]);
   const [refunded, setRefunded] = useState<number | null>(null);
+  /** PQPRINT earned by this printer and not yet claimed; null = not registered. */
+  const [coupons, setCoupons] = useState<number | null>(null);
+  /** Whether the refund wallet can receive PQPRINT; null = unknown / not applicable. */
+  const [optedIn, setOptedIn] = useState<boolean | null>(null);
+  const [couponsPaid, setCouponsPaid] = useState<number | null>(null);
+  const [holdersKey, setHoldersKey] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [now, setNow] = useState(Date.now());
 
+  /**
+   * Paper feed: submitted receipts queue here and are fed onto the tape at a
+   * steady pace, so it scrolls like a printer instead of jumping 16 at a time.
+   * Status updates for receipts still in the queue wait in `feedStatus`.
+   */
+  const feedQueue = useRef<Receipt[]>([]);
+  const feedStatus = useRef(new Map<string, Partial<Receipt>>());
   const abortRef = useRef<AbortController | null>(null);
   const sessionRef = useRef(session);
   const qrRef = useRef<HTMLCanvasElement>(null);
@@ -109,6 +130,28 @@ export default function PQTxPrinter() {
     return () => clearInterval(t);
   }, [session?.account.address, phase, refreshBalance]);
 
+  // ── Coupons: registration status and beneficiary opt-in ───────────────────
+  const couponDeployment = session?.coupons ? PQ_COUPON[session.network] : null;
+
+  useEffect(() => {
+    if (!session || !couponDeployment || session.closed) return setCoupons(null);
+    getPendingCoupons(getPrinterAlgod(session.network), couponDeployment, session.account.address)
+      .then(setCoupons)
+      .catch(() => {}); // node hiccup: keep the last known state
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session?.account.address, couponDeployment?.appId]);
+
+  const checkOptIn = useCallback(async () => {
+    const s = sessionRef.current;
+    const dep = s?.coupons ? PQ_COUPON[s.network] : null;
+    if (!s || !dep || !algosdk.isValidAddress(refundTo)) return setOptedIn(null);
+    setOptedIn(await isOptedIn(getPrinterAlgod(s.network), dep, refundTo));
+  }, [refundTo]);
+
+  useEffect(() => {
+    checkOptIn();
+  }, [checkOptIn, session?.coupons]);
+
   // Default the refund address to the connected wallet, or whoever funded the printer.
   useEffect(() => {
     if (!session || refundTo) return;
@@ -134,6 +177,19 @@ export default function PQTxPrinter() {
     const t = setInterval(() => setNow(Date.now()), 500);
     return () => clearInterval(t);
   }, [phase]);
+
+  // Feed the tape: drain faster when the queue is long, but always one line at a time feel.
+  useEffect(() => {
+    const t = setInterval(() => {
+      const queue = feedQueue.current;
+      if (!queue.length) return;
+      const batch = queue.splice(0, Math.max(1, Math.ceil(queue.length / 12)));
+      const lines = batch.map((r) => ({ ...r, ...feedStatus.current.get(r.txID) }));
+      for (const r of batch) feedStatus.current.delete(r.txID);
+      setReceipts((rs) => [...lines.reverse(), ...rs].slice(0, TAPE_LENGTH));
+    }, FEED_INTERVAL_MS);
+    return () => clearInterval(t);
+  }, []);
 
   // Stop the printer if the page unmounts mid-run.
   useEffect(() => () => abortRef.current?.abort(), []);
@@ -173,6 +229,7 @@ export default function PQTxPrinter() {
         refundTo: "",
         createdAt: Date.now(),
         nextSeq: 1,
+        coupons: PQ_COUPON[walletNetwork] !== null,
       };
       sessionRef.current = next;
       saveSession(next);
@@ -180,8 +237,11 @@ export default function PQTxPrinter() {
       setBalance(0);
       setRefundTo(activeAddress ?? "");
       setReceipts([]);
+      feedQueue.current = [];
+      feedStatus.current.clear();
       setStats(EMPTY_STATS);
       setRefunded(null);
+      setCouponsPaid(null);
       setError(null);
       setPhase("idle");
     } catch (err: any) {
@@ -209,13 +269,57 @@ export default function PQTxPrinter() {
         note: new TextEncoder().encode("wen.tools PQ printer · load paper"),
         suggestedParams: sp,
       });
+      const group = [txn];
+      // Coupons go to the funding wallet by default: bundle its PQPRINT opt-in so it's one signature.
+      const beneficiary = refundTo || activeAddress;
+      if (couponDeployment && beneficiary === activeAddress && optedIn !== true) {
+        const wantsOptIn = !(await isOptedIn(algod, couponDeployment, activeAddress));
+        if (wantsOptIn) {
+          group.push(
+            algosdk.makeAssetTransferTxnWithSuggestedParamsFromObject({
+              from: activeAddress,
+              to: activeAddress,
+              amount: 0,
+              assetIndex: couponDeployment.assetId,
+              suggestedParams: sp,
+            }),
+          );
+          algosdk.assignGroupID(group);
+        }
+      }
+      const signed = await signTransactions(group.map((t) => algosdk.encodeUnsignedTransaction(t)));
+      if (signed.some((s) => !s)) throw new Error("Signing cancelled");
+      await algod.sendRawTransaction(signed as Uint8Array[]).do();
+      await algosdk.waitForConfirmation(algod, txn.txID().toString(), 10);
+      toast.success(`Loaded ${fundAmount} ALGO into the printer`);
+      if (!refundTo) setRefundTo(activeAddress);
+      await Promise.all([refreshBalance(), checkOptIn()]);
+    } catch (err: any) {
+      toast.error(err?.message ?? String(err));
+    } finally {
+      setFunding(false);
+    }
+  };
+
+  const handleOptIn = async () => {
+    if (!session || !couponDeployment || !activeAddress) return;
+    setFunding(true);
+    try {
+      const algod = getPrinterAlgod(session.network);
+      const sp = await algod.getTransactionParams().do();
+      const txn = algosdk.makeAssetTransferTxnWithSuggestedParamsFromObject({
+        from: activeAddress,
+        to: activeAddress,
+        amount: 0,
+        assetIndex: couponDeployment.assetId,
+        suggestedParams: sp,
+      });
       const [signed] = await signTransactions([algosdk.encodeUnsignedTransaction(txn)]);
       if (!signed) throw new Error("Signing cancelled");
       await algod.sendRawTransaction(signed).do();
       await algosdk.waitForConfirmation(algod, txn.txID().toString(), 10);
-      toast.success(`Loaded ${fundAmount} ALGO into the printer`);
-      if (!refundTo) setRefundTo(activeAddress);
-      await refreshBalance();
+      toast.success("Opted in to PQPRINT");
+      await checkOptIn();
     } catch (err: any) {
       toast.error(err?.message ?? String(err));
     } finally {
@@ -226,6 +330,10 @@ export default function PQTxPrinter() {
   const handlePrint = async () => {
     const s = sessionRef.current;
     if (!s) return;
+    if (couponDeployment && coupons === null && optedIn !== true) {
+      toast.error("Opt the refund wallet in to PQPRINT first, or turn coupons off.");
+      return;
+    }
     if (!algosdk.isValidAddress(refundTo)) {
       toast.error("Enter a valid refund address for the leftover minimum balance.");
       return;
@@ -244,14 +352,16 @@ export default function PQTxPrinter() {
 
     const markReceipts = (ids: string[], patch: Partial<Receipt>) => {
       const set = new Set(ids);
+      // Receipts still waiting in the feed pick the update up when they're printed.
+      for (const r of feedQueue.current) if (set.has(r.txID)) feedStatus.current.set(r.txID, patch);
       setReceipts((rs) => rs.map((r) => (set.has(r.txID) ? { ...r, ...patch } : r)));
     };
 
     try {
       const result = await runPrinter(sessionRef.current!, controller.signal, {
         onSubmitted: (batch) => {
-          if (batch.some((r) => r.close)) setPhase("closing");
-          setReceipts((rs) => [...[...batch].reverse(), ...rs].slice(0, TAPE_LENGTH));
+          if (batch.some((r) => r.kind === "close")) setPhase("closing");
+          feedQueue.current.push(...batch);
           setStats((st) => ({
             ...st,
             submitted: st.submitted + batch.length,
@@ -261,6 +371,9 @@ export default function PQTxPrinter() {
         onConfirmed: (ids, round) => {
           markReceipts(ids, { status: "confirmed", round });
           setStats((st) => ({ ...st, confirmed: st.confirmed + ids.length, lastRound: round }));
+          if (sessionRef.current?.network === "mainnet") {
+            setLiveBatches((bs) => [...bs, { round, count: ids.length }]);
+          }
         },
         onFailed: (ids, msg) => {
           markReceipts(ids, { status: "failed" });
@@ -269,11 +382,15 @@ export default function PQTxPrinter() {
         },
         onBalance: setBalance,
         onSeq: (nextSeq) => updateSession({ nextSeq }),
+        onCoupons: setCoupons,
       });
 
       if (result.closed) {
         updateSession({ closed: true });
         setRefunded(result.refunded ?? 0);
+        setCouponsPaid(result.coupons ?? null);
+        setCoupons(null);
+        setHoldersKey((k) => k + 1);
         setPhase("done");
         toast.success("Out of paper: printer closed out and refunded.");
       } else {
@@ -320,16 +437,29 @@ export default function PQTxPrinter() {
     setBalance(null);
     setRefundTo("");
     setReceipts([]);
+    feedQueue.current = [];
+    feedStatus.current.clear();
     setStats(EMPTY_STATS);
     setRefunded(null);
+    setCouponsPaid(null);
+    setCoupons(null);
     setError(null);
     setPhase("idle");
   };
 
   // ── Derived ───────────────────────────────────────────────────────────────
   const fee = nativePQFee(MIN_FEE);
-  const printsLeft = balance === null ? 0 : estimatePrints(balance, minBalance, MIN_FEE);
-  const fundPreview = estimatePrints(algosToMicroAlgos(fundAmount) || 0, 100_000, MIN_FEE);
+  const couponMode = couponDeployment ? { registered: coupons !== null } : undefined;
+  const printsLeft = balance === null ? 0 : estimatePrints(balance, minBalance, MIN_FEE, couponMode);
+  const fundPreview = estimatePrints(
+    algosToMicroAlgos(fundAmount) || 0,
+    100_000,
+    MIN_FEE,
+    couponDeployment ? { registered: false } : undefined,
+  );
+  /** The coupon board follows the header's network switch, like the rest of the site. */
+  const boardNetwork = walletNetwork;
+  const boardDeployment = PQ_COUPON[boardNetwork];
   const elapsed = stats.startedAt ? Math.max(1, (now - stats.startedAt) / 1000) : 0;
   const tps = elapsed ? stats.confirmed / elapsed : 0;
   const networkMismatch = !!session && session.network !== walletNetwork;
@@ -345,9 +475,11 @@ export default function PQTxPrinter() {
         value: `${((stats.sigBytes + stats.submitted * PQ_PUBLIC_KEY_BYTES) / 1024).toFixed(1)} KB`,
       },
       { label: "throughput", value: `${tps.toFixed(1)} tx/s` },
-      { label: "last round", value: stats.lastRound?.toLocaleString() ?? "–" },
+      coupons !== null
+        ? { label: "PQPRINT earned", value: coupons.toLocaleString() }
+        : { label: "last round", value: stats.lastRound?.toLocaleString() ?? "–" },
     ],
-    [stats, fee, tps],
+    [stats, fee, tps, coupons],
   );
 
   // ── Render ────────────────────────────────────────────────────────────────
@@ -365,14 +497,26 @@ export default function PQTxPrinter() {
         meta={["Falcon-1024", "native PQ accounts", "Algorand 5.0", "client-side"]}
       />
 
+      <div className="mb-6 w-full">
+        <PQLeaderboard liveBatches={liveBatches} feePerTx={fee} />
+      </div>
+
       <Callout label="how it works">
         Your browser generates a <strong className="text-white">Falcon-1024</strong> keypair and derives a
         native post-quantum Algorand address from it. No LogicSig and no padding transactions: since
         Algorand 5.0 the ledger verifies a lattice-based signature on every transaction directly. Each
-        print is a 0-ALGO self-payment costing{" "}
+        print is a 0-ALGO transaction costing{" "}
         <strong className="text-primary-yellow">{microAlgosToAlgos(fee).replace(/0+$/, "")} ALGO</strong>{" "}
         (min fee + PQ surcharge). When the balance can't cover another one, the printer closes the
         account and refunds the 0.1 ALGO minimum balance.
+        {boardDeployment && (
+          <>
+            {" "}
+            With coupons on, each print is a call to the open-source PQCoupon contract and earns{" "}
+            <strong className="text-white">1 PQPRINT</strong>, paid to your wallet when the printer
+            closes out.
+          </>
+        )}
       </Callout>
 
       <div className="mt-3 w-full">
@@ -513,15 +657,62 @@ export default function PQTxPrinter() {
           {phase !== "done" && (
             <section className="mt-4 flex w-full flex-col gap-3 rounded-2xl border border-white/[0.07] bg-banner-grey/50 p-5">
               <label className="flex flex-col gap-1.5">
-                <span className="wt-label">( refund leftover min balance to )</span>
+                <span className="wt-label">
+                  {couponDeployment
+                    ? "( refund leftover ALGO + send PQPRINT to )"
+                    : "( refund leftover min balance to )"}
+                </span>
                 <input
                   value={refundTo}
                   onChange={(e) => setRefundTo(e.target.value.trim())}
-                  disabled={busy}
+                  // Registration binds the coupon beneficiary on-chain, so it can't change after.
+                  disabled={busy || coupons !== null}
                   placeholder="Algorand address"
-                  className="rounded-xl border border-white/10 bg-primary-black/40 px-3 py-2.5 font-mono text-xs outline-none focus:border-primary-orange/50"
+                  className="rounded-xl border border-white/10 bg-primary-black/40 px-3 py-2.5 font-mono text-xs outline-none focus:border-primary-orange/50 disabled:opacity-60"
                 />
               </label>
+
+              {PQ_COUPON[session.network] ? (
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-xl border border-white/[0.06] bg-primary-black/30 px-3 py-2.5 text-sm">
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={!!session.coupons}
+                      disabled={busy || coupons !== null}
+                      onChange={(e) => updateSession({ coupons: e.target.checked })}
+                      className="accent-[rgb(var(--brand))]"
+                    />
+                    <span>
+                      Earn <strong className="text-primary-yellow">PQPRINT</strong>: 1 coupon per print
+                    </span>
+                  </label>
+                  {couponDeployment &&
+                    (coupons !== null ? (
+                      <span className="font-mono text-xs text-emerald-400">registered · {coupons} earned</span>
+                    ) : optedIn === true ? (
+                      <span className="font-mono text-xs text-emerald-400">✓ wallet opted in</span>
+                    ) : optedIn === false ? (
+                      activeAddress === refundTo && !networkMismatch ? (
+                        <button
+                          onClick={handleOptIn}
+                          disabled={funding}
+                          className="rounded-lg border border-primary-orange/40 px-3 py-1 text-xs font-semibold text-primary-orange transition hover:bg-primary-orange/10 disabled:opacity-40"
+                        >
+                          Opt in to PQPRINT
+                        </button>
+                      ) : (
+                        <span className="text-xs text-amber-300">
+                          The refund wallet must opt in to PQPRINT ({couponDeployment.assetId}) first
+                        </span>
+                      )
+                    ) : null)}
+                  <span className="text-[11px] text-slate-500">
+                    Setup costs 2 PQ txns + a 0.0317 ALGO deposit, refunded at close-out.
+                  </span>
+                </div>
+              ) : (
+                <p className="text-xs text-slate-500">PQPRINT coupons aren't live on {session.network} yet.</p>
+              )}
               <div className="flex flex-wrap items-center gap-2">
                 {busy ? (
                   <>
@@ -542,7 +733,10 @@ export default function PQTxPrinter() {
                 ) : (
                   <button
                     onClick={handlePrint}
-                    disabled={printsLeft <= 0 && !(balance && balance > 0)}
+                    disabled={
+                      (printsLeft <= 0 && !(balance && balance > 0)) ||
+                      (!!couponDeployment && coupons === null && optedIn !== true)
+                    }
                     className="flex items-center gap-2 rounded-xl bg-primary-yellow px-6 py-3 font-bold text-black transition hover:bg-primary-orange disabled:cursor-not-allowed disabled:opacity-40"
                   >
                     <IoPlay /> {stats.submitted > 0 ? "Resume printing" : "Start printing"}
@@ -588,6 +782,12 @@ export default function PQTxPrinter() {
                   <span className="font-mono">{short(session.refundTo, 8)}</span>.
                 </p>
               )}
+              {couponsPaid !== null && (
+                <p className="text-sm text-slate-300">
+                  <strong className="text-primary-yellow">{couponsPaid.toLocaleString()} PQPRINT</strong>{" "}
+                  claimed to your wallet.
+                </p>
+              )}
               <button
                 onClick={handleDiscard}
                 className="mt-2 rounded-xl bg-primary-yellow px-6 py-3 font-bold text-black transition hover:bg-primary-orange"
@@ -631,7 +831,7 @@ export default function PQTxPrinter() {
                       rel="noopener noreferrer"
                       className="min-w-0 flex-1 truncate hover:underline"
                     >
-                      {r.close ? "CLOSE " : "0A PQ "}
+                      {r.kind === "close" ? "CLOSE " : r.kind === "register" ? "SETUP " : "0A PQ "}
                       {short(r.txID, 10)}
                     </a>
                     <span className="hidden shrink-0 text-neutral-500 sm:inline">sig {r.sigBytes}B</span>
@@ -652,6 +852,18 @@ export default function PQTxPrinter() {
             </section>
           )}
         </>
+      )}
+
+      {boardDeployment && (
+        <div className="mt-8 flex w-full flex-col gap-4">
+          <PQTopPrinters
+            network={boardNetwork}
+            deployment={boardDeployment}
+            highlight={refundTo || activeAddress || undefined}
+            refreshKey={holdersKey}
+          />
+          <PQCouponSource network={boardNetwork} deployment={boardDeployment} />
+        </div>
       )}
 
       <div className="mt-10 w-full space-y-1 border-t border-white/[0.06] pt-4 text-xs text-slate-600">
