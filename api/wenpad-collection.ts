@@ -15,7 +15,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return;
   }
 
-  const url = process.env.KV_URL || process.env.REDIS_URL || process.env.STORAGE_URL || "";
+  const url = process.env.wentools_REDIS_URL || process.env.KV_URL || process.env.REDIS_URL || process.env.STORAGE_URL || "";
 
   if (req.method === "GET") {
     const appId = req.query.appId as string;

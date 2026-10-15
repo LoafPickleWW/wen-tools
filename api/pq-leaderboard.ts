@@ -25,16 +25,19 @@ const QRL_CONFIRMATIONS = 10;
 const QRL_CHUNK = 90;
 const QRL_SLACK = 5;
 
-// One-time backfill snapshots (inclusive of the given height/round).
-// QRL: non-coinbase txns in blocks 1..4,380,664 (genesis allocations in block 0 excluded).
-const QRL_BASELINE = { height: 4_380_664, pqTxs: 1_968_668 };
-const ALGO_BASELINE = { round: 66_012_077, pqTxs: 1_602_448 };
+// Verified snapshots (inclusive of the given height/round). Without persistent storage,
+// a fresh instance restarts here, so keep these recent.
+// QRL: non-coinbase txns in blocks 1..height (genesis allocations in block 0 excluded);
+// full backfill to 4,380,664 = 1,968,668, advanced by the live counter since.
+const QRL_BASELINE = { height: 4_380_985, pqTxs: 1_968_700 };
+// Algorand: native pqsig txns since v42 activation (round 64,318,659), recounted independently.
+const ALGO_BASELINE = { round: 66_018_837, pqTxs: 1_796_849 };
 
 /** Per-request work budgets, to stay well within the function timeout. */
 const QRL_MAX_CHUNKS = 5; // × 90 blocks
 const ALGO_MAX_PAGES = 12; // × 1000 txns
 /** Round span per indexer query; the pqsig filter needs a bounded range to stay fast. */
-const ALGO_MAX_WINDOW = 100_000;
+const ALGO_MAX_WINDOW = 20_000;
 const REFRESH_MS = 30_000;
 /**
  * Hard wall-clock budget for catching up. Vercel kills the function at 10s, and a
@@ -264,7 +267,7 @@ function closeRedis(client: Redis) {
 
 /** Connect to Redis if configured and reachable, else null. Never hangs. */
 async function connectRedis(): Promise<Redis | null> {
-  const url = process.env.KV_URL || process.env.REDIS_URL || process.env.STORAGE_URL;
+  const url = process.env.wentools_REDIS_URL || process.env.KV_URL || process.env.REDIS_URL || process.env.STORAGE_URL;
   if (!url) return null;
   const client = createClient({
     url,

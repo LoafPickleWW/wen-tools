@@ -15,13 +15,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   res.setHeader('Access-Control-Allow-Headers', 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version');
 
   // Resolve the best available URL (redis:// or rediss://)
-  const url = process.env.KV_URL || process.env.REDIS_URL || process.env.STORAGE_URL || '';
+  const url = process.env.wentools_REDIS_URL || process.env.KV_URL || process.env.REDIS_URL || process.env.STORAGE_URL || '';
 
   if (!url) {
     return res.status(500).json({ 
       error: 'Redis Storage not detected in environment.',
       debug: { 
-        tip: 'Ensure REDIS_URL or KV_URL is set in your Vercel project.'
+        tip: 'Ensure wentools_REDIS_URL (or REDIS_URL / KV_URL) is set in your Vercel project.'
       }
     });
   }
