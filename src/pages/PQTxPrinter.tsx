@@ -18,7 +18,9 @@ import {
   fetchBalance,
   findFunder,
   getPrinterAlgod,
+  loadArchive,
   loadSession,
+  parseBackup,
   printDurationSeconds,
   PRINT_SPEEDS,
   runPrinter,
@@ -133,13 +135,43 @@ export default function PQTxPrinter() {
     }
   }, []);
 
+  // Keeps polling after close-out too: anyone can still send ALGO to the address.
   useEffect(() => {
     if (!session || phase === "printing" || phase === "closing") return;
     refreshBalance();
-    if (phase === "done") return;
     const t = setInterval(refreshBalance, 5000);
     return () => clearInterval(t);
   }, [session?.account.address, phase, refreshBalance]);
+
+  // With no current printer, look for archived ones that still hold funds.
+  const [fundedArchive, setFundedArchive] = useState<{ s: PrinterSession; amount: number }[]>([]);
+  useEffect(() => {
+    if (session) return;
+    let alive = true;
+    Promise.all(
+      loadArchive().map(async (s) => {
+        try {
+          return { s, amount: (await fetchBalance(s.network, s.account.address)).amount };
+        } catch {
+          return { s, amount: 0 };
+        }
+      }),
+    ).then((rows) => alive && setFundedArchive(rows.filter((r) => r.amount > 0)));
+    return () => {
+      alive = false;
+    };
+  }, [session]);
+
+  // A closed printer that receives ALGO is a live printer again.
+  useEffect(() => {
+    if (!session?.closed || phase === "printing" || phase === "closing" || !balance || balance <= 0) return;
+    updateSession({ closed: false });
+    setPhase("idle");
+    setRefunded(null);
+    setCouponsPaid(null);
+    setTotalPrinted(null);
+    toast.info(`This printer received ${microAlgosToAlgos(balance)} ALGO after closing. It's ready to print again.`);
+  }, [session?.closed, balance, phase, updateSession]);
 
   // ── Coupons: registration status and beneficiary opt-in ───────────────────
   const couponDeployment = session?.coupons ? PQ_COUPON[session.network] : null;
@@ -259,6 +291,33 @@ export default function PQTxPrinter() {
       toast.error(`Key generation failed: ${err?.message ?? err}`);
     } finally {
       setGenerating(false);
+    }
+  };
+
+  /** Make an archived or restored printer the current one, ready to print. */
+  const openPrinter = (s: PrinterSession) => {
+    const next: PrinterSession = { ...s, closed: false };
+    sessionRef.current = next;
+    saveSession(next);
+    setSession(next);
+    setRefundTo(next.refundTo);
+    setBalance(null);
+    setReceipts([]);
+    feedQueue.current = [];
+    feedStatus.current.clear();
+    setStats(EMPTY_STATS);
+    setRefunded(null);
+    setCouponsPaid(null);
+    setError(null);
+    setPhase("idle");
+  };
+
+  const handleRestore = async (file: File) => {
+    try {
+      openPrinter(parseBackup(await file.text()));
+      toast.success("Printer restored from backup");
+    } catch (err: any) {
+      toast.error(err?.message ?? "Couldn't read that backup file");
     }
   };
 
@@ -431,13 +490,20 @@ export default function PQTxPrinter() {
     URL.revokeObjectURL(url);
   };
 
-  const handleDiscard = () => {
+  const handleDiscard = async () => {
+    if (!session) return;
+    // Check the chain, not the last poll: funds may have arrived since.
+    let live = balance ?? 0;
+    try {
+      live = (await fetchBalance(session.network, session.account.address)).amount;
+    } catch {
+      // Can't confirm it's empty: treat it as funded.
+      live = Math.max(live, 1);
+    }
     if (
-      balance &&
-      balance > 0 &&
-      !session?.closed &&
+      live > 0 &&
       !window.confirm(
-        `This printer still holds ${microAlgosToAlgos(balance)} ALGO. Discarding the key loses those funds forever. Continue?`,
+        `This printer holds ${microAlgosToAlgos(live)} ALGO.\n\nIts key stays saved in this browser, and you can reopen it from "Printers with funds" on the next screen. Download a backup first if you might clear site data.\n\nSet it aside and install a new printer?`,
       )
     ) {
       return;
@@ -551,6 +617,35 @@ export default function PQTxPrinter() {
         </Callout>
       </div>
 
+      {!session && fundedArchive.length > 0 && (
+        <section className="mt-8 w-full rounded-2xl border border-primary-orange/30 bg-primary-orange/[0.05] p-5">
+          <span className="wt-label">( printers with funds )</span>
+          <p className="mt-1 text-sm text-slate-400">
+            These printers from this browser still hold ALGO. Reopen one to print it out or close it out to
+            your wallet.
+          </p>
+          <ul className="mt-3 flex flex-col gap-2">
+            {fundedArchive.map(({ s, amount }) => (
+              <li
+                key={s.account.address}
+                className="flex flex-wrap items-center gap-3 rounded-xl border border-white/[0.07] bg-primary-black/40 px-3 py-2"
+              >
+                <span className="min-w-0 flex-1 truncate font-mono text-xs text-slate-300">
+                  {short(s.account.address, 8)} · {s.network}
+                </span>
+                <span className="font-bold tabular-nums">{microAlgosToAlgos(amount)} A</span>
+                <button
+                  onClick={() => openPrinter(s)}
+                  className="rounded-lg bg-primary-yellow px-3 py-1.5 text-xs font-bold text-black transition hover:bg-primary-orange"
+                >
+                  Reopen
+                </button>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
       {!session ? (
         <section className="mt-8 flex w-full flex-col items-center gap-4 rounded-2xl border border-white/[0.07] bg-banner-grey/50 p-8 text-center backdrop-blur">
           <IoPrint className="text-5xl text-primary-orange" aria-hidden="true" />
@@ -567,6 +662,19 @@ export default function PQTxPrinter() {
           >
             {generating ? <TermSpinner /> : <>Generate PQ account</>}
           </button>
+          <label className="cursor-pointer text-xs text-slate-500 underline-offset-2 hover:text-primary-yellow hover:underline">
+            or restore a printer from a backup file
+            <input
+              type="file"
+              accept="application/json,.json"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) handleRestore(file);
+                e.target.value = "";
+              }}
+            />
+          </label>
         </section>
       ) : (
         <>
@@ -837,12 +945,24 @@ export default function PQTxPrinter() {
                   claimed to your wallet.
                 </p>
               )}
-              <button
-                onClick={handleDiscard}
-                className="mt-2 rounded-xl bg-primary-yellow px-6 py-3 font-bold text-black transition hover:bg-primary-orange"
-              >
-                Install a new printer
-              </button>
+              <p className="max-w-md text-xs text-slate-500">
+                Want more prints? Send ALGO to the printer address above. It reopens automatically while this
+                page is open, or the next time you visit in this browser.
+              </p>
+              <div className="mt-2 flex flex-wrap justify-center gap-2">
+                <button
+                  onClick={handleDiscard}
+                  className="rounded-xl bg-primary-yellow px-6 py-3 font-bold text-black transition hover:bg-primary-orange"
+                >
+                  Install a new printer
+                </button>
+                <button
+                  onClick={handleBackup}
+                  className="flex items-center gap-1.5 rounded-xl border border-white/10 px-4 py-3 text-sm text-slate-300 transition hover:bg-white/5"
+                >
+                  <IoDownload /> Backup key
+                </button>
+              </div>
             </section>
           )}
 

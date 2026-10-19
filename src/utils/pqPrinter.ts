@@ -10,7 +10,9 @@
  */
 
 import algosdk from "algosdk";
+import Falcon from "falcon-signatures";
 import {
+  deriveNativePQAddress,
   nativePQFee,
   signNativePQTransaction,
   type NativePQAccount,
@@ -125,14 +127,66 @@ export function saveSession(session: PrinterSession): void {
   } catch {
     // Storage blocked: the session still works for this tab.
   }
+  archiveSession(session);
 }
 
+/** Forget the *current* printer. Its key stays in the archive. */
 export function clearSession(): void {
   try {
     localStorage.removeItem(SESSION_KEY);
   } catch {
     // ignore
   }
+}
+
+// Every printer key ever used in this browser, by address. Never pruned
+// automatically: anyone can send ALGO to an old printer address at any time,
+// and only its key can move it.
+const ARCHIVE_KEY = "wentools-pq-printer-archive";
+
+export function loadArchive(): PrinterSession[] {
+  try {
+    const raw = localStorage.getItem(ARCHIVE_KEY);
+    return raw ? (JSON.parse(raw) as PrinterSession[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+function archiveSession(session: PrinterSession): void {
+  try {
+    const others = loadArchive().filter((s) => s.account.address !== session.account.address);
+    localStorage.setItem(ARCHIVE_KEY, JSON.stringify([session, ...others]));
+  } catch {
+    // Storage blocked or full: nothing more we can do here.
+  }
+}
+
+/**
+ * Parse a "Backup key" file back into a session. Re-derives the address from
+ * the public key so a corrupted or mismatched file is rejected.
+ */
+export function parseBackup(json: string): PrinterSession {
+  const data = JSON.parse(json);
+  const account = data?.account;
+  if (!account?.address || !account?.publicKey || !account?.secretKey) {
+    throw new Error("Not a PQ printer backup file.");
+  }
+  const { address, salt } = deriveNativePQAddress(Falcon.hexToBytes(account.publicKey));
+  if (address !== account.address || salt !== account.salt) {
+    throw new Error("Backup file is corrupted: its key doesn't match its address.");
+  }
+  return {
+    version: 1,
+    network: data.network === "testnet" ? "testnet" : "mainnet",
+    account: { address, salt, publicKey: account.publicKey, secretKey: account.secretKey },
+    refundTo: typeof data.refundTo === "string" ? data.refundTo : "",
+    createdAt: Number(data.createdAt) || Date.now(),
+    nextSeq: Number(data.nextSeq) || 1,
+    coupons: !!data.coupons,
+    speed: data.speed,
+    closed: false,
+  };
 }
 
 // ---------------------------------------------------------------------------
