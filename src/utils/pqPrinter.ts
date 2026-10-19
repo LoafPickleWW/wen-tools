@@ -42,6 +42,28 @@ export interface PrinterSession {
   closed?: boolean;
   /** Earn PQPRINT coupons (prints go through the PQCoupon app). */
   coupons?: boolean;
+  /** Print speed; defaults to fast. Can change mid-run. */
+  speed?: PrintSpeed;
+}
+
+export type PrintSpeed = "fast" | "medium" | "slow";
+
+/** Algorand's average block time, used to size groups so a slow printer spreads across blocks. */
+const BLOCK_SECONDS = 2.8;
+
+export const PRINT_SPEEDS: Record<
+  PrintSpeed,
+  { label: string; txPerSecond: number | null; blurb: string }
+> = {
+  fast: { label: "Fast", txPerSecond: null, blurb: "As fast as the network takes them" },
+  medium: { label: "Medium", txPerSecond: 45, blurb: "~45 tx/s · ~125 per block" },
+  slow: { label: "Slow", txPerSecond: 5, blurb: "~5 tx/s · ~14 per block" },
+};
+
+/** Seconds a balance lasts at a speed, or null for fast (bounded by the network, not a rate). */
+export function printDurationSeconds(prints: number, speed: PrintSpeed): number | null {
+  const rate = PRINT_SPEEDS[speed].txPerSecond;
+  return rate ? prints / rate : null;
 }
 
 export type ReceiptKind = "print" | "register" | "close";
@@ -278,13 +300,24 @@ export async function runPrinter(
   session: PrinterSession,
   signal: AbortSignal,
   cb: PrinterCallbacks,
+  /** Read before every batch, so the speed can change mid-run. */
+  getSpeed: () => PrintSpeed = () => session.speed ?? "fast",
 ): Promise<PrinterResult> {
   const pool = await SignerPool.create(session.account.secretKey);
   try {
-    return await printWith(session, signal, cb, pool.sign);
+    return await printWith(session, signal, cb, pool.sign, getSpeed);
   } finally {
     pool.terminate();
   }
+}
+
+/** Resolves after `ms`, or immediately if the run is stopped. */
+function sleep(ms: number, signal: AbortSignal): Promise<void> {
+  return new Promise((resolve) => {
+    if (ms <= 0 || signal.aborted) return resolve();
+    const t = setTimeout(resolve, ms);
+    signal.addEventListener("abort", () => (clearTimeout(t), resolve()), { once: true });
+  });
 }
 
 async function printWith(
@@ -292,6 +325,7 @@ async function printWith(
   signal: AbortSignal,
   cb: PrinterCallbacks,
   sign: MessageSigner,
+  getSpeed: () => PrintSpeed,
 ): Promise<PrinterResult> {
   const { network, account } = session;
   const algod = getPrinterAlgod(network);
@@ -370,6 +404,9 @@ async function printWith(
   let sp = await algod.getTransactionParams().do();
   let spFetchedAt = Date.now();
 
+  /** Earliest time the next throttled batch may go out. */
+  let nextBatchAt = 0;
+
   while (!signal.aborted && !fatal) {
     if (Date.now() - spFetchedAt > PARAMS_TTL_MS) {
       sp = await algod.getTransactionParams().do();
@@ -377,8 +414,13 @@ async function printWith(
     }
     const minFee = sp.minFee || 1000;
     const fee = nativePQFee(minFee);
+    // Throttled speeds send smaller groups (about one block's worth) on a schedule.
+    const rate = PRINT_SPEEDS[getSpeed()].txPerSecond;
+    const groupMax = rate
+      ? Math.max(1, Math.min(GROUP_SIZE, Math.round(rate * BLOCK_SECONDS)))
+      : GROUP_SIZE;
     const count = Math.min(
-      GROUP_SIZE,
+      groupMax,
       Math.floor((balance - minBalance - reserveFor(minFee)) / fee),
     );
 
@@ -424,6 +466,13 @@ async function printWith(
     );
     launch(signed, cost, Number(sp.lastRound));
 
+    if (rate) {
+      // Pace the next batch so this one's transactions are spread at `rate` per second.
+      nextBatchAt = Math.max(nextBatchAt, Date.now()) + (count / rate) * 1000;
+      await sleep(nextBatchAt - Date.now(), signal);
+    } else {
+      nextBatchAt = 0;
+    }
     if (inFlight.size >= MAX_IN_FLIGHT) await Promise.race(inFlight);
   }
 

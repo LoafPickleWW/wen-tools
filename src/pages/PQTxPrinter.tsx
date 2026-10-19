@@ -19,12 +19,23 @@ import {
   findFunder,
   getPrinterAlgod,
   loadSession,
+  printDurationSeconds,
+  PRINT_SPEEDS,
   runPrinter,
   saveSession,
   type PrinterNetwork,
   type PrinterSession,
+  type PrintSpeed,
   type Receipt,
 } from "../utils/pqPrinter";
+
+/** "~45 s", "~12 min", "~2 h 5 min" */
+function formatDuration(seconds: number): string {
+  if (seconds < 90) return `~${Math.max(1, Math.round(seconds))} s`;
+  const mins = Math.round(seconds / 60);
+  if (mins < 90) return `~${mins} min`;
+  return `~${Math.floor(mins / 60)} h ${mins % 60} min`;
+}
 import {
   getExplorerAddressUrl,
   getExplorerTxUrl,
@@ -383,7 +394,7 @@ export default function PQTxPrinter() {
         onBalance: setBalance,
         onSeq: (nextSeq) => updateSession({ nextSeq }),
         onCoupons: setCoupons,
-      });
+      }, () => sessionRef.current?.speed ?? "fast");
 
       if (result.closed) {
         updateSession({ closed: true });
@@ -713,6 +724,44 @@ export default function PQTxPrinter() {
               ) : (
                 <p className="text-xs text-slate-500">PQPRINT coupons aren't live on {session.network} yet.</p>
               )}
+              <div className="flex flex-col gap-1.5">
+                <span className="wt-label">( print speed )</span>
+                <div role="radiogroup" aria-label="Print speed" className="grid grid-cols-3 gap-1 rounded-xl border border-white/10 bg-primary-black/40 p-1">
+                  {(Object.keys(PRINT_SPEEDS) as PrintSpeed[]).map((s) => {
+                    const on = (session.speed ?? "fast") === s;
+                    // Before funding, estimate from the amount about to be loaded.
+                    const speedPrints = printsLeft > 0 ? printsLeft : fundPreview;
+                    const secs = printDurationSeconds(speedPrints, s);
+                    return (
+                      <button
+                        key={s}
+                        type="button"
+                        role="radio"
+                        aria-checked={on}
+                        onClick={() => updateSession({ speed: s })}
+                        className={`flex flex-col items-center rounded-lg px-2 py-2 text-center transition ${
+                          on
+                            ? "bg-banner-grey text-white shadow-[inset_0_0_0_1px_rgb(var(--brand)/0.35)]"
+                            : "text-slate-400 hover:bg-white/[0.03] hover:text-white"
+                        }`}
+                      >
+                        <span className={`text-sm font-semibold ${on ? "text-primary-orange" : ""}`}>
+                          {PRINT_SPEEDS[s].label}
+                        </span>
+                        <span className="font-mono text-[10px] text-slate-500">{PRINT_SPEEDS[s].blurb}</span>
+                        {speedPrints > 0 && (
+                          <span className="mt-0.5 font-mono text-[10px] text-slate-400">
+                            {secs === null ? "finishes fastest" : `lasts ${formatDuration(secs)}`}
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+                {busy && (
+                  <span className="text-[11px] text-slate-500">You can change speed while printing.</span>
+                )}
+              </div>
               <div className="flex flex-wrap items-center gap-2">
                 {busy ? (
                   <>
