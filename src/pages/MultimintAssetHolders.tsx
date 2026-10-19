@@ -10,6 +10,7 @@ import {
   getParticipationStatusOfWallet,
 } from "../utils";
 import { useWallet } from "@txnlab/use-wallet-react";
+import { useAppNetwork } from "../hooks/useAppNetwork";
 import ConnectButton from "../components/ConnectButton";
 
 export function MultimintAssetHolders() {
@@ -23,7 +24,8 @@ export function MultimintAssetHolders() {
   const [checkVerifiedOnly, setCheckVerifiedOnly] = useState(false);
   const [checkRunningNode, setCheckRunningNode] = useState(false);
   const [checkRandSupport, setCheckRandSupport] = useState(false);
-  const { activeNetwork, algodClient } = useWallet();
+  const { algodClient } = useWallet();
+  const { activeNetwork } = useAppNetwork();
   const [headers, setHeaders] = useState([] as string[]);
 
   async function getAssetOwners(asset_id: number) {

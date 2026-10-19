@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useWallet } from "@txnlab/use-wallet-react";
+import { useAppNetwork } from "../hooks/useAppNetwork";
 import { toast } from "react-toastify";
 
 import { Meta } from "../components/Meta";
@@ -33,7 +34,8 @@ import { walletSign } from "../utils";
 
 export default function WalletAssetDetail() {
   const { assetId } = useParams<{ assetId: string }>();
-  const { activeAddress, algodClient, activeNetwork, transactionSigner } = useWallet();
+  const { activeAddress, algodClient, transactionSigner } = useWallet();
+  const { activeNetwork } = useAppNetwork();
 
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [assetData, setAssetData] = useState<SingleAssetDataResponse>();

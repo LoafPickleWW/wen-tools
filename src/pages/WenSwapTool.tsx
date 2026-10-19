@@ -232,7 +232,7 @@ function ClaimView({ txIds }: { txIds: string[] }) {
         const params = await algod.getTransactionParams().do();
         const optTxns = optinsNeeded.map(id =>
           algosdk.makeAssetTransferTxnWithSuggestedParamsFromObject({
-            from: activeAddress, to: activeAddress, amount: 0, assetIndex: id, suggestedParams: params,
+            sender: activeAddress, receiver: activeAddress, amount: 0, assetIndex: id, suggestedParams: params,
           })
         );
         if (optTxns.length > 1) { const gid = algosdk.computeGroupID(optTxns); optTxns.forEach(t => { t.group = gid; }); }

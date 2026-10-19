@@ -17,6 +17,7 @@ import { isValidAddress } from "algosdk";
 import React, { useState } from "react";
 import { toast } from "react-toastify";
 import { useWallet } from "@txnlab/use-wallet-react";
+import { useAppNetwork } from "../../hooks/useAppNetwork";
 import {
   createAssetTransferTransactions,
   getAssetData,
@@ -38,7 +39,8 @@ const AssetTransferDialog: React.FC<AssetTransferDialogProps> = ({
   open,
   onClose,
 }) => {
-  const { activeAddress, activeWallet, algodClient, transactionSigner, activeNetwork } = useWallet();
+  const { activeAddress, activeWallet, algodClient, transactionSigner } = useWallet();
+  const { activeNetwork } = useAppNetwork();
   const toolState = useWalletToolStore((s) => s);
   const [amount, setAmount] = useState("1");
   const [receiver, setReceiver] = useState("");

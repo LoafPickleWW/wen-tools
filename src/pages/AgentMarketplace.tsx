@@ -1,6 +1,7 @@
 import { ToolHero } from "../components/cypher/ToolKit";
 import { useState, useEffect, useCallback } from "react";
 import { useWallet, NetworkId } from "@txnlab/use-wallet-react";
+import { useAppNetwork } from "../hooks/useAppNetwork";
 import { useAtom } from "jotai";
 import { IoSparkles, IoAdd, IoGlobe, IoShieldCheckmark } from "react-icons/io5";
 import { toast } from "react-toastify";
@@ -23,7 +24,8 @@ import type { AgentListing } from "../types/agent";
 import { trackEvent } from "../utils";
 
 export default function AgentMarketplace() {
-  const { activeAddress, signTransactions, algodClient, activeNetwork } = useWallet();
+  const { activeAddress, signTransactions, algodClient } = useWallet();
+  const { activeNetwork } = useAppNetwork();
   const [listings, setListings] = useAtom(agentListingsAtom);
   const [loading, setLoading] = useAtom(agentListingsLoadingAtom);
 

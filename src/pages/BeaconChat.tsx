@@ -350,8 +350,8 @@ export function BeaconChat() {
 
     // 2. Standard, Rekeyed, or Native Consensus v42 PQSIG account
     const authTxn = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
-      from: activeAddress,
-      to: activeAddress,
+      sender: activeAddress,
+      receiver: activeAddress,
       amount: 0,
       note: new TextEncoder().encode(BEACON_DOMAIN_NOTE),
       suggestedParams: {
@@ -389,13 +389,13 @@ export function BeaconChat() {
 
     if (!signTransactions) throw new Error("Wallet not connected");
     const params = await algodClient.getTransactionParams().do();
-    const minFee = Math.max(params.minFee || 1000, params.fee || 1000, 3000);
+    const minFee = Math.max(Number(params.minFee || 1000), Number(params.fee || 1000), 3000);
 
     const txns = txnsParams.map((p) => {
       const noteBytes = typeof p.note === "string" ? new TextEncoder().encode(p.note) : p.note;
       return algosdk.makePaymentTxnWithSuggestedParamsFromObject({
-        from: activeAddress,
-        to: p.receiver,
+        sender: activeAddress,
+        receiver: p.receiver,
         amount: p.amount,
         note: noteBytes,
         suggestedParams: { ...params, fee: minFee, flatFee: true },
@@ -411,7 +411,7 @@ export function BeaconChat() {
     if (!signed || signed.some((s) => !s)) throw new Error("Cancelled transaction");
 
     if (signed.length === 1) {
-      const { txId } = await algodClient.sendRawTransaction(signed[0]!).do();
+      const { txid: txId } = await algodClient.sendRawTransaction(signed[0]!).do();
       return [txId];
     } else {
       await algodClient.sendRawTransaction(signed as Uint8Array[]).do();

@@ -15,11 +15,13 @@ import { useState, useEffect } from "react";
 import { FaCopy, FaHeart, FaChevronDown } from "react-icons/fa";
 import { toast } from "react-toastify";
 import { useWallet } from "@txnlab/use-wallet-react";
+import { useAppNetwork } from "../hooks/useAppNetwork";
 import algosdk from "algosdk";
 
 const DonationDialog = () => {
   const [open, setOpen] = useState(false);
-  const { activeAddress, algodClient, transactionSigner, activeNetwork } = useWallet();
+  const { activeAddress, algodClient, transactionSigner } = useWallet();
+  const { activeNetwork } = useAppNetwork();
 
   const [donateAmount, setDonateAmount] = useState<string>("10");
   const [assetType, setAssetType] = useState<"ALGO" | "USDC">("ALGO");
@@ -34,12 +36,12 @@ const DonationDialog = () => {
       const queryClient = new algosdk.Algodv2("", nodeUrl, "");
 
       queryClient.accountInformation(activeAddress).do()
-        .then((res: any) => {
-          const assets = res["assets"] || [];
-          const usdcAsset = assets.find((a: any) => a["asset-id"] === usdcId);
+        .then((res) => {
+          const assets = res.assets || [];
+          const usdcAsset = assets.find((a) => Number(a.assetId) === usdcId);
           if (usdcAsset) {
             setIsOptedInUSDC(true);
-            const usdcBalance = usdcAsset["amount"] || 0;
+            const usdcBalance = Number(usdcAsset.amount || 0);
             if (usdcBalance >= 1_000_000) {
               setAssetType("USDC");
             } else {
@@ -102,16 +104,16 @@ const DonationDialog = () => {
       const donationAddress = "RBZ4GUE7FFDZWCN532FFR5AIYJ6K4V2GKJS5B42JPSWOAVWUT4OHWG57YQ";
       if (assetType === "ALGO") {
         txn = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
-          from: activeAddress,
-          to: donationAddress,
+          sender: activeAddress,
+          receiver: donationAddress,
           amount: Math.round(amountNum * 1_000_000), // microAlgos
           suggestedParams: params,
         });
       } else {
         const usdcId = 31566704;
         txn = algosdk.makeAssetTransferTxnWithSuggestedParamsFromObject({
-          from: activeAddress,
-          to: donationAddress,
+          sender: activeAddress,
+          receiver: donationAddress,
           assetIndex: usdcId,
           amount: Math.round(amountNum * 1_000_000), // USDC has 6 decimals
           suggestedParams: params,

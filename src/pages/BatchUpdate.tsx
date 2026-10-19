@@ -5,6 +5,7 @@ import algosdk from "algosdk";
 import Papa from "papaparse";
 import { toast } from "react-toastify";
 import { useWallet } from "@txnlab/use-wallet-react";
+import { useAppNetwork } from "../hooks/useAppNetwork";
 import {
   createAssetConfigArray,
   updateARC19AssetMintArray,
@@ -38,7 +39,8 @@ export function BatchUpdate() {
   const [txSendingInProgress, setTxSendingInProgress] = useState(false);
   const [isLedger, setIsLedger] = useState(false);
 
-  const { activeAddress, activeNetwork, algodClient, transactionSigner, activeWallet } = useWallet();
+  const { activeAddress, algodClient, transactionSigner, activeWallet } = useWallet();
+  const { activeNetwork } = useAppNetwork();
 
   const handleReset = () => {
     setCsvData(null);
@@ -113,7 +115,7 @@ export function BatchUpdate() {
 
       // Check balance
       const accountInfo = await algodClient.accountInformation(activeAddress).exclude("all").do();
-      const minBalance = accountInfo.amount - accountInfo["min-balance"] / 10 ** 6;
+      const minBalance = Number(accountInfo.amount) - Number(accountInfo.minBalance) / 10 ** 6;
       // fee per asset update is 0.001 (tx fee) + 0.05 (site fee) + 0.001 (payment tx fee) = 0.052 ALGO
       const estimatedCost = 0.052 * data.length;
 
@@ -241,15 +243,15 @@ export function BatchUpdate() {
           let paymentTxn;
           if (assetId === 0) {
             paymentTxn = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
-              from: activeAddress,
-              to: requirements.payTo,
+              sender: activeAddress,
+              receiver: requirements.payTo,
               amount: amountMicro,
               suggestedParams: params,
             });
           } else {
             paymentTxn = algosdk.makeAssetTransferTxnWithSuggestedParamsFromObject({
-              from: activeAddress,
-              to: requirements.payTo,
+              sender: activeAddress,
+              receiver: requirements.payTo,
               amount: amountMicro,
               assetIndex: assetId,
               suggestedParams: params,
@@ -318,7 +320,7 @@ export function BatchUpdate() {
             const { reserveAddress } = (await import("../utils")).createReserveAddressFromIpfsCid(cid);
             
             const update_tx = algosdk.makeAssetConfigTxnWithSuggestedParamsFromObject({
-              from: activeAddress,
+              sender: activeAddress,
               assetIndex: parseInt(data_for_txns[i].asset_id),
               note: new TextEncoder().encode(JSON.stringify(data_for_txns[i].ipfs_data)),
               manager: activeAddress,
@@ -330,8 +332,8 @@ export function BatchUpdate() {
             });
 
             const fee_tx = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
-              from: activeAddress,
-              to: "WEN7BTVZXXGTYZXZ4LFWUUTN5YVUM3242Z26GOKOIKG4FUKQUTHTV74KSE",
+              sender: activeAddress,
+              receiver: "WEN7BTVZXXGTYZXZ4LFWUUTN5YVUM3242Z26GOKOIKG4FUKQUTHTV74KSE",
               amount: algosdk.algosToMicroalgos(0.05),
               suggestedParams: params,
               note: new TextEncoder().encode("via wen.tools - free tools for creators and collectors"),

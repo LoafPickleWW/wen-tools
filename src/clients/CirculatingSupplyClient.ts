@@ -4,7 +4,8 @@
  * DO NOT MODIFY IT BY HAND.
  * requires: @algorandfoundation/algokit-utils: ^7
  */
-import { AlgorandClientInterface } from '@algorandfoundation/algokit-utils/types/algorand-client-interface'
+// algokit-utils v9 removed AlgorandClientInterface; AlgorandClient is the concrete equivalent
+import type { AlgorandClient as AlgorandClientInterface } from '@algorandfoundation/algokit-utils/types/algorand-client'
 // @ts-ignore
 import { ABIReturn, AppReturn, SendAppTransactionResult } from '@algorandfoundation/algokit-utils/types/app'
 // @ts-ignore

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useWallet } from "@txnlab/use-wallet-react";
+import { useAppNetwork } from "../../hooks/useAppNetwork";
 import { GraphNode } from "../../types/analytics";
 import { MdContentCopy, MdOutlineOpenInNew, MdZoomOutMap } from "react-icons/md";
 import { toast } from "react-toastify";
@@ -12,7 +12,7 @@ interface NodeInspectorProps {
 }
 
 export function NodeInspector({ node, onExpand, onClose, loading }: NodeInspectorProps) {
-  const { activeNetwork } = useWallet();
+  const { activeNetwork } = useAppNetwork();
   const [expanding, setExpanding] = useState(false);
 
   if (!node) return null;

@@ -279,8 +279,8 @@ export async function getFactoryStats(network: SaleNetwork, factoryId: number) {
   if (!factoryId) return { totalSales: 0, totalVolume: 0 };
   const app = await getAlgod(network).getApplicationByID(factoryId).do();
   const kv: Record<string, number> = {};
-  for (const entry of app.params["global-state"] || []) {
-    kv[new TextDecoder().decode(Buffer.from(entry.key, "base64"))] = entry.value.uint;
+  for (const entry of app.params?.globalState ?? []) {
+    kv[new TextDecoder().decode(entry.key)] = Number(entry.value.uint);
   }
   return { totalSales: kv.total_sales ?? 0, totalVolume: kv.total_volume ?? 0 };
 }
@@ -313,9 +313,9 @@ export async function getSaleByApp(
 export async function getSaleState(network: SaleNetwork, appId: number): Promise<SaleState> {
   const app = await getAlgod(network).getApplicationByID(appId).do();
   const kv: Record<string, number | Uint8Array> = {};
-  for (const entry of app.params["global-state"] || []) {
-    const key = new TextDecoder().decode(Buffer.from(entry.key, "base64"));
-    kv[key] = entry.value.type === 1 ? new Uint8Array(Buffer.from(entry.value.bytes, "base64")) : entry.value.uint;
+  for (const entry of app.params?.globalState ?? []) {
+    const key = new TextDecoder().decode(entry.key);
+    kv[key] = entry.value.type === 1 ? entry.value.bytes : Number(entry.value.uint);
   }
   const n = (k: string) => (typeof kv[k] === "number" ? (kv[k] as number) : 0);
   const a = (k: string) => (kv[k] instanceof Uint8Array ? algosdk.encodeAddress(kv[k] as Uint8Array) : "");
@@ -487,7 +487,7 @@ export async function findRevealForCommit(
 export async function holdsAsset(network: SaleNetwork, account: string, assetId: number): Promise<boolean> {
   try {
     const info = await getAlgod(network).accountAssetInformation(account, assetId).do();
-    return Number(info["asset-holding"]?.amount || 0) > 0;
+    return Number(info.assetHolding?.amount || 0) > 0;
   } catch {
     return false;
   }
@@ -538,7 +538,7 @@ const countInner = (r: any): number =>
 
 function opUpTxn(sender: string, appId: number, sp: algosdk.SuggestedParams, i: number) {
   return algosdk.makeApplicationNoOpTxnFromObject({
-    from: sender,
+    sender: sender,
     appIndex: appId,
     appArgs: [M.opUp.getSelector()],
     note: new TextEncoder().encode(`opup-${i}`),
@@ -572,7 +572,7 @@ export async function finalizeGroup(
       ...txns.map(cloneTxn),
     ];
     // Generous temporary fees so simulate never fails on fees
-    for (const t of base) t.fee = isAppCall(t) ? minFee * 30 : minFee;
+    for (const t of base) t.fee = BigInt(isAppCall(t) ? minFee * 30 : minFee);
 
     const atc = new algosdk.AtomicTransactionComposer();
     base.forEach((txn) => atc.addTransaction({ txn, signer: emptySigner }));
@@ -616,7 +616,7 @@ export async function finalizeGroup(
     }
 
     built.forEach((t, i) => {
-      t.fee = isAppCall(t) ? minFee * (1 + countInner(group.txnResults[i].txnResult)) : minFee;
+      t.fee = BigInt(isAppCall(t) ? minFee * (1 + countInner(group.txnResults[i].txnResult)) : minFee);
       // simulate() ran buildGroup() on these same objects; clear that group before recomputing
       t.group = undefined;
     });
@@ -658,8 +658,8 @@ function methodCall(
   });
 }
 
-const payTxn = (from: string, to: string, amount: number, sp: algosdk.SuggestedParams) =>
-  algosdk.makePaymentTxnWithSuggestedParamsFromObject({ from, to, amount, suggestedParams: sp });
+const payTxn = (from: string, to: string | algosdk.Address, amount: number, sp: algosdk.SuggestedParams) =>
+  algosdk.makePaymentTxnWithSuggestedParamsFromObject({ sender: from, receiver: to, amount, suggestedParams: sp });
 
 // ─── Builders: creator ───────────────────────────────────────────────────────
 
@@ -710,11 +710,11 @@ export async function buildCreateSale(
 export const isStaleBoxReference = (err: unknown) => /invalid Box reference/i.test(String((err as any)?.message || err));
 
 /** Read the new sale's ID (ABI return) and app ID (first inner txn) from the confirmed createSale call. */
-export function parseCreateSaleResult(confirmation: any): { saleId: number; appId: number } {
+export function parseCreateSaleResult(confirmation: algosdk.modelsv2.PendingTransactionResponse): { saleId: number; appId: number } {
   const logs: Uint8Array[] = confirmation.logs || [];
   const ret = logs[logs.length - 1];
   const saleId = num(algosdk.decodeUint64(ret.slice(4), "bigint"));
-  const appId = Number(confirmation["inner-txns"]?.[0]?.["application-index"] || 0);
+  const appId = Number(confirmation.innerTxns?.[0]?.applicationIndex || 0);
   if (!appId) throw new Error("Sale app ID not found in confirmation");
   return { saleId, appId };
 }
@@ -762,8 +762,8 @@ export async function buildRegister(network: SaleNetwork, distribution: string, 
   const algod = getAlgod(network);
   const sp = await algod.getTransactionParams().do();
   const rekey = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
-    from: distribution,
-    to: distribution,
+    sender: distribution,
+    receiver: distribution,
     amount: 0,
     rekeyTo: algosdk.getApplicationAddress(appId),
     suggestedParams: sp,
@@ -914,12 +914,12 @@ export async function buildCommit(network: SaleNetwork, buyer: string, state: Sa
 }
 
 /** commitId (ABI return) and target round from a confirmed commit call. */
-export function parseCommitResult(confirmation: any): { commitId: number; targetRound: number } {
+export function parseCommitResult(confirmation: algosdk.modelsv2.PendingTransactionResponse): { commitId: number; targetRound: number } {
   const logs: Uint8Array[] = confirmation.logs || [];
   const ret = logs[logs.length - 1];
   return {
     commitId: num(algosdk.decodeUint64(ret.slice(4), "bigint")),
-    targetRound: Number(confirmation["confirmed-round"]) + 1,
+    targetRound: Number(confirmation.confirmedRound) + 1,
   };
 }
 
@@ -933,7 +933,7 @@ const REVEAL_VALIDITY_ROUNDS = 10;
 export async function buildReveal(network: SaleNetwork, caller: string, appId: number, commitId: number) {
   const algod = getAlgod(network);
   const sp = await algod.getTransactionParams().do();
-  sp.lastRound = sp.firstRound + REVEAL_VALIDITY_ROUNDS;
+  sp.lastValid = BigInt(sp.firstValid) + BigInt(REVEAL_VALIDITY_ROUNDS);
   return finalizeGroup(algod, methodCall(appId, M.reveal, caller, sp, [commitId]), { appId, sender: caller });
 }
 
@@ -955,8 +955,8 @@ export async function buildArc59Claim(network: SaleNetwork, receiver: string, as
   if (!optedIn) {
     txns.push(
       algosdk.makeAssetTransferTxnWithSuggestedParamsFromObject({
-        from: receiver,
-        to: receiver,
+        sender: receiver,
+        receiver: receiver,
         amount: 0,
         assetIndex: assetId,
         suggestedParams: sp,
@@ -1012,16 +1012,16 @@ export function buildQueueStep(network: SaleNetwork, caller: string, appId: numb
 export async function waitForRound(algod: algosdk.Algodv2, round: number, timeoutMs = 30_000) {
   const deadline = Date.now() + timeoutMs;
   let status = await algod.status().do();
-  while (Number(status["last-round"]) <= round) {
+  while (Number(status.lastRound) <= round) {
     if (Date.now() > deadline) throw new Error(`Timed out waiting for round ${round + 1}`);
-    status = await algod.statusAfterBlock(Number(status["last-round"])).do();
+    status = await algod.statusAfterBlock(Number(status.lastRound)).do();
   }
-  return Number(status["last-round"]);
+  return Number(status.lastRound);
 }
 
 export async function getCurrentRound(network: SaleNetwork) {
   const status = await getAlgod(network).status().do();
-  return Number(status["last-round"]);
+  return Number(status.lastRound);
 }
 
 export const roundToDate = (round: number, currentRound: number) =>

@@ -62,17 +62,17 @@ const MintedCleanup = ({ defaultUnitName, onDeleted }: Props) => {
     setStatus('scanning');
     setConfirmText('');
     try {
-      const acct: any = await algodClient.accountInformation(activeAccount.address).do();
+      const acct = await algodClient.accountInformation(activeAccount.address).do();
       const holdings = new Map<number, number>();
-      for (const h of acct.assets || []) holdings.set(Number(h['asset-id']), Number(h.amount));
+      for (const h of acct.assets || []) holdings.set(Number(h.assetId), Number(h.amount));
 
       const results: FoundAssetT[] = [];
-      for (const ca of acct['created-assets'] || []) {
-        const params = ca.params || {};
+      for (const ca of acct.createdAssets || []) {
+        const params = ca.params!;
         const name: string = (params.name || '').trim();
         const number = parseEditionNumber(name);
         if (number === null) continue;
-        if (unit && (params['unit-name'] || '').trim().toLowerCase() !== unit) continue;
+        if (unit && (params.unitName || '').trim().toLowerCase() !== unit) continue;
         if (prefix && !name.toLowerCase().startsWith(prefix)) continue;
 
         const id = Number(ca.index);
@@ -105,7 +105,7 @@ const MintedCleanup = ({ defaultUnitName, onDeleted }: Props) => {
       const params = await algodClient.getTransactionParams().do();
       const groups = toDelete.map((a) => [
         algosdk.makeAssetDestroyTxnWithSuggestedParamsFromObject({
-          from: activeAccount.address,
+          sender: activeAccount.address,
           assetIndex: a.id,
           suggestedParams: params,
         }),
@@ -129,7 +129,7 @@ const MintedCleanup = ({ defaultUnitName, onDeleted }: Props) => {
             txIds.push(chunks[i][j][0].txID());
           } catch (err) {
             failed++;
-            console.error(`Failed to delete asset ${chunks[i][j][0].assetIndex}:`, err);
+            console.error(`Failed to delete asset ${chunks[i][j][0].assetConfig?.assetIndex}:`, err);
           }
           // Gentle throttle to avoid RPC rate limiting, matching the mint flow.
           await new Promise((r) => setTimeout(r, 60));

@@ -1,0 +1,179 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`agentContract > builds create / update / deactivate / delete groups 1`] = `
+{
+  "create": [
+    {
+      "amt": "int:478700",
+      "fee": "int:1000",
+      "fv": "int:50000000",
+      "gen": "mainnet-v1.0",
+      "gh": "b64:wGHE2Pwdvd7S12BL5FaOP20EGYesN73ktiC1qzkkit8=",
+      "grp": "b64:HW5CbKI0NdaPQbXNt7YD+VrWIvGAcvjNowXOHX2LZds=",
+      "lv": "int:50001000",
+      "rcv": "addr:HEJML5AKX4CHC33E6HPR6EEN4TJ5VOTXA3GLXFWUA5JTRGHDFX6ZXNKKUA",
+      "snd": "addr:RKEOHXLUBHYZL7KS3MWTZOS5OLFGOCN7DWKBEG7TOSEADNAPN5OOTUNSLE",
+      "txID": "VFFYYRGDJG7RY74TOVFFOFI3ZSUHJ446C75TYLBIT6E77HW5HBWA",
+      "type": "pay",
+    },
+    {
+      "apaa": [
+        "b64:jd10ug==",
+        "b64:AAlXZW4gQWdlbnQ=",
+        "b64:AAtEb2VzIHRoaW5ncw==",
+        "b64:ABlodHRwczovL2FnZW50LmV4YW1wbGUvYXBp",
+        "b64:AAAAAAAD0JA=",
+        "b64:AARkYXRh",
+        "b64:ABVodHRwczovL2FnZW50LmV4YW1wbGU=",
+      ],
+      "apbx": [
+        {
+          "n": "b64:iojj3XQJ8ZX9UtstPLpdcspnCb8dlBIb83SIAbQPb1wAAAAAAAAACQ==",
+        },
+      ],
+      "apid": "int:3565950332",
+      "fee": "int:4000",
+      "fv": "int:50000000",
+      "gen": "mainnet-v1.0",
+      "gh": "b64:wGHE2Pwdvd7S12BL5FaOP20EGYesN73ktiC1qzkkit8=",
+      "grp": "b64:HW5CbKI0NdaPQbXNt7YD+VrWIvGAcvjNowXOHX2LZds=",
+      "lv": "int:50001000",
+      "snd": "addr:RKEOHXLUBHYZL7KS3MWTZOS5OLFGOCN7DWKBEG7TOSEADNAPN5OOTUNSLE",
+      "txID": "AW62D4EZENGGPMZ3COBTJUUTH2VKE6YTPIHM335PJSDRKSLAHDLQ",
+      "type": "appl",
+    },
+  ],
+  "deactivate": [
+    {
+      "apaa": [
+        "b64:8Bnwlw==",
+      ],
+      "apid": "int:4444",
+      "fee": "int:1000",
+      "fv": "int:50000000",
+      "gen": "mainnet-v1.0",
+      "gh": "b64:wGHE2Pwdvd7S12BL5FaOP20EGYesN73ktiC1qzkkit8=",
+      "lv": "int:50001000",
+      "snd": "addr:RKEOHXLUBHYZL7KS3MWTZOS5OLFGOCN7DWKBEG7TOSEADNAPN5OOTUNSLE",
+      "txID": "ZHJEIR6P2YCYRJIHES3K477D3SHDQAM6AGMWUTUWWVQEORVQWU4Q",
+      "type": "appl",
+    },
+  ],
+  "del": [
+    {
+      "apaa": [
+        "b64:WYjp0Q==",
+        "b64:AAAAAAAAAAk=",
+      ],
+      "apbx": [
+        {
+          "n": "b64:iojj3XQJ8ZX9UtstPLpdcspnCb8dlBIb83SIAbQPb1wAAAAAAAAACQ==",
+        },
+      ],
+      "apfa": [
+        "int:4444",
+      ],
+      "apid": "int:3565950332",
+      "fee": "int:4000",
+      "fv": "int:50000000",
+      "gen": "mainnet-v1.0",
+      "gh": "b64:wGHE2Pwdvd7S12BL5FaOP20EGYesN73ktiC1qzkkit8=",
+      "lv": "int:50001000",
+      "snd": "addr:RKEOHXLUBHYZL7KS3MWTZOS5OLFGOCN7DWKBEG7TOSEADNAPN5OOTUNSLE",
+      "txID": "WWGHBT7IGTHUIFVTIWFBJOFUVQCI7HXURIP4X67QAT4D5PURM2GQ",
+      "type": "appl",
+    },
+  ],
+  "update": [
+    {
+      "apaa": [
+        "b64:w8dNfQ==",
+        "b64:AAlXZW4gQWdlbnQ=",
+        "b64:AAtEb2VzIHRoaW5ncw==",
+        "b64:ABlodHRwczovL2FnZW50LmV4YW1wbGUvYXBp",
+        "b64:AAAAAAAD0JA=",
+        "b64:AARkYXRh",
+        "b64:ABVodHRwczovL2FnZW50LmV4YW1wbGU=",
+      ],
+      "apid": "int:4444",
+      "fee": "int:1000",
+      "fv": "int:50000000",
+      "gen": "mainnet-v1.0",
+      "gh": "b64:wGHE2Pwdvd7S12BL5FaOP20EGYesN73ktiC1qzkkit8=",
+      "lv": "int:50001000",
+      "snd": "addr:RKEOHXLUBHYZL7KS3MWTZOS5OLFGOCN7DWKBEG7TOSEADNAPN5OOTUNSLE",
+      "txID": "BHMXNWLGR3DNYF63TFOJBHDHLA3MKC6PKWIHF5ND7P4JKGHS75GA",
+      "type": "appl",
+    },
+  ],
+}
+`;
+
+exports[`agentContract > getAllListings decodes factory boxes and child global state 1`] = `
+[
+  {
+    "active": true,
+    "appId": 4444,
+    "category": "data",
+    "description": "Does things",
+    "endpointUrl": "https://agent.example/api",
+    "infoUrl": "",
+    "name": "Wen Agent",
+    "nonce": 3,
+    "pricePerCallAlgo": 0.25,
+    "walletAddress": "RKEOHXLUBHYZL7KS3MWTZOS5OLFGOCN7DWKBEG7TOSEADNAPN5OOTUNSLE",
+    "x402Compatible": false,
+  },
+]
+`;
+
+exports[`crust > builds pin order ATCs 1`] = `
+[
+  {
+    "fee": "int:8000",
+    "fv": "int:50000000",
+    "gen": "mainnet-v1.0",
+    "gh": "b64:wGHE2Pwdvd7S12BL5FaOP20EGYesN73ktiC1qzkkit8=",
+    "grp": "b64:u6V1g/cv3QgsL27D7dRyAKuPwd9cuGMuXlb6rE9Yws4=",
+    "lv": "int:50001000",
+    "note": "utf8:via wen.tools - free tools for creators and collectors | 4fzzzxjylrx",
+    "rcv": "addr:SLNGOJJFB3ERUUZUAAOVW6DWH3NKKQMGZWH26IBIU34EHM3AU24Y5VIH3E",
+    "snd": "addr:RKEOHXLUBHYZL7KS3MWTZOS5OLFGOCN7DWKBEG7TOSEADNAPN5OOTUNSLE",
+    "txID": "GHF73DBT2C75ZWXM6FNN76XHWV75JRJQY5JTCNYHCGC6EEIFYXXA",
+    "type": "pay",
+  },
+  {
+    "apaa": [
+      "b64:Go1qfw==",
+      "b64:AQ==",
+      "b64:AAhiYWZ5Y2lkMQ==",
+      "b64:AAAAAAAAJxA=",
+      "b64:gA==",
+    ],
+    "apat": [
+      "addr:QE4XODVIPULV6VVDKRTMGTD6ZTFY3CURWTXDPIS56YHVXD6JWOKORTLPBU",
+    ],
+    "apbx": [
+      {
+        "n": "b64:gTl3Dqh9F19Wo1Rmw0x+zMuNipG07jeiXfYPW4/Js5Q=",
+      },
+      {
+        "n": "utf8:nodes",
+      },
+    ],
+    "apid": "int:1275319623",
+    "fee": "int:8000",
+    "fv": "int:50000000",
+    "gen": "mainnet-v1.0",
+    "gh": "b64:wGHE2Pwdvd7S12BL5FaOP20EGYesN73ktiC1qzkkit8=",
+    "grp": "b64:u6V1g/cv3QgsL27D7dRyAKuPwd9cuGMuXlb6rE9Yws4=",
+    "lv": "int:50001000",
+    "note": "utf8:via wen.tools - free tools for creators and collectors | 4fzzzxjylrx",
+    "snd": "addr:RKEOHXLUBHYZL7KS3MWTZOS5OLFGOCN7DWKBEG7TOSEADNAPN5OOTUNSLE",
+    "txID": "IMY3X2SCT73ULZPWYB5HUF5BG7HCCBRH5HAOVHGBZGIZIZGNVVIA",
+    "type": "appl",
+  },
+]
+`;
+
+exports[`crust > reads price and node from on-chain state 1`] = `0`;

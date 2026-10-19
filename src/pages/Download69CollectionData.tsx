@@ -4,7 +4,7 @@ import { toast } from "react-toastify";
 import axios from "axios";
 import { Arc69, getIndexerURL } from "../utils";
 import { TOOLS } from "../constants";
-import { useWallet } from "@txnlab/use-wallet-react";
+import { useAppNetwork } from "../hooks/useAppNetwork";
 import ConnectButton from "../components/ConnectButton";
 import { Meta } from "../components/Meta";
 
@@ -13,7 +13,7 @@ export function Download69CollectionData() {
   const [collectionData, setCollectionData] = useState([] as any[]);
   const [loading, setLoading] = useState(false);
   const [counter, setCounter] = useState(0);
-  const { activeNetwork } = useWallet();
+  const { activeNetwork } = useAppNetwork();
 
   const arc69 = new Arc69();
 

@@ -216,7 +216,7 @@ export async function createAssetConfigArray(
   const txnsArray = [];
   for (let i = 0; i < data_for_txns.length; i++) {
     const asset_update_tx = makeAssetConfigTxnWithSuggestedParamsFromObject({
-      from: address,
+      sender: address,
       assetIndex: parseInt(data_for_txns[i].asset_id),
       note: new TextEncoder().encode(JSON.stringify(data_for_txns[i].note)),
       manager: address,
@@ -227,8 +227,8 @@ export async function createAssetConfigArray(
       strictEmptyAddressChecking: false,
     });
     const fee_tx = makePaymentTxnWithSuggestedParamsFromObject({
-      from: address,
-      to: MINT_FEE_WALLET,
+      sender: address,
+      receiver: MINT_FEE_WALLET,
       amount: algosToMicroalgos(UPDATE_FEE_PER_ASA),
       suggestedParams: params,
       note: new TextEncoder().encode(
@@ -268,7 +268,7 @@ export async function createAssetMintArrayV2(
         JSON.stringify(data_for_txns[i].asset_note)
       );
       const asset_create_tx = makeAssetCreateTxnWithSuggestedParamsFromObject({
-        from: address,
+        sender: address,
         manager: address,
         assetName: data_for_txns[i].asset_name,
         unitName: data_for_txns[i].unit_name,
@@ -286,8 +286,8 @@ export async function createAssetMintArrayV2(
       });
 
       const fee_tx = makePaymentTxnWithSuggestedParamsFromObject({
-        from: address,
-        to: MINT_FEE_WALLET,
+        sender: address,
+        receiver: MINT_FEE_WALLET,
         amount: algosToMicroalgos(MINT_FEE_PER_ASA),
         suggestedParams: params,
         note: new TextEncoder().encode(
@@ -301,8 +301,8 @@ export async function createAssetMintArrayV2(
 
       if (extraFee && extraFeeAddress) {
         const extra_fee_tx = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
-          from: address,
-          to: extraFeeAddress,
+          sender: address,
+          receiver: extraFeeAddress,
           amount: BigInt(extraFee),
           suggestedParams: params,
           note: new TextEncoder().encode("Extra fee via wen.tools integration"),
@@ -333,7 +333,7 @@ export async function createAssetMintArray(
         JSON.stringify(data_for_txns[i].asset_note)
       );
       const asset_create_tx = makeAssetCreateTxnWithSuggestedParamsFromObject({
-        from: address,
+        sender: address,
         manager: address,
         assetName: data_for_txns[i].asset_name,
         unitName: data_for_txns[i].unit_name,
@@ -351,8 +351,8 @@ export async function createAssetMintArray(
       });
 
       const fee_tx = makePaymentTxnWithSuggestedParamsFromObject({
-        from: address,
-        to: MINT_FEE_WALLET,
+        sender: address,
+        receiver: MINT_FEE_WALLET,
         amount: algosToMicroalgos(MINT_FEE_PER_ASA),
         suggestedParams: params,
         note: new TextEncoder().encode(
@@ -424,15 +424,15 @@ export async function createARC3AssetMintArrayV2(
         let paymentTxn;
         if (assetId === 0) {
           paymentTxn = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
-            from: address,
-            to: requirements.payTo,
+            sender: address,
+            receiver: requirements.payTo,
             amount: amountMicro,
             suggestedParams: params,
           });
         } else {
           paymentTxn = algosdk.makeAssetTransferTxnWithSuggestedParamsFromObject({
-            from: address,
-            to: requirements.payTo,
+            sender: address,
+            receiver: requirements.payTo,
             amount: amountMicro,
             assetIndex: assetId,
             suggestedParams: params,
@@ -462,7 +462,7 @@ export async function createARC3AssetMintArrayV2(
 
       const suggestedParams = await algodClient.getTransactionParams().do();
       suggestedParams.flatFee = true;
-      suggestedParams.fee = Math.max(suggestedParams.fee || 1000, suggestedParams.minFee || 1000, 1000); // standard network fee
+      suggestedParams.fee = BigInt(Math.max(Number(suggestedParams.fee || 1000), Number(suggestedParams.minFee || 1000), 1000)); // standard network fee
 
       // build ATC (no longer includes Crust pin txns)
       await buildAssetMintAtomicTransactionComposer(
@@ -481,8 +481,8 @@ export async function createARC3AssetMintArrayV2(
 
       if (extraFee && extraFeeAddress) {
         const extra_fee_tx = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
-          from: address,
-          to: extraFeeAddress,
+          sender: address,
+          receiver: extraFeeAddress,
           amount: BigInt(extraFee),
           suggestedParams: suggestedParams,
           note: new TextEncoder().encode("Extra fee via wen.tools integration"),
@@ -560,15 +560,15 @@ export async function createARC3AssetMintArrayV2Batch(
         let paymentTxn;
         if (assetId === 0) {
           paymentTxn = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
-            from: address,
-            to: requirements.payTo,
+            sender: address,
+            receiver: requirements.payTo,
             amount: amountMicro,
             suggestedParams: params,
           });
         } else {
           paymentTxn = algosdk.makeAssetTransferTxnWithSuggestedParamsFromObject({
-            from: address,
-            to: requirements.payTo,
+            sender: address,
+            receiver: requirements.payTo,
             amount: amountMicro,
             assetIndex: assetId,
             suggestedParams: params,
@@ -599,7 +599,7 @@ export async function createARC3AssetMintArrayV2Batch(
 
       const suggestedParams = await algodClient.getTransactionParams().do();
       suggestedParams.flatFee = true;
-      suggestedParams.fee = Math.max(suggestedParams.fee || 1000, suggestedParams.minFee || 1000, 1000); // standard network fee
+      suggestedParams.fee = BigInt(Math.max(Number(suggestedParams.fee || 1000), Number(suggestedParams.minFee || 1000), 1000)); // standard network fee
 
       // build ATC
       await buildAssetMintAtomicTransactionComposer(
@@ -673,7 +673,7 @@ export async function createARC3AssetMintArray(
 
       data_for_txns[i].asset_url_section = "ipfs://" + cid;
       const asset_create_tx = makeAssetCreateTxnWithSuggestedParamsFromObject({
-        from: address,
+        sender: address,
         manager: address,
         assetName: data_for_txns[i].asset_name,
         unitName: data_for_txns[i].unit_name,
@@ -690,8 +690,8 @@ export async function createARC3AssetMintArray(
       });
 
       const fee_tx = makePaymentTxnWithSuggestedParamsFromObject({
-        from: address,
-        to: MINT_FEE_WALLET,
+        sender: address,
+        receiver: MINT_FEE_WALLET,
         amount: algosToMicroalgos(MINT_FEE_PER_ASA),
         suggestedParams: params,
         note: new TextEncoder().encode(
@@ -766,15 +766,15 @@ export async function createARC19AssetMintArrayV2(
         let paymentTxn;
         if (assetId === 0) {
           paymentTxn = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
-            from: address,
-            to: requirements.payTo,
+            sender: address,
+            receiver: requirements.payTo,
             amount: amountMicro,
             suggestedParams: params,
           });
         } else {
           paymentTxn = algosdk.makeAssetTransferTxnWithSuggestedParamsFromObject({
-            from: address,
-            to: requirements.payTo,
+            sender: address,
+            receiver: requirements.payTo,
             amount: amountMicro,
             assetIndex: assetId,
             suggestedParams: params,
@@ -804,7 +804,7 @@ export async function createARC19AssetMintArrayV2(
 
       const suggestedParams = await algodClient.getTransactionParams().do();
       suggestedParams.flatFee = true;
-      suggestedParams.fee = Math.max(suggestedParams.fee || 1000, suggestedParams.minFee || 1000, 1000); // standard network fee
+      suggestedParams.fee = BigInt(Math.max(Number(suggestedParams.fee || 1000), Number(suggestedParams.minFee || 1000), 1000)); // standard network fee
 
       // build ATC
       await buildAssetMintAtomicTransactionComposer(
@@ -823,8 +823,8 @@ export async function createARC19AssetMintArrayV2(
 
       if (extraFee && extraFeeAddress) {
         const extra_fee_tx = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
-          from: address,
-          to: extraFeeAddress,
+          sender: address,
+          receiver: extraFeeAddress,
           amount: BigInt(extraFee),
           suggestedParams: suggestedParams,
           note: new TextEncoder().encode("Extra fee via wen.tools integration"),
@@ -896,15 +896,15 @@ export async function createARC19AssetMintArrayV2Batch(
         let paymentTxn;
         if (assetId === 0) {
           paymentTxn = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
-            from: address,
-            to: requirements.payTo,
+            sender: address,
+            receiver: requirements.payTo,
             amount: amountMicro,
             suggestedParams: params,
           });
         } else {
           paymentTxn = algosdk.makeAssetTransferTxnWithSuggestedParamsFromObject({
-            from: address,
-            to: requirements.payTo,
+            sender: address,
+            receiver: requirements.payTo,
             amount: amountMicro,
             assetIndex: assetId,
             suggestedParams: params,
@@ -935,7 +935,7 @@ export async function createARC19AssetMintArrayV2Batch(
 
       const suggestedParams = await algodClient.getTransactionParams().do();
       suggestedParams.flatFee = true;
-      suggestedParams.fee = Math.max(suggestedParams.fee || 1000, suggestedParams.minFee || 1000, 1000); // standard network fee
+      suggestedParams.fee = BigInt(Math.max(Number(suggestedParams.fee || 1000), Number(suggestedParams.minFee || 1000), 1000)); // standard network fee
 
       // build ATC
       await buildAssetMintAtomicTransactionComposer(
@@ -995,7 +995,7 @@ export async function createARC19AssetMintArray(
       }
       const { assetURL, reserveAddress } = createReserveAddressFromIpfsCid(cid);
       const asset_create_tx = makeAssetCreateTxnWithSuggestedParamsFromObject({
-        from: address,
+        sender: address,
         manager: address,
         assetName: data_for_txns[i].asset_name,
         unitName: data_for_txns[i].unit_name,
@@ -1012,8 +1012,8 @@ export async function createARC19AssetMintArray(
       });
 
       const fee_tx = makePaymentTxnWithSuggestedParamsFromObject({
-        from: address,
-        to: MINT_FEE_WALLET,
+        sender: address,
+        receiver: MINT_FEE_WALLET,
         amount: algosToMicroalgos(MINT_FEE_PER_ASA),
         suggestedParams: params,
         note: new TextEncoder().encode(
@@ -1103,15 +1103,15 @@ export async function updateARC19AssetMintArrayV2(
         let paymentTxn;
         if (assetId === 0) {
           paymentTxn = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
-            from: address,
-            to: requirements.payTo,
+            sender: address,
+            receiver: requirements.payTo,
             amount: amountMicro,
             suggestedParams: params,
           });
         } else {
           paymentTxn = algosdk.makeAssetTransferTxnWithSuggestedParamsFromObject({
-            from: address,
-            to: requirements.payTo,
+            sender: address,
+            receiver: requirements.payTo,
             amount: amountMicro,
             assetIndex: assetId,
             suggestedParams: params,
@@ -1147,7 +1147,7 @@ export async function updateARC19AssetMintArrayV2(
       const { reserveAddress } = createReserveAddressFromIpfsCid(cid);
 
       const update_tx = makeAssetConfigTxnWithSuggestedParamsFromObject({
-        from: address,
+        sender: address,
         assetIndex: parseInt(data_for_txns[i].asset_id),
         note: new TextEncoder().encode(JSON.stringify(data_for_txns[i].note)),
         manager: address,
@@ -1159,8 +1159,8 @@ export async function updateARC19AssetMintArrayV2(
       });
 
       const fee_tx = makePaymentTxnWithSuggestedParamsFromObject({
-        from: address,
-        to: MINT_FEE_WALLET,
+        sender: address,
+        receiver: MINT_FEE_WALLET,
         amount: algosToMicroalgos(UPDATE_FEE_PER_ASA),
         suggestedParams: params,
         note: new TextEncoder().encode(
@@ -1228,7 +1228,7 @@ export async function updateARC19AssetMintArray(
       }
       const { reserveAddress } = createReserveAddressFromIpfsCid(cid);
       const update_tx = makeAssetConfigTxnWithSuggestedParamsFromObject({
-        from: address,
+        sender: address,
         assetIndex: parseInt(data_for_txns[i].asset_id),
         note: new TextEncoder().encode(JSON.stringify(data_for_txns[i].note)),
         manager: address,
@@ -1240,8 +1240,8 @@ export async function updateARC19AssetMintArray(
       });
 
       const fee_tx = makePaymentTxnWithSuggestedParamsFromObject({
-        from: address,
-        to: MINT_FEE_WALLET,
+        sender: address,
+        receiver: MINT_FEE_WALLET,
         amount: algosToMicroalgos(UPDATE_FEE_PER_ASA),
         suggestedParams: params,
         note: new TextEncoder().encode(
@@ -1301,8 +1301,8 @@ export async function createAirdropTransactions(
       data_for_txns[i].note = data_for_txns[i].note || "";
       if (data_for_txns[i].asset_id === 1) {
         tx = makePaymentTxnWithSuggestedParamsFromObject({
-          from: address,
-          to: data_for_txns[i].receiver.trim(),
+          sender: address,
+          receiver: data_for_txns[i].receiver.trim(),
           amount: algosToMicroalgos(data_for_txns[i].amount * 1),
           suggestedParams: params,
           note: new TextEncoder().encode(
@@ -1322,8 +1322,8 @@ export async function createAirdropTransactions(
           10 ** Number(assetDecimals[data_for_txns[i].asset_id])
         );
         tx = makeAssetTransferTxnWithSuggestedParamsFromObject({
-          from: address,
-          to: data_for_txns[i].receiver.trim(),
+          sender: address,
+          receiver: data_for_txns[i].receiver.trim(),
           amount,
           assetIndex: parseInt(data_for_txns[i].asset_id),
           suggestedParams: params,
@@ -1356,8 +1356,8 @@ export async function createAssetOptInTransactions(
   const txnsArray = [];
   for (let i = 0; i < assets.length; i++) {
     const tx = makeAssetTransferTxnWithSuggestedParamsFromObject({
-      from: address,
-      to: address.trim(),
+      sender: address,
+      receiver: address.trim(),
       amount: 0,
       assetIndex: assets[i],
       suggestedParams: params,
@@ -1391,9 +1391,9 @@ export async function createClawbackTransactions(
       10 ** Number(assetDecimals[data_for_txns[i].asset_id])
     );
     const tx = makeAssetTransferTxnWithSuggestedParamsFromObject({
-      from: address.trim(),
-      revocationTarget: data_for_txns[i].clawback_from,
-      to: data_for_txns[i].receiver,
+      sender: address.trim(),
+      assetSender: data_for_txns[i].clawback_from,
+      receiver: data_for_txns[i].receiver,
       suggestedParams: params,
       assetIndex: parseInt(data_for_txns[i].asset_id),
       amount,
@@ -1422,10 +1422,10 @@ export async function createFreezeTransactions(
   const txnsArray = [];
   for (let i = 0; i < data_for_txns.length; i++) {
     const tx = makeAssetFreezeTxnWithSuggestedParamsFromObject({
-      from: address.trim(),
+      sender: address.trim(),
       suggestedParams: params,
       assetIndex: parseInt(data_for_txns[i].asset_id),
-      freezeState: data_for_txns[i].frozen.trim() === "Y" ? true : false,
+      frozen: data_for_txns[i].frozen.trim() === "Y" ? true : false,
       freezeTarget: data_for_txns[i].wallet,
       note: new TextEncoder().encode(
         "via wen.tools - free tools for creators and collectors"
@@ -1449,9 +1449,9 @@ export async function getAssetCreatorWallet(
 ) {
   try {
     const assetData = await algodClient.getAssetByID(assetId).do();
-    console.log("getAssetCreatorWallet " + JSON.stringify(assetData));
-    console.log("getAssetCreatorWallet " + assetData.params.creator);
-    return assetData.params.creator;
+    console.log("getAssetCreatorWallet " + algosdk.stringifyJSON(assetData));
+    console.log("getAssetCreatorWallet " + assetData.params?.creator);
+    return assetData.params?.creator ?? "";
   } catch (err) {
     console.log("error " + err);
     return "";
@@ -1469,8 +1469,8 @@ export async function createAssetOptoutTransactions(
     const creatorAddress = await getAssetCreatorWallet(assets[i], algodClient);
     if (creatorAddress !== "") {
       const tx = makeAssetTransferTxnWithSuggestedParamsFromObject({
-        from: address,
-        to: creatorAddress.trim(),
+        sender: address,
+        receiver: creatorAddress.trim(),
         amount: 0,
         assetIndex: assets[i],
         suggestedParams: params,
@@ -1505,7 +1505,7 @@ export async function createAssetDeleteTransactions(
   for (let i = 0; i < assets.length; i++) {
     try {
       const asset_create_tx = makeAssetDestroyTxnWithSuggestedParamsFromObject({
-        from: address,
+        sender: address,
         suggestedParams: params,
         assetIndex: assets[i],
         note: new TextEncoder().encode(
@@ -1514,8 +1514,8 @@ export async function createAssetDeleteTransactions(
         ),
       });
       const fee_tx = makePaymentTxnWithSuggestedParamsFromObject({
-        from: address,
-        to: MINT_FEE_WALLET,
+        sender: address,
+        receiver: MINT_FEE_WALLET,
         amount: algosToMicroalgos(UPDATE_FEE_PER_ASA),
         suggestedParams: params,
       });
@@ -1954,8 +1954,7 @@ export async function getAssetUrl(
 ) {
   try {
     const assetInfo = await algodClient.getAssetByID(assetId).do();
-    const typedInfo = algosdk.modelsv2.Asset.from_obj_for_encoding(assetInfo);
-    return typedInfo.params.url;
+    return assetInfo.params?.url;
   } catch {
     return "";
   }
@@ -1967,8 +1966,7 @@ export async function getAssetDecimals(
 ) {
   try {
     const assetInfo = await algodClient.getAssetByID(assetId).do();
-    const typedInfo = algosdk.modelsv2.Asset.from_obj_for_encoding(assetInfo);
-    return typedInfo.params.decimals;
+    return assetInfo.params?.decimals;
   } catch (err) {
     console.error(err);
     toast.error(
@@ -2254,10 +2252,9 @@ export async function getBonfireAccountInfo(
 ) {
   const appId = BONFIRE_APP_IDS[activeNetwork];
   if (!appId) return null;
-  const bonfireAddr = algosdk.getApplicationAddress(appId);
+  const bonfireAddr = algosdk.getApplicationAddress(appId).toString();
   try {
-    const info = await algodClient.accountInformation(bonfireAddr).exclude("all").do();
-    return info as any;
+    return await algodClient.accountInformation(bonfireAddr).exclude("all").do();
   } catch (e) {
     console.error("Error fetching Bonfire info: ", e);
     return null;
@@ -2289,10 +2286,10 @@ export async function createAssetBurnTransactions(
 
   const appId = BONFIRE_APP_IDS[activeNetwork];
   if (!appId) throw new Error("Bonfire not supported on this network");
-  const bonfireAddr = algosdk.getApplicationAddress(appId);
+  const bonfireAddr = algosdk.getApplicationAddress(appId).toString();
 
   const bonfireInfo = await getBonfireAccountInfo(activeNetwork, algodClient);
-  const extraLogs = bonfireInfo ? Math.floor((bonfireInfo.amount - bonfireInfo["min-balance"]) / 100000) : 0;
+  const extraLogs = bonfireInfo ? Math.floor((Number(bonfireInfo.amount) - Number(bonfireInfo.minBalance)) / 100000) : 0;
 
   const params = await algodClient.getTransactionParams().do();
 
@@ -2303,7 +2300,7 @@ export async function createAssetBurnTransactions(
   });
 
   const dummySigner = algosdk.makeBasicAccountTransactionSigner({
-    addr: address,
+    addr: algosdk.Address.fromString(address),
     sk: new Uint8Array(64)
   });
 
@@ -2329,8 +2326,8 @@ export async function createAssetBurnTransactions(
       if (optInCount > extraLogs) {
         // 1. MBR Payment
         const payTxn = makePaymentTxnWithSuggestedParamsFromObject({
-          from: address,
-          to: bonfireAddr,
+          sender: address,
+          receiver: bonfireAddr,
           amount: 100000,
           suggestedParams: params,
           note: new TextEncoder().encode("via wen.tools & Bonfire")
@@ -2345,7 +2342,7 @@ export async function createAssetBurnTransactions(
         method: arc54OptInMethod,
         methodArgs: [asset.id],
         sender: address,
-        suggestedParams: { ...params, flatFee: true, fee: params.minFee * 2 },
+        suggestedParams: { ...params, flatFee: true, fee: Number(params.minFee) * 2 },
         signer: dummySigner,
         note: new TextEncoder().encode("via wen.tools & Bonfire")
       });
@@ -2355,8 +2352,8 @@ export async function createAssetBurnTransactions(
 
     // 3. Asset Transfer (axfer)
     const axferObj: any = {
-      from: address,
-      to: bonfireAddr,
+      sender: address,
+      receiver: bonfireAddr,
       assetIndex: asset.id,
       amount: asset.amountToBurn,
       suggestedParams: params,
@@ -2416,7 +2413,7 @@ export async function getDownbadListingsMap(activeNetwork: NetworkId) {
           if (assetId && sellerBytes) {
             try {
               const sellerAddress = algosdk.encodeAddress(Buffer.from(sellerBytes, "base64"));
-              const escrowAddress = algosdk.getApplicationAddress(app.id);
+              const escrowAddress = algosdk.getApplicationAddress(app.id).toString();
               listings[assetId] = {
                 sellerAddress,
                 escrowAddress,
@@ -2455,7 +2452,7 @@ export async function getAkitaListingsMap(activeNetwork: NetworkId) {
   const marketplaceAppId = 3368394180;
   let creatorAddress = "";
   try {
-    creatorAddress = algosdk.getApplicationAddress(marketplaceAppId);
+    creatorAddress = algosdk.getApplicationAddress(marketplaceAppId).toString();
   } catch (err) {
     console.error("Failed to get Akita application address", err);
     return listings;
@@ -2485,7 +2482,7 @@ export async function getAkitaListingsMap(activeNetwork: NetworkId) {
         if (assetId && sellerBytes) {
           try {
             const sellerAddress = algosdk.encodeAddress(Buffer.from(sellerBytes, "base64"));
-            const escrowAddress = algosdk.getApplicationAddress(app.id);
+            const escrowAddress = algosdk.getApplicationAddress(app.id).toString();
             listings[assetId] = {
               sellerAddress,
               escrowAddress,

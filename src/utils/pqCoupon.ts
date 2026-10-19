@@ -84,13 +84,13 @@ export function buildRegisterTxns(
 ): algosdk.Transaction[] {
   const pqKey = new Uint8Array([account.salt, ...Falcon.hexToBytes(account.publicKey)]);
   const deposit = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
-    from: account.address,
-    to: algosdk.getApplicationAddress(deployment.appId),
+    sender: account.address,
+    receiver: algosdk.getApplicationAddress(deployment.appId),
     amount: PRINTER_BOX_MBR,
     suggestedParams: { ...sp, fee, flatFee: true },
   });
   const register = algosdk.makeApplicationNoOpTxnFromObject({
-    from: account.address,
+    sender: account.address,
     appIndex: deployment.appId,
     appArgs: [
       REGISTER.getSelector(),
@@ -114,7 +114,7 @@ export function buildPrintTxn(
   note: Uint8Array,
 ): algosdk.Transaction {
   return algosdk.makeApplicationNoOpTxnFromObject({
-    from: printer,
+    sender: printer,
     appIndex: deployment.appId,
     appArgs: [PRINT.getSelector()],
     boxes: [printerBox(deployment.appId, printer)],
@@ -131,7 +131,7 @@ export function buildClaimTxn(
   fee: number,
 ): algosdk.Transaction {
   return algosdk.makeApplicationNoOpTxnFromObject({
-    from: printer,
+    sender: printer,
     appIndex: deployment.appId,
     appArgs: [CLAIM.getSelector()],
     boxes: [printerBox(deployment.appId, printer)],
@@ -153,7 +153,7 @@ export async function getTopHolders(
   limit = 10,
 ): Promise<CouponHolder[]> {
   const indexer = new algosdk.Indexer("", `https://${network}-idx.algonode.cloud`, "");
-  const exclude = algosdk.getApplicationAddress(deployment.appId);
+  const exclude = algosdk.getApplicationAddress(deployment.appId).toString();
   const holders: CouponHolder[] = [];
   let next: string | undefined;
   do {
@@ -164,7 +164,7 @@ export async function getTopHolders(
       if (b.address === exclude || b.deleted) continue;
       holders.push({ address: b.address, amount: Number(b.amount) / 10 ** COUPON_DECIMALS });
     }
-    next = res.balances?.length ? res["next-token"] : undefined;
+    next = res.balances?.length ? res.nextToken : undefined;
   } while (next);
   return holders.sort((a, b) => b.amount - a.amount).slice(0, limit);
 }

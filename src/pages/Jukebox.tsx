@@ -1,6 +1,7 @@
 import { ToolHero } from "../components/cypher/ToolKit";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useWallet } from "@txnlab/use-wallet-react";
+import { useAppNetwork } from "../hooks/useAppNetwork";
 import { 
   getAssetsFromAddress, 
   Arc69, 
@@ -37,7 +38,8 @@ interface MusicNFT {
 }
 
 export function Jukebox() {
-  const { activeAddress, activeNetwork, algodClient } = useWallet();
+  const { activeAddress, algodClient } = useWallet();
+  const { activeNetwork } = useAppNetwork();
   const [assets, setAssets] = useState<number[]>([]);
   const [songs, setSongs] = useState<MusicNFT[]>([]);
   const [loading, setLoading] = useState(false);
@@ -116,8 +118,8 @@ export function Jukebox() {
       const promises = batch.map(async (assetId) => {
         try {
           const assetInfo = await algodClient.getAssetByID(assetId).do();
-          const url = assetInfo.params.url || "";
-          const reserve = assetInfo.params.reserve || "";
+          const url = assetInfo.params!.url || "";
+          const reserve = assetInfo.params!.reserve || "";
           let metadata: any = null;
 
           // Check ARC19
@@ -157,8 +159,8 @@ export function Jukebox() {
             if (audioUrl && (mimeType.includes("audio") || mimeType.includes("video") || audioUrl.endsWith(".mp3") || audioUrl.endsWith(".wav") || audioUrl.endsWith(".m4a"))) {
               const song: MusicNFT = {
                 assetId,
-                name: metadata.name || assetInfo.params.name,
-                unitName: assetInfo.params["unit-name"],
+                name: metadata.name || assetInfo.params!.name,
+                unitName: assetInfo.params!.unitName ?? "",
                 url,
                 audioUrl,
                 image: ipfsToGateway(metadata.image || ""),

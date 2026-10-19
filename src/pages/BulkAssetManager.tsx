@@ -24,6 +24,7 @@ import {
 import InfinityModeComponent from "../components/InfinityModeComponent";
 import FaqSectionComponent from "../components/FaqSectionComponent";
 import { useWallet } from "@txnlab/use-wallet-react";
+import { useAppNetwork } from "../hooks/useAppNetwork";
 import ConnectButton from "../components/ConnectButton";
 import { Meta } from "../components/Meta";
 import { getAccountAssetsWithInfo } from "../utils/swap";
@@ -271,7 +272,8 @@ export function BulkAssetManager({ defaultTab = "optin" }: BulkAssetManagerProps
   const [assetIds, setAssetIds] = useState("");
   const [copiedLink, setCopiedLink] = useState(false);
   const [searchParams, setSearchParams] = useSearchParams();
-  const { activeAddress, algodClient, transactionSigner, activeNetwork } = useWallet();
+  const { activeAddress, algodClient, transactionSigner } = useWallet();
+  const { activeNetwork } = useAppNetwork();
 
   // Burn Configuration State
   const [isBurnConfiguring, setIsBurnConfiguring] = useState(false);
@@ -717,7 +719,7 @@ export function BulkAssetManager({ defaultTab = "optin" }: BulkAssetManagerProps
       try {
         const blobs = signedBlobsMap[asset.id];
         // 1. Send raw swap transaction
-        const { txId } = await algodClient.sendRawTransaction(blobs.swapBlobs).do();
+        const { txid: txId } = await algodClient.sendRawTransaction(blobs.swapBlobs).do();
         await algosdk.waitForConfirmation(algodClient, txId, 4);
         swapped = 1;
 
@@ -729,7 +731,7 @@ export function BulkAssetManager({ defaultTab = "optin" }: BulkAssetManagerProps
         // 2. Send opt-out transaction
         if (blobs.optoutBlob) {
           try {
-            const { txId: optoutTxId } = await algodClient.sendRawTransaction(blobs.optoutBlob).do();
+            const { txid: optoutTxId } = await algodClient.sendRawTransaction(blobs.optoutBlob).do();
             await algosdk.waitForConfirmation(algodClient, optoutTxId, 4);
             optedOut = 1;
             reclaimed = 0.1;
@@ -856,25 +858,25 @@ export function BulkAssetManager({ defaultTab = "optin" }: BulkAssetManagerProps
         const assetId = assets[i];
         try {
           const assetInfo = await algodClient.getAssetByID(assetId).do();
-          const userAsset = userAssets.find((a: any) => a["asset-id"] === assetId);
-          const balance = userAsset ? userAsset.amount : 0;
+          const userAsset = userAssets.find((a: any) => Number(a.assetId) === assetId);
+          const balance = userAsset ? Number(userAsset.amount) : 0;
 
           let imageUrl = "";
-          if (assetInfo.params.url) {
-            imageUrl = await getNFTImageUrl(assetInfo.params.url, assetInfo.params.reserve, false);
+          if (assetInfo.params!.url) {
+            imageUrl = await getNFTImageUrl(assetInfo.params!.url, assetInfo.params!.reserve ?? "", false);
           }
 
           loadedAssets.push({
             id: assetId,
-            name: assetInfo.params.name || "[Deleted Asset]",
-            unitName: assetInfo.params["unit-name"] || "N/A",
-            decimals: assetInfo.params.decimals || 0,
-            creator: assetInfo.params.creator,
+            name: assetInfo.params!.name || "[Deleted Asset]",
+            unitName: assetInfo.params!.unitName || "N/A",
+            decimals: assetInfo.params!.decimals || 0,
+            creator: assetInfo.params!.creator,
             imageUrl: imageUrl,
             balance: balance,
             amountToBurn: balance,
-            closeAsset: balance > 0 && activeAddress !== assetInfo.params.creator,
-            totalSupply: assetInfo.params.total,
+            closeAsset: balance > 0 && activeAddress !== assetInfo.params!.creator,
+            totalSupply: Number(assetInfo.params!.total),
           });
         } catch (e) {
           console.error("Error fetching asset info for ", assetId, e);

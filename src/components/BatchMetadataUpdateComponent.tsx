@@ -82,7 +82,7 @@ export function BatchCollectionMetadataUpdate() {
       setTxSendingInProgress(true);
       for (let i = 0; i < groups.length; i++) {
         toast.info(`Sending transaction ${i + 1} of ${groups.length}`);
-        const { txId } = await algodClient
+        const { txid: txId } = await algodClient
           .sendRawTransaction(groups[i].map((txn) => txn.blob))
           .do();
         await algosdk.waitForConfirmation(algodClient, txId, 3);

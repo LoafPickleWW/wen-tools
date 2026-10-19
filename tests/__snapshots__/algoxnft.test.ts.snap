@@ -1,0 +1,136 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`algoxnft > builds, simulates, signs and submits close jobs > plan 1`] = `
+{
+  "group": [
+    {
+      "fee": "int:1000",
+      "fv": "int:50000000",
+      "gen": "mainnet-v1.0",
+      "gh": "b64:wGHE2Pwdvd7S12BL5FaOP20EGYesN73ktiC1qzkkit8=",
+      "grp": "b64:pZTETsfXREsIeVIFLWTY1C9yP7yvylEkpW4rleJKsOU=",
+      "lv": "int:50001000",
+      "rcv": "addr:RKEOHXLUBHYZL7KS3MWTZOS5OLFGOCN7DWKBEG7TOSEADNAPN5OOTUNSLE",
+      "snd": "addr:RKEOHXLUBHYZL7KS3MWTZOS5OLFGOCN7DWKBEG7TOSEADNAPN5OOTUNSLE",
+      "txID": "X4CYZYVWUKJUZEGYN3U3TAE43GU4XN7DC5LMI7FVTULWX6F3IOQA",
+      "type": "pay",
+    },
+    {
+      "aclose": "addr:RKEOHXLUBHYZL7KS3MWTZOS5OLFGOCN7DWKBEG7TOSEADNAPN5OOTUNSLE",
+      "arcv": "addr:RKEOHXLUBHYZL7KS3MWTZOS5OLFGOCN7DWKBEG7TOSEADNAPN5OOTUNSLE",
+      "fee": "int:1000",
+      "fv": "int:50000000",
+      "gen": "mainnet-v1.0",
+      "gh": "b64:wGHE2Pwdvd7S12BL5FaOP20EGYesN73ktiC1qzkkit8=",
+      "grp": "b64:pZTETsfXREsIeVIFLWTY1C9yP7yvylEkpW4rleJKsOU=",
+      "lv": "int:50001000",
+      "snd": "addr:AVILWX743OKHF6U5BWVD4QBUJUE7IWLLHMAWY3AALCZIGVCAVQJWEGO4CU",
+      "txID": "LYS3BHFVH32HONKWUPJ2A67BWVJNK5ZZXOH7WHHOVPU3PC62QILA",
+      "type": "axfer",
+      "xaid": "int:777",
+    },
+    {
+      "close": "addr:XNFT36FUCFRR6CK675FW4BEBCCCOJ4HOSMGCN6J2W6ZMB34KM2ENTNQCP4",
+      "fee": "int:1000",
+      "fv": "int:50000000",
+      "gen": "mainnet-v1.0",
+      "gh": "b64:wGHE2Pwdvd7S12BL5FaOP20EGYesN73ktiC1qzkkit8=",
+      "grp": "b64:pZTETsfXREsIeVIFLWTY1C9yP7yvylEkpW4rleJKsOU=",
+      "lv": "int:50001000",
+      "rcv": "addr:XNFT36FUCFRR6CK675FW4BEBCCCOJ4HOSMGCN6J2W6ZMB34KM2ENTNQCP4",
+      "snd": "addr:AVILWX743OKHF6U5BWVD4QBUJUE7IWLLHMAWY3AALCZIGVCAVQJWEGO4CU",
+      "txID": "4HCKSC4HFPJQPRNVQGVDYKSVTRGV65QWL6T4O7BCWBF4ECUUS3HA",
+      "type": "pay",
+    },
+  ],
+  "optIn": {
+    "arcv": "addr:RKEOHXLUBHYZL7KS3MWTZOS5OLFGOCN7DWKBEG7TOSEADNAPN5OOTUNSLE",
+    "fee": "int:1000",
+    "fv": "int:50000000",
+    "gen": "mainnet-v1.0",
+    "gh": "b64:wGHE2Pwdvd7S12BL5FaOP20EGYesN73ktiC1qzkkit8=",
+    "lv": "int:50001000",
+    "snd": "addr:RKEOHXLUBHYZL7KS3MWTZOS5OLFGOCN7DWKBEG7TOSEADNAPN5OOTUNSLE",
+    "txID": "LZ6L7QGUMG34DSSOXFW7E6VM5WFS6ZHMJ52UHZAXGKR3RUNHYQPA",
+    "type": "axfer",
+    "xaid": "int:777",
+  },
+}
+`;
+
+exports[`algoxnft > builds, simulates, signs and submits close jobs > signed 1`] = `
+[
+  [
+    {
+      "sig": "b64:71yDuSmxIWuU0LOjKiWaEuVClbqEzi9oOVO1ZwKUskwNJEGHC+lr09D8LRrXKf9PTsi/S19QVRyDo2ugOTwyAA==",
+      "txID": "NLDTOBHGPOXGXW3ATVHKIPBOXWOEJYEM7A3RITBPOT253H3VHCBA",
+      "txn": {
+        "arcv": "addr:RKEOHXLUBHYZL7KS3MWTZOS5OLFGOCN7DWKBEG7TOSEADNAPN5OOTUNSLE",
+        "fee": "int:1000",
+        "fv": "int:50000000",
+        "gen": "mainnet-v1.0",
+        "gh": "b64:wGHE2Pwdvd7S12BL5FaOP20EGYesN73ktiC1qzkkit8=",
+        "grp": "b64:suY/KFClNataO69TYe/rD3FKOo1J80CJQ8/wUVTQ1Tk=",
+        "lv": "int:50001000",
+        "snd": "addr:RKEOHXLUBHYZL7KS3MWTZOS5OLFGOCN7DWKBEG7TOSEADNAPN5OOTUNSLE",
+        "type": "axfer",
+        "xaid": "int:777",
+      },
+    },
+  ],
+  [
+    {
+      "sig": "b64:RwVSA9WlYClA0NSyNcitfZZdiljajnblj14FYV1A1rTrSe2wbAUngD7PhsEE5oU/afX0QdGUUErQrLzhuxDKAg==",
+      "txID": "X4CYZYVWUKJUZEGYN3U3TAE43GU4XN7DC5LMI7FVTULWX6F3IOQA",
+      "txn": {
+        "fee": "int:1000",
+        "fv": "int:50000000",
+        "gen": "mainnet-v1.0",
+        "gh": "b64:wGHE2Pwdvd7S12BL5FaOP20EGYesN73ktiC1qzkkit8=",
+        "grp": "b64:pZTETsfXREsIeVIFLWTY1C9yP7yvylEkpW4rleJKsOU=",
+        "lv": "int:50001000",
+        "rcv": "addr:RKEOHXLUBHYZL7KS3MWTZOS5OLFGOCN7DWKBEG7TOSEADNAPN5OOTUNSLE",
+        "snd": "addr:RKEOHXLUBHYZL7KS3MWTZOS5OLFGOCN7DWKBEG7TOSEADNAPN5OOTUNSLE",
+        "type": "pay",
+      },
+    },
+    {
+      "lsig": {
+        "l": "b64:AiYCILtLPfi0EWMfCV7/S24EgRCE5PDukwwm+Tq3ssDvimaIIIqI4910CfGV/VLbLTy6XXLKZwm/HZQSG/N0iAG0D29cMwIJKBIzARUpEhA=",
+      },
+      "txID": "LYS3BHFVH32HONKWUPJ2A67BWVJNK5ZZXOH7WHHOVPU3PC62QILA",
+      "txn": {
+        "aclose": "addr:RKEOHXLUBHYZL7KS3MWTZOS5OLFGOCN7DWKBEG7TOSEADNAPN5OOTUNSLE",
+        "arcv": "addr:RKEOHXLUBHYZL7KS3MWTZOS5OLFGOCN7DWKBEG7TOSEADNAPN5OOTUNSLE",
+        "fee": "int:1000",
+        "fv": "int:50000000",
+        "gen": "mainnet-v1.0",
+        "gh": "b64:wGHE2Pwdvd7S12BL5FaOP20EGYesN73ktiC1qzkkit8=",
+        "grp": "b64:pZTETsfXREsIeVIFLWTY1C9yP7yvylEkpW4rleJKsOU=",
+        "lv": "int:50001000",
+        "snd": "addr:AVILWX743OKHF6U5BWVD4QBUJUE7IWLLHMAWY3AALCZIGVCAVQJWEGO4CU",
+        "type": "axfer",
+        "xaid": "int:777",
+      },
+    },
+    {
+      "lsig": {
+        "l": "b64:AiYCILtLPfi0EWMfCV7/S24EgRCE5PDukwwm+Tq3ssDvimaIIIqI4910CfGV/VLbLTy6XXLKZwm/HZQSG/N0iAG0D29cMwIJKBIzARUpEhA=",
+      },
+      "txID": "4HCKSC4HFPJQPRNVQGVDYKSVTRGV65QWL6T4O7BCWBF4ECUUS3HA",
+      "txn": {
+        "close": "addr:XNFT36FUCFRR6CK675FW4BEBCCCOJ4HOSMGCN6J2W6ZMB34KM2ENTNQCP4",
+        "fee": "int:1000",
+        "fv": "int:50000000",
+        "gen": "mainnet-v1.0",
+        "gh": "b64:wGHE2Pwdvd7S12BL5FaOP20EGYesN73ktiC1qzkkit8=",
+        "grp": "b64:pZTETsfXREsIeVIFLWTY1C9yP7yvylEkpW4rleJKsOU=",
+        "lv": "int:50001000",
+        "rcv": "addr:XNFT36FUCFRR6CK675FW4BEBCCCOJ4HOSMGCN6J2W6ZMB34KM2ENTNQCP4",
+        "snd": "addr:AVILWX743OKHF6U5BWVD4QBUJUE7IWLLHMAWY3AALCZIGVCAVQJWEGO4CU",
+        "type": "pay",
+      },
+    },
+  ],
+]
+`;

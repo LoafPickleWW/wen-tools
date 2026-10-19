@@ -1,6 +1,7 @@
 /* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { useWallet } from "@txnlab/use-wallet-react";
+import { useAppNetwork } from "../hooks/useAppNetwork";
 
 export interface PulseBlock {
   round: number;
@@ -30,7 +31,8 @@ const ChainPulseContext = createContext<ChainPulseState>({
  * the tab is hidden to stay light on the public node.
  */
 export function ChainPulseProvider({ children }: { children: ReactNode }) {
-  const { algodClient, activeNetwork } = useWallet();
+  const { algodClient } = useWallet();
+  const { activeNetwork } = useAppNetwork();
   const [blocks, setBlocks] = useState<PulseBlock[]>([]);
   const [live, setLive] = useState(false);
 

@@ -120,7 +120,7 @@ const TXN_FIELD_ASSET_CLOSE_TO = 21;
 /** True if this program is an AlgoxNFT escrow the given seller can close. */
 export function isClosableAlgoxEscrow(program: Uint8Array, escrow: string, seller: string): boolean {
   // The program must actually be this escrow's program
-  if (new algosdk.LogicSigAccount(program).address() !== escrow) return false;
+  if (new algosdk.LogicSigAccount(program).address().toString() !== escrow) return false;
   const admins = addressesComparedTo(program, 2, TXN_FIELD_CLOSE_REMAINDER_TO);
   const sellers = addressesComparedTo(program, 1, TXN_FIELD_ASSET_CLOSE_TO);
   return admins.includes(ALGOXNFT_ADMIN) && sellers.includes(seller);
@@ -213,7 +213,7 @@ async function getJson(url: string, fallbackBase?: string): Promise<any> {
 async function holdsAsset(algod: algosdk.Algodv2, address: string, assetId: number): Promise<number | null> {
   try {
     const info: any = await withRetry(() => algod.accountAssetInformation(address, assetId).do());
-    return Number(info["asset-holding"]?.amount ?? 0);
+    return Number(info.assetHolding?.amount ?? 0);
   } catch (e) {
     if (isNotFound(e)) return null;
     throw e;
@@ -272,7 +272,7 @@ export async function findAlgoxListings(
         const info: any = await withRetry(() => algod.accountInformation(escrow).do());
         const optedIn: any[] = info.assets ?? [];
         if (optedIn.length > MAX_ESCROW_ASSETS) return [];
-        held = optedIn.filter((a: any) => Number(a.amount) >= 1).map((a: any) => Number(a["asset-id"]));
+        held = optedIn.filter((a: any) => Number(a.amount) >= 1).map((a: any) => Number(a.assetId));
       } catch (e) {
         if (isNotFound(e)) return [];
         throw e;
@@ -324,22 +324,22 @@ export function buildAlgoxClosePlan(
 ): AlgoxClosePlan {
   const sp = { ...params, flatFee: true, fee: 1000 };
   const permission = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
-    from: seller,
-    to: seller,
+    sender: seller,
+    receiver: seller,
     amount: 0,
     suggestedParams: sp,
   });
   const assetClose = algosdk.makeAssetTransferTxnWithSuggestedParamsFromObject({
-    from: listing.escrow,
-    to: seller,
+    sender: listing.escrow,
+    receiver: seller,
     closeRemainderTo: seller,
     amount: 0,
     assetIndex: listing.assetId,
     suggestedParams: sp,
   });
   const algoClose = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
-    from: listing.escrow,
-    to: ALGOXNFT_ADMIN,
+    sender: listing.escrow,
+    receiver: ALGOXNFT_ADMIN,
     closeRemainderTo: ALGOXNFT_ADMIN,
     amount: 0,
     suggestedParams: sp,
@@ -347,8 +347,8 @@ export function buildAlgoxClosePlan(
   const group = algosdk.assignGroupID([permission, assetClose, algoClose]);
   const optIn = listing.needsOptIn
     ? algosdk.makeAssetTransferTxnWithSuggestedParamsFromObject({
-        from: seller,
-        to: seller,
+        sender: seller,
+        receiver: seller,
         amount: 0,
         assetIndex: listing.assetId,
         suggestedParams: sp,
@@ -377,8 +377,8 @@ export type AlgoxSimulation =
  * account state (the pending opt-in, or a low ALGO balance).
  */
 export async function simulateAlgoxClose(algod: algosdk.Algodv2, plan: AlgoxClosePlan): Promise<AlgoxSimulation> {
-  const unsigned = (t: Transaction) => algosdk.decodeObj(algosdk.encodeUnsignedSimulateTransaction(t)) as any;
-  const lsig = (t: Transaction) => algosdk.decodeObj(lsigSign(t, plan.listing.program)) as any;
+  const unsigned = (t: Transaction) => algosdk.decodeSignedTransaction(algosdk.encodeUnsignedSimulateTransaction(t));
+  const lsig = (t: Transaction) => algosdk.decodeSignedTransaction(lsigSign(t, plan.listing.program));
   let failure: string | undefined;
   try {
     const res: any = await algod
@@ -515,7 +515,7 @@ export async function submitClaimJobs(
     try {
       let txId = "";
       for (const blobs of job.steps) {
-        ({ txId } = await algod.sendRawTransaction(blobs).do());
+        ({ txid: txId } = await algod.sendRawTransaction(blobs).do());
         await algosdk.waitForConfirmation(algod, txId, 6);
       }
       onProgress?.(++done, jobs.length, job.assetId, true);

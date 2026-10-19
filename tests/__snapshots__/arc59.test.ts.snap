@@ -1,0 +1,194 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`arc59-helpers > createArc59GroupTxns: direct send when opted in, router send otherwise > csv 1`] = `
+"account,txnFees,innerTxns,receiverOptedIn,mbr,receiverAlgoNeededForClaim,routerOptedIn,totalAmount,txnID
+QE4XODVIPULV6VVDKRTMGTD6ZTFY3CURWTXDPIS56YHVXD6JWOKORTLPBU,1000,0,true,0,0,true,1000,
+5VESRRRI2HBMN2XJAM4JAWMVMEUVSJZ2LRR7SNRWYFDBJLEHG7I2572N4M,4000,2000,false,228100,201000,false,436100,"
+`;
+
+exports[`arc59-helpers > createArc59GroupTxns: direct send when opted in, router send otherwise > log 1`] = `
+[
+  {
+    "account": "QE4XODVIPULV6VVDKRTMGTD6ZTFY3CURWTXDPIS56YHVXD6JWOKORTLPBU",
+    "innerTxns": 0,
+    "mbr": 0,
+    "receiverAlgoNeededForClaim": 0,
+    "receiverOptedIn": true,
+    "routerOptedIn": true,
+    "totalAmount": 1000,
+    "txnFees": 1000,
+    "txnID": "",
+  },
+  {
+    "account": "5VESRRRI2HBMN2XJAM4JAWMVMEUVSJZ2LRR7SNRWYFDBJLEHG7I2572N4M",
+    "innerTxns": 2000,
+    "mbr": 228100,
+    "receiverAlgoNeededForClaim": 201000,
+    "receiverOptedIn": false,
+    "routerOptedIn": false,
+    "totalAmount": 436100,
+    "txnFees": 4000,
+    "txnID": "",
+  },
+]
+`;
+
+exports[`arc59-helpers > createArc59GroupTxns: direct send when opted in, router send otherwise > routed 1`] = `
+[
+  {
+    "amt": "int:429100",
+    "fee": "int:1000",
+    "fv": "int:50000000",
+    "gen": "mainnet-v1.0",
+    "gh": "b64:wGHE2Pwdvd7S12BL5FaOP20EGYesN73ktiC1qzkkit8=",
+    "grp": "b64:+c6ciRap7zQvby/aQWTgWVhwJoggAVdMLxshStaYYkQ=",
+    "lv": "int:50001000",
+    "rcv": "addr:EZRVNZFJGOUZC67FUMEC7ZMVP232TPICFTQCVZ6EQEIRRT3TIHSKZULRNI",
+    "snd": "addr:RKEOHXLUBHYZL7KS3MWTZOS5OLFGOCN7DWKBEG7TOSEADNAPN5OOTUNSLE",
+    "txID": "RODZYHW3XSLESIZCTDL2ED6EX6IW7PFVFNIXCMVHKHUFLRVID6ZQ",
+    "type": "pay",
+  },
+  {
+    "apaa": [
+      "b64:6FQIEA==",
+      "b64:AAAAAAAAAiw=",
+    ],
+    "apid": "int:2449590623",
+    "fee": "int:1000",
+    "fv": "int:50000000",
+    "gen": "mainnet-v1.0",
+    "gh": "b64:wGHE2Pwdvd7S12BL5FaOP20EGYesN73ktiC1qzkkit8=",
+    "grp": "b64:+c6ciRap7zQvby/aQWTgWVhwJoggAVdMLxshStaYYkQ=",
+    "lv": "int:50001000",
+    "snd": "addr:RKEOHXLUBHYZL7KS3MWTZOS5OLFGOCN7DWKBEG7TOSEADNAPN5OOTUNSLE",
+    "txID": "JJFXJNP3CIVJYFWVC4ZC4EYW2ANI2AHZ4ZYB46YU3C7YQD27PRGA",
+    "type": "appl",
+  },
+  {
+    "aamt": "int:1",
+    "arcv": "addr:EZRVNZFJGOUZC67FUMEC7ZMVP232TPICFTQCVZ6EQEIRRT3TIHSKZULRNI",
+    "fee": "int:1000",
+    "fv": "int:50000000",
+    "gen": "mainnet-v1.0",
+    "gh": "b64:wGHE2Pwdvd7S12BL5FaOP20EGYesN73ktiC1qzkkit8=",
+    "grp": "b64:+c6ciRap7zQvby/aQWTgWVhwJoggAVdMLxshStaYYkQ=",
+    "lv": "int:50001000",
+    "note": "utf8:via wen.tools | wen wallet",
+    "snd": "addr:RKEOHXLUBHYZL7KS3MWTZOS5OLFGOCN7DWKBEG7TOSEADNAPN5OOTUNSLE",
+    "txID": "4KIW6GMWGSEJEWUNTV4SB7OSS24TQEXWPZSHJV5QPX7MH7SYBM5Q",
+    "type": "axfer",
+    "xaid": "int:556",
+  },
+  {
+    "apaa": [
+      "b64:CFMe1w==",
+      "b64:7UkoxijRwsbq6QM4kFmVYSlZJzpcY/k2NsFGFKyHN9E=",
+      "b64:AAAAAAADESg=",
+    ],
+    "apas": [
+      "int:556",
+    ],
+    "apat": [
+      "addr:5VESRRRI2HBMN2XJAM4JAWMVMEUVSJZ2LRR7SNRWYFDBJLEHG7I2572N4M",
+      "addr:VOV2XK5LVOV2XK5LVOV2XK5LVOV2XK5LVOV2XK5LVOV2XK5LVOVRVHZ4JQ",
+    ],
+    "apbx": [
+      {
+        "n": "b64:7UkoxijRwsbq6QM4kFmVYSlZJzpcY/k2NsFGFKyHN9E=",
+      },
+    ],
+    "apid": "int:2449590623",
+    "fee": "int:4000",
+    "fv": "int:50000000",
+    "gen": "mainnet-v1.0",
+    "gh": "b64:wGHE2Pwdvd7S12BL5FaOP20EGYesN73ktiC1qzkkit8=",
+    "grp": "b64:+c6ciRap7zQvby/aQWTgWVhwJoggAVdMLxshStaYYkQ=",
+    "lv": "int:50001000",
+    "snd": "addr:RKEOHXLUBHYZL7KS3MWTZOS5OLFGOCN7DWKBEG7TOSEADNAPN5OOTUNSLE",
+    "txID": "4TYZRSHVNXWBXEOE2N7JTPPHUW4IBNUZAI5SP6CML2VESR6CGSRA",
+    "type": "appl",
+  },
+]
+`;
+
+exports[`arc59-helpers > createArc59GroupTxns: direct send when opted in, router send otherwise > total 1`] = `437100`;
+
+exports[`arc59-helpers > generateARC59ClaimTxns adds an opt-in only when needed 1`] = `
+{
+  "notOpted": [
+    {
+      "arcv": "addr:QE4XODVIPULV6VVDKRTMGTD6ZTFY3CURWTXDPIS56YHVXD6JWOKORTLPBU",
+      "fee": "int:1000",
+      "fv": "int:50000000",
+      "gen": "mainnet-v1.0",
+      "gh": "b64:wGHE2Pwdvd7S12BL5FaOP20EGYesN73ktiC1qzkkit8=",
+      "grp": "b64:oRYwEYSKfE2jAG1B/wYCGahQYn64usbBK6Sl74Gutr0=",
+      "lv": "int:50001000",
+      "note": "utf8:via wen.tools - free tools for creators and collectors | 4fzzzxjylrx",
+      "snd": "addr:QE4XODVIPULV6VVDKRTMGTD6ZTFY3CURWTXDPIS56YHVXD6JWOKORTLPBU",
+      "txID": "BBBR7I4554NQMDCFXX4MDIO7CFLYEHMOTORIWLQEZPO44LCKONUQ",
+      "type": "axfer",
+      "xaid": "int:556",
+    },
+    {
+      "apaa": [
+        "b64:v5AuPA==",
+        "b64:AAAAAAAAAiw=",
+      ],
+      "apas": [
+        "int:556",
+      ],
+      "apat": [
+        "addr:QE4XODVIPULV6VVDKRTMGTD6ZTFY3CURWTXDPIS56YHVXD6JWOKORTLPBU",
+        "addr:VOV2XK5LVOV2XK5LVOV2XK5LVOV2XK5LVOV2XK5LVOV2XK5LVOVRVHZ4JQ",
+      ],
+      "apbx": [
+        {
+          "n": "b64:gTl3Dqh9F19Wo1Rmw0x+zMuNipG07jeiXfYPW4/Js5Q=",
+        },
+      ],
+      "apid": "int:2449590623",
+      "fee": "int:9000",
+      "fv": "int:50000000",
+      "gen": "mainnet-v1.0",
+      "gh": "b64:wGHE2Pwdvd7S12BL5FaOP20EGYesN73ktiC1qzkkit8=",
+      "grp": "b64:oRYwEYSKfE2jAG1B/wYCGahQYn64usbBK6Sl74Gutr0=",
+      "lv": "int:50000010",
+      "note": "utf8:via wen.tools - free tools for creators and collectors | 4fzzzxjylrx",
+      "snd": "addr:QE4XODVIPULV6VVDKRTMGTD6ZTFY3CURWTXDPIS56YHVXD6JWOKORTLPBU",
+      "txID": "B6PIKLIRGPJXIYQW3QAOW365AG5HPUPQWAXGTZ3OPZGLFYWIZP4Q",
+      "type": "appl",
+    },
+  ],
+  "opted": [
+    {
+      "apaa": [
+        "b64:v5AuPA==",
+        "b64:AAAAAAAAAis=",
+      ],
+      "apas": [
+        "int:555",
+      ],
+      "apat": [
+        "addr:QE4XODVIPULV6VVDKRTMGTD6ZTFY3CURWTXDPIS56YHVXD6JWOKORTLPBU",
+        "addr:VOV2XK5LVOV2XK5LVOV2XK5LVOV2XK5LVOV2XK5LVOV2XK5LVOVRVHZ4JQ",
+      ],
+      "apbx": [
+        {
+          "n": "b64:gTl3Dqh9F19Wo1Rmw0x+zMuNipG07jeiXfYPW4/Js5Q=",
+        },
+      ],
+      "apid": "int:2449590623",
+      "fee": "int:9000",
+      "fv": "int:50000000",
+      "gen": "mainnet-v1.0",
+      "gh": "b64:wGHE2Pwdvd7S12BL5FaOP20EGYesN73ktiC1qzkkit8=",
+      "lv": "int:50000010",
+      "note": "utf8:via wen.tools - free tools for creators and collectors | 4fzzzxjylrx",
+      "snd": "addr:QE4XODVIPULV6VVDKRTMGTD6ZTFY3CURWTXDPIS56YHVXD6JWOKORTLPBU",
+      "txID": "AT3DPFLHMNCC6PJWMFT7CAPQKLBBRING3EMY635M4KUUQ7MY47BQ",
+      "type": "appl",
+    },
+  ],
+}
+`;

@@ -1,0 +1,2 @@
+patchedDependencies:
+  '@noble/post-quantum@0.7.1': patches/@noble__post-quantum@0.7.1.patch

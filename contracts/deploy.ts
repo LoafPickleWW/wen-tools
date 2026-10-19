@@ -19,9 +19,9 @@ async function deployToNetwork(network: 'testnet' | 'mainnet', mnemonic: string)
 
   // Get balance
   const accountInfo = await algod.accountInformation(account.addr).do();
-  console.log(`Balance: ${accountInfo.amount / 1e6} ALGO`);
+  console.log(`Balance: ${Number(accountInfo.amount) / 1e6} ALGO`);
 
-  if (accountInfo.amount < 200000) {
+  if (Number(accountInfo.amount) < 200000) {
     throw new Error(`Insufficient funds on ${network}. Please fund ${account.addr}`);
   }
 
@@ -52,7 +52,7 @@ async function deployToNetwork(network: 'testnet' | 'mainnet', mnemonic: string)
   const suggestedParams = await algod.getTransactionParams().do();
   
   const txn = algosdk.makeApplicationCreateTxnFromObject({
-    from: account.addr,
+    sender: account.addr,
     approvalProgram: new Uint8Array(Buffer.from(approvalCompiled.result, 'base64')),
     clearProgram: new Uint8Array(Buffer.from(clearCompiled.result, 'base64')),
     numGlobalInts: AgentFactoryARC32.state.global.num_uints,
@@ -72,7 +72,7 @@ async function deployToNetwork(network: 'testnet' | 'mainnet', mnemonic: string)
   await algosdk.waitForConfirmation(algod, txn.txID().toString(), 4);
   
   const ptx = await algod.pendingTransactionInformation(txn.txID().toString()).do();
-  const appId = ptx['application-index'];
+  const appId = Number(ptx.applicationIndex);
 
   console.log(`✅ Success!`);
   console.log(`App ID: ${appId}`);

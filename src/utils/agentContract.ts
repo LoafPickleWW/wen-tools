@@ -225,8 +225,8 @@ export async function buildCreateListingTxns(
   }
 
   const mbrPayment = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
-    from: senderAddress,
-    to: algosdk.getApplicationAddress(factoryId),
+    sender: senderAddress,
+    receiver: algosdk.getApplicationAddress(factoryId),
     amount: 478_700, // Box MBR (21.7k) + Child App MBR (457k)
     suggestedParams,
   });
@@ -257,7 +257,7 @@ export async function buildCreateListingTxns(
       params.infoUrl || ""
     ],
     sender: senderAddress,
-    suggestedParams: { ...suggestedParams, fee: Math.max((suggestedParams.minFee || 1000) * 2, (suggestedParams.fee || 1000) * 2, 4000), flatFee: true },
+    suggestedParams: { ...suggestedParams, fee: Math.max(Number(suggestedParams.minFee || 1000) * 2, Number(suggestedParams.fee || 1000) * 2, 4000), flatFee: true },
     signer: dummySigner,
     boxes: [{ appIndex: factoryId, name: boxName }],
   });
@@ -362,7 +362,7 @@ export async function buildDeleteListingTxns(
     method: algosdk.ABIMethod.fromSignature("delete_listing(uint64)void"),
     methodArgs: [nonce],
     sender: senderAddress,
-    suggestedParams: { ...suggestedParams, fee: Math.max((suggestedParams.minFee || 1000) * 2, (suggestedParams.fee || 1000) * 2, 4000), flatFee: true }, // Inner txn fee coverage
+    suggestedParams: { ...suggestedParams, fee: Math.max(Number(suggestedParams.minFee || 1000) * 2, Number(suggestedParams.fee || 1000) * 2, 4000), flatFee: true }, // Inner txn fee coverage
     signer: dummySigner,
     boxes: [{ appIndex: factoryId, name: boxName }],
     appForeignApps: [childAppId],

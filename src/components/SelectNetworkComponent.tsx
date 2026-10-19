@@ -1,4 +1,5 @@
-import { NetworkId, useWallet } from "@txnlab/use-wallet-react";
+import { NetworkId } from "@txnlab/use-wallet-react";
+import { useAppNetwork } from "../hooks/useAppNetwork";
 
 const NETWORKS = [
   { id: NetworkId.MAINNET, label: "Mainnet", short: "Main", dot: "bg-emerald-400" },
@@ -7,7 +8,7 @@ const NETWORKS = [
 
 /** Segmented Mainnet / Testnet switch. */
 export default function SelectNetworkComponent() {
-  const { activeNetwork, setActiveNetwork } = useWallet();
+  const { activeNetwork, setActiveNetwork } = useAppNetwork();
 
   return (
     <div

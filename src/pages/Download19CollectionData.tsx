@@ -4,7 +4,7 @@ import { toast } from "react-toastify";
 import axios from "axios";
 import { TOOLS } from "../constants";
 import { getARC19AssetMetadataData, getIndexerURL } from "../utils";
-import { useWallet } from "@txnlab/use-wallet-react";
+import { useAppNetwork } from "../hooks/useAppNetwork";
 import ConnectButton from "../components/ConnectButton";
 import { Meta } from "../components/Meta";
 
@@ -13,7 +13,7 @@ export function Download19CollectionData() {
   const [collectionData, setCollectionData] = useState([] as any[]);
   const [loading, setLoading] = useState(false);
   const [counter, setCounter] = useState(0);
-  const { activeNetwork } = useWallet();
+  const { activeNetwork } = useAppNetwork();
 
   async function getCollectionData() {
     if (creatorWallet) {

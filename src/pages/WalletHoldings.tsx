@@ -5,6 +5,7 @@ import axios from "axios";
 import { getIndexerURL } from "../utils";
 import { TOOLS } from "../constants";
 import { useWallet } from "@txnlab/use-wallet-react";
+import { useAppNetwork } from "../hooks/useAppNetwork";
 import { Meta } from "../components/Meta";
 
 export function WalletHoldings() {
@@ -13,7 +14,8 @@ export function WalletHoldings() {
   const [isIncludedCreatedAssets, setIsIncludedCreatedAssets] = useState(false);
   const [loading, setLoading] = useState(false);
   const [counter, setCounter] = useState(0);
-  const { activeNetwork, algodClient } = useWallet();
+  const { algodClient } = useWallet();
+  const { activeNetwork } = useAppNetwork();
 
   async function getWalletData() {
     if (userWallet) {
@@ -81,10 +83,10 @@ export function WalletHoldings() {
       const assetData = await algodClient.getAssetByID(asset.asset_id).do();
       return {
         asset_id: asset.asset_id,
-        unit_name: assetData.params["unit-name"] || "-",
-        asset_name: assetData.params.name || "-",
-        amount: (asset.amount / 10 ** assetData.params.decimals).toFixed(
-          assetData.params.decimals
+        unit_name: assetData.params!.unitName || "-",
+        asset_name: assetData.params!.name || "-",
+        amount: (asset.amount / 10 ** assetData.params!.decimals).toFixed(
+          assetData.params!.decimals
         ),
       };
     } catch {

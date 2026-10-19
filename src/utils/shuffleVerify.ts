@@ -44,7 +44,7 @@ function compiledPrograms(network: SaleNetwork) {
 
 async function onChainApproval(network: SaleNetwork, appId: number) {
   const app = await getAlgod(network).getApplicationByID(appId).do();
-  return new Uint8Array(Buffer.from(app.params["approval-program"], "base64"));
+  return app.params!.approvalProgram;
 }
 
 /** Does the deployed factory run exactly the published source? */

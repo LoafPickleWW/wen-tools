@@ -11,9 +11,10 @@ interface PQCheckResult {
 const pqCheckCache: Record<string, PQCheckResult> = {};
 
 /**
- * Decode a base64 string to a utf-8 string safely.
+ * Decode a base64 string (raw indexer JSON) or bytes (algosdk v3 typed models) to a string safely.
  */
-function safeBase64Decode(b64: string): string {
+function safeBase64Decode(b64: string | Uint8Array): string {
+  if (b64 instanceof Uint8Array) return new TextDecoder().decode(b64);
   try {
     return atob(b64);
   } catch {
@@ -128,7 +129,7 @@ export async function checkIsPQAccount(
           }
         }
 
-        nextToken = res["next-token"];
+        nextToken = res.nextToken;
         maxPages--;
       } while (nextToken && maxPages > 0);
 

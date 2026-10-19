@@ -1,0 +1,25 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`api/wenpad-reveal (keeper) > reveals the commit as the keeper and returns the delivered asset 1`] = `
+[
+  {
+    "sig": "b64:bgg+VQS9hmS4+64KRMjq9ErDqArDZTopDWAo3h80VY6tjXHyRRR1W1sXByOv9S+4bP4eGMUVFFb8XwRXuubbCA==",
+    "txID": "ZU6X5CNIOMWOPDHTO7UTPZEX4I44INWA6SZSY5HQ3JPSY2JI7MPA",
+    "txn": {
+      "apaa": [
+        "b64:3qCGrQ==",
+        "b64:AAAAAAAAAA4=",
+      ],
+      "apid": "int:2001",
+      "fee": "int:3000",
+      "fv": "int:50000000",
+      "gen": "mainnet-v1.0",
+      "gh": "b64:wGHE2Pwdvd7S12BL5FaOP20EGYesN73ktiC1qzkkit8=",
+      "grp": "b64:dE0V9R67ZSUirMua0Q7v+cREmQ6XR00xuAtC+ZoprFM=",
+      "lv": "int:50000010",
+      "snd": "addr:5VESRRRI2HBMN2XJAM4JAWMVMEUVSJZ2LRR7SNRWYFDBJLEHG7I2572N4M",
+      "type": "appl",
+    },
+  },
+]
+`;

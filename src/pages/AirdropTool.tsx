@@ -13,6 +13,7 @@ import FileDownloadIcon from "@mui/icons-material/FileDownload";
 import { TOOLS } from "../constants";
 import InfinityModeComponent from "../components/InfinityModeComponent";
 import { useWallet } from "@txnlab/use-wallet-react";
+import { useAppNetwork } from "../hooks/useAppNetwork";
 import { Meta } from "../components/Meta";
 import {
   createArc59GroupTxns,
@@ -41,8 +42,8 @@ export function AirdropTool() {
   const [currentSpendingBalance, setCurrentSpendingBalance] = useState(0);
 
   const [processStep, setProcessStep] = useState<PageState>("INITIAL");
-  const { activeAddress, activeNetwork, algodClient, transactionSigner } =
-    useWallet();
+  const { activeAddress, algodClient, transactionSigner } = useWallet();
+  const { activeNetwork } = useAppNetwork();
 
   const handleFileData = async () => {
     if (activeAddress === null || activeAddress === undefined) {
@@ -121,7 +122,7 @@ export function AirdropTool() {
             .accountInformation(activeAddress as string)
             .do();
           const spendingBalance =
-            accountInfo.amount - accountInfo["min-balance"];
+            Number(accountInfo.amount) - Number(accountInfo.minBalance);
           setCurrentSpendingBalance(spendingBalance);
           setProcessStep("SEND_TO_ASSET_INBOX");
         } else {

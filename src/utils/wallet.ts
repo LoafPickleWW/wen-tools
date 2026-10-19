@@ -469,7 +469,7 @@ async function getCreatorWalletOfAsset(assetId: number, indexerUrl: string) {
 }
 
 export async function sendSignedTransaction(signedTxns: Uint8Array[], algodClient: Algodv2) {
-  const { txId } = await algodClient.sendRawTransaction(signedTxns).do();
+  const { txid: txId } = await algodClient.sendRawTransaction(signedTxns).do();
   await waitForConfirmation(algodClient, txId, 3);
   return txId;
 }
@@ -500,8 +500,8 @@ export async function createAssetOptInTransactions(
   const txnsArray: Transaction[] = [];
   for (let i = 0; i < assets.length; i++) {
     const tx = makeAssetTransferTxnWithSuggestedParamsFromObject({
-      from: walletAddress.trim(),
-      to: walletAddress.trim(),
+      sender: walletAddress.trim(),
+      receiver: walletAddress.trim(),
       amount: 0,
       assetIndex: assets[i],
       suggestedParams: params,
@@ -530,8 +530,8 @@ export async function createAssetOptoutTransactions(
     const creatorAddress = await getCreatorWalletOfAsset(assets[i], indexerUrl);
     if (creatorAddress !== "") {
       const tx = makeAssetTransferTxnWithSuggestedParamsFromObject({
-        from: walletAddress.trim(),
-        to: creatorAddress.trim(),
+        sender: walletAddress.trim(),
+        receiver: creatorAddress.trim(),
         amount: 0,
         assetIndex: assets[i],
         suggestedParams: params,
@@ -559,8 +559,8 @@ export async function createDeletedAssetOptoutTransactions(
   const txnsArray: Transaction[] = [];
   for (let i = 0; i < assets.length; i++) {
     const tx = makeAssetTransferTxnWithSuggestedParamsFromObject({
-      from: walletAddress.trim(),
-      to: walletAddress.trim(),
+      sender: walletAddress.trim(),
+      receiver: walletAddress.trim(),
       amount: 0,
       assetIndex: assets[i],
       suggestedParams: params,
@@ -590,7 +590,7 @@ export async function createAssetDestroyTransactions(
     const creatorAddress = await getCreatorWalletOfAsset(assets[i], indexerUrl);
     if (creatorAddress !== "") {
       const tx = makeAssetDestroyTxnWithSuggestedParamsFromObject({
-        from: walletAddress.trim(),
+        sender: walletAddress.trim(),
         suggestedParams: params,
         assetIndex: assets[i],
         note: new TextEncoder().encode(TX_NOTE),
@@ -616,8 +616,8 @@ export async function createAssetSendTransactions(
   const txnsArray: Transaction[] = [];
   for (let i = 0; i < assets.length; i++) {
     const tx = makeAssetTransferTxnWithSuggestedParamsFromObject({
-      from: walletAddress.trim(),
-      to: assets[i].receiver.trim(),
+      sender: walletAddress.trim(),
+      receiver: assets[i].receiver.trim(),
       amount: assets[i].amount * 10 ** assets[i].decimals,
       assetIndex: assets[i].index,
       suggestedParams: params,
@@ -643,16 +643,16 @@ export async function createAssetTransferTransactions(
   const txnsArray: Transaction[][] = [];
   for (let i = 0; i < assets.length; i++) {
     const optin_tx = makeAssetTransferTxnWithSuggestedParamsFromObject({
-      from: assets[i].receiver.trim(),
-      to: assets[i].receiver.trim(),
+      sender: assets[i].receiver.trim(),
+      receiver: assets[i].receiver.trim(),
       amount: 0,
       assetIndex: assets[i].index,
       suggestedParams: params,
       note: new TextEncoder().encode(TX_NOTE),
     });
     const send_tx = makeAssetTransferTxnWithSuggestedParamsFromObject({
-      from: walletAddress.trim(),
-      to: assets[i].receiver.trim(),
+      sender: walletAddress.trim(),
+      receiver: assets[i].receiver.trim(),
       amount: assets[i].amount * 10 ** assets[i].decimals,
       assetIndex: assets[i].index,
       suggestedParams: params,

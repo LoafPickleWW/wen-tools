@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useWallet } from "@txnlab/use-wallet-react";
+import { useAppNetwork } from "../hooks/useAppNetwork";
 import algosdk from "algosdk";
 import QRCode from "qrcode";
 import { toast } from "react-toastify";
@@ -9,6 +10,7 @@ import { Meta } from "../components/Meta";
 import { PQLeaderboard, type LiveBatch } from "../components/quantum/PQLeaderboard";
 import { PQTopPrinters } from "../components/quantum/PQTopPrinters";
 import { PQCouponSource } from "../components/quantum/PQCouponSource";
+import { RecoveryPhrase } from "../components/quantum/PQRecoveryPhrase";
 import { PQ_COUPON, getPendingCoupons, isOptedIn } from "../utils/pqCoupon";
 import { generateNativePQAccount, nativePQFee } from "../utils/pqNative";
 import {
@@ -21,6 +23,8 @@ import {
   loadArchive,
   loadSession,
   parseBackup,
+  sessionFromMnemonic,
+  storagePersists,
   printDurationSeconds,
   PRINT_SPEEDS,
   runPrinter,
@@ -78,11 +82,15 @@ function short(s: string, n = 6) {
 }
 
 export default function PQTxPrinter() {
-  const { activeAddress, activeNetwork, signTransactions } = useWallet();
+  const { activeAddress, signTransactions } = useWallet();
+  const { activeNetwork } = useAppNetwork();
   const walletNetwork: PrinterNetwork = activeNetwork === "testnet" ? "testnet" : "mainnet";
 
   const [session, setSession] = useState<PrinterSession | null>(() => loadSession());
   const [generating, setGenerating] = useState(false);
+  /** False when this browser won't keep the printer key (blocked or broken storage). */
+  const [storageOk] = useState(storagePersists);
+  const [phraseInput, setPhraseInput] = useState("");
   const [balance, setBalance] = useState<number | null>(null);
   const [minBalance, setMinBalance] = useState(100_000);
   const [fundAmount, setFundAmount] = useState("1");
@@ -312,6 +320,16 @@ export default function PQTxPrinter() {
     setPhase("idle");
   };
 
+  const handleRestorePhrase = () => {
+    try {
+      openPrinter(sessionFromMnemonic(phraseInput, walletNetwork));
+      setPhraseInput("");
+      toast.success("Printer restored from recovery phrase");
+    } catch {
+      toast.error("That isn't a valid 25-word recovery phrase.");
+    }
+  };
+
   const handleRestore = async (file: File) => {
     try {
       openPrinter(parseBackup(await file.text()));
@@ -333,8 +351,8 @@ export default function PQTxPrinter() {
       const algod = getPrinterAlgod(session.network);
       const sp = await algod.getTransactionParams().do();
       const txn = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
-        from: activeAddress,
-        to: session.account.address,
+        sender: activeAddress,
+        receiver: session.account.address,
         amount,
         note: new TextEncoder().encode("wen.tools PQ printer · load paper"),
         suggestedParams: sp,
@@ -347,8 +365,8 @@ export default function PQTxPrinter() {
         if (wantsOptIn) {
           group.push(
             algosdk.makeAssetTransferTxnWithSuggestedParamsFromObject({
-              from: activeAddress,
-              to: activeAddress,
+              sender: activeAddress,
+              receiver: activeAddress,
               amount: 0,
               assetIndex: couponDeployment.assetId,
               suggestedParams: sp,
@@ -378,8 +396,8 @@ export default function PQTxPrinter() {
       const algod = getPrinterAlgod(session.network);
       const sp = await algod.getTransactionParams().do();
       const txn = algosdk.makeAssetTransferTxnWithSuggestedParamsFromObject({
-        from: activeAddress,
-        to: activeAddress,
+        sender: activeAddress,
+        receiver: activeAddress,
         amount: 0,
         assetIndex: couponDeployment.assetId,
         suggestedParams: sp,
@@ -487,7 +505,8 @@ export default function PQTxPrinter() {
     a.href = url;
     a.download = `pq-printer-${session.account.address.slice(0, 8)}.json`;
     a.click();
-    URL.revokeObjectURL(url);
+    // Revoking immediately can cancel the download in Safari: give it a moment.
+    setTimeout(() => URL.revokeObjectURL(url), 10_000);
   };
 
   const handleDiscard = async () => {
@@ -675,6 +694,29 @@ export default function PQTxPrinter() {
               }}
             />
           </label>
+          <details className="w-full max-w-md text-left">
+            <summary className="cursor-pointer text-center text-xs text-slate-500 hover:text-primary-yellow">
+              or restore from a 25-word recovery phrase
+            </summary>
+            <div className="mt-2 flex flex-col gap-2">
+              <textarea
+                value={phraseInput}
+                onChange={(e) => setPhraseInput(e.target.value)}
+                rows={3}
+                spellCheck={false}
+                autoComplete="off"
+                placeholder="word1 word2 … word25"
+                className="rounded-xl border border-white/10 bg-primary-black/40 px-3 py-2 font-mono text-xs outline-none focus:border-primary-orange/50"
+              />
+              <button
+                onClick={handleRestorePhrase}
+                disabled={phraseInput.trim().split(/\s+/).length !== 25}
+                className="rounded-xl border border-primary-orange/40 px-4 py-2 text-sm font-semibold text-primary-orange transition hover:bg-primary-orange/10 disabled:opacity-40"
+              >
+                Restore printer on {walletNetwork}
+              </button>
+            </div>
+          </details>
         </section>
       ) : (
         <>
@@ -771,6 +813,8 @@ export default function PQTxPrinter() {
               )}
             </div>
           </section>
+
+          <RecoveryPhrase mnemonic={session.account.mnemonic} storageOk={storageOk} />
 
           {/* Controls */}
           {phase !== "done" && (

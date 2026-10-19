@@ -13,6 +13,7 @@ import algosdk from "algosdk";
 import Falcon from "falcon-signatures";
 import {
   deriveNativePQAddress,
+  nativePQAccountFromMnemonic,
   nativePQFee,
   signNativePQTransaction,
   type NativePQAccount,
@@ -130,6 +131,24 @@ export function saveSession(session: PrinterSession): void {
   archiveSession(session);
 }
 
+/**
+ * Whether this browser actually keeps what we write. False when storage is
+ * blocked (e.g. Safari "Block All Cookies") or broken. Private windows can still
+ * pass this and lose everything when closed, which is why backups are prompted
+ * for everyone.
+ */
+export function storagePersists(): boolean {
+  const probe = "wentools-pq-storage-probe";
+  try {
+    localStorage.setItem(probe, "1");
+    const ok = localStorage.getItem(probe) === "1";
+    localStorage.removeItem(probe);
+    return ok;
+  } catch {
+    return false;
+  }
+}
+
 /** Forget the *current* printer. Its key stays in the archive. */
 export function clearSession(): void {
   try {
@@ -179,13 +198,33 @@ export function parseBackup(json: string): PrinterSession {
   return {
     version: 1,
     network: data.network === "testnet" ? "testnet" : "mainnet",
-    account: { address, salt, publicKey: account.publicKey, secretKey: account.secretKey },
+    account: {
+      address,
+      salt,
+      publicKey: account.publicKey,
+      secretKey: account.secretKey,
+      mnemonic: typeof account.mnemonic === "string" ? account.mnemonic : undefined,
+    },
     refundTo: typeof data.refundTo === "string" ? data.refundTo : "",
     createdAt: Number(data.createdAt) || Date.now(),
     nextSeq: Number(data.nextSeq) || 1,
     coupons: !!data.coupons,
     speed: data.speed,
     closed: false,
+  };
+}
+
+/** A printer session rebuilt from its 25-word recovery phrase. */
+export function sessionFromMnemonic(mnemonic: string, network: PrinterNetwork): PrinterSession {
+  return {
+    version: 1,
+    network,
+    account: nativePQAccountFromMnemonic(mnemonic),
+    refundTo: "",
+    createdAt: Date.now(),
+    // Notes only need to be unique per printer; jump well past any earlier run.
+    nextSeq: Date.now(),
+    coupons: PQ_COUPON[network] !== null,
   };
 }
 
@@ -205,10 +244,10 @@ export async function fetchBalance(
   network: PrinterNetwork,
   address: string,
 ): Promise<{ amount: number; minBalance: number }> {
-  const info: any = await getPrinterAlgod(network).accountInformation(address).do();
+  const info = await getPrinterAlgod(network).accountInformation(address).do();
   return {
     amount: Number(info.amount ?? 0),
-    minBalance: Number(info["min-balance"] ?? 100_000),
+    minBalance: Number(info.minBalance ?? 100_000),
   };
 }
 
@@ -239,9 +278,9 @@ export async function countPrinted(network: PrinterNetwork, address: string): Pr
   do {
     let req = indexer.searchForTransactions().address(address).addressRole("sender").limit(1000);
     if (next) req = req.nextToken(next);
-    const res: any = await req.do();
+    const res = await req.do();
     count += res.transactions?.length ?? 0;
-    next = res.transactions?.length ? res["next-token"] : undefined;
+    next = res.transactions?.length ? res.nextToken : undefined;
   } while (next);
   return count;
 }
@@ -311,10 +350,10 @@ class ConfirmationTracker {
   private async run() {
     if (this.running) return;
     this.running = true;
-    let round = Number((await this.algod.status().do())["last-round"]);
+    let round = Number((await this.algod.status().do()).lastRound);
     while (this.groups.size) {
       try {
-        round = Number((await this.algod.statusAfterBlock(round).do())["last-round"]);
+        round = Number((await this.algod.statusAfterBlock(round).do()).lastRound);
       } catch {
         await new Promise((r) => setTimeout(r, 1000));
         continue;
@@ -322,14 +361,14 @@ class ConfirmationTracker {
       await Promise.all(
         [...this.groups].map(async ([txID, g]) => {
           try {
-            const info: any = await this.algod.pendingTransactionInformation(txID).do();
-            const confirmed = Number(info["confirmed-round"] || 0);
+            const info = await this.algod.pendingTransactionInformation(txID).do();
+            const confirmed = Number(info.confirmedRound || 0);
             if (confirmed > 0) {
               this.groups.delete(txID);
               g.resolve(confirmed);
-            } else if (info["pool-error"]) {
+            } else if (info.poolError) {
               this.groups.delete(txID);
-              g.reject(new Error(info["pool-error"]));
+              g.reject(new Error(info.poolError));
             }
           } catch {
             // Not found: dropped from the pool, or a transient node error.
@@ -394,7 +433,7 @@ async function printWith(
   let pending = coupon ? await getPendingCoupons(algod, coupon, account.address) : null;
   if (coupon && pending === null) {
     const sp = await algod.getTransactionParams().do();
-    const fee = nativePQFee(sp.minFee || 1000);
+    const fee = nativePQFee(Number(sp.minFee || 1000));
     const txns = buildRegisterTxns(coupon, account, session.refundTo, sp, fee);
     algosdk.assignGroupID(txns);
     const signed = await signAll(txns, account, sign);
@@ -408,8 +447,8 @@ async function printWith(
     cb.onSubmitted(receipts);
     try {
       await algod.sendRawTransaction(signed.map((s) => s.blob)).do();
-      const res: any = await algosdk.waitForConfirmation(algod, signed[1].txID, 20);
-      cb.onConfirmed(receipts.map((r) => r.txID), Number(res["confirmed-round"]));
+      const res = await algosdk.waitForConfirmation(algod, signed[1].txID, 20);
+      cb.onConfirmed(receipts.map((r) => r.txID), Number(res.confirmedRound));
     } catch (err) {
       cb.onFailed(receipts.map((r) => r.txID), errorMessage(err));
       throw new Error(`Coupon registration failed: ${errorMessage(err)}`);
@@ -466,7 +505,7 @@ async function printWith(
       sp = await algod.getTransactionParams().do();
       spFetchedAt = Date.now();
     }
-    const minFee = sp.minFee || 1000;
+    const minFee = Number(sp.minFee || 1000);
     const fee = nativePQFee(minFee);
     // Throttled speeds send smaller groups (about one block's worth) on a schedule.
     const rate = PRINT_SPEEDS[getSpeed()].txPerSecond;
@@ -493,8 +532,8 @@ async function printWith(
       return coupon
         ? buildPrintTxn(coupon, account.address, sp, fee, note)
         : algosdk.makePaymentTxnWithSuggestedParamsFromObject({
-            from: account.address,
-            to: account.address,
+            sender: account.address,
+            receiver: account.address,
             amount: 0,
             note,
             suggestedParams: { ...sp, fee, flatFee: true },
@@ -518,7 +557,7 @@ async function printWith(
         kind: "print",
       })),
     );
-    launch(signed, cost, Number(sp.lastRound));
+    launch(signed, cost, Number(sp.lastValid));
 
     if (rate) {
       // Pace the next batch so this one's transactions are spread at `rate` per second.
@@ -552,7 +591,7 @@ async function closeOut(
   const coupon = sessionCoupon(session);
   const { amount } = await fetchBalance(network, account.address);
   const sp = await algod.getTransactionParams().do();
-  const minFee = sp.minFee || 1000;
+  const minFee = Number(sp.minFee || 1000);
   const fee = nativePQFee(minFee);
 
   // Throws on node errors rather than guessing "not registered" and closing without a claim.
@@ -570,8 +609,8 @@ async function closeOut(
   }
   txns.push(
     algosdk.makePaymentTxnWithSuggestedParamsFromObject({
-      from: account.address,
-      to: refundTo,
+      sender: account.address,
+      receiver: refundTo,
       amount: 0,
       closeRemainderTo: refundTo,
       note: new TextEncoder().encode(`wen.tools PQ printer · falcon-1024 · #${seq} · close`),
@@ -595,10 +634,10 @@ async function closeOut(
 
   try {
     await algod.sendRawTransaction(signed.map((s) => s.blob)).do();
-    const res: any = await algosdk.waitForConfirmation(algod, closeTx.txID, 20);
+    const res = await algosdk.waitForConfirmation(algod, closeTx.txID, 20);
     cb.onConfirmed(
       signed.map((s) => s.txID),
-      Number(res["confirmed-round"]),
+      Number(res.confirmedRound),
     );
   } catch (err) {
     cb.onFailed(

@@ -46,11 +46,11 @@ export default function VanityAddressTool() {
       const runBatch = () => {
         for (let i = 0; i < 20; i++) {
           const account = algosdk.generateAccount();
-          if (account.addr.startsWith(prefix)) {
+          if (account.addr.toString().startsWith(prefix)) {
             setResults((prev) => [
               ...prev.slice(-4), // Keep last 4
               {
-                addr: account.addr,
+                addr: account.addr.toString(),
                 mnemonic: algosdk.secretKeyToMnemonic(account.sk),
               },
             ]);

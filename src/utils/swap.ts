@@ -212,16 +212,16 @@ export async function buildSwapGroup(items: SwapItem[]) {
     const to = resolved[item.receiver] || item.receiver;
     if (item.txType === "pay") {
       txns.push(algosdk.makePaymentTxnWithSuggestedParamsFromObject({
-        from, to, amount: algosdk.algosToMicroalgos(item.amount || 0), suggestedParams: params,
+        sender: from, receiver: to, amount: algosdk.algosToMicroalgos(item.amount || 0), suggestedParams: params,
       }));
     } else if (item.txType === "axfer") {
       txns.push(algosdk.makeAssetTransferTxnWithSuggestedParamsFromObject({
-        from, to, amount: (item.amount || 0) * Math.pow(10, decimals[item.assetId!] || 0),
+        sender: from, receiver: to, amount: (item.amount || 0) * Math.pow(10, decimals[item.assetId!] || 0),
         assetIndex: item.assetId!, suggestedParams: params,
       }));
     } else if (item.txType === "optin") {
       txns.push(algosdk.makeAssetTransferTxnWithSuggestedParamsFromObject({
-        from, to: from, amount: 0, assetIndex: item.assetId!, suggestedParams: params,
+        sender: from, receiver: from, amount: 0, assetIndex: item.assetId!, suggestedParams: params,
       }));
     }
   }
@@ -270,7 +270,7 @@ export async function createShareTx(
   const params = await algod.getTransactionParams().do();
   const txns = notes.map(note =>
     algosdk.makePaymentTxnWithSuggestedParamsFromObject({
-      from: sender, to: SWAP_RECEIVER, amount: 0, suggestedParams: params, note,
+      sender: sender, receiver: SWAP_RECEIVER, amount: 0, suggestedParams: params, note,
     })
   );
   if (txns.length > 1) {
@@ -278,7 +278,7 @@ export async function createShareTx(
     txns.forEach(t => { t.group = gid; });
   }
   const signed = await signer(txns, txns.map((_, i) => i));
-  const { txId } = await algod.sendRawTransaction(signed).do();
+  const { txid: txId } = await algod.sendRawTransaction(signed).do();
   await algosdk.waitForConfirmation(algod, txId, 4);
   return txns.map(t => t.txID());
 }
@@ -328,19 +328,22 @@ export async function fetchSwapFromTxIds(txIds: string[]): Promise<DecodedSwapTx
       isSigned = true;
     }
 
-    const from = algosdk.encodeAddress(txn.from.publicKey);
-    const to = txn.to ? algosdk.encodeAddress(txn.to.publicKey) : from;
+    const from = txn.sender.toString();
+    const receiver = txn.payment?.receiver ?? txn.assetTransfer?.receiver;
+    const to = receiver ? receiver.toString() : from;
+    const amount = Number(txn.payment?.amount ?? txn.assetTransfer?.amount ?? 0);
+    const assetIndex = Number(txn.assetTransfer?.assetIndex ?? 0);
 
     if (txn.type === "pay") {
       results.push({
-        swap: { id: i, sender: from, receiver: to, assetId: 1, amount: algosdk.microalgosToAlgos(txn.amount as number), txType: "pay" },
+        swap: { id: i, sender: from, receiver: to, assetId: 1, amount: algosdk.microalgosToAlgos(amount), txType: "pay" },
         isSigned, bytes: rawTxns[i],
       });
     } else if (txn.type === "axfer") {
-      const isOptin = from === to && (txn.amount === undefined || txn.amount === 0);
+      const isOptin = from === to && amount === 0;
       if (isOptin) {
         results.push({
-          swap: { id: i, sender: from, receiver: to, assetId: txn.assetIndex, amount: 0, txType: "optin" },
+          swap: { id: i, sender: from, receiver: to, assetId: assetIndex, amount: 0, txType: "optin" },
           isSigned, bytes: rawTxns[i],
         });
       } else {
@@ -348,14 +351,14 @@ export async function fetchSwapFromTxIds(txIds: string[]): Promise<DecodedSwapTx
         let url = "";
         let reserve = "";
         try { 
-          const info = await getAssetInfo(txn.assetIndex); 
+          const info = await getAssetInfo(assetIndex); 
           dec = info.params.decimals; 
           url = info.params.url || "";
           reserve = info.params.reserve || "";
         } catch { /* ignore */ }
         results.push({
-          swap: { id: i, sender: from, receiver: to, assetId: txn.assetIndex,
-            amount: (txn.amount as number) / Math.pow(10, dec), txType: "axfer",
+          swap: { id: i, sender: from, receiver: to, assetId: assetIndex,
+            amount: amount / Math.pow(10, dec), txType: "axfer",
             assetUrl: url, assetReserve: reserve },
           isSigned, bytes: rawTxns[i],
         });
@@ -396,7 +399,7 @@ export async function claimSwap(
     }
   }
 
-  const { txId } = await algod.sendRawTransaction(merged).do();
+  const { txid: txId } = await algod.sendRawTransaction(merged).do();
   await algosdk.waitForConfirmation(algod, txId, 4);
   return txId;
 }

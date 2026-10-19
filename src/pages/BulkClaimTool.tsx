@@ -1,6 +1,7 @@
 import { ToolHero, TermSpinner } from "../components/cypher/ToolKit";
 import { showDonationToast } from "../utils";
 import { NetworkId, useWallet } from "@txnlab/use-wallet-react";
+import { useAppNetwork } from "../hooks/useAppNetwork";
 import algosdk, { Transaction } from "algosdk";
 import axios from "axios";
 import { useEffect, useState } from "react";
@@ -121,7 +122,8 @@ const INITIAL_STEP = 0;
 const COMPLETED = 1;
 
 export const BlukClaimTool = () => {
-  const { activeAddress, activeNetwork, algodClient, signTransactions } = useWallet();
+  const { activeAddress, algodClient, signTransactions } = useWallet();
+  const { activeNetwork } = useAppNetwork();
   const [mnemonic, setMnemonic] = useState("");
   const [isLoadingAssets, setIsLoadingAssets] = useState(true);
   const [assets, setAssets] = useState<Asset[]>([]);

@@ -63,7 +63,7 @@ async function autoClose(network: SaleNetwork, factoryId: number, keeper: algosd
   const state = await getSaleState(network, appId);
   if (state.status !== STATUS.RELEASED || state.pending > 0) return false;
 
-  const steps = await planCollect(network, factoryId, keeper.addr, { appId, saleId });
+  const steps = await planCollect(network, factoryId, keeper.addr.toString(), { appId, saleId });
   if (steps.length !== 1) return false;
   const txns = await steps[0]();
   if (txns.reduce((n, t) => n + Number(t.fee), 0) > MAX_CLOSE_FEE) return false;
@@ -122,7 +122,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     let result: { txId: string; assetId: number } | null = null;
     for (const step of steps) {
       await waitForRound(algod, step.targetRound, 20_000);
-      const txns = await buildQueueStep(network, keeper.addr, appId, step);
+      const txns = await buildQueueStep(network, keeper.addr.toString(), appId, step);
       if (txns.reduce((n, t) => n + Number(t.fee), 0) > MAX_STEP_FEE) {
         return res.status(402).json({ error: "Reveal fees too high for the keeper; reveal from your own wallet" });
       }

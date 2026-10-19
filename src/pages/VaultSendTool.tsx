@@ -13,6 +13,7 @@ import axios from "axios";
 import InfinityModeComponent from "../components/InfinityModeComponent";
 import FaqSectionComponent from "../components/FaqSectionComponent";
 import { useWallet } from "@txnlab/use-wallet-react";
+import { useAppNetwork } from "../hooks/useAppNetwork";
 import ConnectButton from "../components/ConnectButton";
 import { Meta } from "../components/Meta";
 
@@ -46,8 +47,8 @@ export function VaultSendTool() {
 
   const [processStep, setProcessStep] = useState(START_PROCESS);
   const [mnemonic, setMnemonic] = useState("");
-  const { activeAddress, activeNetwork, algodClient, transactionSigner } =
-    useWallet();
+  const { activeAddress, algodClient, transactionSigner } = useWallet();
+  const { activeNetwork } = useAppNetwork();
 
   function base64ToByteArray(blob: any) {
     return stringToByteArray(atob(blob));
@@ -166,7 +167,7 @@ export function VaultSendTool() {
           unsignedTransactions.push(
             encodeNFDTransactionsArray(transactionsArray).map((a) => {
               const uTxn = algosdk.decodeUnsignedTransaction(a);
-              uTxn.lastRound = uTxn.lastRound + 900;
+              (uTxn as { lastValid: bigint }).lastValid = uTxn.lastValid + 900n;
               uTxn.group = undefined;
               return uTxn;
             })

@@ -1,0 +1,184 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`swap > build -> sign -> share -> fetch -> claim round trip > claimed 1`] = `
+[
+  {
+    "sig": "b64:ZfIRpHt5hggaofPtk7SkhOkfMiYdkqv4kAPnX784JFpAxaFo9KCUuoq2Pty0nVidmdHsk3V6yninnVxCstaQBQ==",
+    "txID": "YDUMOHJ7XP2YTCJBWS4HA3S2ZRXSLQPQVUKYMRNOKL4IYDZHLNLA",
+    "txn": {
+      "amt": "int:2500000",
+      "fee": "int:1000",
+      "fv": "int:50000000",
+      "gen": "mainnet-v1.0",
+      "gh": "b64:wGHE2Pwdvd7S12BL5FaOP20EGYesN73ktiC1qzkkit8=",
+      "grp": "b64:aWavAaefCDb7O6xHs+5hjx7JQccJtXZwyhDfg3MJra0=",
+      "lv": "int:50001000",
+      "rcv": "addr:QE4XODVIPULV6VVDKRTMGTD6ZTFY3CURWTXDPIS56YHVXD6JWOKORTLPBU",
+      "snd": "addr:RKEOHXLUBHYZL7KS3MWTZOS5OLFGOCN7DWKBEG7TOSEADNAPN5OOTUNSLE",
+      "type": "pay",
+    },
+  },
+  {
+    "sig": "b64:UHRf/fWY1WagiGYjbDfe+0PhXwRGVEpNNqFrKu5WIxxM8jLFlVE/WAje3khsLgnDJlFDWdj1SxnSH/rydKFpCQ==",
+    "txID": "CFYKIOBJBDQG5J2QHSLCMD442GWUGEWZ5E65AAWUHN5BKJJVL3EQ",
+    "txn": {
+      "arcv": "addr:QE4XODVIPULV6VVDKRTMGTD6ZTFY3CURWTXDPIS56YHVXD6JWOKORTLPBU",
+      "fee": "int:1000",
+      "fv": "int:50000000",
+      "gen": "mainnet-v1.0",
+      "gh": "b64:wGHE2Pwdvd7S12BL5FaOP20EGYesN73ktiC1qzkkit8=",
+      "grp": "b64:aWavAaefCDb7O6xHs+5hjx7JQccJtXZwyhDfg3MJra0=",
+      "lv": "int:50001000",
+      "snd": "addr:QE4XODVIPULV6VVDKRTMGTD6ZTFY3CURWTXDPIS56YHVXD6JWOKORTLPBU",
+      "type": "axfer",
+      "xaid": "int:555",
+    },
+  },
+  {
+    "sig": "b64:bWhSrhaZTIowcF460CQVN+kIbwndwim6WK0zGDHWokoNUOdY0i83gsTPFwlCo+76VWCJkyTjHVqvHj/42xuDAQ==",
+    "txID": "JGTFZDPGQF53AAF7HJHQAGXB3CQBTOLOMU6ZDKAC66BTJ7ZWQD3Q",
+    "txn": {
+      "aamt": "int:1",
+      "arcv": "addr:QE4XODVIPULV6VVDKRTMGTD6ZTFY3CURWTXDPIS56YHVXD6JWOKORTLPBU",
+      "fee": "int:1000",
+      "fv": "int:50000000",
+      "gen": "mainnet-v1.0",
+      "gh": "b64:wGHE2Pwdvd7S12BL5FaOP20EGYesN73ktiC1qzkkit8=",
+      "grp": "b64:aWavAaefCDb7O6xHs+5hjx7JQccJtXZwyhDfg3MJra0=",
+      "lv": "int:50001000",
+      "snd": "addr:RKEOHXLUBHYZL7KS3MWTZOS5OLFGOCN7DWKBEG7TOSEADNAPN5OOTUNSLE",
+      "type": "axfer",
+      "xaid": "int:555",
+    },
+  },
+  {
+    "sig": "b64:jQN0AM354+kLDnYaFVLE6+npy1omZtb36cAnbh3bdvpLoeMYn+2SAlOoIxcxGiPcRsKpB2frzxhY9SHle2U/AQ==",
+    "txID": "ABS5PAQEXW7VTPVS2VMKQWGTI67IPZZFRSL6JDHGALG4E57G6OPA",
+    "txn": {
+      "amt": "int:1000000",
+      "fee": "int:1000",
+      "fv": "int:50000000",
+      "gen": "mainnet-v1.0",
+      "gh": "b64:wGHE2Pwdvd7S12BL5FaOP20EGYesN73ktiC1qzkkit8=",
+      "grp": "b64:aWavAaefCDb7O6xHs+5hjx7JQccJtXZwyhDfg3MJra0=",
+      "lv": "int:50001000",
+      "rcv": "addr:RKEOHXLUBHYZL7KS3MWTZOS5OLFGOCN7DWKBEG7TOSEADNAPN5OOTUNSLE",
+      "snd": "addr:QE4XODVIPULV6VVDKRTMGTD6ZTFY3CURWTXDPIS56YHVXD6JWOKORTLPBU",
+      "type": "pay",
+    },
+  },
+]
+`;
+
+exports[`swap > build -> sign -> share -> fetch -> claim round trip > decoded 1`] = `
+[
+  {
+    "bytes": "gqNzaWfEQGXyEaR7eYYIGqHz7ZO0pITpHzImHZKr+JAD51+/OCRaQMWhaPSglLqKtj7ctJ1YnZnR7JN1esp4p51cQrLWkAWjdHhuiqNhbXTOACYloKNmZWXNA+iiZnbOAvrwgKNnZW6sbWFpbm5ldC12MS4womdoxCDAYcTY/B293tLXYEvkVo4/bQQZh6w3veS2ILWrOSSK36NncnDEIGlmrwGnnwg2+zusR7PuYY8eyUHHCbV2cMoQ34NzCa2tomx2zgL69GijcmN2xCCBOXcOqH0XX1ajVGbDTH7My42KkbTuN6Jd9g9bj8mzlKNzbmTEIIqI4910CfGV/VLbLTy6XXLKZwm/HZQSG/N0iAG0D29cpHR5cGWjcGF5",
+    "isSigned": true,
+    "swap": {
+      "amount": 2.5,
+      "assetId": 1,
+      "id": 0,
+      "receiver": "QE4XODVIPULV6VVDKRTMGTD6ZTFY3CURWTXDPIS56YHVXD6JWOKORTLPBU",
+      "sender": "RKEOHXLUBHYZL7KS3MWTZOS5OLFGOCN7DWKBEG7TOSEADNAPN5OOTUNSLE",
+      "txType": "pay",
+    },
+  },
+  {
+    "bytes": "iqRhcmN2xCCBOXcOqH0XX1ajVGbDTH7My42KkbTuN6Jd9g9bj8mzlKNmZWXNA+iiZnbOAvrwgKNnZW6sbWFpbm5ldC12MS4womdoxCDAYcTY/B293tLXYEvkVo4/bQQZh6w3veS2ILWrOSSK36NncnDEIGlmrwGnnwg2+zusR7PuYY8eyUHHCbV2cMoQ34NzCa2tomx2zgL69Gijc25kxCCBOXcOqH0XX1ajVGbDTH7My42KkbTuN6Jd9g9bj8mzlKR0eXBlpWF4ZmVypHhhaWTNAis=",
+    "isSigned": false,
+    "swap": {
+      "amount": 0,
+      "assetId": 555,
+      "id": 1,
+      "receiver": "QE4XODVIPULV6VVDKRTMGTD6ZTFY3CURWTXDPIS56YHVXD6JWOKORTLPBU",
+      "sender": "QE4XODVIPULV6VVDKRTMGTD6ZTFY3CURWTXDPIS56YHVXD6JWOKORTLPBU",
+      "txType": "optin",
+    },
+  },
+  {
+    "bytes": "gqNzaWfEQG1oUq4WmUyKMHBeOtAkFTfpCG8J3cIpulitMxgx1qJKDVDnWNIvN4LEzxcJQqPu+lVgiZMk4x1arx4/+NsbgwGjdHhui6RhYW10AaRhcmN2xCCBOXcOqH0XX1ajVGbDTH7My42KkbTuN6Jd9g9bj8mzlKNmZWXNA+iiZnbOAvrwgKNnZW6sbWFpbm5ldC12MS4womdoxCDAYcTY/B293tLXYEvkVo4/bQQZh6w3veS2ILWrOSSK36NncnDEIGlmrwGnnwg2+zusR7PuYY8eyUHHCbV2cMoQ34NzCa2tomx2zgL69Gijc25kxCCKiOPddAnxlf1S2y08ul1yymcJvx2UEhvzdIgBtA9vXKR0eXBlpWF4ZmVypHhhaWTNAis=",
+    "isSigned": true,
+    "swap": {
+      "amount": 1,
+      "assetId": 555,
+      "assetReserve": "QE4XODVIPULV6VVDKRTMGTD6ZTFY3CURWTXDPIS56YHVXD6JWOKORTLPBU",
+      "assetUrl": "ipfs://x",
+      "id": 2,
+      "receiver": "QE4XODVIPULV6VVDKRTMGTD6ZTFY3CURWTXDPIS56YHVXD6JWOKORTLPBU",
+      "sender": "RKEOHXLUBHYZL7KS3MWTZOS5OLFGOCN7DWKBEG7TOSEADNAPN5OOTUNSLE",
+      "txType": "axfer",
+    },
+  },
+  {
+    "bytes": "iqNhbXTOAA9CQKNmZWXNA+iiZnbOAvrwgKNnZW6sbWFpbm5ldC12MS4womdoxCDAYcTY/B293tLXYEvkVo4/bQQZh6w3veS2ILWrOSSK36NncnDEIGlmrwGnnwg2+zusR7PuYY8eyUHHCbV2cMoQ34NzCa2tomx2zgL69GijcmN2xCCKiOPddAnxlf1S2y08ul1yymcJvx2UEhvzdIgBtA9vXKNzbmTEIIE5dw6ofRdfVqNUZsNMfszLjYqRtO43ol32D1uPybOUpHR5cGWjcGF5",
+    "isSigned": false,
+    "swap": {
+      "amount": 1,
+      "assetId": 1,
+      "id": 3,
+      "receiver": "RKEOHXLUBHYZL7KS3MWTZOS5OLFGOCN7DWKBEG7TOSEADNAPN5OOTUNSLE",
+      "sender": "QE4XODVIPULV6VVDKRTMGTD6ZTFY3CURWTXDPIS56YHVXD6JWOKORTLPBU",
+      "txType": "pay",
+    },
+  },
+]
+`;
+
+exports[`swap > build -> sign -> share -> fetch -> claim round trip > group 1`] = `
+[
+  {
+    "amt": "int:2500000",
+    "fee": "int:1000",
+    "fv": "int:50000000",
+    "gen": "mainnet-v1.0",
+    "gh": "b64:wGHE2Pwdvd7S12BL5FaOP20EGYesN73ktiC1qzkkit8=",
+    "grp": "b64:aWavAaefCDb7O6xHs+5hjx7JQccJtXZwyhDfg3MJra0=",
+    "lv": "int:50001000",
+    "rcv": "addr:QE4XODVIPULV6VVDKRTMGTD6ZTFY3CURWTXDPIS56YHVXD6JWOKORTLPBU",
+    "snd": "addr:RKEOHXLUBHYZL7KS3MWTZOS5OLFGOCN7DWKBEG7TOSEADNAPN5OOTUNSLE",
+    "txID": "YDUMOHJ7XP2YTCJBWS4HA3S2ZRXSLQPQVUKYMRNOKL4IYDZHLNLA",
+    "type": "pay",
+  },
+  {
+    "arcv": "addr:QE4XODVIPULV6VVDKRTMGTD6ZTFY3CURWTXDPIS56YHVXD6JWOKORTLPBU",
+    "fee": "int:1000",
+    "fv": "int:50000000",
+    "gen": "mainnet-v1.0",
+    "gh": "b64:wGHE2Pwdvd7S12BL5FaOP20EGYesN73ktiC1qzkkit8=",
+    "grp": "b64:aWavAaefCDb7O6xHs+5hjx7JQccJtXZwyhDfg3MJra0=",
+    "lv": "int:50001000",
+    "snd": "addr:QE4XODVIPULV6VVDKRTMGTD6ZTFY3CURWTXDPIS56YHVXD6JWOKORTLPBU",
+    "txID": "CFYKIOBJBDQG5J2QHSLCMD442GWUGEWZ5E65AAWUHN5BKJJVL3EQ",
+    "type": "axfer",
+    "xaid": "int:555",
+  },
+  {
+    "aamt": "int:1",
+    "arcv": "addr:QE4XODVIPULV6VVDKRTMGTD6ZTFY3CURWTXDPIS56YHVXD6JWOKORTLPBU",
+    "fee": "int:1000",
+    "fv": "int:50000000",
+    "gen": "mainnet-v1.0",
+    "gh": "b64:wGHE2Pwdvd7S12BL5FaOP20EGYesN73ktiC1qzkkit8=",
+    "grp": "b64:aWavAaefCDb7O6xHs+5hjx7JQccJtXZwyhDfg3MJra0=",
+    "lv": "int:50001000",
+    "snd": "addr:RKEOHXLUBHYZL7KS3MWTZOS5OLFGOCN7DWKBEG7TOSEADNAPN5OOTUNSLE",
+    "txID": "JGTFZDPGQF53AAF7HJHQAGXB3CQBTOLOMU6ZDKAC66BTJ7ZWQD3Q",
+    "type": "axfer",
+    "xaid": "int:555",
+  },
+  {
+    "amt": "int:1000000",
+    "fee": "int:1000",
+    "fv": "int:50000000",
+    "gen": "mainnet-v1.0",
+    "gh": "b64:wGHE2Pwdvd7S12BL5FaOP20EGYesN73ktiC1qzkkit8=",
+    "grp": "b64:aWavAaefCDb7O6xHs+5hjx7JQccJtXZwyhDfg3MJra0=",
+    "lv": "int:50001000",
+    "rcv": "addr:RKEOHXLUBHYZL7KS3MWTZOS5OLFGOCN7DWKBEG7TOSEADNAPN5OOTUNSLE",
+    "snd": "addr:QE4XODVIPULV6VVDKRTMGTD6ZTFY3CURWTXDPIS56YHVXD6JWOKORTLPBU",
+    "txID": "ABS5PAQEXW7VTPVS2VMKQWGTI67IPZZFRSL6JDHGALG4E57G6OPA",
+    "type": "pay",
+  },
+]
+`;

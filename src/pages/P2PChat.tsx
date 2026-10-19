@@ -133,11 +133,11 @@ export function P2PChat() {
       const note = new TextEncoder().encode(noteStr);
       
       const txn = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
-        from: activeAddress,
-        to: activeAddress,
+        sender: activeAddress,
+        receiver: activeAddress,
         amount: 0,
         note,
-        suggestedParams: { ...suggestedParams, fee: Math.max(suggestedParams.minFee || 1000, suggestedParams.fee || 1000, 3000), flatFee: true },
+        suggestedParams: { ...suggestedParams, fee: Math.max(Number(suggestedParams.minFee || 1000), Number(suggestedParams.fee || 1000), 3000), flatFee: true },
       });
 
       const encodedTxn = algosdk.encodeUnsignedTransaction(txn);
@@ -201,8 +201,8 @@ export function P2PChat() {
             const signedBytes = base64ToUint8(sigB64);
             const signedTxn = algosdk.decodeSignedTransaction(signedBytes);
             const txn = signedTxn.txn;
-            const accountAddr = algosdk.encodeAddress(txn.from.publicKey);
-            const signerKey = signedTxn.sgnr ? signedTxn.sgnr : txn.from.publicKey;
+            const accountAddr = txn.sender.toString();
+            const signerKey = (signedTxn.sgnr ?? txn.sender).publicKey;
             
             const rawTxn = algosdk.decodeUnsignedTransaction(unsignedBytes);
             const isValid = nacl.sign.detached.verify(rawTxn.bytesToSign(), signedTxn.sig!, signerKey);
@@ -232,8 +232,8 @@ export function P2PChat() {
           const noteStr = noteBytes ? new TextDecoder().decode(noteBytes) : "";
           if (!noteStr.includes(nonce)) throw new Error("Invalid nonce");
 
-          const accountAddr = algosdk.encodeAddress(txn.from.publicKey);
-          const signerKey = signedTxn.sgnr ? signedTxn.sgnr : txn.from.publicKey;
+          const accountAddr = txn.sender.toString();
+          const signerKey = (signedTxn.sgnr ?? txn.sender).publicKey;
           
           const rawTxn = algosdk.decodeUnsignedTransaction(unsignedBytes);
           const bytesToVerify = rawTxn.bytesToSign();
@@ -330,11 +330,11 @@ export function P2PChat() {
       // Force a signature BEFORE initializing the session
       const suggestedParams = await algodClient.getTransactionParams().do();
       const initTxn = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
-        from: activeAddress,
-        to: activeAddress,
+        sender: activeAddress,
+        receiver: activeAddress,
         amount: 0,
         note: new TextEncoder().encode(`Wen Tools P2P Session Init:${Date.now()}`),
-        suggestedParams: { ...suggestedParams, fee: Math.max(suggestedParams.minFee || 1000, suggestedParams.fee || 1000, 3000), flatFee: true },
+        suggestedParams: { ...suggestedParams, fee: Math.max(Number(suggestedParams.minFee || 1000), Number(suggestedParams.fee || 1000), 3000), flatFee: true },
       });
 
       const signedInit = await signTransactions([algosdk.encodeUnsignedTransaction(initTxn)]);
@@ -776,8 +776,8 @@ export function P2PChat() {
                       // 1. Sign Identity Proof
                       const nonce = crypto.randomUUID();
                       const pickupTxn = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
-                        from: activeAddress,
-                        to: activeAddress,
+                        sender: activeAddress,
+                        receiver: activeAddress,
                         amount: 0,
                         note: new TextEncoder().encode(`Dead Drop Pickup: ${nonce}`),
                         suggestedParams: await algodClient.getTransactionParams().do(),

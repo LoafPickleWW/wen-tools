@@ -78,6 +78,17 @@ export interface AccountFixture {
 /** Called for each confirmed txn; returns extra pending-response fields (asset-index, logs, ...). */
 export type ConfirmHook = (txn: SentTxn, index: number) => Record<string, any> | void;
 
+export interface SimulateResult {
+  /** Per-txn: number of inner txns to report and logs to attach. */
+  txns?: { inner?: number; logs?: Uint8Array[] }[];
+  /** Group-level unnamed resources (what algokit's populateAppCallResources reads). */
+  unnamed?: { accounts?: string[]; assets?: number[]; apps?: number[]; boxes?: { app: number; name: Uint8Array }[]; "extra-box-refs"?: number };
+  failure?: string;
+}
+
+/** Inspect a simulated group (decoded raw signed txns) and describe the outcome. */
+export type SimulateHook = (group: any[], call: number) => SimulateResult | void;
+
 const decodeMulti = (buf: Uint8Array): { value: any; bytes: Uint8Array }[] => {
   const out: { value: any; bytes: Uint8Array }[] = [];
   const decoder = new Decoder({ useBigInt64: true });
@@ -122,6 +133,9 @@ export class FakeChain {
   sent: SentTxn[] = [];
   requests: string[] = [];
   confirmHook: ConfirmHook | null = null;
+  simulateHook: SimulateHook | null = null;
+  /** Decoded raw groups of every simulate call. */
+  simulated: any[][] = [];
   private routes: { method: string; pattern: RegExp; handler: Handler }[] = [];
   private nextAssetId = 9_000_000_000;
   private nextAppId = 8_000_000_000;
@@ -317,6 +331,7 @@ export class FakeChain {
     }
     if (req.method === "POST") {
       if (p.endsWith("/v2/transactions")) return this.submit(req.body!);
+      if (p.endsWith("/v2/transactions/simulate")) return this.simulate(req);
       if (p.endsWith("/v2/teal/compile")) {
         const src = new TextDecoder().decode(req.body!);
         const bytes = new TextEncoder().encode(src);
@@ -335,6 +350,44 @@ export class FakeChain {
       this.sent.push({ txID: stxn.txn.txID().toString(), bytes: c.bytes, raw: c.value });
     }
     return { txId: this.sent[start].txID };
+  }
+
+  private simulate(req: FakeRequest) {
+    const decoded: any = req.json ?? new Decoder({ useBigInt64: true }).decode(req.body!);
+    const groups: any[][] = (decoded["txn-groups"] ?? []).map((g: any) => g.txns);
+    const zeroAddr = new Uint8Array(32);
+    const txnGroups = groups.map((group) => {
+      const call = this.simulated.length;
+      this.simulated.push(group);
+      const res = this.simulateHook?.(group, call) ?? {};
+      const out: Json = {
+        "txn-results": group.map((stxn, i) => {
+          const info = res.txns?.[i] ?? {};
+          const inner = Array.from({ length: info.inner ?? 0 }, () => ({
+            "pool-error": "",
+            txn: { txn: { type: "pay", snd: zeroAddr, fv: this.round, lv: this.round + 10 } },
+          }));
+          const r: Json = { "pool-error": "", txn: stxn };
+          if (inner.length) r["inner-txns"] = inner;
+          if (info.logs?.length) r.logs = info.logs;
+          return { "txn-result": r, "app-budget-consumed": stxn.txn.type === "appl" ? 100 : undefined };
+        }),
+        "app-budget-added": group.filter((s) => s.txn.type === "appl").length * 700,
+        "app-budget-consumed": group.filter((s) => s.txn.type === "appl").length * 100,
+      };
+      if (res.failure) {
+        out["failure-message"] = res.failure;
+        out["failed-at"] = [0];
+      }
+      if (res.unnamed) out["unnamed-resources-accessed"] = res.unnamed;
+      return out;
+    });
+    return {
+      version: 2,
+      "last-round": this.round,
+      "txn-groups": txnGroups,
+      "eval-overrides": { "allow-empty-signatures": true, "allow-unnamed-resources": true },
+    };
   }
 
   private pending(txid: string) {

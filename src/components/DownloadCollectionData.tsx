@@ -3,14 +3,14 @@ import { useState } from "react";
 import { toast } from "react-toastify";
 import axios from "axios";
 import { Arc69, getIndexerURL } from "../utils";
-import { useWallet } from "@txnlab/use-wallet-react";
+import { useAppNetwork } from "../hooks/useAppNetwork";
 
 export function DownloadCollectionData() {
   const [creatorWallet, setCreatorWallet] = useState("");
   const [collectionData, setCollectionData] = useState([]);
   const [loading, setLoading] = useState(false);
   const [counter, setCounter] = useState(0);
-  const { activeNetwork } = useWallet();
+  const { activeNetwork } = useAppNetwork();
 
   const arc69 = new Arc69();
 

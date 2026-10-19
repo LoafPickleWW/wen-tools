@@ -181,14 +181,14 @@ export async function getAccountTransactions(
     const response = await indexer.searchForTransactions().address(address).limit(limit).do();
     const txns = response.transactions || [];
     
-    return txns.map((tx: any) => ({
-      id: tx.id,
+    return txns.map((tx) => ({
+      id: tx.id ?? "",
       sender: tx.sender,
-      receiver: tx["payment-transaction"]?.receiver,
-      amount: Number(tx["payment-transaction"]?.amount || 0),
+      receiver: tx.paymentTransaction?.receiver,
+      amount: Number(tx.paymentTransaction?.amount || 0),
       fee: Number(tx.fee || 0),
-      round: Number(tx["confirmed-round"] || 0),
-      timestamp: Number(tx["round-time"] || 0),
+      round: Number(tx.confirmedRound || 0),
+      timestamp: Number(tx.roundTime || 0),
     }));
   } catch (err) {
     console.error("Error fetching transactions:", err);
@@ -259,8 +259,8 @@ export async function sendFalconPayment(
   for (let i = 0; i < 3; i++) {
     paddings.push(
       algosdk.makePaymentTxnWithSuggestedParamsFromObject({
-        from: funderAddress,
-        to: funderAddress,
+        sender: funderAddress,
+        receiver: funderAddress,
         amount: 0,
         suggestedParams: paddingSp,
         note: new Uint8Array(
@@ -273,8 +273,8 @@ export async function sendFalconPayment(
   // 3. Build the real payment (fee = 4 × minFee to cover the group)
   const paymentSp = { ...sp, fee: 4 * minFee, flatFee: true };
   const paymentTxn = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
-    from: account.address,
-    to: params.receiver,
+    sender: account.address,
+    receiver: params.receiver,
     amount: params.amount,
     suggestedParams: paymentSp,
     note: params.note
@@ -360,8 +360,8 @@ export async function sendFalconTransactions(
   for (let i = 0; i < 3; i++) {
     paddings.push(
       algosdk.makePaymentTxnWithSuggestedParamsFromObject({
-        from: funderAddress,
-        to: funderAddress,
+        sender: funderAddress,
+        receiver: funderAddress,
         amount: 0,
         suggestedParams: paddingSp,
         note: new Uint8Array(
@@ -380,8 +380,8 @@ export async function sendFalconTransactions(
       : p.note;
 
     return algosdk.makePaymentTxnWithSuggestedParamsFromObject({
-      from: account.address,
-      to: p.receiver,
+      sender: account.address,
+      receiver: p.receiver,
       amount: p.amount,
       suggestedParams: paymentSp,
       note: noteBytes,

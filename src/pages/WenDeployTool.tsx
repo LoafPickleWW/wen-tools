@@ -388,20 +388,20 @@ function SiteResolver({ asaId }: { asaId: number }) {
       try {
         const algod = new algosdk.Algodv2("", ALGOD_SERVER, "");
         const assetInfo = await algod.getAssetByID(asaId).do();
-        const params = assetInfo.params;
+        const params = assetInfo.params!;
 
         if (!params.url?.startsWith("template-ipfs://")) {
           setError("This is not an ARC-19 site asset.");
           return;
         }
 
-        const cid = reserveAddressToCID(params.reserve);
+        const cid = reserveAddressToCID(params.reserve ?? "");
         setSiteInfo({ 
           asaId, 
           cid, 
           name: params.name, 
           creator: params.creator,
-          unit: params["unit-name"]
+          unit: params.unitName
         });
       } catch (e: any) {
         setError(e.message);
@@ -954,18 +954,18 @@ function DeployView() {
         setDeployState({ step: "updating", message: "Verifying asset ownership...", progress: 88, activeStepIndex: 4 });
         const assetInfo = await algodClient.getAssetByID(config.existingAsaId).do();
         
-        if (assetInfo.params.manager !== activeAddress) {
-          throw new Error(`You are not the manager of ASA ${config.existingAsaId}. Manager is ${assetInfo.params.manager}`);
+        if (assetInfo.params!.manager !== activeAddress) {
+          throw new Error(`You are not the manager of ASA ${config.existingAsaId}. Manager is ${assetInfo.params!.manager}`);
         }
 
         termWriteln(`\x1b[33m> New Reserve Address (CID Hash): ${reserve}\x1b[0m`);
         txn = algosdk.makeAssetConfigTxnWithSuggestedParamsFromObject({
-          from: activeAddress!,
+          sender: activeAddress!,
           assetIndex: config.existingAsaId,
-          manager: assetInfo.params.manager,
+          manager: assetInfo.params!.manager,
           reserve: reserve,
-          freeze: assetInfo.params.freeze,
-          clawback: assetInfo.params.clawback,
+          freeze: assetInfo.params!.freeze,
+          clawback: assetInfo.params!.clawback,
           strictEmptyAddressChecking: false,
           suggestedParams: params
         });
@@ -974,7 +974,7 @@ function DeployView() {
         termWriteln(`\x1b[33m> Mint Mode: Creating new ARC-19 NFT\x1b[0m`);
         setDeployState({ step: "minting", message: "Minting ARC-19 NFT...", progress: 92, activeStepIndex: 4 });
         txn = algosdk.makeAssetCreateTxnWithSuggestedParamsFromObject({
-          from: activeAddress!,
+          sender: activeAddress!,
           assetName: config.repo.name.slice(0, 32),
           unitName: "SITE",
           total: 1,
@@ -1003,8 +1003,8 @@ function DeployView() {
       if (!node) throw new Error("No Crust storage nodes available at the moment.");
       
       const paymentTxn = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
-        from: activeAddress!,
-        to: algosdk.getApplicationAddress(appId),
+        sender: activeAddress!,
+        receiver: algosdk.getApplicationAddress(appId),
         amount: price,
         suggestedParams: { ...params, flatFee: true, fee: 2000 }
       });
@@ -1038,7 +1038,7 @@ function DeployView() {
       let asaId = config.existingAsaId;
       if (!asaId) {
         const ptx = await algodClient.pendingTransactionInformation(txId).do();
-        asaId = ptx["asset-index"];
+        asaId = Number(ptx.assetIndex);
       }
 
       setResult({ cid: cidV1, asaId: asaId! });
@@ -1063,15 +1063,15 @@ function DeployView() {
       const params = await algodClient.getTransactionParams().do();
       
       const destroyTxn = algosdk.makeAssetDestroyTxnWithSuggestedParamsFromObject({
-        from: activeAddress,
+        sender: activeAddress,
         suggestedParams: params,
         assetIndex: asaId,
         note: new TextEncoder().encode("Destroyed via WEN.DEPLOY")
       });
 
       const feeTxn = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
-        from: activeAddress,
-        to: MINT_FEE_WALLET,
+        sender: activeAddress,
+        receiver: MINT_FEE_WALLET,
         amount: algosdk.algosToMicroalgos(UPDATE_FEE_PER_ASA),
         suggestedParams: params,
         note: new TextEncoder().encode("WEN.DEPLOY maintenance fee")
@@ -1081,7 +1081,7 @@ function DeployView() {
 
       termWriteln(`\x1b[33m> Requesting signature to DESTROY ASA #${asaId}...\x1b[0m`);
       const signed = await transactionSigner([destroyTxn, feeTxn], [0, 1]);
-      const { txId } = await algodClient.sendRawTransaction(signed).do();
+      const { txid: txId } = await algodClient.sendRawTransaction(signed).do();
       
       termWriteln(`\x1b[32m> Asset #${asaId} destroyed successfully. TX: ${txId}\x1b[0m`);
       setMyDeployments(prev => prev.filter(d => d.asaId !== asaId));

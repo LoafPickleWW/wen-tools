@@ -13,7 +13,7 @@ import {
   getDownbadListingsMap,
   getAkitaListingsMap,
 } from "../utils";
-import { useWallet } from "@txnlab/use-wallet-react";
+import { useAppNetwork } from "../hooks/useAppNetwork";
 import ConnectButton from "../components/ConnectButton";
 import { Meta } from "../components/Meta";
 
@@ -27,7 +27,7 @@ export function CollectionSnapshot() {
   const [checkDownbadSupport, setCheckDownbadSupport] = useState(false);
   const [checkAkitaSupport, setCheckAkitaSupport] = useState(false);
   const [checkSeparated, setCheckSeparated] = useState(false);
-  const { activeNetwork } = useWallet();
+  const { activeNetwork } = useAppNetwork();
 
   // Dashboard states
   const [snapshotResult, setSnapshotResult] = useState<Record<string, {

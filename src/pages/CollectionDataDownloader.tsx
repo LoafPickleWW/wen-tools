@@ -5,7 +5,7 @@ import { toast } from "react-toastify";
 import axios from "axios";
 import { Arc69, getIndexerURL, getARC19AssetMetadataData } from "../utils";
 import { IPFS_ENDPOINT } from "../constants";
-import { useWallet } from "@txnlab/use-wallet-react";
+import { useAppNetwork } from "../hooks/useAppNetwork";
 import ConnectButton from "../components/ConnectButton";
 import { Meta } from "../components/Meta";
 
@@ -25,7 +25,7 @@ export function CollectionDataDownloader() {
     asa: 0,
   });
 
-  const { activeNetwork } = useWallet();
+  const { activeNetwork } = useAppNetwork();
 
   const arc69 = new Arc69();
 

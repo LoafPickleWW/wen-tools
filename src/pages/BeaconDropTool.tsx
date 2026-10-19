@@ -130,8 +130,8 @@ export function BeaconDropTool() {
 
     // 2. Standard, Rekeyed, or Native Consensus v42 PQSIG account
     const domainTxn = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
-      from: activeAddress,
-      to: activeAddress,
+      sender: activeAddress,
+      receiver: activeAddress,
       amount: 0,
       note: new TextEncoder().encode("BEACON/1:derive-encryption-key"),
       suggestedParams: {
@@ -186,18 +186,18 @@ export function BeaconDropTool() {
         if (!signTransactions) throw new Error("Wallet not connected");
         const suggestedParams = await algodClient.getTransactionParams().do();
         const txn = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
-          from: activeAddress,
-          to: BEACON_PROTOCOL_ADDRESS,
+          sender: activeAddress,
+          receiver: BEACON_PROTOCOL_ADDRESS,
           amount: 0,
           note: noteBytes,
-          suggestedParams: { ...suggestedParams, fee: Math.max(suggestedParams.minFee || 1000, suggestedParams.fee || 1000, 3000), flatFee: true },
+          suggestedParams: { ...suggestedParams, fee: Math.max(Number(suggestedParams.minFee || 1000), Number(suggestedParams.fee || 1000), 3000), flatFee: true },
         });
 
         const signedTxn = await signTransactions([algosdk.encodeUnsignedTransaction(txn)]);
         if (!signedTxn || !signedTxn[0]) throw new Error("Transaction cancelled.");
 
         const res = await algodClient.sendRawTransaction(signedTxn[0]).do();
-        txId = res.txId;
+        txId = res.txid;
       }
 
       toast.success(`Inbox Initialized! TxID: ${txId.slice(0, 8)}...`);
@@ -324,11 +324,11 @@ export function BeaconDropTool() {
         if (!signTransactions) throw new Error("Wallet not connected");
         const suggestedParams = await algodClient.getTransactionParams().do();
         const txn = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
-          from: activeAddress,
-          to: BEACON_PROTOCOL_ADDRESS,
+          sender: activeAddress,
+          receiver: BEACON_PROTOCOL_ADDRESS,
           amount: 0,
           note: noteBytes,
-          suggestedParams: { ...suggestedParams, fee: Math.max(suggestedParams.minFee || 1000, suggestedParams.fee || 1000, 3000), flatFee: true },
+          suggestedParams: { ...suggestedParams, fee: Math.max(Number(suggestedParams.minFee || 1000), Number(suggestedParams.fee || 1000), 3000), flatFee: true },
         });
 
         const encodedTxn = algosdk.encodeUnsignedTransaction(txn);
@@ -339,7 +339,7 @@ export function BeaconDropTool() {
         }
 
         const res = await algodClient.sendRawTransaction(signedTxn[0]).do();
-        txId = res.txId;
+        txId = res.txid;
       }
       
       toast.success(`BEACON Drop deployed! TxID: ${txId.slice(0, 8)}...`);

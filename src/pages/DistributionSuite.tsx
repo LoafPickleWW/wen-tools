@@ -7,6 +7,7 @@ import axios from "axios";
 import algosdk, { Transaction } from "algosdk";
 import { toast } from "react-toastify";
 import { useWallet } from "@txnlab/use-wallet-react";
+import { useAppNetwork } from "../hooks/useAppNetwork";
 
 import {
   createAirdropTransactions,
@@ -58,8 +59,8 @@ export function DistributionSuite({
 }: DistributionSuiteProps) {
   const [activeTab, setActiveTab] = useState<MainTab>(defaultTab);
   const [searchParams] = useSearchParams();
-  const { activeAddress, activeNetwork, algodClient, transactionSigner } =
-    useWallet();
+  const { activeAddress, algodClient, transactionSigner } = useWallet();
+  const { activeNetwork } = useAppNetwork();
 
   const [mnemonic, setMnemonic] = useState("");
 
@@ -291,7 +292,7 @@ export function DistributionSuite({
         setManualInboxInfo(txnData);
 
         const accountInfo = await algodClient.accountInformation(activeAddress).do();
-        const spendingBalance = accountInfo.amount - accountInfo["min-balance"];
+        const spendingBalance = Number(accountInfo.amount) - Number(accountInfo.minBalance);
         setManualSpendingBalance(spendingBalance);
         setManualProcessStep("SEND_TO_ASSET_INBOX");
       } else {
@@ -442,7 +443,7 @@ export function DistributionSuite({
         setCsvInboxInfo(txnData);
 
         const accountInfo = await algodClient.accountInformation(activeAddress).do();
-        const spendingBalance = accountInfo.amount - accountInfo["min-balance"];
+        const spendingBalance = Number(accountInfo.amount) - Number(accountInfo.minBalance);
         setCsvSpendingBalance(spendingBalance);
         setCsvProcessStep("SEND_TO_ASSET_INBOX");
       } else {
@@ -724,7 +725,7 @@ export function DistributionSuite({
       setCreatorInboxInfo(txnData);
 
       const accountInfo = await algodClient.accountInformation(activeAddress).do();
-      const spendingBalance = accountInfo.amount - accountInfo["min-balance"];
+      const spendingBalance = Number(accountInfo.amount) - Number(accountInfo.minBalance);
       setCreatorSpendingBalance(spendingBalance);
       setCreatorProcessStep(6);
     } catch (err: any) {
@@ -928,7 +929,7 @@ export function DistributionSuite({
       setHolderInboxInfo(txnData);
 
       const accountInfo = await algodClient.accountInformation(activeAddress).do();
-      const spendingBalance = accountInfo.amount - accountInfo["min-balance"];
+      const spendingBalance = Number(accountInfo.amount) - Number(accountInfo.minBalance);
       setHolderSpendingBalance(spendingBalance);
       setHolderProcessStep(6);
     } catch (err: any) {
@@ -1071,7 +1072,7 @@ export function DistributionSuite({
                 array[idx] = base64Bytes.charCodeAt(idx);
               }
               const uTxn = algosdk.decodeUnsignedTransaction(array);
-              uTxn.lastRound = uTxn.lastRound + 900;
+              (uTxn as { lastValid: bigint }).lastValid = uTxn.lastValid + 900n;
               uTxn.group = undefined;
               return uTxn;
             })

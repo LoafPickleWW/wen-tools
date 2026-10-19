@@ -15,6 +15,7 @@ import { TOOLS } from "../constants";
 
 import InfinityModeComponent from "../components/InfinityModeComponent";
 import { useWallet } from "@txnlab/use-wallet-react";
+import { useAppNetwork } from "../hooks/useAppNetwork";
 import {
   createArc59GroupTxns,
   TxnInfoType,
@@ -43,8 +44,8 @@ export function SimpleAirdropTool() {
   const [assetInbox, setAssetInbox] = useState(false);
   const [assetInboxInfo, setAssetInboxInfo] = useState({} as TxnInfoType);
   const [currentSpendingBalance, setCurrentSpendingBalance] = useState(0);
-  const { activeAddress, activeNetwork, algodClient, transactionSigner } =
-    useWallet();
+  const { activeAddress, algodClient, transactionSigner } = useWallet();
+  const { activeNetwork } = useAppNetwork();
 
   const TOOL_TYPES = [
     {
@@ -348,7 +349,7 @@ export function SimpleAirdropTool() {
       const accountInfo = await algodClient
         .accountInformation(activeAddress as string)
         .do();
-      const spendingBalance = accountInfo.amount - accountInfo["min-balance"];
+      const spendingBalance = Number(accountInfo.amount) - Number(accountInfo.minBalance);
       setCurrentSpendingBalance(spendingBalance);
       setProcessStep(6);
     } catch (err: any) {

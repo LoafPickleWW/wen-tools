@@ -29,14 +29,14 @@ export const appId = 1275319623;
  */
 export async function getPrice(client: algosdk.Algodv2, size: number) {
   const appInfo = await client.getApplicationByID(appId).do();
-  const state = appInfo.params["global-state"];
+  const state = appInfo.params?.globalState ?? [];
 
   console.log(state);
   const getStateValue = function (key: string) {
     const item = state.find(
-      (item: any) => Buffer.from(item.key, "base64").toString() === key
+      (item) => Buffer.from(item.key).toString() === key
     );
-    return item ? item.value.uint : 0;
+    return item ? Number(item.value.uint) : 0;
   };
 
   const basePrice = getStateValue("base_price");
@@ -121,7 +121,7 @@ export async function buildAssetMintAtomicTransactionComposer(
 
   const asset_create_tx =
     algosdk.makeAssetCreateTxnWithSuggestedParamsFromObject({
-      from: address,
+      sender: address,
       manager: address,
       assetName: data_for_txn.asset_name,
       unitName: data_for_txn.unit_name,
@@ -138,8 +138,8 @@ export async function buildAssetMintAtomicTransactionComposer(
     });
 
   const fee_tx = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
-    from: address,
-    to: MINT_FEE_WALLET,
+    sender: address,
+    receiver: MINT_FEE_WALLET,
     amount: algosdk.algosToMicroalgos(MINT_FEE_PER_ASA),
     suggestedParams,
     note: new TextEncoder().encode(
@@ -293,13 +293,13 @@ export async function makeCrustPinTx(
   const price = await getPrice(algodClient, 10000);
   const suggestedParams = await algodClient.getTransactionParams().do();
   suggestedParams.flatFee = true;
-  suggestedParams.fee = 2000 * 4; // set fee
+  suggestedParams.fee = BigInt(2000 * 4); // set fee
 
   const node = await getRandomNode(algodClient);
   if (!node) throw Error("Invalid Node");
   const paymentTxn = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
-    from: address,
-    to: algosdk.getApplicationAddress(appId),
+    sender: address,
+    receiver: algosdk.getApplicationAddress(appId),
     amount: price,
     closeRemainderTo: undefined,
     note: new TextEncoder().encode(

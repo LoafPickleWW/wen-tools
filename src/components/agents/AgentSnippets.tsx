@@ -24,8 +24,8 @@ async function registerAgent() {
   
   // 1. MBR Payment for Box + Child App storage
   const mbrPayment = makePaymentTxnWithSuggestedParamsFromObject({
-    from: senderAddress,
-    to: getApplicationAddress(factoryAppId),
+    sender: senderAddress,
+    receiver: getApplicationAddress(factoryAppId),
     amount: 425_500, 
     suggestedParams,
   });
@@ -44,7 +44,7 @@ async function registerAgent() {
       "DeFi"
     ],
     sender: senderAddress,
-    suggestedParams: { ...suggestedParams, fee: Math.max((suggestedParams.minFee || 1000) * 2, 4000), flatFee: true }, // Extra fee for inner txn (PQ compatible)
+    suggestedParams: { ...suggestedParams, fee: Math.max(Number(suggestedParams.minFee || 1000) * 2, 4000), flatFee: true }, // Extra fee for inner txn (PQ compatible)
     signer: walletSigner,
   });
 

@@ -151,15 +151,15 @@ export async function uploadToAlgoFile(
   let txn: algosdk.Transaction;
   if (assetId === 0) {
     txn = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
-      from: address,
-      to: requirements.payTo,
+      sender: address,
+      receiver: requirements.payTo,
       amount: amountMicro,
       suggestedParams: params,
     });
   } else {
     txn = algosdk.makeAssetTransferTxnWithSuggestedParamsFromObject({
-      from: address,
-      to: requirements.payTo,
+      sender: address,
+      receiver: requirements.payTo,
       amount: amountMicro,
       assetIndex: assetId,
       suggestedParams: params,

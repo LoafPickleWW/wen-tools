@@ -10,6 +10,10 @@ declare global {
   var allowConsoleErrors: () => void;
 }
 
+// happy-dom has no canvas; wallet SDKs (lottie animations) touch it at import time.
+const noopCtx: any = new Proxy({}, { get: () => () => noopCtx, set: () => true });
+HTMLCanvasElement.prototype.getContext = (() => noopCtx) as any;
+
 // Route axios through fetch so the fake chain sees its requests too.
 axios.defaults.adapter = "fetch";
 

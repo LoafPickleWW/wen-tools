@@ -86,7 +86,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       // 1. Verify Signature (Proof of Identity)
       try {
         const decodedTxn = algosdk.decodeSignedTransaction(Buffer.from(txn as string, 'base64'));
-        const sgnrPK = (decodedTxn.sgnr || decodedTxn.txn.from.publicKey) as Uint8Array;
+        const sgnrPK = (decodedTxn.sgnr ?? decodedTxn.txn.sender).publicKey;
         const sgnrAddr = algosdk.encodeAddress(sgnrPK);
         
         // Verify signature is mathematically valid (Using raw PK bytes + NaCl)
@@ -122,7 +122,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         try {
           if (targetAccount.length === 58) {
             const accountInfo = await indexer.lookupAccountByID(targetAccount).do();
-            const authorizedSigner = accountInfo.account['auth-addr'] || targetAccount;
+            const authorizedSigner = accountInfo.account.authAddr?.toString() || targetAccount;
             
             if (sgnrAddr !== authorizedSigner) {
               throw new Error(`Signer ${sgnrAddr} is not authorized for ${targetAccount} (Authorized: ${authorizedSigner})`);

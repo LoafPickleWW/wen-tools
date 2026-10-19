@@ -1,0 +1,13 @@
+diff --git a/falcon.js b/falcon.js
+index 7d5d78356c23bea0729cf432eb90e5a4b12d2858..058f3c161a7dbe9644b13d3be0b522a897f0b252 100644
+--- a/falcon.js
++++ b/falcon.js
+@@ -2268,7 +2268,7 @@ function genFalcon(opts) {
+         const randSeed = seed === undefined;
+         if (randSeed)
+             seed = randomBytes(48);
+-        abytes(seed, 48, 'seed');
++        if (seed.length !== 32) abytes(seed, 48, 'seed'); // also accept Algorand's 32-byte Falcon keygen seed
+         const [f, g, F, _G, pub] = new NTRU(logn, seed).generate();
+         const sk = secretKeyCoder.encode([f, g, F]);
+         const pk = publicKeyCoder.encode(pub);

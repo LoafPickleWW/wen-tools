@@ -1,0 +1,610 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`wenpadSaleCore builders (simulate + resource population) > buildAddItemsGroup splits into [pay, addItems] pairs 1`] = `
+[
+  {
+    "amt": "int:831400",
+    "fee": "int:1000",
+    "fv": "int:50000000",
+    "gen": "mainnet-v1.0",
+    "gh": "b64:wGHE2Pwdvd7S12BL5FaOP20EGYesN73ktiC1qzkkit8=",
+    "grp": "b64:6fxyG0pdfCNGnnbjcIOIhUZOGP6BvrPjXTBjrDtxUuo=",
+    "lv": "int:50001000",
+    "rcv": "addr:J3RJL2VS5BEMQVYJDALNRMNQIQGRJA47WYZBDQ43FUZY4COJDFGK5JFCDA",
+    "snd": "addr:QE4XODVIPULV6VVDKRTMGTD6ZTFY3CURWTXDPIS56YHVXD6JWOKORTLPBU",
+    "txID": "FDTJ3NNA2LDM3EJAYESX5OPIYMQRNSKCVZXGATLONXSHE2AXKNYA",
+    "type": "pay",
+  },
+  {
+    "apaa": [
+      "b64:qSrO6w==",
+      "b64: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",
+    ],
+    "apas": [
+      "int:77",
+    ],
+    "apat": [
+      "addr:5VESRRRI2HBMN2XJAM4JAWMVMEUVSJZ2LRR7SNRWYFDBJLEHG7I2572N4M",
+    ],
+    "apbx": [
+      {
+        "n": "b64:YwAAAAAAAAAO",
+      },
+    ],
+    "apfa": [
+      "int:1001",
+    ],
+    "apid": "int:2001",
+    "fee": "int:2000",
+    "fv": "int:50000000",
+    "gen": "mainnet-v1.0",
+    "gh": "b64:wGHE2Pwdvd7S12BL5FaOP20EGYesN73ktiC1qzkkit8=",
+    "grp": "b64:6fxyG0pdfCNGnnbjcIOIhUZOGP6BvrPjXTBjrDtxUuo=",
+    "lv": "int:50001000",
+    "snd": "addr:QE4XODVIPULV6VVDKRTMGTD6ZTFY3CURWTXDPIS56YHVXD6JWOKORTLPBU",
+    "txID": "DVN25CQIQKZOIR4QKVDQVRG3G4V6DJSXFYE4NGGWLT7D5UGDDPIA",
+    "type": "appl",
+  },
+  {
+    "amt": "int:415700",
+    "fee": "int:1000",
+    "fv": "int:50000000",
+    "gen": "mainnet-v1.0",
+    "gh": "b64:wGHE2Pwdvd7S12BL5FaOP20EGYesN73ktiC1qzkkit8=",
+    "grp": "b64:6fxyG0pdfCNGnnbjcIOIhUZOGP6BvrPjXTBjrDtxUuo=",
+    "lv": "int:50001000",
+    "rcv": "addr:J3RJL2VS5BEMQVYJDALNRMNQIQGRJA47WYZBDQ43FUZY4COJDFGK5JFCDA",
+    "snd": "addr:QE4XODVIPULV6VVDKRTMGTD6ZTFY3CURWTXDPIS56YHVXD6JWOKORTLPBU",
+    "txID": "ZSWY2XLZN4AKXX3NF7SNAJSE7CWUPFWVPSD455XFU5L3Y4KMU6FQ",
+    "type": "pay",
+  },
+  {
+    "apaa": [
+      "b64:qSrO6w==",
+      "b64:AZAAAAAAAAAoCgAAAAAAACgLAAAAAAAAKAwAAAAAAAAoDQAAAAAAACgOAAAAAAAAKA8AAAAAAAAoEAAAAAAAACgRAAAAAAAAKBIAAAAAAAAoEwAAAAAAACgUAAAAAAAAKBUAAAAAAAAoFgAAAAAAACgXAAAAAAAAKBgAAAAAAAAoGQAAAAAAACgaAAAAAAAAKBsAAAAAAAAoHAAAAAAAACgdAAAAAAAAKB4AAAAAAAAoHwAAAAAAACggAAAAAAAAKCEAAAAAAAAoIgAAAAAAACgjAAAAAAAAKCQAAAAAAAAoJQAAAAAAACgmAAAAAAAAKCcAAAAAAAAoKAAAAAAAACgpAAAAAAAAKCoAAAAAAAAoKwAAAAAAACgsAAAAAAAAKC0AAAAAAAAoLgAAAAAAACgvAAAAAAAAKDAAAAAAAAAoMQAAAAAAACgyAAAAAAAAKDMAAAAAAAAoNAAAAAAAACg1AAAAAAAAKDYAAAAAAAAoNwAAAAAAACg4AAAAAAAAKDkAAAAAAAAoOgAAAAAAACg7",
+    ],
+    "apid": "int:2001",
+    "fee": "int:2000",
+    "fv": "int:50000000",
+    "gen": "mainnet-v1.0",
+    "gh": "b64:wGHE2Pwdvd7S12BL5FaOP20EGYesN73ktiC1qzkkit8=",
+    "grp": "b64:6fxyG0pdfCNGnnbjcIOIhUZOGP6BvrPjXTBjrDtxUuo=",
+    "lv": "int:50001000",
+    "snd": "addr:QE4XODVIPULV6VVDKRTMGTD6ZTFY3CURWTXDPIS56YHVXD6JWOKORTLPBU",
+    "txID": "YDXSXAYRXLDH4K6QQS3524NDCZ4WEMPDNCGI6X3Q5KBMVEENBMLQ",
+    "type": "appl",
+  },
+]
+`;
+
+exports[`wenpadSaleCore builders (simulate + resource population) > buildArc59Claim opts in only when needed 1`] = `
+{
+  "notOpted": [
+    {
+      "arcv": "addr:5VESRRRI2HBMN2XJAM4JAWMVMEUVSJZ2LRR7SNRWYFDBJLEHG7I2572N4M",
+      "fee": "int:1000",
+      "fv": "int:50000000",
+      "gen": "mainnet-v1.0",
+      "gh": "b64:wGHE2Pwdvd7S12BL5FaOP20EGYesN73ktiC1qzkkit8=",
+      "grp": "b64:1Bs8wLPSY5B2qbb8UHD10gxqbZearH2WAJ/TzXNAzrI=",
+      "lv": "int:50001000",
+      "snd": "addr:5VESRRRI2HBMN2XJAM4JAWMVMEUVSJZ2LRR7SNRWYFDBJLEHG7I2572N4M",
+      "txID": "HWHAF6V6JBJQNE5SCT7T5B7VXQXC5XYUKW44MWO75ZAAZFZBVBAQ",
+      "type": "axfer",
+      "xaid": "int:78",
+    },
+    {
+      "apaa": [
+        "b64:v5AuPA==",
+        "b64:AAAAAAAAAE4=",
+      ],
+      "apas": [
+        "int:77",
+      ],
+      "apat": [
+        "addr:5VESRRRI2HBMN2XJAM4JAWMVMEUVSJZ2LRR7SNRWYFDBJLEHG7I2572N4M",
+      ],
+      "apbx": [
+        {
+          "i": "int:1",
+          "n": "b64:YwAAAAAAAAAO",
+        },
+      ],
+      "apfa": [
+        "int:2001",
+        "int:1001",
+      ],
+      "apid": "int:2449590623",
+      "fee": "int:2000",
+      "fv": "int:50000000",
+      "gen": "mainnet-v1.0",
+      "gh": "b64:wGHE2Pwdvd7S12BL5FaOP20EGYesN73ktiC1qzkkit8=",
+      "grp": "b64:1Bs8wLPSY5B2qbb8UHD10gxqbZearH2WAJ/TzXNAzrI=",
+      "lv": "int:50001000",
+      "snd": "addr:5VESRRRI2HBMN2XJAM4JAWMVMEUVSJZ2LRR7SNRWYFDBJLEHG7I2572N4M",
+      "txID": "Z37AEAQDILJRUVJA273VUBII7I7UGWTB2X4E3RNCTGV7YZZO3B4A",
+      "type": "appl",
+    },
+  ],
+  "opted": [
+    {
+      "apaa": [
+        "b64:v5AuPA==",
+        "b64:AAAAAAAAAE0=",
+      ],
+      "apas": [
+        "int:77",
+      ],
+      "apat": [
+        "addr:5VESRRRI2HBMN2XJAM4JAWMVMEUVSJZ2LRR7SNRWYFDBJLEHG7I2572N4M",
+      ],
+      "apbx": [
+        {
+          "i": "int:1",
+          "n": "b64:YwAAAAAAAAAO",
+        },
+      ],
+      "apfa": [
+        "int:2001",
+        "int:1001",
+      ],
+      "apid": "int:2449590623",
+      "fee": "int:2000",
+      "fv": "int:50000000",
+      "gen": "mainnet-v1.0",
+      "gh": "b64:wGHE2Pwdvd7S12BL5FaOP20EGYesN73ktiC1qzkkit8=",
+      "grp": "b64:ngfVL6Kn5kFZrQYtJpQkiCUVf1smN2tqZlGMdKLzj+M=",
+      "lv": "int:50001000",
+      "snd": "addr:5VESRRRI2HBMN2XJAM4JAWMVMEUVSJZ2LRR7SNRWYFDBJLEHG7I2572N4M",
+      "txID": "65MVVXQXHA6ICQLIJMOC3LT5RPVBVXS4YH25NV2YASCUBLTH5SVQ",
+      "type": "appl",
+    },
+  ],
+}
+`;
+
+exports[`wenpadSaleCore builders (simulate + resource population) > buildCommit, buildReveal, buildSaleAction 1`] = `
+{
+  "commit": [
+    {
+      "amt": "int:1454900",
+      "fee": "int:1000",
+      "fv": "int:50000000",
+      "gen": "mainnet-v1.0",
+      "gh": "b64:wGHE2Pwdvd7S12BL5FaOP20EGYesN73ktiC1qzkkit8=",
+      "grp": "b64:YieVAPDRfWQNRQZXHsKZ0tQ2H2lkGdvc4b0orfLTygw=",
+      "lv": "int:50001000",
+      "rcv": "addr:J3RJL2VS5BEMQVYJDALNRMNQIQGRJA47WYZBDQ43FUZY4COJDFGK5JFCDA",
+      "snd": "addr:5VESRRRI2HBMN2XJAM4JAWMVMEUVSJZ2LRR7SNRWYFDBJLEHG7I2572N4M",
+      "txID": "R5XEDAIM2RLYXM7W52RGPDCOQKI4I7YXXJZJDPDAWPSOZBSSONYQ",
+      "type": "pay",
+    },
+    {
+      "apaa": [
+        "b64:5y4uTw==",
+        "b64:AAAAAAAPQkA=",
+      ],
+      "apas": [
+        "int:77",
+      ],
+      "apat": [
+        "addr:5VESRRRI2HBMN2XJAM4JAWMVMEUVSJZ2LRR7SNRWYFDBJLEHG7I2572N4M",
+      ],
+      "apbx": [
+        {
+          "n": "b64:YwAAAAAAAAAO",
+        },
+      ],
+      "apfa": [
+        "int:1001",
+      ],
+      "apid": "int:2001",
+      "fee": "int:2000",
+      "fv": "int:50000000",
+      "gen": "mainnet-v1.0",
+      "gh": "b64:wGHE2Pwdvd7S12BL5FaOP20EGYesN73ktiC1qzkkit8=",
+      "grp": "b64:YieVAPDRfWQNRQZXHsKZ0tQ2H2lkGdvc4b0orfLTygw=",
+      "lv": "int:50001000",
+      "snd": "addr:5VESRRRI2HBMN2XJAM4JAWMVMEUVSJZ2LRR7SNRWYFDBJLEHG7I2572N4M",
+      "txID": "UEHGRGI65TRC2LCVINECW7ZTPONJ4TPAPO5SQ733DKARKDQ2627Q",
+      "type": "appl",
+    },
+  ],
+  "pause": [
+    {
+      "apaa": [
+        "b64:AXj5Sw==",
+      ],
+      "apas": [
+        "int:77",
+      ],
+      "apat": [
+        "addr:5VESRRRI2HBMN2XJAM4JAWMVMEUVSJZ2LRR7SNRWYFDBJLEHG7I2572N4M",
+      ],
+      "apbx": [
+        {
+          "n": "b64:YwAAAAAAAAAO",
+        },
+      ],
+      "apfa": [
+        "int:1001",
+      ],
+      "apid": "int:2001",
+      "fee": "int:2000",
+      "fv": "int:50000000",
+      "gen": "mainnet-v1.0",
+      "gh": "b64:wGHE2Pwdvd7S12BL5FaOP20EGYesN73ktiC1qzkkit8=",
+      "grp": "b64:2qDUMeV3s2RNkxfNAyXj492pd1zQ7yLGjGFs3D1bkA4=",
+      "lv": "int:50001000",
+      "snd": "addr:RKEOHXLUBHYZL7KS3MWTZOS5OLFGOCN7DWKBEG7TOSEADNAPN5OOTUNSLE",
+      "txID": "S3IQVUAI3IF5RRRA6IAC6BRGSU5KD45TNASS7WIPT73MRRJ6W5VQ",
+      "type": "appl",
+    },
+  ],
+  "reveal": [
+    {
+      "apaa": [
+        "b64:3qCGrQ==",
+        "b64:AAAAAAAAAA4=",
+      ],
+      "apas": [
+        "int:77",
+      ],
+      "apat": [
+        "addr:5VESRRRI2HBMN2XJAM4JAWMVMEUVSJZ2LRR7SNRWYFDBJLEHG7I2572N4M",
+      ],
+      "apbx": [
+        {
+          "n": "b64:YwAAAAAAAAAO",
+        },
+      ],
+      "apfa": [
+        "int:1001",
+      ],
+      "apid": "int:2001",
+      "fee": "int:2000",
+      "fv": "int:50000000",
+      "gen": "mainnet-v1.0",
+      "gh": "b64:wGHE2Pwdvd7S12BL5FaOP20EGYesN73ktiC1qzkkit8=",
+      "grp": "b64:sN2Uk6KswQKLqgItSHpahZtSRKZc0LWPD0sodi36Puc=",
+      "lv": "int:50000010",
+      "snd": "addr:5VESRRRI2HBMN2XJAM4JAWMVMEUVSJZ2LRR7SNRWYFDBJLEHG7I2572N4M",
+      "txID": "CC6PG2LXQJXWE2U2P7JNHOHZ4BWPLCEDE5WYLVQ77DSLUW4YALPA",
+      "type": "appl",
+    },
+  ],
+}
+`;
+
+exports[`wenpadSaleCore builders (simulate + resource population) > buildCreateSale 1`] = `
+[
+  {
+    "amt": "int:1074700",
+    "fee": "int:1000",
+    "fv": "int:50000000",
+    "gen": "mainnet-v1.0",
+    "gh": "b64:wGHE2Pwdvd7S12BL5FaOP20EGYesN73ktiC1qzkkit8=",
+    "grp": "b64:ZaGtsoBSdAeklSBFhliym22yEvvo9+hJl647kluOT/g=",
+    "lv": "int:50001000",
+    "rcv": "addr:OKSDOCOXVGMBXQ5TP5YA4VWTZWZJLJP3OMIILPHMHGHURUFE2Q3JP62QNU",
+    "snd": "addr:QE4XODVIPULV6VVDKRTMGTD6ZTFY3CURWTXDPIS56YHVXD6JWOKORTLPBU",
+    "txID": "XC2OBW4YZ252RWMDUJHM4MO7NK6WRGSI3DPIE6RP5PKQOUKOBN6A",
+    "type": "pay",
+  },
+  {
+    "apaa": [
+      "b64:EKDvNA==",
+      "b64:iojj3XQJ8ZX9UtstPLpdcspnCb8dlBIb83SIAbQPb1w=",
+      "b64:ACjtSSjGKNHCxurpAziQWZVhKVknOlxj+TY2wUYUrIc30QAAAAAAACcQ",
+      "b64:AAAAAAAPQkA=",
+      "b64:AAAAAAAAAGQ=",
+      "b64:AAAAAAAAIyg=",
+      "b64:AAAAAAAATiA=",
+      "b64:AAAAAAAGGoA=",
+      "b64:AAtXZW4gU2h1ZmZsZQ==",
+      "b64:AARXU0hG",
+      "b64:AARhcmMz",
+      "b64:AAhpcGZzOi8veA==",
+    ],
+    "apas": [
+      "int:77",
+    ],
+    "apat": [
+      "addr:5VESRRRI2HBMN2XJAM4JAWMVMEUVSJZ2LRR7SNRWYFDBJLEHG7I2572N4M",
+    ],
+    "apbx": [
+      {
+        "i": "int:1",
+        "n": "b64:YwAAAAAAAAAO",
+      },
+    ],
+    "apfa": [
+      "int:2001",
+      "int:1001",
+    ],
+    "apid": "int:1001",
+    "fee": "int:2000",
+    "fv": "int:50000000",
+    "gen": "mainnet-v1.0",
+    "gh": "b64:wGHE2Pwdvd7S12BL5FaOP20EGYesN73ktiC1qzkkit8=",
+    "grp": "b64:ZaGtsoBSdAeklSBFhliym22yEvvo9+hJl647kluOT/g=",
+    "lv": "int:50001000",
+    "snd": "addr:QE4XODVIPULV6VVDKRTMGTD6ZTFY3CURWTXDPIS56YHVXD6JWOKORTLPBU",
+    "txID": "HUNRAUF75NFYXHVCMWBARCU4KB6J7GJAZCFHG6XP6DM3IUUERENA",
+    "type": "appl",
+  },
+]
+`;
+
+exports[`wenpadSaleCore builders (simulate + resource population) > buildDeleteItemPages and planCollect 1`] = `
+{
+  "collect": [
+    {
+      "apaa": [
+        "b64:B2u9TQ==",
+      ],
+      "apas": [
+        "int:77",
+      ],
+      "apat": [
+        "addr:5VESRRRI2HBMN2XJAM4JAWMVMEUVSJZ2LRR7SNRWYFDBJLEHG7I2572N4M",
+      ],
+      "apbx": [
+        {
+          "n": "b64:YwAAAAAAAAAO",
+        },
+      ],
+      "apfa": [
+        "int:1001",
+      ],
+      "apid": "int:2001",
+      "fee": "int:2000",
+      "fv": "int:50000000",
+      "gen": "mainnet-v1.0",
+      "gh": "b64:wGHE2Pwdvd7S12BL5FaOP20EGYesN73ktiC1qzkkit8=",
+      "grp": "b64:W9s036fGAvVQtVQEOAkcTBr3dfA0PyUKTB2S/wHHNvk=",
+      "lv": "int:50001000",
+      "snd": "addr:RKEOHXLUBHYZL7KS3MWTZOS5OLFGOCN7DWKBEG7TOSEADNAPN5OOTUNSLE",
+      "txID": "FYX43CKU537UJEARCNJJXPTFKCYFZS4XCO4MYJXEHIF55HXCRFBQ",
+      "type": "appl",
+    },
+    {
+      "apaa": [
+        "b64:+8Xp5g==",
+        "b64:AAAAAAAAAAA=",
+      ],
+      "apid": "int:2001",
+      "fee": "int:2000",
+      "fv": "int:50000000",
+      "gen": "mainnet-v1.0",
+      "gh": "b64:wGHE2Pwdvd7S12BL5FaOP20EGYesN73ktiC1qzkkit8=",
+      "grp": "b64:W9s036fGAvVQtVQEOAkcTBr3dfA0PyUKTB2S/wHHNvk=",
+      "lv": "int:50001000",
+      "snd": "addr:RKEOHXLUBHYZL7KS3MWTZOS5OLFGOCN7DWKBEG7TOSEADNAPN5OOTUNSLE",
+      "txID": "UJUCBHJLGS5PBWMHCWZOSB5PJAAGZOIZRBOIUEGKGYNYBSYP2YKQ",
+      "type": "appl",
+    },
+    {
+      "apaa": [
+        "b64:+8Xp5g==",
+        "b64:AAAAAAAAAAE=",
+      ],
+      "apid": "int:2001",
+      "fee": "int:2000",
+      "fv": "int:50000000",
+      "gen": "mainnet-v1.0",
+      "gh": "b64:wGHE2Pwdvd7S12BL5FaOP20EGYesN73ktiC1qzkkit8=",
+      "grp": "b64:W9s036fGAvVQtVQEOAkcTBr3dfA0PyUKTB2S/wHHNvk=",
+      "lv": "int:50001000",
+      "snd": "addr:RKEOHXLUBHYZL7KS3MWTZOS5OLFGOCN7DWKBEG7TOSEADNAPN5OOTUNSLE",
+      "txID": "65WFVLJXOUTQET2KKYJYRG5LE7RQY3XBWHD45P7UIMG7EUNR2UCA",
+      "type": "appl",
+    },
+    {
+      "apaa": [
+        "utf8:B-L
+",
+        "b64:AAAAAAAAAAc=",
+      ],
+      "apid": "int:1001",
+      "fee": "int:2000",
+      "fv": "int:50000000",
+      "gen": "mainnet-v1.0",
+      "gh": "b64:wGHE2Pwdvd7S12BL5FaOP20EGYesN73ktiC1qzkkit8=",
+      "grp": "b64:W9s036fGAvVQtVQEOAkcTBr3dfA0PyUKTB2S/wHHNvk=",
+      "lv": "int:50001000",
+      "snd": "addr:RKEOHXLUBHYZL7KS3MWTZOS5OLFGOCN7DWKBEG7TOSEADNAPN5OOTUNSLE",
+      "txID": "EH5J2ZFLMWYNN3DDVPRYY64SZ6YTL3WPW3WREV7BUPOLH37O7PRA",
+      "type": "appl",
+    },
+  ],
+  "pages": [
+    [
+      {
+        "apaa": [
+          "b64:+8Xp5g==",
+          "b64:AAAAAAAAAAA=",
+        ],
+        "apas": [
+          "int:77",
+        ],
+        "apat": [
+          "addr:5VESRRRI2HBMN2XJAM4JAWMVMEUVSJZ2LRR7SNRWYFDBJLEHG7I2572N4M",
+        ],
+        "apbx": [
+          {
+            "n": "b64:YwAAAAAAAAAO",
+          },
+        ],
+        "apfa": [
+          "int:1001",
+        ],
+        "apid": "int:2001",
+        "fee": "int:2000",
+        "fv": "int:50000000",
+        "gen": "mainnet-v1.0",
+        "gh": "b64:wGHE2Pwdvd7S12BL5FaOP20EGYesN73ktiC1qzkkit8=",
+        "grp": "b64:1Rt9Y2Ew3+B3Q1e0Q4ER+WgQRbSK+UryB9C1qaCVUvw=",
+        "lv": "int:50001000",
+        "snd": "addr:RKEOHXLUBHYZL7KS3MWTZOS5OLFGOCN7DWKBEG7TOSEADNAPN5OOTUNSLE",
+        "txID": "6TPKVKPZNBX6W733HTIVUB2W3JKTX5KCFXPLMOUY6G7U2QH7B4AA",
+        "type": "appl",
+      },
+      {
+        "apaa": [
+          "b64:+8Xp5g==",
+          "b64:AAAAAAAAAAE=",
+        ],
+        "apid": "int:2001",
+        "fee": "int:2000",
+        "fv": "int:50000000",
+        "gen": "mainnet-v1.0",
+        "gh": "b64:wGHE2Pwdvd7S12BL5FaOP20EGYesN73ktiC1qzkkit8=",
+        "grp": "b64:1Rt9Y2Ew3+B3Q1e0Q4ER+WgQRbSK+UryB9C1qaCVUvw=",
+        "lv": "int:50001000",
+        "snd": "addr:RKEOHXLUBHYZL7KS3MWTZOS5OLFGOCN7DWKBEG7TOSEADNAPN5OOTUNSLE",
+        "txID": "MWL63MGVSN43SJ6AIVTU3WSAZVBWEIH6GAREP7ZDPYGUEFRMYAFQ",
+        "type": "appl",
+      },
+    ],
+  ],
+}
+`;
+
+exports[`wenpadSaleCore builders (simulate + resource population) > buildRegister adds opUps after a budget failure 1`] = `
+[
+  {
+    "apaa": [
+      "b64:hU3t4A==",
+    ],
+    "apid": "int:2001",
+    "fee": "int:1000",
+    "fv": "int:50000000",
+    "gen": "mainnet-v1.0",
+    "gh": "b64:wGHE2Pwdvd7S12BL5FaOP20EGYesN73ktiC1qzkkit8=",
+    "grp": "b64:PgO+oxL+hlHqgzBFZSKfpYtLPRlofur5qoDEvPl+GSA=",
+    "lv": "int:50001000",
+    "note": "utf8:opup-0",
+    "snd": "addr:QE4XODVIPULV6VVDKRTMGTD6ZTFY3CURWTXDPIS56YHVXD6JWOKORTLPBU",
+    "txID": "AEZQZWFMHG5RJTPE53HOSHZVT5M4JAFK2UBI6ZVUCDFIWLYMG46A",
+    "type": "appl",
+  },
+  {
+    "apaa": [
+      "b64:WX/HwA==",
+    ],
+    "apid": "int:2001",
+    "fee": "int:1000",
+    "fv": "int:50000000",
+    "gen": "mainnet-v1.0",
+    "gh": "b64:wGHE2Pwdvd7S12BL5FaOP20EGYesN73ktiC1qzkkit8=",
+    "grp": "b64:PgO+oxL+hlHqgzBFZSKfpYtLPRlofur5qoDEvPl+GSA=",
+    "lv": "int:50001000",
+    "snd": "addr:QE4XODVIPULV6VVDKRTMGTD6ZTFY3CURWTXDPIS56YHVXD6JWOKORTLPBU",
+    "txID": "6MSM2NLFFB4AOQCE46T5APVEHJT2SCV7KEWVBTKWYVDF2GKZ7TKQ",
+    "type": "appl",
+  },
+  {
+    "fee": "int:1000",
+    "fv": "int:50000000",
+    "gen": "mainnet-v1.0",
+    "gh": "b64:wGHE2Pwdvd7S12BL5FaOP20EGYesN73ktiC1qzkkit8=",
+    "grp": "b64:PgO+oxL+hlHqgzBFZSKfpYtLPRlofur5qoDEvPl+GSA=",
+    "lv": "int:50001000",
+    "rcv": "addr:QE4XODVIPULV6VVDKRTMGTD6ZTFY3CURWTXDPIS56YHVXD6JWOKORTLPBU",
+    "rekey": "addr:J3RJL2VS5BEMQVYJDALNRMNQIQGRJA47WYZBDQ43FUZY4COJDFGK5JFCDA",
+    "snd": "addr:QE4XODVIPULV6VVDKRTMGTD6ZTFY3CURWTXDPIS56YHVXD6JWOKORTLPBU",
+    "txID": "XEOEHORSFPLQCKAXSREQKUIPNXIOFKP3DSBL33ONDBBBDSP5NTCA",
+    "type": "pay",
+  },
+]
+`;
+
+exports[`wenpadSaleCore reads > getCollectEstimate 1`] = `
+{
+  "deposits": 3879900,
+  "proceeds": 12000000,
+}
+`;
+
+exports[`wenpadSaleCore reads > getSaleState decodes globals with number types 1`] = `
+{
+  "admin": "RKEOHXLUBHYZL7KS3MWTZOS5OLFGOCN7DWKBEG7TOSEADNAPN5OOTUNSLE",
+  "appId": 2001,
+  "deliveryBudget": 400000,
+  "distribution": "QE4XODVIPULV6VVDKRTMGTD6ZTFY3CURWTXDPIS56YHVXD6JWOKORTLPBU",
+  "endRound": 9000,
+  "factory": 1001,
+  "nextCommit": 15,
+  "nextReveal": 13,
+  "pending": 2,
+  "price": 1000000,
+  "proceeds": 12000000,
+  "remaining": 288,
+  "revealFee": 20000,
+  "saleId": 7,
+  "sold": 12,
+  "startRound": 100,
+  "status": 1,
+  "total": 300,
+}
+`;
+
+exports[`wenpadSaleCore reads > listSales, getFactoryStats, getSaleByApp 1`] = `
+[
+  {
+    "admin": "RKEOHXLUBHYZL7KS3MWTZOS5OLFGOCN7DWKBEG7TOSEADNAPN5OOTUNSLE",
+    "appId": 2001,
+    "createdRound": 50,
+    "distribution": "QE4XODVIPULV6VVDKRTMGTD6ZTFY3CURWTXDPIS56YHVXD6JWOKORTLPBU",
+    "endRound": 9000,
+    "metadata": {
+      "metadataUrl": "ipfs://bafycollection",
+      "name": "Wen Shuffle",
+      "standard": "arc3",
+      "unitName": "WSHF",
+    },
+    "payout": "5VESRRRI2HBMN2XJAM4JAWMVMEUVSJZ2LRR7SNRWYFDBJLEHG7I2572N4M",
+    "price": 1000000,
+    "saleId": 7,
+    "sold": 12,
+    "startRound": 100,
+    "status": 1,
+    "totalItems": 300,
+    "volume": 12000000,
+  },
+  {
+    "admin": "RKEOHXLUBHYZL7KS3MWTZOS5OLFGOCN7DWKBEG7TOSEADNAPN5OOTUNSLE",
+    "appId": 2000,
+    "createdRound": 5,
+    "distribution": "QE4XODVIPULV6VVDKRTMGTD6ZTFY3CURWTXDPIS56YHVXD6JWOKORTLPBU",
+    "endRound": 2,
+    "metadata": {
+      "metadataUrl": "",
+      "name": "Old",
+      "standard": "arc69",
+      "unitName": "OLD",
+    },
+    "payout": "5VESRRRI2HBMN2XJAM4JAWMVMEUVSJZ2LRR7SNRWYFDBJLEHG7I2572N4M",
+    "price": 5,
+    "saleId": 6,
+    "sold": 4,
+    "startRound": 1,
+    "status": 3,
+    "totalItems": 3,
+    "volume": 6,
+  },
+]
+`;
+
+exports[`wenpadSaleCore reads > payouts and commits 1`] = `
+{
+  "boxMbr": 31700,
+  "buyer": "5VESRRRI2HBMN2XJAM4JAWMVMEUVSJZ2LRR7SNRWYFDBJLEHG7I2572N4M",
+  "commitId": 13,
+  "deposit": 400000,
+  "price": 1000000,
+  "revealFee": 20000,
+  "targetRound": 49998000,
+}
+`;

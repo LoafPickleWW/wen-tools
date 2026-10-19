@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { ASSET_PREVIEW, IPFS_ENDPOINT, TOOLS } from "../constants";
 import { toast } from "react-toastify";
 import { useWallet } from "@txnlab/use-wallet-react";
+import { useAppNetwork } from "../hooks/useAppNetwork";
 import {
   getIndexerURL,
   formatNumber,
@@ -99,8 +100,8 @@ export const ARC62ManagerTool = () => {
     useState<boolean>(false);
   const [assetData, setAssetData] = useState<AssetData | null>(null);
 
-  const { activeNetwork, algodClient, activeAddress, transactionSigner } =
-    useWallet();
+  const { algodClient, activeAddress, transactionSigner } = useWallet();
+  const { activeNetwork } = useAppNetwork();
 
   const algorand = algokit.AlgorandClient.fromClients({
     algod: algodClient,
@@ -649,7 +650,7 @@ export const ARC62ManagerTool = () => {
         })
         .addTransaction(
           algosdk.makeAssetConfigTxnWithSuggestedParamsFromObject({
-            from: activeAddress,
+            sender: activeAddress,
             assetIndex: assetId,
             manager: assetData.manager,
             reserve: assetData.freeze,

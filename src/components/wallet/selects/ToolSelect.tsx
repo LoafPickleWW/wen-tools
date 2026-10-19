@@ -7,6 +7,7 @@ import MenuItem from "@mui/material/MenuItem";
 import { Fragment, useState } from "react";
 import { toast } from "react-toastify";
 import { useWallet } from "@txnlab/use-wallet-react";
+import { useAppNetwork } from "../../../hooks/useAppNetwork";
 import { ToolSelectProps } from "../../../types/wallet";
 import {
   createAssetDestroyTransactions,
@@ -25,7 +26,8 @@ export default function ToolSelect({
   tools,
   setFilteredAssets,
 }: ToolSelectProps) {
-  const { activeAddress, algodClient, transactionSigner, activeNetwork } = useWallet();
+  const { activeAddress, algodClient, transactionSigner } = useWallet();
+  const { activeNetwork } = useAppNetwork();
   const toolState = useWalletToolStore();
   const [isLoading, setIsLoading] = useState(false);
   const [openMultiSend, setOpenMultiSend] = useState(false);

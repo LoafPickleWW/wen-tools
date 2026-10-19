@@ -24,6 +24,7 @@ import { isCrustAuth } from "../crust-auth";
 import { makeCrustPinTx } from "../crust";
 import { uploadToAlgoFile, completeAlgoFileUpload } from "../utils/algofile";
 import { useWallet } from "@txnlab/use-wallet-react";
+import { useAppNetwork } from "../hooks/useAppNetwork";
 import "react-json-view-lite/dist/index.css";
 import { PreviewAssetComponent } from "../components/PreviewAssetComponent";
 import ConnectButton from "../components/ConnectButton";
@@ -68,8 +69,8 @@ export function SimpleUpdate() {
   // batchATC is a AtomicTransactionComposer to batch and send all transactions
   const [batchATC, setBatchATC] = useState(null as any);
   const [algofileUploads, setAlgofileUploads] = useState<any[]>([]);
-  const { activeAddress, activeNetwork, algodClient, transactionSigner } =
-    useWallet();
+  const { activeAddress, algodClient, transactionSigner } = useWallet();
+  const { activeNetwork } = useAppNetwork();
   const isTestnet = activeNetwork === "testnet";
   const effectiveProvider = isTestnet && pinningProvider === "crust" ? "pinata" : pinningProvider;
 
@@ -171,24 +172,24 @@ export function SimpleUpdate() {
           return "Token";
         }
       }
-      const assetFormat = findFormat(assetData.params["url"]);
+      const assetFormat = findFormat((assetData.params!.url ?? ""));
       let assetMetadata: any = {};
       if (assetFormat === "ARC19") {
         assetMetadata = await getARC19AssetMetadataData(
-          assetData.params["url"],
-          assetData.params["reserve"]
+          (assetData.params!.url ?? ""),
+          (assetData.params!.reserve ?? "")
         );
       } else if (assetFormat === "ARC69") {
         const arc69 = new Arc69();
         assetMetadata = await arc69.fetch(Number(assetID), activeNetwork);
       } else if (assetFormat === "ARC3") {
-        if (assetData.params["url"].startsWith("ipfs://")) {
+        if ((assetData.params!.url ?? "").startsWith("ipfs://")) {
           assetMetadata = await axios
-            .get(IPFS_ENDPOINT + assetData.params["url"].replace("ipfs://", ""))
+            .get(IPFS_ENDPOINT + (assetData.params!.url ?? "").replace("ipfs://", ""))
             .then((res) => res.data);
         } else {
           assetMetadata = await axios
-            .get(assetData.params["url"])
+            .get((assetData.params!.url ?? ""))
             .then((res) => res.data);
         }
       } else {
@@ -240,12 +241,12 @@ export function SimpleUpdate() {
 
       setFormData({
         ...formData,
-        name: assetData.params["name"],
-        unitName: assetData.params["unit-name"],
-        totalSupply: assetData.params["total"],
-        decimals: assetData.params["decimals"],
-        freeze: assetData.params["freeze"],
-        clawback: assetData.params["clawback"],
+        name: assetData.params!["name"],
+        unitName: assetData.params!.unitName,
+        totalSupply: assetData.params!["total"],
+        decimals: assetData.params!["decimals"],
+        freeze: assetData.params!["freeze"],
+        clawback: assetData.params!["clawback"],
         format: assetFormat,
         description: assetMetadata.description || "",
         external_url: assetMetadata.external_url || "",
@@ -268,9 +269,9 @@ export function SimpleUpdate() {
             name: metadata.extras[key],
           }))
           : [],
-        image_url: assetMetadata.image || assetData.params["url"] || "",
+        image_url: assetMetadata.image || (assetData.params!.url ?? "") || "",
         image_mime_type: assetMetadata.image_mime_type,
-        animation_url: assetMetadata.animation_url || assetData.params["url"],
+        animation_url: assetMetadata.animation_url || (assetData.params!.url ?? ""),
         animation_mime_type: assetMetadata.animation_mime_type,
       });
 
@@ -569,7 +570,7 @@ export function SimpleUpdate() {
           toast.error("Transaction not signed!");
           return;
         }
-        const { txId } = await algodClient.sendRawTransaction(signedTxns).do();
+        const { txid: txId } = await algodClient.sendRawTransaction(signedTxns).do();
         await algosdk.waitForConfirmation(algodClient, txId, 4);
 
         // Upload metadata to AlgoFile using the signed transactions group
@@ -612,7 +613,7 @@ export function SimpleUpdate() {
         }
         const groups = sliceIntoChunks(signedAssetTransaction, 2);
 
-        const { txId } = await algodClient.sendRawTransaction(groups[0]).do();
+        const { txid: txId } = await algodClient.sendRawTransaction(groups[0]).do();
         await algosdk.waitForConfirmation(algodClient, txId, 4);
       }
 

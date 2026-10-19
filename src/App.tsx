@@ -1,9 +1,11 @@
 import {
   NetworkId,
-  WalletId,
   WalletManager,
   WalletProvider,
 } from "@txnlab/use-wallet-react";
+import { pera } from "@txnlab/use-wallet-pera";
+import { defly } from "@txnlab/use-wallet-defly";
+import { lute } from "@galaxypay/use-wallet-lute";
 import { Navigate, Route, Routes, BrowserRouter as Router, useParams } from "react-router-dom";
 
 /** Old Shuffle URLs (/wen-pad/sales/:appId) keep working */
@@ -62,15 +64,10 @@ import { StablecoinStudio } from "./pages/StablecoinStudio";
 
 
 const walletManager = new WalletManager({
-  wallets: [
-    WalletId.PERA,
-    WalletId.DEFLY,
-    {
-      id: WalletId.LUTE,
-      options: { siteName: "wen.tools" },
-    },
-  ],
-  network: NetworkId.MAINNET,
+  wallets: [pera(), defly(), lute({ siteName: "wen.tools" })],
+  defaultNetwork: NetworkId.MAINNET,
+  // use-wallet v5 no longer remembers the selected network by default
+  options: { persistNetwork: true },
 });
 
 axios.interceptors.response.use(

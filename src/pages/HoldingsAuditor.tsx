@@ -13,6 +13,7 @@ import {
   getParticipationStatusOfWallet,
 } from "../utils";
 import { useWallet } from "@txnlab/use-wallet-react";
+import { useAppNetwork } from "../hooks/useAppNetwork";
 import ConnectButton from "../components/ConnectButton";
 import { Meta } from "../components/Meta";
 import {
@@ -32,7 +33,8 @@ interface HoldingsAuditorProps {
 export function HoldingsAuditor({ defaultTab = "wallet" }: HoldingsAuditorProps) {
   const [activeTab, setActiveTab] = useState<TabMode>(defaultTab);
   const [searchParams] = useSearchParams();
-  const { activeNetwork, algodClient } = useWallet();
+  const { algodClient } = useWallet();
+  const { activeNetwork } = useAppNetwork();
 
   // Tab change handler
   const handleTabChange = (tab: TabMode) => {
@@ -132,11 +134,11 @@ export function HoldingsAuditor({ defaultTab = "wallet" }: HoldingsAuditorProps)
   async function getAssetData(asset: any) {
     try {
       const assetData = await algodClient.getAssetByID(asset.asset_id).do();
-      const decimals = assetData.params.decimals || 0;
+      const decimals = assetData.params!.decimals || 0;
       return {
         asset_id: asset.asset_id,
-        unit_name: assetData.params["unit-name"] || "-",
-        asset_name: assetData.params.name || "-",
+        unit_name: assetData.params!.unitName || "-",
+        asset_name: assetData.params!.name || "-",
         amount: (asset.amount / 10 ** decimals).toFixed(decimals),
       };
     } catch {
@@ -495,7 +497,7 @@ export function HoldingsAuditor({ defaultTab = "wallet" }: HoldingsAuditorProps)
     const appId = BONFIRE_APP_IDS[activeNetwork];
     if (!appId) return "";
     try {
-      return algosdk.getApplicationAddress(appId);
+      return algosdk.getApplicationAddress(appId).toString();
     } catch {
       return "";
     }

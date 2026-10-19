@@ -16,6 +16,7 @@ import {
   MdCasino
 } from 'react-icons/md';
 import { useWallet } from '@txnlab/use-wallet-react';
+import { useAppNetwork } from "../../../hooks/useAppNetwork";
 import { toast } from 'react-toastify';
 import confetti from 'canvas-confetti';
 import { 
@@ -49,7 +50,8 @@ import { saveLastMint, toSaleNetwork } from '../../../utils/wenpadSale';
 
 const MintStep = () => {
   const { project, previewItems, selectStep } = useProject();
-  const { activeAccount, activeNetwork, transactionSigner, algodClient } = useWallet();
+  const { activeAccount, transactionSigner, algodClient } = useWallet();
+  const { activeNetwork } = useAppNetwork();
   const [standard, setStandard] = useState<'ARC3' | 'ARC69' | 'ARC19'>('ARC19');
   const [provider, setProvider] = useState<'Filebase' | 'AlgoFile' | 'Crust' | 'Pinata'>('Filebase');
   const [filebaseToken, setFilebaseToken] = useState(
@@ -160,9 +162,9 @@ const MintStep = () => {
     }
     try {
       setIsFetchingBalance(true);
-      const acctInfo: any = await algodClient.accountInformation(activeAccount.address).do();
+      const acctInfo = await algodClient.accountInformation(activeAccount.address).do();
       const amount = Number(acctInfo.amount || 0);
-      const minBal = Number(acctInfo['min-balance'] || 100000);
+      const minBal = Number(acctInfo.minBalance || 100000);
       const spendable = Math.max(0, (amount - minBal) / 1e6);
       setWalletBalance({
         amount: amount / 1e6,
@@ -171,13 +173,13 @@ const MintStep = () => {
       });
 
       // Detect already created assets for this collection in the wallet
-      const createdAssets = acctInfo['created-assets'] || [];
+      const createdAssets = acctInfo.createdAssets || [];
       const projName = (project.name || '').trim().toLowerCase();
       const projUnit = (project.unitName || '').trim().toLowerCase();
       let maxMinted = 0;
       for (const ca of createdAssets) {
         const name = (ca.params?.name || '').trim();
-        const unit = (ca.params?.['unit-name'] || '').trim().toLowerCase();
+        const unit = (ca.params?.unitName || '').trim().toLowerCase();
         const num = parseEditionNumber(name);
         if (num !== null) {
           if (
@@ -333,15 +335,15 @@ const MintStep = () => {
         let imgPaymentTxn;
         if (imgAssetId === 0) {
           imgPaymentTxn = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
-            from: activeAccount.address,
-            to: imgRequirements.payTo,
+            sender: activeAccount.address,
+            receiver: imgRequirements.payTo,
             amount: imgAmountMicro,
             suggestedParams: params,
           });
         } else {
           imgPaymentTxn = algosdk.makeAssetTransferTxnWithSuggestedParamsFromObject({
-            from: activeAccount.address,
-            to: imgRequirements.payTo,
+            sender: activeAccount.address,
+            receiver: imgRequirements.payTo,
             amount: imgAmountMicro,
             assetIndex: imgAssetId,
             suggestedParams: params,
@@ -425,15 +427,15 @@ const MintStep = () => {
           let jsonPaymentTxn;
           if (jsonAssetId === 0) {
             jsonPaymentTxn = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
-              from: activeAccount.address,
-              to: jsonRequirements.payTo,
+              sender: activeAccount.address,
+              receiver: jsonRequirements.payTo,
               amount: jsonAmountMicro,
               suggestedParams: params,
             });
           } else {
             jsonPaymentTxn = algosdk.makeAssetTransferTxnWithSuggestedParamsFromObject({
-              from: activeAccount.address,
-              to: jsonRequirements.payTo,
+              sender: activeAccount.address,
+              receiver: jsonRequirements.payTo,
               amount: jsonAmountMicro,
               assetIndex: jsonAssetId,
               suggestedParams: params,
@@ -680,7 +682,7 @@ const MintStep = () => {
           for (const txId of createTxIds) {
             try {
               const confirmed = await algosdk.waitForConfirmation(algodClient, txId, 10);
-              const assetId = Number(confirmed['asset-index'] || 0);
+              const assetId = Number(confirmed.assetIndex || 0);
               if (assetId) createdAssetIds.push(assetId);
             } catch (confErr) {
               console.error(`Confirmation error for txId ${txId}:`, confErr);

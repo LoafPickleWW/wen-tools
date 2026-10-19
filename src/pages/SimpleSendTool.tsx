@@ -14,6 +14,7 @@ import FileDownloadIcon from "@mui/icons-material/FileDownload";
 import InfinityModeComponent from "../components/InfinityModeComponent";
 import FaqSectionComponent from "../components/FaqSectionComponent";
 import { useWallet } from "@txnlab/use-wallet-react";
+import { useAppNetwork } from "../hooks/useAppNetwork";
 import {
   createArc59GroupTxns,
   TxnInfoType,
@@ -56,8 +57,8 @@ export function SimpleSendTool() {
   const [assetInboxInfo, setAssetInboxInfo] = useState({} as TxnInfoType);
   const [currentSpendingBalance, setCurrentSpendingBalance] = useState(0);
   const [errMsg, setErrMsg] = useState("");
-  const { activeAddress, activeNetwork, algodClient, transactionSigner } =
-    useWallet();
+  const { activeAddress, algodClient, transactionSigner } = useWallet();
+  const { activeNetwork } = useAppNetwork();
 
   async function handleNext() {
     if (!activeAddress) {
@@ -167,7 +168,7 @@ export function SimpleSendTool() {
             .accountInformation(activeAddress as string)
             .do();
           const spendingBalance =
-            accountInfo.amount - accountInfo["min-balance"];
+            Number(accountInfo.amount) - Number(accountInfo.minBalance);
           setCurrentSpendingBalance(spendingBalance);
           // setCalculatingAssetInboxFees(false);
           setProcessStep("SEND_TO_ASSET_INBOX");

@@ -25,8 +25,8 @@ async function deployToNetwork(network: Network, mnemonic: string) {
   console.log(`Deployer Address: ${account.addr}`);
 
   const accountInfo = await algod.accountInformation(account.addr).do();
-  console.log(`Balance: ${accountInfo.amount / 1e6} ALGO`);
-  if (accountInfo.amount < 1_000_000) {
+  console.log(`Balance: ${Number(accountInfo.amount) / 1e6} ALGO`);
+  if (Number(accountInfo.amount) < 1_000_000) {
     throw new Error(`Insufficient funds on ${network}. Please fund ${account.addr} with at least 1 ALGO`);
   }
 
@@ -51,7 +51,7 @@ async function deployToNetwork(network: Network, mnemonic: string) {
 
   const suggestedParams = await algod.getTransactionParams().do();
   const createTxn = algosdk.makeApplicationCreateTxnFromObject({
-    from: account.addr,
+    sender: account.addr,
     approvalProgram,
     clearProgram,
     numGlobalInts: arc32.state.global.num_uints,
@@ -67,12 +67,12 @@ async function deployToNetwork(network: Network, mnemonic: string) {
   await algod.sendRawTransaction(createTxn.signTxn(account.sk)).do();
   console.log(`Waiting for confirmation of txID ${createTxn.txID()}...`);
   const result = await algosdk.waitForConfirmation(algod, createTxn.txID(), 4);
-  const appId = Number(result['application-index']);
+  const appId = Number(result.applicationIndex);
 
   // Fund the factory account's base MBR so it can hold boxes
   const fundTxn = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
-    from: account.addr,
-    to: algosdk.getApplicationAddress(appId),
+    sender: account.addr,
+    receiver: algosdk.getApplicationAddress(appId),
     amount: FACTORY_SEED,
     suggestedParams,
   });

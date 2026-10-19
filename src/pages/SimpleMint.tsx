@@ -23,6 +23,7 @@ import FaqSectionComponent from "../components/FaqSectionComponent";
 import { pinImageToCrust, makeCrustPinTx } from "../crust";
 import { uploadToAlgoFile, completeAlgoFileUpload } from "../utils/algofile";
 import { useWallet } from "@txnlab/use-wallet-react";
+import { useAppNetwork } from "../hooks/useAppNetwork";
 import "react-json-view-lite/dist/index.css";
 import { PreviewAssetComponent } from "../components/PreviewAssetComponent";
 import ConnectButton from "../components/ConnectButton";
@@ -81,7 +82,8 @@ const formatNumberWithCommas = (val: string | number) => {
 export function SimpleMint() {
   const [formData, setFormData] = useAtom(simpleMintAtom);
   const [pinningProvider, setPinningProvider] = useAtom(simpleMintProviderAtom);
-  const { activeAddress, algodClient, transactionSigner, activeNetwork } = useWallet();
+  const { activeAddress, algodClient, transactionSigner } = useWallet();
+  const { activeNetwork } = useAppNetwork();
   const isTestnet = activeNetwork === "testnet";
   const effectiveProvider = isTestnet && pinningProvider === "crust" ? "pinata" : pinningProvider;
   const [token, setToken] = useAtom(smTokenAtom);
@@ -89,7 +91,7 @@ export function SimpleMint() {
   const [isCustomMode, setIsCustomMode] = useState(false);
   const [processStep, setProcessStep] = useState(0);
 
-  const [createdAssetID, setCreatedAssetID] = useState(null);
+  const [createdAssetID, setCreatedAssetID] = useState<number | null>(null);
 
   const [batchATC, setBatchATC] = useState(null as any);
   const [pinCids, setPinCids] = useState<string[]>([]);
@@ -802,9 +804,9 @@ wen.contentWindow.postMessage({
 
       // 1. Send Mint Group
       const mintSigned = signedTxns.slice(0, mintTxns.length);
-      const { txId } = await algodClient.sendRawTransaction(mintSigned).do();
+      const { txid: txId } = await algodClient.sendRawTransaction(mintSigned).do();
       const result = await algosdk.waitForConfirmation(algodClient, txId, 4);
-      setCreatedAssetID(result["asset-index"]);
+      setCreatedAssetID(Number(result.assetIndex));
 
       // 2. Upload to AlgoFile if applicable
       if (effectiveProvider === "algofile" && algofileUploads && algofileUploads.length > 0) {
@@ -853,7 +855,7 @@ wen.contentWindow.postMessage({
       if (window.parent) {
         window.parent.postMessage({
           type: "WEN_TOOLS_MINT_SUCCESS",
-          assetID: result["asset-index"],
+          assetID: Number(result.assetIndex),
         }, "*");
       }
 

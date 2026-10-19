@@ -325,7 +325,7 @@ export function XGov() {
       const algodClient = new algosdk.Algodv2('', 'https://mainnet-api.algonode.cloud', '');
       const atc = new algosdk.AtomicTransactionComposer();
       const suggestedParams = await algodClient.getTransactionParams().do();
-      suggestedParams.fee = Math.max((suggestedParams.minFee || 1000) * 2, (suggestedParams.fee || 1000) * 2, 4000);
+      suggestedParams.fee = BigInt(Math.max(Number(suggestedParams.minFee || 1000) * 2, Number(suggestedParams.fee || 1000) * 2, 4000));
       suggestedParams.flatFee = true;
 
       // Simplified ABI for vote_proposal
@@ -387,7 +387,7 @@ export function XGov() {
       
       // Split sign and submit for better Ledger compatibility
       const signedTxns = await atc.gatherSignatures();
-      const { txId } = await algodClient.sendRawTransaction(signedTxns).do();
+      const { txid: txId } = await algodClient.sendRawTransaction(signedTxns).do();
       await algosdk.waitForConfirmation(algodClient, txId, 4);
       toast.success(`Successfully cast votes! TxID: ${txId}`);
       

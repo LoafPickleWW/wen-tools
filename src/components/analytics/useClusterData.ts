@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef } from "react";
-import { useWallet } from "@txnlab/use-wallet-react";
+import { useAppNetwork } from "../../hooks/useAppNetwork";
 import axios from "axios";
 import { getIndexerURL, getNfDomainsInBulk } from "../../utils";
 import { GraphNode, GraphEdge } from "../../types/analytics";
@@ -20,7 +20,7 @@ export interface UseClusterDataOptions {
 }
 
 export function useClusterData() {
-  const { activeNetwork } = useWallet();
+  const { activeNetwork } = useAppNetwork();
   const [nodes, setNodes] = useState<GraphNode[]>([]);
   const [edges, setEdges] = useState<GraphEdge[]>([]);
   const [loading, setLoading] = useState(false);

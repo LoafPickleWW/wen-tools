@@ -173,9 +173,9 @@ export function LaunchSaleWizard({ network }: { network: SaleNetwork }) {
       .then((info) => {
         if (cancelled) return;
         setWalletCheck(
-          info["auth-addr"]
+          info.authAddr
             ? { ok: false, message: "This wallet is rekeyed to another account, so it cannot be handed to a sale." }
-            : { ok: true, message: `Holds ${info["total-assets-opted-in"] ?? 0} assets` }
+            : { ok: true, message: `Holds ${info.totalAssetsOptedIn ?? 0} assets` }
         );
       })
       .catch(() => !cancelled && setWalletCheck({ ok: false, message: "Account not found on this network" }));
@@ -290,7 +290,7 @@ export function LaunchSaleWizard({ network }: { network: SaleNetwork }) {
     getAlgod(network)
       .accountInformation(distribution)
       .do()
-      .then((info) => !cancelled && setWalletSpendable(Number(info.amount) - Number(info["min-balance"])))
+      .then((info) => !cancelled && setWalletSpendable(Number(info.amount) - Number(info.minBalance)))
       .catch(() => !cancelled && setWalletSpendable(null));
     return () => {
       cancelled = true;

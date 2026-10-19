@@ -346,15 +346,15 @@ const modeOptions: VRFMode[] = _vrfInfo && _vrfInfo.capabilities && Array.isArra
 
       if (assetId === 0) {
         txn = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
-          from: activeAddress,
-          to: recipient,
+          sender: activeAddress,
+          receiver: recipient,
           amount: amountMicro,
           suggestedParams: params,
         });
       } else {
         txn = algosdk.makeAssetTransferTxnWithSuggestedParamsFromObject({
-          from: activeAddress,
-          to: recipient,
+          sender: activeAddress,
+          receiver: recipient,
           amount: amountMicro,
           assetIndex: assetId,
           suggestedParams: params,

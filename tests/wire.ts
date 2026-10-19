@@ -19,7 +19,7 @@ const ADDRESS_KEYS = new Set(["snd", "rcv", "close", "asnd", "arcv", "aclose", "
 const printable = (u: Uint8Array) => {
   try {
     const s = new TextDecoder("utf-8", { fatal: true }).decode(u);
-    return /^[\x20-\x7E -￿\n\r\t]*$/.test(s) ? s : null;
+    return /^[\x20-\x7E\u00A0-\uFFFF\n\r\t]*$/.test(s) ? s : null;
   } catch {
     return null;
   }

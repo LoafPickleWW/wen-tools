@@ -354,7 +354,7 @@ export default function ConnectButton({
               <div className="bg-banner-grey/70 p-2.5 rounded-2xl border border-white/[0.07] flex flex-col justify-between">
                 <span className="text-[10px] uppercase tracking-wider text-slate-400 font-semibold">Balance</span>
                 <div className="flex items-center justify-between mt-1">
-                  <span className="font-extrabold text-sm text-white">{((accountData?.amount || 0) / 10 ** 6).toFixed(2)}</span>
+                  <span className="font-extrabold text-sm text-white">{(Number(accountData?.amount || 0) / 10 ** 6).toFixed(2)}</span>
                   <span
                     className="font-bold text-xxs transition-colors"
                     style={{ color: isThemeActive ? "var(--pq-primary, #00f0ff)" : "#38bdf8" }}
@@ -367,7 +367,7 @@ export default function ConnectButton({
               <div className="bg-banner-grey/70 p-2.5 rounded-2xl border border-white/[0.07] flex flex-col justify-between">
                 <span className="text-[10px] uppercase tracking-wider text-slate-400 font-semibold">Min Balance</span>
                 <div className="flex items-center justify-between mt-1">
-                  <span className="font-bold text-sm text-slate-300">{((accountData?.["min-balance"] || 0) / 10 ** 6).toFixed(2)}</span>
+                  <span className="font-bold text-sm text-slate-300">{(Number(accountData?.minBalance || 0) / 10 ** 6).toFixed(2)}</span>
                   <span className="text-slate-500 font-medium text-xxs">ALGO</span>
                 </div>
               </div>

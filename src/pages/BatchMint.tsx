@@ -5,6 +5,7 @@ import algosdk from "algosdk";
 import Papa from "papaparse";
 import { toast } from "react-toastify";
 import { useWallet } from "@txnlab/use-wallet-react";
+import { useAppNetwork } from "../hooks/useAppNetwork";
 
 import {
   createAssetMintArray,
@@ -80,7 +81,8 @@ export function BatchMint() {
   const [mediaFiles, setMediaFiles] = useState<File[]>([]);
   const [previewAsset, setPreviewAsset] = useState(null as any);
 
-  const { activeAddress, algodClient, transactionSigner, activeWallet, activeNetwork } = useWallet();
+  const { activeAddress, algodClient, transactionSigner, activeWallet } = useWallet();
+  const { activeNetwork } = useAppNetwork();
   const isTestnet = activeNetwork === "testnet";
   const effectiveProvider = isTestnet
     ? (formData.pinningProvider === "crust" ? "pinata" : formData.pinningProvider)
@@ -320,15 +322,15 @@ export function BatchMint() {
         let imgPaymentTxn;
         if (imgAssetId === 0) {
           imgPaymentTxn = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
-            from: activeAddress,
-            to: imgRequirements.payTo,
+            sender: activeAddress,
+            receiver: imgRequirements.payTo,
             amount: imgAmountMicro,
             suggestedParams: params,
           });
         } else {
           imgPaymentTxn = algosdk.makeAssetTransferTxnWithSuggestedParamsFromObject({
-            from: activeAddress,
-            to: imgRequirements.payTo,
+            sender: activeAddress,
+            receiver: imgRequirements.payTo,
             amount: imgAmountMicro,
             assetIndex: imgAssetId,
             suggestedParams: params,
@@ -379,7 +381,7 @@ export function BatchMint() {
 
       // Check balance
       const accountInfo = await algodClient.accountInformation(activeAddress).exclude("all").do();
-      const minBalance = accountInfo.amount - accountInfo["min-balance"] / 10 ** 6;
+      const minBalance = Number(accountInfo.amount) - Number(accountInfo.minBalance) / 10 ** 6;
       
       let estimatedCostPerAsset = 0.1 + MINT_FEE_PER_ASA + 0.002; // network fee + site fee + tx fees
       if (effectiveProvider === "crust") {
@@ -531,15 +533,15 @@ export function BatchMint() {
         let paymentTxn;
         if (assetId === 0) {
           paymentTxn = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
-            from: activeAddress,
-            to: requirements.payTo,
+            sender: activeAddress,
+            receiver: requirements.payTo,
             amount: amountMicro,
             suggestedParams: params,
           });
         } else {
           paymentTxn = algosdk.makeAssetTransferTxnWithSuggestedParamsFromObject({
-            from: activeAddress,
-            to: requirements.payTo,
+            sender: activeAddress,
+            receiver: requirements.payTo,
             amount: amountMicro,
             assetIndex: assetId,
             suggestedParams: params,

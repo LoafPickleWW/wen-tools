@@ -7,6 +7,9 @@ import { ALGORAND_ZERO_ADDRESS } from "./constants";
 import axios from "axios";
 import * as algokit from "@algorandfoundation/algokit-utils";
 
+/** algosdk v3 dropped ALGORAND_MIN_TX_FEE */
+const MIN_TXN_FEE = 1000;
+
 type SenderType = {
   addr: string;
   signer: (
@@ -57,7 +60,7 @@ export const createArc59GroupTxns = async (
   try {
     const appClient = new Arc59Client(
       {
-        sender,
+        sender: { addr: algosdk.Address.fromString(sender.addr), signer: sender.signer },
         resolveBy: "id",
         id: appId,
       },
@@ -65,7 +68,7 @@ export const createArc59GroupTxns = async (
     );
 
     const simSender = {
-      addr: activeAddress,
+      addr: algosdk.Address.fromString(activeAddress),
       signer: algosdk.makeEmptyTransactionSigner(),
     };
     const simParams = {
@@ -75,7 +78,9 @@ export const createArc59GroupTxns = async (
     };
     for (let i = 0; i < txn.length; i++) {
       const logData: LogDataType = {} as LogDataType;
-      const receiver = algosdk.encodeAddress(txn[i].to.publicKey);
+      const assetTransfer = txn[i].assetTransfer!;
+      const assetIndex = Number(assetTransfer.assetIndex);
+      const receiver = assetTransfer.receiver.toString();
       logData.account = receiver;
 
       const composer = appClient.compose();
@@ -91,13 +96,13 @@ export const createArc59GroupTxns = async (
           .compose()
           .arc59GetSendAssetInfo(
             {
-              asset: txn[i].assetIndex,
+              asset: assetIndex,
               receiver: receiver,
             },
             {
               sender: {
                 ...simSender,
-                addr: activeAddress,
+                addr: algosdk.Address.fromString(activeAddress),
               },
             }
           )
@@ -116,21 +121,21 @@ export const createArc59GroupTxns = async (
         // update the logDataArray
         logDataArray.push({
           ...logData,
-          txnFees: algosdk.ALGORAND_MIN_TX_FEE,
+          txnFees: MIN_TXN_FEE,
           innerTxns: 0,
           receiverOptedIn: true,
           mbr: 0,
           receiverAlgoNeededForClaim: 0,
           routerOptedIn: routerOptedIn,
-          totalAmount: algosdk.ALGORAND_MIN_TX_FEE,
+          totalAmount: MIN_TXN_FEE,
           txnID: "",
         });
       } else {
         logData.txnFees = 0;
 
         // log the inner txns plus the txn fee
-        logData.innerTxns = Number(itxns) * algosdk.ALGORAND_MIN_TX_FEE;
-        logData.txnFees += algosdk.ALGORAND_MIN_TX_FEE;
+        logData.innerTxns = Number(itxns) * MIN_TXN_FEE;
+        logData.txnFees += MIN_TXN_FEE;
 
         let amount = 0;
         logData.receiverOptedIn = receiverOptedIn;
@@ -143,8 +148,8 @@ export const createArc59GroupTxns = async (
           // If the MBR is non-zero, send the MBR to the router
           const mbrPayment =
             algosdk.makePaymentTxnWithSuggestedParamsFromObject({
-              to: appAddr,
-              from: activeAddress,
+              receiver: appAddr,
+              sender: activeAddress,
               suggestedParams,
               amount: Number(mbr + receiverAlgoNeededForClaim),
             });
@@ -152,9 +157,9 @@ export const createArc59GroupTxns = async (
           // add the MBR payment to the atomic transaction plus the txn fee
           amount +=
             Number(mbr + receiverAlgoNeededForClaim) +
-            algosdk.ALGORAND_MIN_TX_FEE;
+            MIN_TXN_FEE;
 
-          logData.txnFees += algosdk.ALGORAND_MIN_TX_FEE;
+          logData.txnFees += MIN_TXN_FEE;
 
           // add the MBR payment to the atomic transaction
           composer.addTransaction({
@@ -165,25 +170,42 @@ export const createArc59GroupTxns = async (
 
         // If the router is not opted in, add a call to arc59OptRouterIn to do so
         if (!routerOptedIn) {
-          composer.arc59OptRouterIn({ asa: txn[i].assetIndex });
+          composer.arc59OptRouterIn({ asa: assetIndex });
 
           // opt-in txn fee
-          amount += algosdk.ALGORAND_MIN_TX_FEE;
-          logData.txnFees += algosdk.ALGORAND_MIN_TX_FEE;
+          amount += MIN_TXN_FEE;
+          logData.txnFees += MIN_TXN_FEE;
         }
         logData.routerOptedIn = routerOptedIn;
 
         // The transfer of the asset to the router
-        txn[i].to = algosdk.decodeAddress(appAddr);
+        // (algosdk v3 transactions are immutable, so rebuild it with the router as receiver)
+        const original = txn[i];
+        txn[i] = algosdk.makeAssetTransferTxnWithSuggestedParamsFromObject({
+          sender: original.sender,
+          receiver: appAddr,
+          amount: assetTransfer.amount,
+          assetIndex,
+          note: original.note,
+          suggestedParams: {
+            fee: original.fee,
+            flatFee: true,
+            firstValid: original.firstValid,
+            lastValid: original.lastValid,
+            genesisHash: original.genesisHash,
+            genesisID: original.genesisID,
+            minFee: MIN_TXN_FEE,
+          },
+        });
 
         // An extra itxn is if we are also sending ALGO for the receiver claim
         const totalItxns =
           itxns + (receiverAlgoNeededForClaim === 0n ? 0n : 1n);
 
-        amount += algosdk.ALGORAND_MIN_TX_FEE * Number(totalItxns + 1n);
+        amount += MIN_TXN_FEE * Number(totalItxns + 1n);
 
         const fee = (
-          algosdk.ALGORAND_MIN_TX_FEE * Number(totalItxns + 1n)
+          MIN_TXN_FEE * Number(totalItxns + 1n)
         ).microAlgos();
         const boxes = [algosdk.decodeAddress(receiver).publicKey];
         const inboxAddress = (
@@ -194,7 +216,7 @@ export const createArc59GroupTxns = async (
         ).returns[0];
 
         const accounts = [receiver, inboxAddress];
-        const assets = [Number(txn[i].assetIndex)];
+        const assets = [assetIndex];
         composer.arc59SendAsset(
           {
             axfer: txn[i],
@@ -204,8 +226,8 @@ export const createArc59GroupTxns = async (
           { sendParams: { fee: fee as any }, boxes, accounts, assets }
         );
         // asset send txn fee
-        amount += algosdk.ALGORAND_MIN_TX_FEE;
-        logData.txnFees += algosdk.ALGORAND_MIN_TX_FEE;
+        amount += MIN_TXN_FEE;
+        logData.txnFees += MIN_TXN_FEE;
         logData.totalAmount = amount;
         logData.txnID = ""; // empty txnID
 
@@ -215,7 +237,8 @@ export const createArc59GroupTxns = async (
         // Adjust the app call to 1000 rounds instead of 10 rounds
         const originalTxns = atc.clone().buildGroup();
         const unsignedTxn = originalTxns.map((txn) => {
-          txn.txn.lastRound = txn.txn.firstRound + 1000;
+          // lastValid is readonly in algosdk v3's types but a plain field at runtime
+          (txn.txn as { lastValid: bigint }).lastValid = txn.txn.firstValid + 1000n;
           txn.txn.group = undefined;
           return txn.txn;
         });
@@ -273,7 +296,7 @@ export const getAssetsInAssetInbox = async (
     );
 
     const simSender = {
-      addr: receiver,
+      addr: algosdk.Address.fromString(receiver),
       signer: algosdk.makeEmptyTransactionSigner(),
     };
     const simParams = {
@@ -358,7 +381,7 @@ export const generateARC59ClaimTxns = async (
   }
 
   const simSender = {
-    addr: claimer,
+    addr: algosdk.Address.fromString(claimer),
     signer: algosdk.makeEmptyTransactionSigner(),
   };
 
@@ -392,8 +415,8 @@ export const generateARC59ClaimTxns = async (
   if (!claimerOptedIn) {
     composer.addTransaction(
       algosdk.makeAssetTransferTxnWithSuggestedParamsFromObject({
-        from: claimer,
-        to: claimer,
+        sender: claimer,
+        receiver: claimer,
         assetIndex: Number(assetId),
         amount: 0,
         suggestedParams: await algodClient.getTransactionParams().do(),

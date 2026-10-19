@@ -23,7 +23,7 @@ async function deploy(network: Network, mnemonic: string) {
   const algod = new algosdk.Algodv2('', `https://${network}-api.algonode.cloud`, '');
   const deployer = algosdk.mnemonicToSecretKey(mnemonic);
   const info = await algod.accountInformation(deployer.addr).do();
-  const spendable = (info.amount - info['min-balance']) / 1e6;
+  const spendable = (Number(info.amount) - Number(info.minBalance)) / 1e6;
   console.log(`Deploying PQCoupon to ${network.toUpperCase()} from ${deployer.addr} (${spendable} ALGO spendable)`);
   if (spendable < 0.5) throw new Error(`Fund ${deployer.addr} with at least 0.5 spendable ALGO on ${network}`);
 
@@ -33,7 +33,7 @@ async function deploy(network: Network, mnemonic: string) {
 
   let sp = await algod.getTransactionParams().do();
   const create = algosdk.makeApplicationCreateTxnFromObject({
-    from: deployer.addr,
+    sender: deployer.addr,
     approvalProgram: await compile(readTeal('PQCoupon.approval.teal')),
     clearProgram: await compile(readTeal('PQCoupon.clear.teal')),
     numGlobalInts: 2,
@@ -51,21 +51,21 @@ async function deploy(network: Network, mnemonic: string) {
   console.log(`App created: ${appId} (${appAddr})`);
 
   sp = await algod.getTransactionParams().do();
-  const seed = algosdk.makePaymentTxnWithSuggestedParamsFromObject({ from: deployer.addr, to: appAddr, amount: APP_SEED, suggestedParams: sp });
+  const seed = algosdk.makePaymentTxnWithSuggestedParamsFromObject({ sender: deployer.addr, receiver: appAddr, amount: APP_SEED, suggestedParams: sp });
   const boot = algosdk.makeApplicationNoOpTxnFromObject({
-    from: deployer.addr,
+    sender: deployer.addr,
     appIndex: appId,
     appArgs: [contract.getMethodByName('bootstrap').getSelector()],
-    suggestedParams: { ...sp, fee: 2 * (sp.minFee || 1000), flatFee: true },
+    suggestedParams: { ...sp, fee: 2 * Number(sp.minFee || 1000), flatFee: true },
   });
   algosdk.assignGroupID([seed, boot]);
   await algod.sendRawTransaction([seed.signTxn(deployer.sk), boot.signTxn(deployer.sk)]).do();
   await algosdk.waitForConfirmation(algod, boot.txID(), 10);
 
-  const state = (await algod.getApplicationByID(appId).do()).params['global-state'];
-  const assetId = Number(state.find((s: any) => Buffer.from(s.key, 'base64').toString() === 'c').value.uint);
-  const asset: any = (await algod.getAssetByID(assetId).do()).params;
-  console.log(`PQPRINT created: ${assetId} — ${asset.name} / ${asset['unit-name']}, decimals ${asset.decimals}`);
+  const state = (await algod.getApplicationByID(appId).do()).params?.globalState ?? [];
+  const assetId = Number(state.find((s) => Buffer.from(s.key).toString() === 'c')!.value.uint);
+  const asset = (await algod.getAssetByID(assetId).do()).params!;
+  console.log(`PQPRINT created: ${assetId} — ${asset.name} / ${asset.unitName}, decimals ${asset.decimals}`);
   console.log(`\nSet in src/utils/pqCoupon.ts:\n  ${network}: { appId: ${appId}, assetId: ${assetId} },`);
 }
 

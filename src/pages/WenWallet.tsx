@@ -16,6 +16,7 @@ import Fuse from "fuse.js";
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { useWallet } from "@txnlab/use-wallet-react";
+import { useAppNetwork } from "../hooks/useAppNetwork";
 import { toast } from "react-toastify";
 
 import AssetImageCard from "../components/wallet/AssetCard";
@@ -67,7 +68,8 @@ const ACCOUNT_TOOLS = [
 ];
 
 export function WenWallet() {
-  const { activeAddress, activeNetwork } = useWallet();
+  const { activeAddress } = useWallet();
+  const { activeNetwork } = useAppNetwork();
   const toolState = useWalletToolStore((state) => state);
   const { account } = useParams();
 

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { toast } from "react-toastify";
-import { useWallet } from "@txnlab/use-wallet-react";
+import { useAppNetwork } from "../../hooks/useAppNetwork";
 import { SingleAssetDataResponse } from "../../types/wallet";
 import {
   getAssetData,
@@ -13,7 +13,7 @@ import useWalletToolStore from "../../store/walletToolStore";
 
 // Loads asset params (cached in the asset store) and resolves its image url.
 export function useAssetData(assetId: number) {
-  const { activeNetwork } = useWallet();
+  const { activeNetwork } = useAppNetwork();
   const [assetData, setAssetData] = useState<SingleAssetDataResponse>();
   const [assetUrl, setAssetUrl] = useState<string>("/images/wallet/loading.gif");
 

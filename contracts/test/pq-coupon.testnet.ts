@@ -29,7 +29,9 @@ function funderMnemonic(): string {
   return m[1];
 }
 
-const funder = algosdk.mnemonicToSecretKey(funderMnemonic());
+// algosdk v3 accounts carry an Address object; this script passes addresses around as strings
+const strAccount = (a: algosdk.Account) => ({ addr: a.addr.toString(), sk: a.sk });
+const funder = strAccount(algosdk.mnemonicToSecretKey(funderMnemonic()));
 const falcon = new Falcon();
 const arc4 = JSON.parse(fs.readFileSync(path.join(buildDir, 'PQCoupon.arc4.json'), 'utf8'));
 const contract = new algosdk.ABIContract(arc4);
@@ -68,7 +70,7 @@ async function pqSign(txn: algosdk.Transaction, acct: NativePQAccount): Promise<
   const sig = await falcon.sign(txn.bytesToSign(), Falcon.hexToBytes(acct.secretKey));
   const pqsig: Record<string, unknown> = { pk: Falcon.hexToBytes(acct.publicKey), sch: enc.encode('f1'), sig };
   if (acct.salt !== 0) pqsig.slt = acct.salt;
-  return algosdk.encodeObj({ pqsig, txn: txn.get_obj_for_encoding() });
+  return algosdk.msgpackRawEncode({ pqsig, txn: algosdk.msgpackRawDecode(algosdk.encodeUnsignedTransaction(txn)) });
 }
 
 function pqKeyArg(acct: NativePQAccount) {
@@ -89,7 +91,7 @@ function appCall(
   extra: Partial<{ boxes: any[]; foreignAssets: number[]; accounts: string[]; note: Uint8Array; rekeyTo: string }> = {},
 ) {
   return algosdk.makeApplicationNoOpTxnFromObject({
-    from,
+    sender: from,
     appIndex: appId,
     appArgs: [method(name).getSelector(), ...args],
     suggestedParams: { ...sp, fee, flatFee: true },
@@ -107,7 +109,7 @@ async function main() {
     new Uint8Array(Buffer.from((await algod.compile(fs.readFileSync(path.join(buildDir, file), 'utf8')).do()).result, 'base64'));
   let sp = await algod.getTransactionParams().do();
   const create = algosdk.makeApplicationCreateTxnFromObject({
-    from: funder.addr,
+    sender: funder.addr,
     approvalProgram: await compile('PQCoupon.approval.teal'),
     clearProgram: await compile('PQCoupon.clear.teal'),
     numGlobalInts: 2,
@@ -125,11 +127,11 @@ async function main() {
 
   // ── Bootstrap: fund app, create PQPRINT ──────────────────────────────────
   sp = await algod.getTransactionParams().do();
-  const fund = algosdk.makePaymentTxnWithSuggestedParamsFromObject({ from: funder.addr, to: appAddr, amount: 200_000, suggestedParams: sp });
+  const fund = algosdk.makePaymentTxnWithSuggestedParamsFromObject({ sender: funder.addr, receiver: appAddr, amount: 200_000, suggestedParams: sp });
   const boot = appCall(sp, appId, funder.addr, 'bootstrap', [], 2 * minFee);
   algosdk.assignGroupID([fund, boot]);
   await send([fund.signTxn(funder.sk), boot.signTxn(funder.sk)], boot.txID());
-  const coupon = Number((await algod.getApplicationByID(appId).do()).params['global-state'].find((s: any) => Buffer.from(s.key, 'base64').toString() === 'c').value.uint);
+  const coupon = Number((await algod.getApplicationByID(appId).do()).params!.globalState!.find((s) => Buffer.from(s.key).toString() === 'c')!.value.uint);
   const asset: any = (await algod.getAssetByID(coupon).do()).params;
   console.log(`Coupon ASA ${coupon}: ${asset.name} / ${asset['unit-name']}, decimals ${asset.decimals}, total ${asset.total}`);
   if (asset.decimals !== 6 || asset.name !== 'Wen Tools PQ Coupon' || asset['unit-name'] !== 'PQPRINT') throw new Error('bad ASA params');
@@ -141,20 +143,20 @@ async function main() {
   await expectReject('a second bootstrap', [appCall(sp, appId, funder.addr, 'bootstrap', [], 2 * minFee, { note: enc.encode('again') }).signTxn(funder.sk)]);
 
   // ── Beneficiary opts in ──────────────────────────────────────────────────
-  const optIn = algosdk.makeAssetTransferTxnWithSuggestedParamsFromObject({ from: funder.addr, to: funder.addr, amount: 0, assetIndex: coupon, suggestedParams: sp });
+  const optIn = algosdk.makeAssetTransferTxnWithSuggestedParamsFromObject({ sender: funder.addr, receiver: funder.addr, amount: 0, assetIndex: coupon, suggestedParams: sp });
   await send([optIn.signTxn(funder.sk)], optIn.txID());
 
   // ── Make a PQ printer and fund it ────────────────────────────────────────
   const pq = await newPQAccount();
   console.log(`PQ printer ${pq.address} (salt ${pq.salt})`);
   sp = await algod.getTransactionParams().do();
-  const load = algosdk.makePaymentTxnWithSuggestedParamsFromObject({ from: funder.addr, to: pq.address, amount: 300_000, suggestedParams: sp });
+  const load = algosdk.makePaymentTxnWithSuggestedParamsFromObject({ sender: funder.addr, receiver: pq.address, amount: 300_000, suggestedParams: sp });
   await send([load.signTxn(funder.sk)], load.txID());
 
   // ── Attack: classic account claiming to be PQ (uses pq's key, its own sender) ──
   sp = await algod.getTransactionParams().do();
   {
-    const pay = algosdk.makePaymentTxnWithSuggestedParamsFromObject({ from: funder.addr, to: appAddr, amount: BOX_MBR, suggestedParams: sp });
+    const pay = algosdk.makePaymentTxnWithSuggestedParamsFromObject({ sender: funder.addr, receiver: appAddr, amount: BOX_MBR, suggestedParams: sp });
     const reg = appCall(sp, appId, funder.addr, 'register', [algosdk.ABIType.from('byte[]').encode(pqKeyArg(pq)), algosdk.decodeAddress(funder.addr).publicKey], pqFee, { boxes: [boxRef(appId, funder.addr)] });
     algosdk.assignGroupID([pay, reg]);
     await expectReject('a classic account registering with someone else\'s PQ key', [pay.signTxn(funder.sk), reg.signTxn(funder.sk)], /assert/);
@@ -164,7 +166,7 @@ async function main() {
   const other = await newPQAccount();
   const registerGroup = async (key: Uint8Array, note: string, beneficiary = funder.addr, acct = pq) => {
     sp = await algod.getTransactionParams().do();
-    const pay = algosdk.makePaymentTxnWithSuggestedParamsFromObject({ from: acct.address, to: appAddr, amount: BOX_MBR, suggestedParams: { ...sp, fee: pqFee, flatFee: true }, note: enc.encode(note) });
+    const pay = algosdk.makePaymentTxnWithSuggestedParamsFromObject({ sender: acct.address, receiver: appAddr, amount: BOX_MBR, suggestedParams: { ...sp, fee: pqFee, flatFee: true }, note: enc.encode(note) });
     const reg = appCall(sp, appId, acct.address, 'register', [algosdk.ABIType.from('byte[]').encode(key), algosdk.decodeAddress(beneficiary).publicKey], pqFee, {
       boxes: [boxRef(appId, acct.address)],
       accounts: [beneficiary],
@@ -176,7 +178,7 @@ async function main() {
   };
   await expectReject('a PQ account presenting the wrong public key', (await registerGroup(pqKeyArg(other), 'wrong')).stxns, /assert/);
   await expectReject('the zero address as beneficiary', (await registerGroup(pqKeyArg(pq), 'zero', algosdk.encodeAddress(new Uint8Array(32)))).stxns, /assert/);
-  await expectReject('a beneficiary not opted in to PQPRINT', (await registerGroup(pqKeyArg(pq), 'noopt', algosdk.generateAccount().addr)).stxns, /assert/);
+  await expectReject('a beneficiary not opted in to PQPRINT', (await registerGroup(pqKeyArg(pq), 'noopt', algosdk.generateAccount().addr.toString())).stxns, /assert/);
 
   // ── Attack: print before registering ─────────────────────────────────────
   sp = await algod.getTransactionParams().do();
@@ -191,7 +193,7 @@ async function main() {
   // ── Attack: underpaid print (fee pooled from a classic txn) ──────────────
   sp = await algod.getTransactionParams().do();
   {
-    const pay = algosdk.makePaymentTxnWithSuggestedParamsFromObject({ from: funder.addr, to: funder.addr, amount: 0, suggestedParams: { ...sp, fee: 4 * minFee, flatFee: true } });
+    const pay = algosdk.makePaymentTxnWithSuggestedParamsFromObject({ sender: funder.addr, receiver: funder.addr, amount: 0, suggestedParams: { ...sp, fee: 4 * minFee, flatFee: true } });
     const pr = appCall(sp, appId, pq.address, 'print', [], 0, { boxes: [boxRef(appId, pq.address)], note: enc.encode('cheap') });
     algosdk.assignGroupID([pay, pr]);
     await expectReject('a print that offloads its fee to another txn', [pay.signTxn(funder.sk), await pqSign(pr, pq)], /assert/);
@@ -227,7 +229,7 @@ async function main() {
   const before: any = await algod.accountAssetInformation(funder.addr, coupon).do();
   sp = await algod.getTransactionParams().do();
   const claim = appCall(sp, appId, pq.address, 'claim', [], pqFee + 2 * minFee, { boxes: [boxRef(appId, pq.address)], foreignAssets: [coupon], accounts: [funder.addr] });
-  const close = algosdk.makePaymentTxnWithSuggestedParamsFromObject({ from: pq.address, to: funder.addr, amount: 0, closeRemainderTo: funder.addr, suggestedParams: { ...sp, fee: pqFee, flatFee: true } });
+  const close = algosdk.makePaymentTxnWithSuggestedParamsFromObject({ sender: pq.address, receiver: funder.addr, amount: 0, closeRemainderTo: funder.addr, suggestedParams: { ...sp, fee: pqFee, flatFee: true } });
   algosdk.assignGroupID([claim, close]);
   await send([await pqSign(claim, pq), await pqSign(close, pq)], close.txID());
   const after: any = await algod.accountAssetInformation(funder.addr, coupon).do();
@@ -241,13 +243,13 @@ async function main() {
   ok('box deleted, MBR refunded, printer closed out to 0');
 
   // ── Beneficiary opts out after registering: claim must not lock the deposit ──
-  const ben = algosdk.generateAccount();
+  const ben = strAccount(algosdk.generateAccount());
   const pq2 = await newPQAccount();
   sp = await algod.getTransactionParams().do();
   {
-    const f1 = algosdk.makePaymentTxnWithSuggestedParamsFromObject({ from: funder.addr, to: ben.addr, amount: 210_000, suggestedParams: sp });
-    const f2 = algosdk.makePaymentTxnWithSuggestedParamsFromObject({ from: funder.addr, to: pq2.address, amount: 160_000, suggestedParams: sp });
-    const opt = algosdk.makeAssetTransferTxnWithSuggestedParamsFromObject({ from: ben.addr, to: ben.addr, amount: 0, assetIndex: coupon, suggestedParams: sp });
+    const f1 = algosdk.makePaymentTxnWithSuggestedParamsFromObject({ sender: funder.addr, receiver: ben.addr, amount: 210_000, suggestedParams: sp });
+    const f2 = algosdk.makePaymentTxnWithSuggestedParamsFromObject({ sender: funder.addr, receiver: pq2.address, amount: 160_000, suggestedParams: sp });
+    const opt = algosdk.makeAssetTransferTxnWithSuggestedParamsFromObject({ sender: ben.addr, receiver: ben.addr, amount: 0, assetIndex: coupon, suggestedParams: sp });
     algosdk.assignGroupID([f1, f2, opt]);
     await send([f1.signTxn(funder.sk), f2.signTxn(funder.sk), opt.signTxn(ben.sk)], opt.txID());
   }
@@ -257,12 +259,12 @@ async function main() {
   const pr2 = appCall(sp, appId, pq2.address, 'print', [], pqFee, { boxes: [boxRef(appId, pq2.address)] });
   await send([await pqSign(pr2, pq2)], pr2.txID());
   // Beneficiary opts out (closes its zero PQPRINT holding to the creator, the app)
-  const optOut = algosdk.makeAssetTransferTxnWithSuggestedParamsFromObject({ from: ben.addr, to: appAddr, closeRemainderTo: appAddr, amount: 0, assetIndex: coupon, suggestedParams: sp });
+  const optOut = algosdk.makeAssetTransferTxnWithSuggestedParamsFromObject({ sender: ben.addr, receiver: appAddr, closeRemainderTo: appAddr, amount: 0, assetIndex: coupon, suggestedParams: sp });
   await send([optOut.signTxn(ben.sk)], optOut.txID());
 
   sp = await algod.getTransactionParams().do();
   const claim2 = appCall(sp, appId, pq2.address, 'claim', [], pqFee + 2 * minFee, { boxes: [boxRef(appId, pq2.address)], foreignAssets: [coupon], accounts: [ben.addr] });
-  const close2 = algosdk.makePaymentTxnWithSuggestedParamsFromObject({ from: pq2.address, to: funder.addr, amount: 0, closeRemainderTo: funder.addr, suggestedParams: { ...sp, fee: pqFee, flatFee: true } });
+  const close2 = algosdk.makePaymentTxnWithSuggestedParamsFromObject({ sender: pq2.address, receiver: funder.addr, amount: 0, closeRemainderTo: funder.addr, suggestedParams: { ...sp, fee: pqFee, flatFee: true } });
   algosdk.assignGroupID([claim2, close2]);
   const res2: any = await send([await pqSign(claim2, pq2), await pqSign(close2, pq2)], claim2.txID());
   const paid = Number(Buffer.from(res2.logs[0], 'base64').readBigUInt64BE(4));
@@ -271,7 +273,7 @@ async function main() {
   ok('beneficiary opted out: claim forfeits coupons but still refunds the deposit and closes');
 
   // Return the test beneficiary's ALGO
-  const back = algosdk.makePaymentTxnWithSuggestedParamsFromObject({ from: ben.addr, to: funder.addr, amount: 0, closeRemainderTo: funder.addr, suggestedParams: sp });
+  const back = algosdk.makePaymentTxnWithSuggestedParamsFromObject({ sender: ben.addr, receiver: funder.addr, amount: 0, closeRemainderTo: funder.addr, suggestedParams: sp });
   await send([back.signTxn(ben.sk)], back.txID());
 
   console.log(`\nAll ${passed} checks passed. App ${appId}, PQPRINT ASA ${coupon}`);

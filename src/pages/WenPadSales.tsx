@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
-import { useWallet } from "@txnlab/use-wallet-react";
+import { useAppNetwork } from "../hooks/useAppNetwork";
 import { MdCasino } from "react-icons/md";
 import { Meta } from "../components/Meta";
 import { ToolHero } from "../components/cypher/ToolKit";
@@ -33,7 +33,7 @@ const TABS: { id: Tab; label: string }[] = [
 export function WenPadSales() {
   const { appId } = useParams();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { activeNetwork } = useWallet();
+  const { activeNetwork } = useAppNetwork();
   const network = toSaleNetwork(activeNetwork);
   const factoryId = getFactoryId(network);
 

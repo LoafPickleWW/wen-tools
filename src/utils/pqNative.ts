@@ -17,6 +17,7 @@
 import algosdk from "algosdk";
 import Falcon from "falcon-signatures";
 import { sha512_256 } from "@noble/hashes/sha2.js";
+import { falcon1024 } from "@noble/post-quantum/falcon.js";
 
 /** Falcon-1024 scheme tag (protocol.PQSchemeFalcon1024). */
 export const PQ_SCHEME_FALCON1024 = "f1";
@@ -29,6 +30,11 @@ export interface NativePQAccount {
   publicKey: string; // hex, 1793 bytes
   secretKey: string; // hex, 2305 bytes
   salt: number;
+  /**
+   * 25-word Algorand mnemonic of the 32-byte entropy the key was derived from.
+   * Absent on printers created before recovery phrases existed (random keys).
+   */
+  mnemonic?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -108,13 +114,41 @@ export function deriveNativePQAddress(publicKey: Uint8Array): {
  * Generate a fresh native Falcon-1024 account entirely in the browser.
  */
 export async function generateNativePQAccount(): Promise<NativePQAccount> {
-  const { publicKey, secretKey } = await getFalcon().keypair();
+  return nativePQAccountFromEntropy(crypto.getRandomValues(new Uint8Array(32)));
+}
+
+/**
+ * Re-create a printer account from its 25-word recovery phrase.
+ * Throws on an invalid phrase (bad word or checksum).
+ */
+export function nativePQAccountFromMnemonic(mnemonic: string): NativePQAccount {
+  const words = mnemonic.trim().toLowerCase().split(/\s+/).join(" ");
+  return nativePQAccountFromEntropy(algosdk.seedFromMnemonic(words));
+}
+
+/**
+ * Falcon-1024 account from 32 bytes of entropy, using go-algorand's derivation
+ * (cmd/algokey, pinned by its known-answer test), so the same 25 words work
+ * with `algokey pq import`:
+ *
+ *   seed = SHA-512/256("PQK" || "f1" || entropy)
+ *   key  = deterministic Falcon-1024 keygen seeded with SHAKE256(seed)
+ *
+ * Keygen uses @noble/post-quantum, patched to accept Algorand's 32-byte seed
+ * (patches/@noble__post-quantum@0.7.1.patch). The keys use the standard Falcon
+ * encodings, so signing still goes through the falcon-signatures WASM.
+ */
+function nativePQAccountFromEntropy(entropy: Uint8Array): NativePQAccount {
+  const prefix = new TextEncoder().encode("PQK" + PQ_SCHEME_FALCON1024);
+  const seed = sha512_256(new Uint8Array([...prefix, ...entropy]));
+  const { publicKey, secretKey } = falcon1024.keygen(seed);
   const { address, salt } = deriveNativePQAddress(publicKey);
   return {
     address,
     publicKey: Falcon.bytesToHex(publicKey),
     secretKey: Falcon.bytesToHex(secretKey),
     salt,
+    mnemonic: algosdk.mnemonicFromSeed(entropy),
   };
 }
 
@@ -148,7 +182,7 @@ export async function signNativePQTransaction(
 
   return {
     txID: txn.txID().toString(),
-    blob: algosdk.encodeObj({ pqsig, txn: txn.get_obj_for_encoding() }),
+    blob: algosdk.msgpackRawEncode({ pqsig, txn: algosdk.msgpackRawDecode(algosdk.encodeUnsignedTransaction(txn)) }),
     signatureBytes: signature.length,
   };
 }

@@ -67,9 +67,12 @@ const REVEAL_WINDOW_ROUNDS = Number(process.env.WENPAD_REVEAL_WINDOW || REVEAL_W
 // ─── Wallets & state ─────────────────────────────────────────────────────────
 
 type Role = "admin" | "dist" | "buyerA" | "buyerB";
+/** algosdk v3 accounts carry an Address object; this script passes addresses around as strings */
+type StrAccount = { addr: string; sk: Uint8Array };
+const strAccount = (a: algosdk.Account): StrAccount => ({ addr: a.addr.toString(), sk: a.sk });
 const ROLES: Role[] = ["admin", "dist", "buyerA", "buyerB"];
 
-function loadWallets(): Record<Role, algosdk.Account> {
+function loadWallets(): Record<Role, StrAccount> {
   const saved: Record<string, string> = fs.existsSync(WALLETS_FILE)
     ? Object.fromEntries(
         fs
@@ -79,10 +82,10 @@ function loadWallets(): Record<Role, algosdk.Account> {
           .map((l) => [l.slice(0, l.indexOf("=")), l.slice(l.indexOf("=") + 1).trim()])
       )
     : {};
-  const out = {} as Record<Role, algosdk.Account>;
+  const out = {} as Record<Role, StrAccount>;
   for (const role of ROLES) {
     if (!saved[role]) saved[role] = algosdk.secretKeyToMnemonic(algosdk.generateAccount().sk);
-    out[role] = algosdk.mnemonicToSecretKey(saved[role]);
+    out[role] = strAccount(algosdk.mnemonicToSecretKey(saved[role]));
   }
   fs.writeFileSync(WALLETS_FILE, ROLES.map((r) => `${r}=${saved[r]}`).join("\n") + "\n");
   return out;
@@ -91,7 +94,7 @@ function loadWallets(): Record<Role, algosdk.Account> {
 const state: Record<string, any> = fs.existsSync(STATE_FILE) ? JSON.parse(fs.readFileSync(STATE_FILE, "utf8")) : {};
 const saveState = () => fs.writeFileSync(STATE_FILE, JSON.stringify(state, null, 2));
 
-const deployer = algosdk.mnemonicToSecretKey(process.env.WENPAD_DEPLOYER_MNEMONIC!);
+const deployer = strAccount(algosdk.mnemonicToSecretKey(process.env.WENPAD_DEPLOYER_MNEMONIC!));
 const w = loadWallets();
 const keys = new Map<string, Uint8Array>([[deployer.addr, deployer.sk], ...ROLES.map((r) => [w[r].addr, w[r].sk] as [string, Uint8Array])]);
 
@@ -111,8 +114,8 @@ function check(cond: boolean, msg: string) {
 
 async function send(txns: algosdk.Transaction[], confirmIndex = txns.length - 1) {
   const signed = txns.map((t) => {
-    const sk = keys.get(algosdk.encodeAddress(t.from.publicKey));
-    if (!sk) throw new Error(`No key for ${algosdk.encodeAddress(t.from.publicKey)}`);
+    const sk = keys.get(t.sender.toString());
+    if (!sk) throw new Error(`No key for ${t.sender.toString()}`);
     return t.signTxn(sk);
   });
   await algod.sendRawTransaction(signed).do();
@@ -143,10 +146,10 @@ const holds = async (addr: string, asset: number) => {
   }
 };
 
-async function pay(from: algosdk.Account, to: string, amount: number, close?: string) {
+async function pay(from: StrAccount, to: string, amount: number, close?: string) {
   const t = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
-    from: from.addr,
-    to,
+    sender: from.addr,
+    receiver: to,
     amount,
     closeRemainderTo: close,
     suggestedParams: await sp(),
@@ -154,10 +157,10 @@ async function pay(from: algosdk.Account, to: string, amount: number, close?: st
   return send([t]);
 }
 
-async function optIn(acct: algosdk.Account, asset: number) {
+async function optIn(acct: StrAccount, asset: number) {
   const t = algosdk.makeAssetTransferTxnWithSuggestedParamsFromObject({
-    from: acct.addr,
-    to: acct.addr,
+    sender: acct.addr,
+    receiver: acct.addr,
     amount: 0,
     assetIndex: asset,
     suggestedParams: await sp(),
@@ -217,7 +220,7 @@ async function step(name: string, fn: () => Promise<void>) {
 
 async function mintNft(n: number) {
   const t = algosdk.makeAssetCreateTxnWithSuggestedParamsFromObject({
-    from: w.dist.addr,
+    sender: w.dist.addr,
     total: 1,
     decimals: 0,
     defaultFrozen: false,
@@ -228,10 +231,10 @@ async function mintNft(n: number) {
     suggestedParams: await sp(),
   });
   const conf = await send([t]);
-  return Number(conf["asset-index"]);
+  return Number(conf.assetIndex);
 }
 
-async function commitAndReveal(buyer: algosdk.Account, revealer: algosdk.Account, beforeReveal?: () => Promise<void>) {
+async function commitAndReveal(buyer: StrAccount, revealer: StrAccount, beforeReveal?: () => Promise<void>) {
   const st = await getSaleState(NETWORK, state.appId);
   const conf = await send(await buildCommit(NETWORK, buyer.addr, st));
   const { commitId, targetRound } = parseCommitResult(conf);
@@ -296,7 +299,7 @@ async function main() {
         packed.set(algosdk.encodeUint64(bps), i * 40 + 32);
       });
       const pay = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
-        from: w.dist.addr, to: algosdk.getApplicationAddress(FACTORY_ID), amount: 1_200_000, suggestedParams: await sp(),
+        sender: w.dist.addr, receiver: algosdk.getApplicationAddress(FACTORY_ID), amount: 1_200_000, suggestedParams: await sp(),
       });
       return abiCall(
         FACTORY_ID,
@@ -346,11 +349,11 @@ async function main() {
       ["factory", FACTORY_ID, deployer.addr],
     ] as const) {
       const upd = algosdk.makeApplicationUpdateTxnFromObject({
-        from, appIndex: appId, approvalProgram: approval, clearProgram: approval, suggestedParams: await sp(),
+        sender: from, appIndex: appId, approvalProgram: approval, clearProgram: approval, suggestedParams: await sp(),
       });
       check(await simulateRejects([upd]), `${label} cannot be updated`);
       const del = algosdk.makeApplicationDeleteTxnFromObject({
-        from, appIndex: appId, appArgs: [algosdk.ABIMethod.fromSignature("deleteApplication()void").getSelector()],
+        sender: from, appIndex: appId, appArgs: [algosdk.ABIMethod.fromSignature("deleteApplication()void").getSelector()],
         suggestedParams: await sp(),
       });
       check(await simulateRejects([del]), `${label} cannot be deleted directly`);
@@ -400,7 +403,7 @@ async function main() {
         const creator = (await algod.getAssetByID(assetId).do()).params.creator;
         await send([
           algosdk.makeAssetTransferTxnWithSuggestedParamsFromObject({
-            from: w.buyerB.addr, to: creator, closeRemainderTo: creator, amount: 0, assetIndex: assetId,
+            sender: w.buyerB.addr, receiver: creator, closeRemainderTo: creator, amount: 0, assetIndex: assetId,
             suggestedParams: await sp(),
           }),
         ]);
@@ -418,7 +421,7 @@ async function main() {
   await step("buyer B: claim from inbox", async () => {
     await pay(deployer, w.buyerB.addr, 250_000);
     const optin = algosdk.makeAssetTransferTxnWithSuggestedParamsFromObject({
-      from: w.buyerB.addr, to: w.buyerB.addr, amount: 0, assetIndex: state.inboxAsset, suggestedParams: await sp(),
+      sender: w.buyerB.addr, receiver: w.buyerB.addr, amount: 0, assetIndex: state.inboxAsset, suggestedParams: await sp(),
     });
     const before = await balance(w.buyerB.addr);
     const txns = await abiCall(ROUTER_ID, "arc59_claim(uint64)void", w.buyerB.addr, [state.inboxAsset], [optin]);
@@ -495,17 +498,17 @@ async function main() {
 
     // A default-frozen NFT and a normal one
     const ft = algosdk.makeAssetCreateTxnWithSuggestedParamsFromObject({
-      from: w.dist.addr, total: 1, decimals: 0, defaultFrozen: true, unitName: "WPZ", assetName: "WenPad Frozen Test",
+      sender: w.dist.addr, total: 1, decimals: 0, defaultFrozen: true, unitName: "WPZ", assetName: "WenPad Frozen Test",
       manager: w.dist.addr, freeze: w.dist.addr, suggestedParams: await sp(),
     });
-    const frozen = Number((await send([ft]))["asset-index"]);
+    const frozen = Number((await send([ft])).assetIndex);
     const normal = await mintNft(7);
     await optIn(w.buyerA, normal);
     // The attack: opt in to the frozen asset so a delivery of it would fail (free re-roll)
     await optIn(w.buyerA, frozen);
 
     // 50/50 split with an account that was never funded: a 0.005 ALGO share cannot reach it
-    const ghost = algosdk.generateAccount().addr;
+    const ghost = algosdk.generateAccount().addr.toString();
     const { saleId, appId } = parseCreateSaleResult(
       await send(await buildCreateSale(NETWORK, FACTORY_ID, w.dist.addr, {
         ...(await saleParams(50_000)),
@@ -521,7 +524,7 @@ async function main() {
     const st = await getSaleState(NETWORK, appId);
     await expectFail("commit with maxPrice below the price", async () => {
       const p = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
-        from: w.buyerA.addr, to: algosdk.getApplicationAddress(appId), amount: buyerLineItems(st).total, suggestedParams: await sp(),
+        sender: w.buyerA.addr, receiver: algosdk.getApplicationAddress(appId), amount: buyerLineItems(st).total, suggestedParams: await sp(),
       });
       return abiCall(appId, "commit(pay,uint64)uint64", w.buyerA.addr, [
         { txn: p, signer: algosdk.makeEmptyTransactionSigner() }, st.price - 1,
@@ -642,10 +645,10 @@ async function main() {
       if ((await spendable(w.dist.addr)) < 1_400_000) await pay(deployer, w.dist.addr, 600_000);
       if ((await spendable(w.admin.addr)) < 1_000_000) await pay(deployer, w.admin.addr, 600_000);
       const ct = algosdk.makeAssetCreateTxnWithSuggestedParamsFromObject({
-        from: w.dist.addr, total: 200, decimals: 0, defaultFrozen: false, unitName: "WPF", assetName: "WenPad Fungible Test",
+        sender: w.dist.addr, total: 200, decimals: 0, defaultFrozen: false, unitName: "WPF", assetName: "WenPad Fungible Test",
         suggestedParams: await sp(),
       });
-      const fungible = Number((await send([ct]))["asset-index"]);
+      const fungible = Number((await send([ct])).assetIndex);
       await optIn(w.buyerA, fungible);
 
       const { saleId, appId } = parseCreateSaleResult(
@@ -704,7 +707,7 @@ async function main() {
   });
 
   await step("keeper endpoint", async () => {
-    const keeper = algosdk.generateAccount();
+    const keeper = strAccount(algosdk.generateAccount());
     keys.set(keeper.addr, keeper.sk);
     await pay(deployer, keeper.addr, 200_000);
     process.env.KEEPER_MNEMONIC = algosdk.secretKeyToMnemonic(keeper.sk);

@@ -2,6 +2,7 @@ import { ToolHero } from "../components/cypher/ToolKit";
 import { useState, useCallback, useRef, useEffect } from "react";
 import { toast } from "react-toastify";
 import { useWallet } from "@txnlab/use-wallet-react";
+import { useAppNetwork } from "../hooks/useAppNetwork";
 import algosdk from "algosdk";
 import { Meta } from "../components/Meta";
 import ConnectButton from "../components/ConnectButton";
@@ -279,7 +280,8 @@ const TOOL_META = TOOLS.find((t) => t.id === "nft_import") || {
 };
 
 export function NFTImportTool() {
-  const { activeAddress, algodClient, transactionSigner, activeNetwork } = useWallet();
+  const { activeAddress, algodClient, transactionSigner } = useWallet();
+  const { activeNetwork } = useAppNetwork();
 
   // ── Step state ──
   const [step, setStep] = useState<ImportStep>("input");
@@ -815,7 +817,7 @@ export function NFTImportTool() {
     try {
       const suggestedParams = await algodClient.getTransactionParams().do();
       suggestedParams.flatFee = true;
-      suggestedParams.fee = Math.max((suggestedParams.minFee || 1000) * 2, (suggestedParams.fee || 1000) * 2, 4000);
+      suggestedParams.fee = BigInt(Math.max(Number(suggestedParams.minFee || 1000) * 2, Number(suggestedParams.fee || 1000) * 2, 4000));
 
       const start = Math.max(0, parseInt(startIndex, 10) || 0);
       const allTxns: algosdk.Transaction[] = [];
@@ -1078,7 +1080,7 @@ export function NFTImportTool() {
         }
 
         const asset_create_tx = algosdk.makeAssetCreateTxnWithSuggestedParamsFromObject({
-          from: activeAddress,
+          sender: activeAddress,
           manager: activeAddress,
           assetName: mintData.asset_name,
           unitName: mintData.unit_name,
@@ -1087,17 +1089,17 @@ export function NFTImportTool() {
           reserve: mintData.reserve_address || activeAddress,
           freeze: mintData.has_freeze === "Y" ? activeAddress : undefined,
           assetURL: mintData.asset_url,
-          suggestedParams: { ...suggestedParams, fee: Math.max((suggestedParams.minFee || 1000) * 2, (suggestedParams.fee || 1000) * 2, 4000) },
+          suggestedParams: { ...suggestedParams, fee: Math.max(Number(suggestedParams.minFee || 1000) * 2, Number(suggestedParams.fee || 1000) * 2, 4000) },
           clawback: mintData.has_clawback === "Y" ? activeAddress : undefined,
           defaultFrozen: mintData.default_frozen === "Y" ? true : false,
           note: mintData.asset_note ? buildAndTruncateNote(mintData.asset_note) : undefined,
         });
 
         const fee_tx = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
-          from: activeAddress,
-          to: MINT_FEE_WALLET,
+          sender: activeAddress,
+          receiver: MINT_FEE_WALLET,
           amount: 0,
-          suggestedParams: { ...suggestedParams, fee: Math.max(suggestedParams.minFee || 1000, suggestedParams.fee || 1000, 3000) },
+          suggestedParams: { ...suggestedParams, fee: Math.max(Number(suggestedParams.minFee || 1000), Number(suggestedParams.fee || 1000), 3000) },
           note: new TextEncoder().encode("via wen.tools cross-chain importer | " + Math.random().toString(36).substring(2)),
         });
 
@@ -1135,10 +1137,10 @@ export function NFTImportTool() {
         for (let idx = 0; idx < signedGroups.length; idx++) {
           if (abortRef.current) break;
           try {
-            const { txId } = await algodClient.sendRawTransaction(signedGroups[idx]).do();
+            const { txid: txId } = await algodClient.sendRawTransaction(signedGroups[idx]).do();
             const confirmed = await algosdk.waitForConfirmation(algodClient, txId, 4);
-            if (confirmed["asset-index"]) {
-              const assetId = Number(confirmed["asset-index"]);
+            if (confirmed.assetIndex) {
+              const assetId = Number(confirmed.assetIndex);
               allCreatedIds.push(assetId);
               setMintedAssets([...allCreatedIds]);
             }
@@ -1160,10 +1162,10 @@ export function NFTImportTool() {
             chunk.map(async (group, groupOffset) => {
               const idx = i + groupOffset;
               try {
-                const { txId } = await algodClient.sendRawTransaction(group).do();
+                const { txid: txId } = await algodClient.sendRawTransaction(group).do();
                 const confirmed = await algosdk.waitForConfirmation(algodClient, txId, 4);
-                if (confirmed["asset-index"]) {
-                  const assetId = Number(confirmed["asset-index"]);
+                if (confirmed.assetIndex) {
+                  const assetId = Number(confirmed.assetIndex);
                   allCreatedIds.push(assetId);
                   setMintedAssets((prev) => [...prev, assetId]);
                 }
