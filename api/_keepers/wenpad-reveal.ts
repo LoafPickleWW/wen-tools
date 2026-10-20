@@ -12,10 +12,10 @@ import {
   STATUS,
   waitForRound,
   type SaleNetwork,
-} from "../src/utils/wenpadSaleCore.js";
+} from "../../src/utils/wenpadSaleCore.js";
 
 /**
- * POST /api/wenpad-reveal { network, appId, commitId? }
+ * POST /api/keeper?job=wenpad { network, appId, commitId? }   (old path /api/wenpad-reveal still works via a rewrite)
  *
  * Keeper for WenPad random sales: waits for the commit's target round, then submits
  * reveal(commitId) from the keeper account so buyers only sign once. Commits resolve strictly in

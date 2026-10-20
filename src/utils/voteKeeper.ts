@@ -13,7 +13,7 @@
  * per pass, and work left over is picked up by the next pass. Voters and creators can always run
  * any step themselves from the vote page.
  *
- * Framework-agnostic: used by api/vote-keeper.ts and the tests.
+ * Framework-agnostic: used by api/_keepers/vote.ts (served at /api/keeper?job=vote) and the tests.
  */
 
 import algosdk from "algosdk";

@@ -62,7 +62,7 @@ WenPad ever holding a key. The security review is in [WENPAD_SALE_AUDIT.md](WENP
   wallet** is rekeyed to this app's address, and the app transfers NFTs out of it to buyers.
 
 Frontend: `/wen-pad/sales` (`src/pages/WenPadSales.tsx`). Shared client logic is in
-`src/utils/wenpadSaleCore.ts`. Keeper endpoint: `api/wenpad-reveal.ts`.
+`src/utils/wenpadSaleCore.ts`. Keeper endpoint: `api/_keepers/wenpad-reveal.ts` (served at `/api/keeper?job=wenpad`).
 
 ## Build & deploy
 
@@ -74,7 +74,7 @@ npx tsx --env-file=contracts/.env contracts/deploy-wenpad-sale.ts mainnet    # m
 
 The deploy script signs with `WENPAD_DEPLOYER_MNEMONIC` from `contracts/.env`, which is separate
 from the agent marketplace's `DEPLOYER_MNEMONIC`. Hardcode the printed factory app ID in
-`src/utils/wenpadSale.ts` and `api/wenpad-reveal.ts`; the `VITE_`/`WENPAD_` env vars still
+`src/utils/wenpadSale.ts` and `api/_keepers/wenpad-reveal.ts`; the `VITE_`/`WENPAD_` env vars still
 override it if set. For the
 keeper, set the following in Vercel:
 - `KEEPER_MNEMONIC`: a hot wallet funded with a few ALGO for fees. It earns the reveal fees.

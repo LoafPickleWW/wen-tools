@@ -35,7 +35,7 @@ It uses these go-algorand v5 features:
 | **NFT collection** | No, read from the wallet | 1 per held piece: asset created by any of up to 8 minting wallets, and (optional) unit name starts with a prefix, e.g. `WEN` | Each piece is recorded once (`n`+assetId). If it moves, anyone can `recountNft` it, and then the new holder can vote with it |
 
 ### Keeper: catching moved tokens and settling votes
-`api/vote-keeper.ts` (logic in `src/utils/voteKeeper.ts`) uses the keeper account (`KEEPER_MNEMONIC`), which only pays fees.
+`api/_keepers/vote.ts`, served at `/api/keeper?job=vote` (logic in `src/utils/voteKeeper.ts`), uses the keeper account (`KEEPER_MNEMONIC`), which only pays fees.
 
 - **After every ballot cast on the site**, the page pings the keeper. For read-only votes it re-reads every ballot's wallet and recounts the ones no longer backed. If someone moves tokens or an NFT to a second wallet and votes again, the original ballot is lowered as soon as the second vote lands. A pass with nothing stale sends no transactions.
 - **After the end** (on the first page view, or from the cron), it runs finalize → payout, or fallback to refunds after the grace period → release every ballot and NFT record → `closeVote`. Voters don't have to come back to claim.

@@ -2,7 +2,7 @@
  * WenPad Random Sale — contract interaction core.
  *
  * Framework-agnostic (no React, no import.meta.env) so it is shared by the frontend
- * (src/utils/wenpadSale.ts) and the keeper endpoint (api/wenpad-reveal.ts).
+ * (src/utils/wenpadSale.ts) and the keeper endpoint (api/_keepers/wenpad-reveal.ts, served at /api/keeper?job=wenpad).
  * Contract source: contracts/WenPadSale.algo.ts
  */
 

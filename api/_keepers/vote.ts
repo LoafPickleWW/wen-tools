@@ -1,17 +1,17 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import algosdk from "algosdk";
-import { keepAll, keepVote, type KeeperSigner } from "../src/utils/voteKeeper.js";
-import type { VoteNetwork } from "../src/utils/voteCore.js";
+import { keepAll, keepVote, type KeeperSigner } from "../../src/utils/voteKeeper.js";
+import type { VoteNetwork } from "../../src/utils/voteCore.js";
 
 /**
  * Vote Tool keeper (logic: src/utils/voteKeeper.ts).
  *
- * POST /api/vote-keeper { network, appId }
+ * POST /api/keeper?job=vote { network, appId }   (old path /api/vote-keeper still works via a rewrite)
  *   Sent by the vote page after every ballot it submits, and when someone opens a vote that has
  *   ended. Live read-only votes: recount ballots whose wallets no longer back them. Ended votes:
  *   finalize, pay out, release every ballot, close.
  *
- * GET /api/vote-keeper (Vercel cron, `Authorization: Bearer $CRON_SECRET`)
+ * GET /api/keeper (Vercel cron, `Authorization: Bearer $CRON_SECRET`)
  *   Backstop for votes cast without the site: sweeps every vote ending soon, ended, or not closed.
  *
  * Safety: only acts on votes registered in the factory, caps fees per pass, and throttles POSTs

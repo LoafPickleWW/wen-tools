@@ -45,7 +45,7 @@ export async function requestKeeperReveal(
   commitId: number
 ): Promise<{ txId: string; assetId: number } | null> {
   try {
-    const res = await fetch("/api/wenpad-reveal", {
+    const res = await fetch("/api/keeper?job=wenpad", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ network, appId, commitId }),
@@ -59,7 +59,7 @@ export async function requestKeeperReveal(
 
 /** Ask the keeper to close a Shuffle that was released (e.g. sold out by a reveal the buyer sent). */
 export function requestKeeperClose(network: SaleNetwork, appId: number) {
-  fetch("/api/wenpad-reveal", {
+  fetch("/api/keeper?job=wenpad", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ network, appId }),

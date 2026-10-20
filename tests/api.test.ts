@@ -121,7 +121,7 @@ describe("api/wenpad-reveal (keeper)", () => {
 
   it("reveals the commit as the keeper and returns the delivered asset", async () => {
     process.env.KEEPER_MNEMONIC = MNEMONICS.carol;
-    const { default: handler } = await import("../api/wenpad-reveal");
+    const { default: handler } = await import("../api/_keepers/wenpad-reveal");
     seed(1, 1);
     chain.confirmHook = (s) => (s.raw.txn.type === "appl" ? { logs: [new Uint8Array([...SEL, ...REVEALED.encode([14, BOB, 9001, 0])])] } : {});
     const res = mockRes();
@@ -133,7 +133,7 @@ describe("api/wenpad-reveal (keeper)", () => {
 
   it("auto-closes a released sale with nothing pending", async () => {
     process.env.KEEPER_MNEMONIC = MNEMONICS.carol;
-    const { default: handler } = await import("../api/wenpad-reveal");
+    const { default: handler } = await import("../api/_keepers/wenpad-reveal");
     seed(3, 0);
     chain.simulateHook = (group) => ({ txns: group.map(() => ({ inner: 0 })) });
     const res = mockRes();
@@ -144,9 +144,38 @@ describe("api/wenpad-reveal (keeper)", () => {
   });
 
   it("validates input", async () => {
-    const { default: handler } = await import("../api/wenpad-reveal");
+    const { default: handler } = await import("../api/_keepers/wenpad-reveal");
     const res = mockRes();
     await handler({ method: "POST", body: { network: "betanet", appId: 1 } } as any, res);
     expect(res.statusCode).toBe(400);
+  });
+});
+
+describe("api/keeper (merged keeper function)", () => {
+  it("routes ?job= to the Shuffle and Vote keepers, and GET without a job to the vote cron", async () => {
+    process.env.KEEPER_MNEMONIC = MNEMONICS.carol;
+    delete process.env.CRON_SECRET;
+    const { default: handler } = await import("../api/keeper");
+
+    // Vote job, bad input → the vote keeper's own validation answers
+    let res = mockRes();
+    await handler({ method: "POST", query: { job: "vote" }, body: { network: "testnet" } } as any, res);
+    expect(res.statusCode).toBe(400);
+    expect(res.body).toEqual({ error: "appId required" });
+
+    // GET with no job = the cron sweep, which needs CRON_SECRET
+    res = mockRes();
+    await handler({ method: "GET", query: {}, headers: {} } as any, res);
+    expect(res.statusCode).toBe(401);
+
+    // Shuffle job → the wenpad keeper (it only accepts POST)
+    res = mockRes();
+    await handler({ method: "GET", query: { job: "wenpad" }, headers: {} } as any, res);
+    expect(res.statusCode).toBe(405);
+
+    res = mockRes();
+    await handler({ method: "POST", query: { job: "nope" } } as any, res);
+    expect(res.statusCode).toBe(400);
+    expect(res.body).toEqual({ error: "Unknown keeper job" });
   });
 });

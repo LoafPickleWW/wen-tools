@@ -17,11 +17,11 @@ const FACTORY_IDS: Record<VoteNetwork, number> = {
 export const getVoteFactoryId = (network: VoteNetwork) => FACTORY_IDS[network];
 
 /**
- * Ask the keeper to look at a vote (api/vote-keeper.ts): recount moved ballots while it's live,
+ * Ask the keeper to look at a vote (api/keeper.ts?job=vote → api/_keepers/vote.ts): recount moved ballots while it's live,
  * settle it once it has ended. Fire-and-forget; anyone can still run every step from the page.
  */
 export function requestVoteKeeper(network: VoteNetwork, appId: number) {
-  fetch("/api/vote-keeper", {
+  fetch("/api/keeper?job=vote", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ network, appId }),
