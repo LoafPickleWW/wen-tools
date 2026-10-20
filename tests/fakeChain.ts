@@ -315,7 +315,7 @@ export class FakeChain {
       if ((m = p.match(/\/v2\/assets\/(\d+)$/)) && !req.url.host.includes("idx")) return this.assetJson(Number(m[1]));
       if ((m = p.match(/\/v2\/applications\/(\d+)\/boxes$/)) && !req.url.host.includes("idx")) {
         const app = this.apps.get(Number(m[1]));
-        return { boxes: Object.keys(app?.boxes ?? {}).map((k) => ({ name: b64(new TextEncoder().encode(k)) })) };
+        return { boxes: Object.keys(app?.boxes ?? {}).map((k) => ({ name: b64(boxKeyBytes(k)) })) };
       }
       if ((m = p.match(/\/v2\/applications\/(\d+)\/box$/)) && !req.url.host.includes("idx")) {
         const app = this.apps.get(Number(m[1]));
@@ -455,5 +455,11 @@ function decodeBoxName(name: string): Uint8Array {
 
 /** Box-name helper that matches FakeChain's latin1 key lookup for binary names. */
 export const boxKey = (bytes: Uint8Array) => new TextDecoder("latin1").decode(bytes);
+
+// "latin1" decodes as windows-1252, which maps 0x80–0x9F to other code points; invert it exactly.
+const BYTE_FOR_CHAR = new Map(Array.from({ length: 256 }, (_, b) => [boxKey(new Uint8Array([b])), b] as const));
+
+/** Inverse of boxKey: the raw box name bytes for a fixture key. */
+export const boxKeyBytes = (key: string) => Uint8Array.from(key, (c) => BYTE_FOR_CHAR.get(c) ?? c.charCodeAt(0));
 
 export { addr };

@@ -38,6 +38,7 @@ import { Analytics } from "@vercel/analytics/react";
 import { ARC62ManagerTool } from "./pages/ARC62ManagerTool";
 import { WenPad } from './pages/WenPad';
 import { WenPadSales } from './pages/WenPadSales';
+import { VoteTool } from './pages/VoteTool';
 import { XGov } from './pages/XGov';
 import { Jukebox } from './pages/Jukebox';
 import { P2PChat } from './pages/P2PChat';
@@ -197,6 +198,8 @@ function App() {
             <Route path='/shuffle/:appId' element={<WenPadSales />} />
             <Route path='/wen-pad/sales' element={<Navigate to='/shuffle' replace />} />
             <Route path='/wen-pad/sales/:appId' element={<RedirectSaleToShuffle />} />
+            <Route path='/vote' element={<VoteTool />} />
+            <Route path='/vote/:appId' element={<VoteTool />} />
             <Route path='/xgov' element={<XGov />} />
             <Route path='/jukebox' element={<Jukebox />} />
             <Route path='/p2p-chat' element={<P2PChat />} />

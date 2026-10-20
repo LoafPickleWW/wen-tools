@@ -206,6 +206,15 @@ export const TOOLS = [
     hideFromLanding: true
   },
   {
+    id: "vote",
+    label: "On-Chain Vote",
+    description: "Run a vote with any asset or NFT collection: hard votes with escrowed tokens, or read-only votes weighted by holdings.",
+    path: "/vote",
+    category: "creator",
+    icon: "/icons/wenpad.png",
+    hideFromLanding: true
+  },
+  {
     id: "nft_import",
     label: "NFT Import Tool",
     description: "Import your NFTs from other chains (XRP Ledger, etc.) and re-mint them on Algorand.",

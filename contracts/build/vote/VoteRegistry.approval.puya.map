@@ -1,0 +1,160 @@
+{
+  "version": 3,
+  "sources": [
+    "../../VoteTool.algo.ts"
+  ],
+  "mappings": ";AA0HA;;;;;;AAAA;;;AAAA;;;;AAAA;AAIG;;AAAA;AAAA;;AAAA;AAAA;AAAA;AAAA;;AAFS;;;;;;;;;AAIa;;AAArB;AAEmC;;AAAnC;;AAEmC;;AAAnC;;AAND;;AAAA",
+  "op_pc_offset": 0,
+  "pc_events": {
+    "1": {
+      "subroutine": "@algorandfoundation/algorand-typescript/arc4/index.d.ts::Contract.approvalProgram",
+      "params": {},
+      "block": "main",
+      "stack_in": [],
+      "op": "pushbytes 0xb8447b36 // method \"createApplication()void\"",
+      "defined_out": [
+        "Method(createApplication()void)"
+      ],
+      "stack_out": [
+        "Method(createApplication()void)"
+      ]
+    },
+    "7": {
+      "op": "txna ApplicationArgs 0",
+      "defined_out": [
+        "Method(createApplication()void)",
+        "tmp%0#1"
+      ],
+      "stack_out": [
+        "Method(createApplication()void)",
+        "tmp%0#1"
+      ]
+    },
+    "10": {
+      "op": "match main_createApplication_route@2",
+      "stack_out": []
+    },
+    "14": {
+      "op": "err"
+    },
+    "15": {
+      "block": "main_createApplication_route@2",
+      "stack_in": [],
+      "op": "txn OnCompletion",
+      "defined_out": [
+        "tmp%1#0"
+      ],
+      "stack_out": [
+        "tmp%1#0"
+      ]
+    },
+    "17": {
+      "op": "!",
+      "defined_out": [
+        "tmp%2#0"
+      ],
+      "stack_out": [
+        "tmp%2#0"
+      ]
+    },
+    "18": {
+      "op": "txn ApplicationID",
+      "defined_out": [
+        "tmp%2#0",
+        "tmp%3#0"
+      ],
+      "stack_out": [
+        "tmp%2#0",
+        "tmp%3#0"
+      ]
+    },
+    "20": {
+      "op": "!",
+      "defined_out": [
+        "tmp%2#0",
+        "tmp%4#0"
+      ],
+      "stack_out": [
+        "tmp%2#0",
+        "tmp%4#0"
+      ]
+    },
+    "21": {
+      "op": "&&",
+      "defined_out": [
+        "tmp%5#0"
+      ],
+      "stack_out": [
+        "tmp%5#0"
+      ]
+    },
+    "22": {
+      "op": "assert",
+      "stack_out": []
+    },
+    "23": {
+      "op": "b createApplication"
+    },
+    "25": {
+      "subroutine": "contracts/VoteTool.algo.ts::VoteRegistry.createApplication[routing]",
+      "params": {},
+      "block": "createApplication",
+      "stack_in": [],
+      "op": "pushbytes \"factory\"",
+      "defined_out": [
+        "\"factory\""
+      ],
+      "stack_out": [
+        "\"factory\""
+      ]
+    },
+    "34": {
+      "op": "global CallerApplicationID",
+      "defined_out": [
+        "\"factory\"",
+        "tmp%0#0"
+      ],
+      "stack_out": [
+        "\"factory\"",
+        "tmp%0#0"
+      ]
+    },
+    "36": {
+      "op": "app_global_put",
+      "stack_out": []
+    },
+    "37": {
+      "op": "pushint 1",
+      "defined_out": [
+        "1"
+      ],
+      "stack_out": [
+        "1"
+      ]
+    },
+    "39": {
+      "op": "app_params_set AppFamilyBoxAccess",
+      "stack_out": []
+    },
+    "41": {
+      "op": "pushint 1",
+      "stack_out": [
+        "1"
+      ]
+    },
+    "43": {
+      "op": "app_params_set AppForeignBoxReads",
+      "stack_out": []
+    },
+    "45": {
+      "op": "pushint 1",
+      "stack_out": [
+        "1"
+      ]
+    },
+    "47": {
+      "op": "return",
+      "stack_out": []
+    }
+  }
+}

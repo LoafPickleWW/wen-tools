@@ -1,0 +1,452 @@
+#pragma version 13
+#pragma typetrack false
+#pragma autosalt false
+
+// @algorandfoundation/algorand-typescript/arc4/index.d.ts::Contract.approvalProgram() -> uint64:
+main:
+    intcblock 0 1 32 2
+    bytecblock "count" "owner" "factory" ""
+    // contracts/VoteTool.algo.ts:140-141
+    // @contract({ avmVersion: 13 })
+    // export class VoterList extends Contract {
+    pushbytes 0x9656047a // method "close()void"
+    txna ApplicationArgs 0
+    match main_close_route@2
+
+main_switch_case_next@3:
+    // contracts/VoteTool.algo.ts:140-141
+    // @contract({ avmVersion: 13 })
+    // export class VoterList extends Contract {
+    txn OnCompletion
+    !
+    assert
+    txn ApplicationID
+    bz main_create_NoOp@9
+    pushbytess 0x854dede0 0xc33291ff 0xbf242d8b // method "opUp()void", method "add(pay,address[])void", method "remove(address[])void"
+    txna ApplicationArgs 0
+    match main_opUp_route@5 add remove
+    err
+
+main_opUp_route@5:
+    // contracts/VoteTool.algo.ts:156
+    // opUp(): void {}
+    intc_1 // 1
+    return
+
+main_create_NoOp@9:
+    // contracts/VoteTool.algo.ts:140-141
+    // @contract({ avmVersion: 13 })
+    // export class VoterList extends Contract {
+    pushbytes 0xd324bea4 // method "createApplication(address)void"
+    txna ApplicationArgs 0
+    match createApplication
+    err
+
+main_close_route@2:
+    // contracts/VoteTool.algo.ts:177
+    // @abimethod({ allowActions: 'DeleteApplication' })
+    txn OnCompletion
+    pushint 5 // DeleteApplication
+    ==
+    txn ApplicationID
+    &&
+    assert
+    b close
+
+
+// contracts/VoteTool.algo.ts::VoterList.createApplication[routing]() -> void:
+createApplication:
+    // contracts/VoteTool.algo.ts:147
+    // @abimethod({ onCreate: 'require' })
+    txna ApplicationArgs 1
+    dup
+    len
+    intc_2 // 32
+    ==
+    assert // invalid number of bytes for arc4.static_array<arc4.uint8, 32>
+    // contracts/VoteTool.algo.ts:142
+    // factory = GlobalState<uint64>({ key: 'factory' })
+    bytec_2 // "factory"
+    // contracts/VoteTool.algo.ts:149
+    // this.factory.value = Global.callerApplicationId
+    global CallerApplicationID
+    app_global_put
+    // contracts/VoteTool.algo.ts:143
+    // owner = GlobalState<Account>({ key: 'owner' })
+    bytec_1 // "owner"
+    // contracts/VoteTool.algo.ts:150
+    // this.owner.value = owner
+    swap
+    app_global_put
+    // contracts/VoteTool.algo.ts:144
+    // count = GlobalState<uint64>({ key: 'count' })
+    bytec_0 // "count"
+    // contracts/VoteTool.algo.ts:151
+    // this.count.value = 0
+    intc_0 // 0
+    app_global_put
+    // contracts/VoteTool.algo.ts:152
+    // op.AppParamsSet.appForeignBoxReads(true)
+    intc_1 // 1
+    app_params_set AppForeignBoxReads
+    // contracts/VoteTool.algo.ts:147
+    // @abimethod({ onCreate: 'require' })
+    intc_1 // 1
+    return
+
+
+// contracts/VoteTool.algo.ts::VoterList.add[routing]() -> void:
+add:
+    intc_0 // 0
+    bytec_3 // ""
+    dup
+    // contracts/VoteTool.algo.ts:159
+    // add(pay: gtxn.PaymentTxn, addresses: Account[]): void {
+    txn GroupIndex
+    intc_1 // 1
+    -
+    dupn 2
+    gtxns TypeEnum
+    intc_1 // pay
+    ==
+    assert // transaction type is pay
+    txna ApplicationArgs 1
+    dup
+    cover 2
+    dup
+    intc_0 // 0
+    extract_uint16 // on error: invalid array length header
+    dup
+    cover 3
+    intc_2 // 32
+    *
+    intc_3 // 2
+    +
+    swap
+    len
+    ==
+    assert // invalid number of bytes for arc4.dynamic_array<account>
+    // contracts/VoteTool.algo.ts:160
+    // assert(Txn.sender === this.owner.value, 'owner only')
+    txn Sender
+    intc_0 // 0
+    // contracts/VoteTool.algo.ts:143
+    // owner = GlobalState<Account>({ key: 'owner' })
+    bytec_1 // "owner"
+    // contracts/VoteTool.algo.ts:160
+    // assert(Txn.sender === this.owner.value, 'owner only')
+    app_global_get_ex
+    assert // check GlobalState exists
+    ==
+    assert // owner only
+    // contracts/VoteTool.algo.ts:161
+    // assert(pay.receiver === Global.currentApplicationAddress, 'pay the list')
+    gtxns Receiver
+    global CurrentApplicationAddress
+    ==
+    assert // pay the list
+    // contracts/VoteTool.algo.ts:162
+    // const before = Global.currentApplicationAddress.minBalance
+    global CurrentApplicationAddress
+    acct_params_get AcctMinBalance
+    assert // account funded
+    intc_0 // 0
+
+add_for_header@2:
+    // contracts/VoteTool.algo.ts:163
+    // for (const a of addresses) {
+    dup
+    dig 3
+    <
+    bz add_after_for@7
+    dig 3
+    extract 2 0
+    dig 1
+    intc_2 // 32
+    *
+    intc_2 // 32
+    extract3 // on error: index access is out of bounds
+    // contracts/VoteTool.algo.ts:145
+    // voters = BoxMap<Account, bytes>({ keyPrefix: 'b' })
+    pushbytes "b"
+    swap
+    concat
+    dup
+    bury 9
+    // contracts/VoteTool.algo.ts:164
+    // if (!this.voters(a).exists) {
+    box_len
+    bury 1
+    bnz add_after_if_else@5
+    // contracts/VoteTool.algo.ts:165
+    // this.voters(a).value = Bytes('1')
+    dig 7
+    dup
+    box_del
+    pop
+    pushbytes "1"
+    box_put
+    // contracts/VoteTool.algo.ts:166
+    // this.count.value += 1
+    intc_0 // 0
+    // contracts/VoteTool.algo.ts:144
+    // count = GlobalState<uint64>({ key: 'count' })
+    bytec_0 // "count"
+    // contracts/VoteTool.algo.ts:166
+    // this.count.value += 1
+    app_global_get_ex
+    assert // check GlobalState exists
+    intc_1 // 1
+    +
+    // contracts/VoteTool.algo.ts:144
+    // count = GlobalState<uint64>({ key: 'count' })
+    bytec_0 // "count"
+    // contracts/VoteTool.algo.ts:166
+    // this.count.value += 1
+    swap
+    app_global_put
+
+add_after_if_else@5:
+    intc_1 // 1
+    +
+    b add_for_header@2
+
+add_after_for@7:
+    pop
+    bury 1
+    bury 1
+    // contracts/VoteTool.algo.ts:169
+    // const cost: uint64 = Global.currentApplicationAddress.minBalance - before
+    global CurrentApplicationAddress
+    acct_params_get AcctMinBalance
+    assert // account funded
+    swap
+    -
+    dup
+    bury 4
+    // contracts/VoteTool.algo.ts:170
+    // assert(pay.amount >= cost, 'MBR not covered')
+    swap
+    gtxns Amount
+    dup
+    bury 3
+    dup
+    dig 2
+    >=
+    assert // MBR not covered
+    // contracts/VoteTool.algo.ts:171
+    // if (pay.amount > cost) {
+    <
+    bz add_after_if_else@10
+    // contracts/VoteTool.algo.ts:172
+    // itxn.payment({ receiver: Txn.sender, amount: pay.amount - cost, fee: 0 }).submit()
+    itxn_begin
+    txn Sender
+    dig 1
+    dig 3
+    -
+    itxn_field Amount
+    itxn_field Receiver
+    intc_1 // 1
+    itxn_field TypeEnum
+    intc_0 // 0
+    itxn_field Fee
+    itxn_submit
+
+add_after_if_else@10:
+    // contracts/VoteTool.algo.ts:159
+    // add(pay: gtxn.PaymentTxn, addresses: Account[]): void {
+    intc_1 // 1
+    return
+
+
+// contracts/VoteTool.algo.ts::VoterList.close[routing]() -> void:
+close:
+    // contracts/VoteTool.algo.ts:179
+    // assert(Global.callerApplicationId === this.factory.value, 'close through the factory')
+    global CallerApplicationID
+    intc_0 // 0
+    // contracts/VoteTool.algo.ts:142
+    // factory = GlobalState<uint64>({ key: 'factory' })
+    bytec_2 // "factory"
+    // contracts/VoteTool.algo.ts:179
+    // assert(Global.callerApplicationId === this.factory.value, 'close through the factory')
+    app_global_get_ex
+    assert // check GlobalState exists
+    ==
+    assert // close through the factory
+    // contracts/VoteTool.algo.ts:180
+    // assert(this.count.value === 0, 'remove every voter first')
+    intc_0 // 0
+    // contracts/VoteTool.algo.ts:144
+    // count = GlobalState<uint64>({ key: 'count' })
+    bytec_0 // "count"
+    // contracts/VoteTool.algo.ts:180
+    // assert(this.count.value === 0, 'remove every voter first')
+    app_global_get_ex
+    assert // check GlobalState exists
+    !
+    assert // remove every voter first
+    // contracts/VoteTool.algo.ts:181
+    // itxn.payment({ receiver: this.owner.value, closeRemainderTo: this.owner.value, amount: 0, fee: 0 }).submit()
+    itxn_begin
+    intc_0 // 0
+    // contracts/VoteTool.algo.ts:143
+    // owner = GlobalState<Account>({ key: 'owner' })
+    bytec_1 // "owner"
+    // contracts/VoteTool.algo.ts:181
+    // itxn.payment({ receiver: this.owner.value, closeRemainderTo: this.owner.value, amount: 0, fee: 0 }).submit()
+    app_global_get_ex
+    assert // check GlobalState exists
+    intc_0 // 0
+    itxn_field Amount
+    dup
+    itxn_field CloseRemainderTo
+    itxn_field Receiver
+    intc_1 // 1
+    itxn_field TypeEnum
+    intc_0 // 0
+    itxn_field Fee
+    itxn_submit
+    // contracts/VoteTool.algo.ts:177
+    // @abimethod({ allowActions: 'DeleteApplication' })
+    intc_1 // 1
+    return
+
+
+// contracts/VoteTool.algo.ts::VoterList.remove[routing]() -> void:
+remove:
+    intc_0 // 0
+    bytec_3 // ""
+    // contracts/VoteTool.algo.ts:185
+    // remove(addresses: Account[]): void {
+    txna ApplicationArgs 1
+    dupn 2
+    intc_0 // 0
+    extract_uint16 // on error: invalid array length header
+    dup
+    cover 2
+    intc_2 // 32
+    *
+    intc_3 // 2
+    +
+    swap
+    len
+    ==
+    assert // invalid number of bytes for arc4.dynamic_array<account>
+    // contracts/VoteTool.algo.ts:186
+    // assert(Txn.sender === this.owner.value, 'owner only')
+    txn Sender
+    intc_0 // 0
+    // contracts/VoteTool.algo.ts:143
+    // owner = GlobalState<Account>({ key: 'owner' })
+    bytec_1 // "owner"
+    // contracts/VoteTool.algo.ts:186
+    // assert(Txn.sender === this.owner.value, 'owner only')
+    app_global_get_ex
+    assert // check GlobalState exists
+    ==
+    assert // owner only
+    // contracts/VoteTool.algo.ts:187
+    // const before = Global.currentApplicationAddress.minBalance
+    global CurrentApplicationAddress
+    acct_params_get AcctMinBalance
+    assert // account funded
+    intc_0 // 0
+
+remove_for_header@2:
+    // contracts/VoteTool.algo.ts:188
+    // for (const a of addresses) {
+    dup
+    dig 3
+    <
+    bz remove_after_for@7
+    dig 3
+    extract 2 0
+    dig 1
+    intc_2 // 32
+    *
+    intc_2 // 32
+    extract3 // on error: index access is out of bounds
+    // contracts/VoteTool.algo.ts:145
+    // voters = BoxMap<Account, bytes>({ keyPrefix: 'b' })
+    pushbytes "b"
+    swap
+    concat
+    dup
+    bury 7
+    // contracts/VoteTool.algo.ts:189
+    // if (this.voters(a).exists) {
+    box_len
+    bury 1
+    bz remove_after_if_else@5
+    // contracts/VoteTool.algo.ts:190
+    // this.voters(a).delete()
+    dig 5
+    box_del
+    pop
+    // contracts/VoteTool.algo.ts:191
+    // this.count.value -= 1
+    intc_0 // 0
+    // contracts/VoteTool.algo.ts:144
+    // count = GlobalState<uint64>({ key: 'count' })
+    bytec_0 // "count"
+    // contracts/VoteTool.algo.ts:191
+    // this.count.value -= 1
+    app_global_get_ex
+    assert // check GlobalState exists
+    intc_1 // 1
+    -
+    // contracts/VoteTool.algo.ts:144
+    // count = GlobalState<uint64>({ key: 'count' })
+    bytec_0 // "count"
+    // contracts/VoteTool.algo.ts:191
+    // this.count.value -= 1
+    swap
+    app_global_put
+
+remove_after_if_else@5:
+    intc_1 // 1
+    +
+    b remove_for_header@2
+
+remove_after_for@7:
+    pop
+    bury 1
+    bury 1
+    // contracts/VoteTool.algo.ts:194
+    // const freed: uint64 = before - Global.currentApplicationAddress.minBalance
+    global CurrentApplicationAddress
+    acct_params_get AcctMinBalance
+    assert // account funded
+    -
+    dup
+    bury 2
+    // contracts/VoteTool.algo.ts:195
+    // if (freed > 0) {
+    bz remove_after_if_else@10
+    // contracts/VoteTool.algo.ts:196
+    // itxn.payment({ receiver: this.owner.value, amount: freed, fee: 0 }).submit()
+    itxn_begin
+    intc_0 // 0
+    // contracts/VoteTool.algo.ts:143
+    // owner = GlobalState<Account>({ key: 'owner' })
+    bytec_1 // "owner"
+    // contracts/VoteTool.algo.ts:196
+    // itxn.payment({ receiver: this.owner.value, amount: freed, fee: 0 }).submit()
+    app_global_get_ex
+    assert // check GlobalState exists
+    dig 1
+    itxn_field Amount
+    itxn_field Receiver
+    intc_1 // 1
+    itxn_field TypeEnum
+    intc_0 // 0
+    itxn_field Fee
+    itxn_submit
+
+remove_after_if_else@10:
+    // contracts/VoteTool.algo.ts:185
+    // remove(addresses: Account[]): void {
+    intc_1 // 1
+    return

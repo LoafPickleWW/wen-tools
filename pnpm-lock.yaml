@@ -161,6 +161,12 @@ importers:
       '@algorandfoundation/algokit-utils':
         specifier: 9.2.2
         version: 9.2.2(algosdk@3.8.0)
+      '@algorandfoundation/algorand-typescript':
+        specifier: 1.3.1
+        version: 1.3.1(tslib@2.8.1)
+      '@algorandfoundation/puya-ts':
+        specifier: 1.3.1
+        version: 1.3.1
       '@algorandfoundation/tealscript':
         specifier: ^0.107.2
         version: 0.107.2
@@ -243,14 +249,33 @@ packages:
     resolution: {integrity: sha512-V1aYu6Xuj3mxbRVmzkYgDvbObs3BgZVBrp3r5Ro4Pf0GyTOQmZU8DZ2ZH/ye8hREZk5eGeSyVDkj6bVbR4SQxQ==}
     engines: {node: '>=24.0'}
 
+  '@algorandfoundation/algokit-utils@10.0.0-beta.4':
+    resolution: {integrity: sha512-+X06PW7w2zWJWPp91pHoLMQizrq7E33Y1Mj/Hz/hkLiASXWwMKVX5QsQCbvsMYk+guqayCwB6782VngLR8d1RA==}
+    engines: {node: '>=22.0'}
+
   '@algorandfoundation/algokit-utils@9.2.2':
     resolution: {integrity: sha512-3UWFF/vNJNEAGK4w+ZRSOGs1tbsDYtom3L3mpUBqb0J6mWif/c1Z36emCC2gV1s+XKOKDtgodqqI7cLWf7FGAQ==}
     engines: {node: '>=22.0'}
     peerDependencies:
       algosdk: ^3.5.2
 
+  '@algorandfoundation/algorand-typescript@1.3.1':
+    resolution: {integrity: sha512-FpXSD0NpJi6HF7tpoPcWG0Ab/xoy4VcTSInl3ExiD14Z8iBsJWGIsDV5LHu5YXjclvp9XQ7x2ujH911AHxzpsg==}
+    engines: {node: '>=22.11.0'}
+    peerDependencies:
+      tslib: ^2.6.2
+
   '@algorandfoundation/liquid-client@1.0.0-canary.5':
     resolution: {integrity: sha512-0e14C+H/zxnedGuvQGW5UoJ72BxvLma8IxmimaVBxwySN8O9WE9tAdhpmC1KFYNvpq1Zauva3rPM2GWryoY55A==}
+
+  '@algorandfoundation/puya-ts@1.3.1':
+    resolution: {integrity: sha512-DAS/D1IH/q5vV2s6zBbuzYnjCmK+M1WN0eE3oWPO04OF+2dwZ8ItwWig9r82O82vAO6R1Ape2UgUM0uolLls8A==}
+    engines: {node: '>=22.11.0'}
+    hasBin: true
+    bundledDependencies:
+      - vscode-jsonrpc
+      - vscode-languageserver
+      - vscode-languageserver-textdocument
 
   '@algorandfoundation/tealscript@0.107.2':
     resolution: {integrity: sha512-Fs+bbx75TIvR/SJ96wdjiJIMkdoIFVo3aeydhYUXGM0eDUQTEH/Qw1sHf0fHJ8HCncASn3xBhcawqukEz+T6qw==}
@@ -1173,6 +1198,9 @@ packages:
     cpu: [x64]
     os: [win32]
 
+  '@scure/bip39@2.4.0':
+    resolution: {integrity: sha512-82dxFbZUYboyOf0AXiydsQrFQ5Q4h9mX+O2UkE91ROYmsc0BKMGZLwDmy96Jpa2+vrtoxomjUhy1RPIgH/r2nA==}
+
   '@socket.io/component-emitter@3.1.2':
     resolution: {integrity: sha512-9BCxFwvbGg/RsZK9tjXd8s4UcwR0MWeFQ1XEKIQVVvAGJyINdrqKMcTRyLoK8Rse1GjzLV9cwjWV1olXRWEXVA==}
 
@@ -1552,6 +1580,9 @@ packages:
     resolution: {integrity: sha512-KMReFUr0B4t+D+OBkjR3KYqvocp2XaSzO55UcB6mgQMd3KbcE+mWTyvVV7D/zsdEbNnV6acZUutkiHQXvTr1Rw==}
     engines: {node: '>= 8'}
 
+  arcsecond@5.0.0:
+    resolution: {integrity: sha512-J/fHdyadnsIencRsM6oUSsraCKG+Ni9Udcgr/eusxjTzX3SEQtCUQSpP0YtImFPfIK6DdT1nqwN0ng4FqNmwgA==}
+
   arg@5.0.2:
     resolution: {integrity: sha512-PYjyFOLKQ9y57JvQ6QLo8dAgNqswh8M1RMJYdQduT6xbWSgK36P/Z/v+p888pM69jMMfS8Xd8F6I1kQ/I9HUGg==}
 
@@ -1733,6 +1764,13 @@ packages:
   chalk@4.1.2:
     resolution: {integrity: sha512-oKnbhFyRIXpUuez8iBMmyEa4nbj4IOQyuhc/wy9kY7/WVPcwIO9VA668Pu8RkO7+0G76SLROeyw9CpQ061i4mA==}
     engines: {node: '>=10'}
+
+  chalk@5.6.2:
+    resolution: {integrity: sha512-7NzBL0rN6fMUW+f7A6Io4h40qQlG+xGmtMxfbnH/K7TAtt8JQWVQK+6g0UXKMeVJoyV5EkkNsErQ8pVD3bLHbA==}
+    engines: {node: ^12.17.0 || ^14.13 || >=16.0.0}
+
+  change-case@5.4.4:
+    resolution: {integrity: sha512-HRQyTk2/YPEkt9TnUPbOpr64Uw3KOicFWPVBb+xiHvd6eBx/qPr9xqfBFDT8P2vWsvvz4jbEkfDe71W3VyNu2w==}
 
   check-error@2.1.3:
     resolution: {integrity: sha512-PAJdDJusoxnwm1VwW07VWwUN1sl7smmC3OKggvndJFadxxDRyFJBX/ggnu/KE4kQAB7a3Dp8f/YXC1FlUprWmA==}
@@ -2561,10 +2599,6 @@ packages:
 
   minimatch@9.0.5:
     resolution: {integrity: sha512-G6T0ZX48xgozx7587koeX9Ys2NYy6Gmv//P89sEte9V9whIapMNF4idKxnW2QtCcLiTWlb/wfCabAtAFWhhBow==}
-    engines: {node: '>=16 || 14 >=14.17'}
-
-  minipass@7.1.2:
-    resolution: {integrity: sha512-qOOzS1cBTWYF4BH8fVePDBOO9iptMnGUEZwNc/cMWnTV2nVLZ7VoNWEPHkYczZA0pdoA7dl6e7FL659nX9S2aw==}
     engines: {node: '>=16 || 14 >=14.17'}
 
   minipass@7.1.3:
@@ -3467,6 +3501,9 @@ packages:
   vm-browserify@1.1.2:
     resolution: {integrity: sha512-2ham8XPWTONajOR0ohOKOHXkm3+gaBmGut3SRuu75xLd/RRaY6vqgh8NBYYk7+RW3u5AtzPQZG8F10LHkl0lAQ==}
 
+  vscode-uri@3.2.0:
+    resolution: {integrity: sha512-m2gXo3bn0G1kT9InzMf07fTbqMbGtyckj3bH5ktLO+1Ssv+yiATZ4dhwaQv9UZWxJh6E9IFGnQyjgWVDWVBDrg==}
+
   webidl-conversions@3.0.1:
     resolution: {integrity: sha512-2JAn3z8AR6rjK8Sm8orRC0h/bcl/DqL7tRPdGZ4I1CjdF+EaMLmYxBHyXuKL849eucPFhvBoxMsflfOb8kxaeQ==}
 
@@ -3624,10 +3661,29 @@ snapshots:
       tweetnacl: 1.0.3
       vlq: 2.0.4
 
+  '@algorandfoundation/algokit-utils@10.0.0-beta.4':
+    dependencies:
+      '@algorandfoundation/xhd-wallet-api': 2.0.0-canary.1
+      '@noble/curves': 2.4.0
+      '@noble/ed25519': 3.1.0
+      '@noble/hashes': 2.4.0
+      '@scure/bip39': 2.4.0
+      algorand-msgpack: 1.1.0
+      buffer: 6.0.3
+      dotenv: 16.6.1
+      hi-base32: 0.5.1
+      json-bigint: 1.0.0
+      tweetnacl: 1.0.3
+      vlq: 2.0.4
+
   '@algorandfoundation/algokit-utils@9.2.2(algosdk@3.8.0)':
     dependencies:
       algosdk: 3.8.0
       buffer: 6.0.3
+
+  '@algorandfoundation/algorand-typescript@1.3.1(tslib@2.8.1)':
+    dependencies:
+      tslib: 2.8.1
 
   '@algorandfoundation/liquid-client@1.0.0-canary.5':
     dependencies:
@@ -3640,6 +3696,25 @@ snapshots:
       - bufferutil
       - supports-color
       - utf-8-validate
+
+  '@algorandfoundation/puya-ts@1.3.1':
+    dependencies:
+      '@algorandfoundation/algokit-utils': 10.0.0-beta.4
+      '@algorandfoundation/algorand-typescript': 1.3.1(tslib@2.8.1)
+      arcsecond: 5.0.0
+      argparse: 2.0.1
+      chalk: 5.6.2
+      change-case: 5.4.4
+      cross-spawn: 7.0.6
+      glob: 13.0.6
+      minimatch: 10.2.5
+      pathe: 2.0.3
+      polytype: 0.17.0
+      signal-exit: 4.1.0
+      tar: 7.5.13
+      tslib: 2.8.1
+      typescript: 5.9.3
+      vscode-uri: 3.2.0
 
   '@algorandfoundation/tealscript@0.107.2':
     dependencies:
@@ -4130,7 +4205,7 @@ snapshots:
 
   '@isaacs/fs-minipass@4.0.1':
     dependencies:
-      minipass: 7.1.2
+      minipass: 7.1.3
 
   '@jridgewell/gen-mapping@0.3.8':
     dependencies:
@@ -4422,6 +4497,10 @@ snapshots:
 
   '@rollup/rollup-win32-x64-msvc@4.32.0':
     optional: true
+
+  '@scure/bip39@2.4.0':
+    dependencies:
+      '@noble/hashes': 2.4.0
 
   '@socket.io/component-emitter@3.1.2': {}
 
@@ -4942,6 +5021,8 @@ snapshots:
       normalize-path: 3.0.0
       picomatch: 2.3.1
 
+  arcsecond@5.0.0: {}
+
   arg@5.0.2: {}
 
   argparse@2.0.1: {}
@@ -5154,6 +5235,10 @@ snapshots:
     dependencies:
       ansi-styles: 4.3.0
       supports-color: 7.2.0
+
+  chalk@5.6.2: {}
+
+  change-case@5.4.4: {}
 
   check-error@2.1.3: {}
 
@@ -6010,13 +6095,11 @@ snapshots:
     dependencies:
       brace-expansion: 2.0.1
 
-  minipass@7.1.2: {}
-
   minipass@7.1.3: {}
 
   minizlib@3.1.0:
     dependencies:
-      minipass: 7.1.2
+      minipass: 7.1.3
 
   mkdirp@1.0.4: {}
 
@@ -6702,7 +6785,7 @@ snapshots:
     dependencies:
       '@isaacs/fs-minipass': 4.0.1
       chownr: 3.0.0
-      minipass: 7.1.2
+      minipass: 7.1.3
       minizlib: 3.1.0
       yallist: 5.0.0
 
@@ -6931,6 +7014,8 @@ snapshots:
   vlq@2.0.4: {}
 
   vm-browserify@1.1.2: {}
+
+  vscode-uri@3.2.0: {}
 
   webidl-conversions@3.0.1: {}
 

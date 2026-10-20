@@ -1,0 +1,3416 @@
+#pragma version 13
+#pragma typetrack false
+#pragma autosalt false
+
+// @algorandfoundation/algorand-typescript/arc4/index.d.ts::Contract.approvalProgram() -> uint64:
+main:
+    intcblock 0 1 8 2 18446744073709551615
+    bytecblock "status" "mode" "asset" "t" "creator" "end" "return_mode" "escrow" "open_nfts" "payout_pending" "options" "open_ballots" "b" "apv" "total_weight" "c" "start" "voters" "factory" "registry" "gate_app" "winner" "m" "o" "n" "vote_no" "return_addr" "gate_prefix" "paid_to" "grace"
+    // contracts/VoteTool.algo.ts:203-204
+    // @contract({ avmVersion: 13 })
+    // export class Vote extends Contract {
+    txn NumAppArgs
+    bz main_updateApplication@25
+    pushbytes 0x9656047a // method "close()void"
+    txna ApplicationArgs 0
+    match main_close_route@3
+
+main_switch_case_next@4:
+    // contracts/VoteTool.algo.ts:203-204
+    // @contract({ avmVersion: 13 })
+    // export class Vote extends Contract {
+    txn OnCompletion
+    !
+    assert
+    txn ApplicationID
+    bz main_create_NoOp@21
+    pushbytess 0xefd4769d 0x9bed9c37 0xd8606e93 0xab9d5073 0xe75f3ded 0xb5a0b165 0x23d8b7ce 0xce706dd1 0xc557b378 0x31f26a9b 0x261d5b38 0x00c24a8c 0x854dede0 0x84e12390 // method "init(string,string,(string,string,address)[],(address[],byte[]))void", method "voteEscrow(pay,axfer,uint64)void", method "voteHeld(pay,uint64)void", method "voteNft(pay,uint64,uint64[])void", method "recount(address)void", method "recountNft(uint64)void", method "finalize()void", method "payout()void", method "fallbackToRefunds()void", method "cancel()void", method "release(address)void", method "releaseNft(uint64)void", method "opUp()void", method "getTallies()uint64[]"
+    txna ApplicationArgs 0
+    match init voteEscrow voteHeld voteNft recount recountNft finalize payout fallbackToRefunds cancel release releaseNft main_opUp_route@18 getTallies
+    err
+
+main_opUp_route@18:
+    // contracts/VoteTool.algo.ts:543
+    // opUp(): void {}
+    intc_1 // 1
+    return
+
+main_create_NoOp@21:
+    // contracts/VoteTool.algo.ts:203-204
+    // @contract({ avmVersion: 13 })
+    // export class Vote extends Contract {
+    pushbytes 0x4bc371ff // method "createApplication(uint64,uint64,address,(uint64,uint64,uint64,uint64,uint64,uint64,address,uint64,byte[]),uint64,uint64)void"
+    txna ApplicationArgs 0
+    match createApplication
+    err
+
+main_close_route@3:
+    // contracts/VoteTool.algo.ts:517
+    // @abimethod({ allowActions: 'DeleteApplication' })
+    txn OnCompletion
+    pushint 5 // DeleteApplication
+    ==
+    txn ApplicationID
+    &&
+    assert
+    b close
+
+main_updateApplication@25:
+    // contracts/VoteTool.algo.ts:326
+    // @baremethod({ allowActions: 'UpdateApplication' })
+    txn OnCompletion
+    pushint 4 // UpdateApplication
+    ==
+    txn ApplicationID
+    &&
+    assert
+    // contracts/VoteTool.algo.ts:328
+    // assert(Txn.sender === this.creator.value, 'creator only')
+    txn Sender
+    intc_0 // 0
+    // contracts/VoteTool.algo.ts:208
+    // creator = GlobalState<Account>({ key: 'creator' })
+    bytec 4 // "creator"
+    // contracts/VoteTool.algo.ts:328
+    // assert(Txn.sender === this.creator.value, 'creator only')
+    app_global_get_ex
+    assert // check GlobalState exists
+    ==
+    assert // creator only
+    // contracts/VoteTool.algo.ts:329
+    // assert(Global.round < this.startRound.value, 'locked: voting has started')
+    global Round
+    intc_0 // 0
+    // contracts/VoteTool.algo.ts:212
+    // startRound = GlobalState<uint64>({ key: 'start' })
+    bytec 16 // "start"
+    // contracts/VoteTool.algo.ts:329
+    // assert(Global.round < this.startRound.value, 'locked: voting has started')
+    app_global_get_ex
+    assert // check GlobalState exists
+    <
+    assert // locked: voting has started
+    // contracts/VoteTool.algo.ts:330
+    // assert(this.status.value === STATUS_ACTIVE, 'not active')
+    intc_0 // 0
+    // contracts/VoteTool.algo.ts:219
+    // status = GlobalState<uint64>({ key: 'status' })
+    bytec_0 // "status"
+    // contracts/VoteTool.algo.ts:330
+    // assert(this.status.value === STATUS_ACTIVE, 'not active')
+    app_global_get_ex
+    assert // check GlobalState exists
+    !
+    assert // not active
+    // contracts/VoteTool.algo.ts:326
+    // @baremethod({ allowActions: 'UpdateApplication' })
+    intc_1 // 1
+    return
+
+
+// contracts/VoteTool.algo.ts::Vote.createApplication[routing]() -> void:
+createApplication:
+    // contracts/VoteTool.algo.ts:243
+    // @abimethod({ onCreate: 'require' })
+    txna ApplicationArgs 1
+    dup
+    len
+    intc_2 // 8
+    ==
+    assert // invalid number of bytes for arc4.uint64
+    btoi
+    txna ApplicationArgs 2
+    dup
+    len
+    intc_2 // 8
+    ==
+    assert // invalid number of bytes for arc4.uint64
+    btoi
+    txna ApplicationArgs 3
+    dup
+    len
+    pushint 32
+    ==
+    assert // invalid number of bytes for arc4.static_array<arc4.uint8, 32>
+    txna ApplicationArgs 4
+    dup
+    cover 4
+    dup
+    len
+    dig 1
+    pushint 88
+    extract_uint16 // on error: invalid tuple encoding
+    dup
+    pushint 90
+    ==
+    assert // invalid tail pointer at index 8 of (uint64,uint64,uint64,uint64,uint64,uint64,uint8[32],uint64,(len+uint8[]))
+    dig 2
+    swap
+    dig 2
+    substring3
+    dup
+    cover 7
+    intc_0 // 0
+    extract_uint16 // on error: invalid array length header
+    pushint 92
+    +
+    ==
+    assert // invalid number of bytes for contracts/VoteTool.algo.ts::VoteConfig
+    txna ApplicationArgs 5
+    dup
+    len
+    intc_2 // 8
+    ==
+    assert // invalid number of bytes for arc4.uint64
+    btoi
+    cover 5
+    txna ApplicationArgs 6
+    dup
+    len
+    intc_2 // 8
+    ==
+    assert // invalid number of bytes for arc4.uint64
+    btoi
+    cover 5
+    // contracts/VoteTool.algo.ts:205
+    // factory = GlobalState<uint64>({ key: 'factory' })
+    bytec 18 // "factory"
+    // contracts/VoteTool.algo.ts:245
+    // this.factory.value = Global.callerApplicationId
+    global CallerApplicationID
+    app_global_put
+    // contracts/VoteTool.algo.ts:206
+    // registry = GlobalState<uint64>({ key: 'registry' })
+    bytec 19 // "registry"
+    // contracts/VoteTool.algo.ts:246
+    // this.registry.value = registry
+    uncover 4
+    app_global_put
+    // contracts/VoteTool.algo.ts:207
+    // voteNo = GlobalState<uint64>({ key: 'vote_no' })
+    bytec 25 // "vote_no"
+    // contracts/VoteTool.algo.ts:247
+    // this.voteNo.value = voteNo
+    uncover 3
+    app_global_put
+    // contracts/VoteTool.algo.ts:208
+    // creator = GlobalState<Account>({ key: 'creator' })
+    bytec 4 // "creator"
+    // contracts/VoteTool.algo.ts:248
+    // this.creator.value = creator
+    uncover 2
+    app_global_put
+    // contracts/VoteTool.algo.ts:249
+    // this.mode.value = config.mode
+    dup
+    intc_0 // 0
+    extract_uint64
+    dup
+    cover 2
+    // contracts/VoteTool.algo.ts:209
+    // mode = GlobalState<uint64>({ key: 'mode' })
+    bytec_1 // "mode"
+    // contracts/VoteTool.algo.ts:249
+    // this.mode.value = config.mode
+    dig 1
+    app_global_put
+    // contracts/VoteTool.algo.ts:250
+    // this.asset.value = config.asset
+    swap
+    intc_2 // 8
+    extract_uint64
+    // contracts/VoteTool.algo.ts:210
+    // asset = GlobalState<uint64>({ key: 'asset' })
+    bytec_2 // "asset"
+    // contracts/VoteTool.algo.ts:250
+    // this.asset.value = config.asset
+    swap
+    app_global_put
+    // contracts/VoteTool.algo.ts:251
+    // this.amountPerVote.value = config.mode === MODE_NFT ? Uint64(1) : config.amountPerVote
+    intc_3 // 2
+    ==
+    bz createApplication_ternary_false@3
+    intc_1 // 1
+
+createApplication_ternary_merge@4:
+    // contracts/VoteTool.algo.ts:211
+    // amountPerVote = GlobalState<uint64>({ key: 'apv' })
+    bytec 13 // "apv"
+    // contracts/VoteTool.algo.ts:251
+    // this.amountPerVote.value = config.mode === MODE_NFT ? Uint64(1) : config.amountPerVote
+    swap
+    app_global_put
+    // contracts/VoteTool.algo.ts:252
+    // this.startRound.value = config.startRound === 0 ? Global.round : config.startRound
+    dig 1
+    pushint 24
+    extract_uint64
+    dup
+    bnz createApplication_ternary_false@6
+    pop
+    global Round
+
+createApplication_ternary_merge@7:
+    // contracts/VoteTool.algo.ts:212
+    // startRound = GlobalState<uint64>({ key: 'start' })
+    bytec 16 // "start"
+    // contracts/VoteTool.algo.ts:252
+    // this.startRound.value = config.startRound === 0 ? Global.round : config.startRound
+    swap
+    app_global_put
+    // contracts/VoteTool.algo.ts:253
+    // this.endRound.value = config.endRound
+    dig 1
+    pushint 32
+    extract_uint64
+    // contracts/VoteTool.algo.ts:213
+    // endRound = GlobalState<uint64>({ key: 'end' })
+    bytec 5 // "end"
+    // contracts/VoteTool.algo.ts:253
+    // this.endRound.value = config.endRound
+    swap
+    app_global_put
+    // contracts/VoteTool.algo.ts:254
+    // this.returnMode.value = config.mode === MODE_ESCROW ? config.returnMode : RETURN_SENDERS
+    bnz createApplication_ternary_false@9
+    dup
+    pushint 40
+    extract_uint64
+
+createApplication_ternary_merge@10:
+    // contracts/VoteTool.algo.ts:214
+    // returnMode = GlobalState<uint64>({ key: 'return_mode' })
+    bytec 6 // "return_mode"
+    // contracts/VoteTool.algo.ts:254
+    // this.returnMode.value = config.mode === MODE_ESCROW ? config.returnMode : RETURN_SENDERS
+    swap
+    app_global_put
+    // contracts/VoteTool.algo.ts:255
+    // this.returnAddress.value = config.returnAddress
+    dup
+    extract 48 32
+    // contracts/VoteTool.algo.ts:215
+    // returnAddress = GlobalState<Account>({ key: 'return_addr' })
+    bytec 26 // "return_addr"
+    // contracts/VoteTool.algo.ts:255
+    // this.returnAddress.value = config.returnAddress
+    swap
+    app_global_put
+    // contracts/VoteTool.algo.ts:256
+    // this.gateApp.value = config.gateApp
+    pushint 80
+    extract_uint64
+    // contracts/VoteTool.algo.ts:216
+    // gateApp = GlobalState<uint64>({ key: 'gate_app' })
+    bytec 20 // "gate_app"
+    // contracts/VoteTool.algo.ts:256
+    // this.gateApp.value = config.gateApp
+    swap
+    app_global_put
+    // contracts/VoteTool.algo.ts:257
+    // this.gatePrefix.value = config.gatePrefix
+    uncover 2
+    extract 2 0
+    // contracts/VoteTool.algo.ts:217
+    // gatePrefix = GlobalState<bytes>({ key: 'gate_prefix' })
+    bytec 27 // "gate_prefix"
+    // contracts/VoteTool.algo.ts:257
+    // this.gatePrefix.value = config.gatePrefix
+    swap
+    app_global_put
+    // contracts/VoteTool.algo.ts:218
+    // optionCount = GlobalState<uint64>({ key: 'options' })
+    bytec 10 // "options"
+    // contracts/VoteTool.algo.ts:258
+    // this.optionCount.value = optionCount
+    uncover 2
+    app_global_put
+    // contracts/VoteTool.algo.ts:219
+    // status = GlobalState<uint64>({ key: 'status' })
+    bytec_0 // "status"
+    // contracts/VoteTool.algo.ts:259
+    // this.status.value = STATUS_ACTIVE
+    intc_0 // 0
+    app_global_put
+    // contracts/VoteTool.algo.ts:220
+    // winner = GlobalState<uint64>({ key: 'winner' })
+    bytec 21 // "winner"
+    // contracts/VoteTool.algo.ts:260
+    // this.winner.value = NO_WINNER
+    intc 4 // 18446744073709551615
+    app_global_put
+    // contracts/VoteTool.algo.ts:221
+    // totalWeight = GlobalState<uint64>({ key: 'total_weight' })
+    bytec 14 // "total_weight"
+    // contracts/VoteTool.algo.ts:261
+    // this.totalWeight.value = 0
+    intc_0 // 0
+    app_global_put
+    // contracts/VoteTool.algo.ts:223
+    // totalEscrow = GlobalState<uint64>({ key: 'escrow' })
+    bytec 7 // "escrow"
+    // contracts/VoteTool.algo.ts:262
+    // this.totalEscrow.value = 0
+    intc_0 // 0
+    app_global_put
+    // contracts/VoteTool.algo.ts:224
+    // voters = GlobalState<uint64>({ key: 'voters' })
+    bytec 17 // "voters"
+    // contracts/VoteTool.algo.ts:263
+    // this.voters.value = 0
+    intc_0 // 0
+    app_global_put
+    // contracts/VoteTool.algo.ts:225
+    // openBallots = GlobalState<uint64>({ key: 'open_ballots' })
+    bytec 11 // "open_ballots"
+    // contracts/VoteTool.algo.ts:264
+    // this.openBallots.value = 0
+    intc_0 // 0
+    app_global_put
+    // contracts/VoteTool.algo.ts:226
+    // openNfts = GlobalState<uint64>({ key: 'open_nfts' })
+    bytec 8 // "open_nfts"
+    // contracts/VoteTool.algo.ts:265
+    // this.openNfts.value = 0
+    intc_0 // 0
+    app_global_put
+    // contracts/VoteTool.algo.ts:227
+    // payoutPending = GlobalState<boolean>({ key: 'payout_pending' })
+    bytec 9 // "payout_pending"
+    // contracts/VoteTool.algo.ts:266
+    // this.payoutPending.value = false
+    intc_0 // 0
+    app_global_put
+    // contracts/VoteTool.algo.ts:228
+    // paidTo = GlobalState<Account>({ key: 'paid_to' })
+    bytec 28 // "paid_to"
+    // contracts/VoteTool.algo.ts:267
+    // this.paidTo.value = Global.zeroAddress
+    global ZeroAddress
+    app_global_put
+    // contracts/VoteTool.algo.ts:229
+    // payoutGrace = GlobalState<uint64>({ key: 'grace' })
+    bytec 29 // "grace"
+    // contracts/VoteTool.algo.ts:268
+    // this.payoutGrace.value = payoutGrace
+    swap
+    app_global_put
+    // contracts/VoteTool.algo.ts:243
+    // @abimethod({ onCreate: 'require' })
+    intc_1 // 1
+    return
+
+createApplication_ternary_false@9:
+    // contracts/VoteTool.algo.ts:254
+    // this.returnMode.value = config.mode === MODE_ESCROW ? config.returnMode : RETURN_SENDERS
+    intc_0 // 0
+    b createApplication_ternary_merge@10
+
+createApplication_ternary_false@6:
+    b createApplication_ternary_merge@7
+
+createApplication_ternary_false@3:
+    // contracts/VoteTool.algo.ts:251
+    // this.amountPerVote.value = config.mode === MODE_NFT ? Uint64(1) : config.amountPerVote
+    dig 1
+    pushint 16
+    extract_uint64
+    b createApplication_ternary_merge@4
+
+
+// contracts/VoteTool.algo.ts::Vote.init[routing]() -> void:
+init:
+    intc_0 // 0
+    dup
+    // contracts/VoteTool.algo.ts:276
+    // init(title: string, description: string, options: VoteOption[], collection: CollectionRule): void {
+    txna ApplicationArgs 1
+    dup
+    intc_0 // 0
+    extract_uint16 // on error: invalid array length header
+    intc_3 // 2
+    +
+    dig 1
+    len
+    ==
+    assert // invalid number of bytes for arc4.dynamic_array<arc4.uint8>
+    extract 2 0
+    txna ApplicationArgs 2
+    dup
+    intc_0 // 0
+    extract_uint16 // on error: invalid array length header
+    intc_3 // 2
+    +
+    dig 1
+    len
+    ==
+    assert // invalid number of bytes for arc4.dynamic_array<arc4.uint8>
+    extract 2 0
+    txna ApplicationArgs 3
+    dup
+    intc_0 // 0
+    extract_uint16 // on error: invalid array length header
+    dup
+    cover 2
+    intc_3 // 2
+    *
+    swap
+    dup
+    len
+    cover 2
+    extract 2 0
+    intc_0 // 0
+
+init_for_header@1:
+    // contracts/VoteTool.algo.ts:276
+    // init(title: string, description: string, options: VoteOption[], collection: CollectionRule): void {
+    dup
+    dig 5
+    <
+    bz init_after_for@4
+    dup
+    intc_3 // 2
+    *
+    dig 2
+    dup
+    uncover 2
+    extract_uint16 // on error: invalid array encoding
+    dup
+    uncover 5
+    dup
+    cover 4
+    ==
+    assert // invalid tail pointer for (len+((len+utf8[]),(len+utf8[]),uint8[32])[])
+    dig 1
+    len
+    substring3
+    dup
+    len
+    dig 1
+    intc_0 // 0
+    extract_uint16 // on error: invalid tuple encoding
+    dup
+    pushint 36
+    ==
+    assert // invalid tail pointer at index 0 of ((len+utf8[]),(len+utf8[]),uint8[32])
+    dig 2
+    swap
+    dig 2
+    substring3
+    intc_0 // 0
+    extract_uint16 // on error: invalid array length header
+    pushint 38
+    +
+    dig 2
+    intc_3 // 2
+    extract_uint16 // on error: invalid tuple encoding
+    dup
+    dig 2
+    ==
+    assert // invalid tail pointer at index 1 of ((len+utf8[]),(len+utf8[]),uint8[32])
+    uncover 3
+    swap
+    uncover 3
+    substring3
+    intc_0 // 0
+    extract_uint16 // on error: invalid array length header
+    intc_3 // 2
+    +
+    +
+    +
+    cover 2
+    intc_1 // 1
+    +
+    b init_for_header@1
+
+init_after_for@4:
+    pop
+    // contracts/VoteTool.algo.ts:276
+    // init(title: string, description: string, options: VoteOption[], collection: CollectionRule): void {
+    swap
+    intc_3 // 2
+    +
+    uncover 2
+    ==
+    assert // invalid number of bytes for arc4.dynamic_array<contracts/VoteTool.algo.ts::VoteOption>
+    txna ApplicationArgs 4
+    dup
+    bury 6
+    dup
+    len
+    dig 1
+    intc_0 // 0
+    extract_uint16 // on error: invalid tuple encoding
+    dup
+    pushint 4
+    ==
+    assert // invalid tail pointer at index 0 of ((len+uint8[32][]),(len+uint8[]))
+    dig 2
+    swap
+    dig 2
+    substring3
+    intc_0 // 0
+    extract_uint16 // on error: invalid array length header
+    pushint 32
+    *
+    pushint 6
+    +
+    dig 2
+    intc_3 // 2
+    extract_uint16 // on error: invalid tuple encoding
+    dup
+    dig 2
+    ==
+    assert // invalid tail pointer at index 1 of ((len+uint8[32][]),(len+uint8[]))
+    uncover 3
+    swap
+    dig 3
+    substring3
+    intc_0 // 0
+    extract_uint16 // on error: invalid array length header
+    intc_3 // 2
+    +
+    +
+    ==
+    assert // invalid number of bytes for contracts/VoteTool.algo.ts::CollectionRule
+    // contracts/VoteTool.algo.ts:277
+    // assert(Global.callerApplicationId === this.factory.value, 'factory only')
+    global CallerApplicationID
+    intc_0 // 0
+    // contracts/VoteTool.algo.ts:205
+    // factory = GlobalState<uint64>({ key: 'factory' })
+    bytec 18 // "factory"
+    // contracts/VoteTool.algo.ts:277
+    // assert(Global.callerApplicationId === this.factory.value, 'factory only')
+    app_global_get_ex
+    assert // check GlobalState exists
+    ==
+    assert // factory only
+    // contracts/VoteTool.algo.ts:234
+    // tally = Box<bytes>({ key: 't' })
+    bytec_3 // "t"
+    // contracts/VoteTool.algo.ts:278
+    // assert(!this.tally.exists, 'already initialised')
+    box_len
+    bury 1
+    !
+    assert // already initialised
+    // contracts/VoteTool.algo.ts:279
+    // assert(options.length === this.optionCount.value, 'option count')
+    intc_0 // 0
+    // contracts/VoteTool.algo.ts:218
+    // optionCount = GlobalState<uint64>({ key: 'options' })
+    bytec 10 // "options"
+    // contracts/VoteTool.algo.ts:279
+    // assert(options.length === this.optionCount.value, 'option count')
+    app_global_get_ex
+    assert // check GlobalState exists
+    dig 2
+    ==
+    assert // option count
+    // contracts/VoteTool.algo.ts:281
+    // op.AppParamsSet.appForeignBoxReads(true)
+    intc_1 // 1
+    app_params_set AppForeignBoxReads
+    // contracts/VoteTool.algo.ts:283
+    // this.meta.value = { title: title, description: description }
+    uncover 3
+    dup
+    len
+    itob
+    extract 6 2
+    swap
+    concat
+    dup
+    len
+    pushint 4
+    +
+    uncover 4
+    dup
+    len
+    itob
+    extract 6 2
+    swap
+    concat
+    swap
+    itob
+    extract 6 2
+    pushbytes 0x0004
+    swap
+    concat
+    uncover 2
+    concat
+    swap
+    concat
+    // contracts/VoteTool.algo.ts:231
+    // meta = Box<{ title: string; description: string }>({ key: 'm' })
+    bytec 22 // "m"
+    // contracts/VoteTool.algo.ts:283
+    // this.meta.value = { title: title, description: description }
+    box_del
+    pop
+    // contracts/VoteTool.algo.ts:231
+    // meta = Box<{ title: string; description: string }>({ key: 'm' })
+    bytec 22 // "m"
+    // contracts/VoteTool.algo.ts:283
+    // this.meta.value = { title: title, description: description }
+    swap
+    box_put
+    // contracts/VoteTool.algo.ts:284
+    // if (this.mode.value === MODE_NFT) {
+    intc_0 // 0
+    // contracts/VoteTool.algo.ts:209
+    // mode = GlobalState<uint64>({ key: 'mode' })
+    bytec_1 // "mode"
+    // contracts/VoteTool.algo.ts:284
+    // if (this.mode.value === MODE_NFT) {
+    app_global_get_ex
+    assert // check GlobalState exists
+    intc_3 // 2
+    ==
+    bz init_after_if_else@7
+    // contracts/VoteTool.algo.ts:239
+    // collection = Box<CollectionRule>({ key: 'c' })
+    bytec 15 // "c"
+    // contracts/VoteTool.algo.ts:285
+    // this.collection.value = clone(collection)
+    box_del
+    pop
+    // contracts/VoteTool.algo.ts:239
+    // collection = Box<CollectionRule>({ key: 'c' })
+    bytec 15 // "c"
+    // contracts/VoteTool.algo.ts:285
+    // this.collection.value = clone(collection)
+    dig 3
+    box_put
+
+init_after_if_else@7:
+    // contracts/VoteTool.algo.ts:287
+    // for (let i: uint64 = 0; i < options.length; i += 1) {
+    intc_0 // 0
+
+init_while_top@8:
+    // contracts/VoteTool.algo.ts:287
+    // for (let i: uint64 = 0; i < options.length; i += 1) {
+    dup
+    dig 3
+    <
+    bz init_after_while@10
+    dup
+    intc_3 // 2
+    *
+    dig 2
+    dup
+    uncover 2
+    extract_uint16
+    dig 1
+    len
+    dig 3
+    intc_1 // 1
+    +
+    dup
+    intc_3 // 2
+    *
+    dig 4
+    swap
+    extract_uint16
+    dig 7
+    dig 2
+    -
+    uncover 3
+    cover 2
+    select
+    uncover 3
+    uncover 3
+    uncover 2
+    substring3
+    // contracts/VoteTool.algo.ts:288
+    // this.options(i).value = clone(options[i])
+    uncover 2
+    itob
+    // contracts/VoteTool.algo.ts:232
+    // options = BoxMap<uint64, VoteOption>({ keyPrefix: 'o' })
+    bytec 23 // "o"
+    swap
+    concat
+    // contracts/VoteTool.algo.ts:288
+    // this.options(i).value = clone(options[i])
+    dup
+    box_del
+    pop
+    swap
+    box_put
+    b init_while_top@8
+
+init_after_while@10:
+    popn 3
+    // contracts/VoteTool.algo.ts:234
+    // tally = Box<bytes>({ key: 't' })
+    bytec_3 // "t"
+    // contracts/VoteTool.algo.ts:290
+    // this.tally.create({ size: MAX_OPTIONS * 8 })
+    pushint 128
+    box_create
+    pop
+    // contracts/VoteTool.algo.ts:292
+    // if (this.mode.value === MODE_ESCROW) {
+    intc_0 // 0
+    // contracts/VoteTool.algo.ts:209
+    // mode = GlobalState<uint64>({ key: 'mode' })
+    bytec_1 // "mode"
+    // contracts/VoteTool.algo.ts:292
+    // if (this.mode.value === MODE_ESCROW) {
+    app_global_get_ex
+    assert // check GlobalState exists
+    bnz init_after_if_else@13
+    // contracts/VoteTool.algo.ts:293-295
+    // itxn
+    //   .assetTransfer({ xferAsset: this.asset.value, assetReceiver: Global.currentApplicationAddress, assetAmount: 0, fee: 0 })
+    //   .submit()
+    itxn_begin
+    // contracts/VoteTool.algo.ts:294
+    // .assetTransfer({ xferAsset: this.asset.value, assetReceiver: Global.currentApplicationAddress, assetAmount: 0, fee: 0 })
+    intc_0 // 0
+    // contracts/VoteTool.algo.ts:210
+    // asset = GlobalState<uint64>({ key: 'asset' })
+    bytec_2 // "asset"
+    // contracts/VoteTool.algo.ts:294
+    // .assetTransfer({ xferAsset: this.asset.value, assetReceiver: Global.currentApplicationAddress, assetAmount: 0, fee: 0 })
+    app_global_get_ex
+    assert // check GlobalState exists
+    global CurrentApplicationAddress
+    intc_0 // 0
+    itxn_field AssetAmount
+    itxn_field AssetReceiver
+    itxn_field XferAsset
+    // contracts/VoteTool.algo.ts:293-294
+    // itxn
+    //   .assetTransfer({ xferAsset: this.asset.value, assetReceiver: Global.currentApplicationAddress, assetAmount: 0, fee: 0 })
+    pushint 4
+    itxn_field TypeEnum
+    // contracts/VoteTool.algo.ts:294
+    // .assetTransfer({ xferAsset: this.asset.value, assetReceiver: Global.currentApplicationAddress, assetAmount: 0, fee: 0 })
+    intc_0 // 0
+    itxn_field Fee
+    // contracts/VoteTool.algo.ts:293-295
+    // itxn
+    //   .assetTransfer({ xferAsset: this.asset.value, assetReceiver: Global.currentApplicationAddress, assetAmount: 0, fee: 0 })
+    //   .submit()
+    itxn_submit
+
+init_after_if_else@13:
+    // contracts/VoteTool.algo.ts:299
+    // const registry = Application(this.registry.value)
+    intc_0 // 0
+    // contracts/VoteTool.algo.ts:206
+    // registry = GlobalState<uint64>({ key: 'registry' })
+    bytec 19 // "registry"
+    // contracts/VoteTool.algo.ts:299
+    // const registry = Application(this.registry.value)
+    app_global_get_ex
+    assert // check GlobalState exists
+    // contracts/VoteTool.algo.ts:300
+    // const regBefore = registry.address.minBalance
+    dup
+    app_params_get AppAddress
+    assert // application exists
+    acct_params_get AcctMinBalance
+    assert // account funded
+    // contracts/VoteTool.algo.ts:301
+    // const key = this.registryKey()
+    callsub registryKey
+    // contracts/VoteTool.algo.ts:302
+    // op.AppBox.create(registry, key, REC_SIZE)
+    dig 2
+    dig 1
+    pushint 104
+    app_box_create
+    pop
+    // contracts/VoteTool.algo.ts:306
+    // op.itob(Global.currentApplicationId.id)
+    global CurrentApplicationID
+    itob
+    // contracts/VoteTool.algo.ts:307
+    // .concat(this.creator.value.bytes)
+    intc_0 // 0
+    // contracts/VoteTool.algo.ts:208
+    // creator = GlobalState<Account>({ key: 'creator' })
+    bytec 4 // "creator"
+    // contracts/VoteTool.algo.ts:307
+    // .concat(this.creator.value.bytes)
+    app_global_get_ex
+    assert // check GlobalState exists
+    // contracts/VoteTool.algo.ts:306-307
+    // op.itob(Global.currentApplicationId.id)
+    //   .concat(this.creator.value.bytes)
+    concat
+    // contracts/VoteTool.algo.ts:308
+    // .concat(op.itob(this.mode.value))
+    intc_0 // 0
+    // contracts/VoteTool.algo.ts:209
+    // mode = GlobalState<uint64>({ key: 'mode' })
+    bytec_1 // "mode"
+    // contracts/VoteTool.algo.ts:308
+    // .concat(op.itob(this.mode.value))
+    app_global_get_ex
+    assert // check GlobalState exists
+    itob
+    // contracts/VoteTool.algo.ts:306-308
+    // op.itob(Global.currentApplicationId.id)
+    //   .concat(this.creator.value.bytes)
+    //   .concat(op.itob(this.mode.value))
+    concat
+    // contracts/VoteTool.algo.ts:309
+    // .concat(op.itob(this.asset.value))
+    intc_0 // 0
+    // contracts/VoteTool.algo.ts:210
+    // asset = GlobalState<uint64>({ key: 'asset' })
+    bytec_2 // "asset"
+    // contracts/VoteTool.algo.ts:309
+    // .concat(op.itob(this.asset.value))
+    app_global_get_ex
+    assert // check GlobalState exists
+    itob
+    // contracts/VoteTool.algo.ts:306-309
+    // op.itob(Global.currentApplicationId.id)
+    //   .concat(this.creator.value.bytes)
+    //   .concat(op.itob(this.mode.value))
+    //   .concat(op.itob(this.asset.value))
+    concat
+    // contracts/VoteTool.algo.ts:310
+    // .concat(op.itob(this.startRound.value))
+    intc_0 // 0
+    // contracts/VoteTool.algo.ts:212
+    // startRound = GlobalState<uint64>({ key: 'start' })
+    bytec 16 // "start"
+    // contracts/VoteTool.algo.ts:310
+    // .concat(op.itob(this.startRound.value))
+    app_global_get_ex
+    assert // check GlobalState exists
+    itob
+    // contracts/VoteTool.algo.ts:306-310
+    // op.itob(Global.currentApplicationId.id)
+    //   .concat(this.creator.value.bytes)
+    //   .concat(op.itob(this.mode.value))
+    //   .concat(op.itob(this.asset.value))
+    //   .concat(op.itob(this.startRound.value))
+    concat
+    // contracts/VoteTool.algo.ts:311
+    // .concat(op.itob(this.endRound.value))
+    intc_0 // 0
+    // contracts/VoteTool.algo.ts:213
+    // endRound = GlobalState<uint64>({ key: 'end' })
+    bytec 5 // "end"
+    // contracts/VoteTool.algo.ts:311
+    // .concat(op.itob(this.endRound.value))
+    app_global_get_ex
+    assert // check GlobalState exists
+    itob
+    // contracts/VoteTool.algo.ts:306-311
+    // op.itob(Global.currentApplicationId.id)
+    //   .concat(this.creator.value.bytes)
+    //   .concat(op.itob(this.mode.value))
+    //   .concat(op.itob(this.asset.value))
+    //   .concat(op.itob(this.startRound.value))
+    //   .concat(op.itob(this.endRound.value))
+    concat
+    // contracts/VoteTool.algo.ts:312
+    // .concat(op.itob(STATUS_ACTIVE))
+    intc_0 // 0
+    itob
+    // contracts/VoteTool.algo.ts:306-312
+    // op.itob(Global.currentApplicationId.id)
+    //   .concat(this.creator.value.bytes)
+    //   .concat(op.itob(this.mode.value))
+    //   .concat(op.itob(this.asset.value))
+    //   .concat(op.itob(this.startRound.value))
+    //   .concat(op.itob(this.endRound.value))
+    //   .concat(op.itob(STATUS_ACTIVE))
+    swap
+    dig 1
+    concat
+    // contracts/VoteTool.algo.ts:313
+    // .concat(op.itob(NO_WINNER))
+    intc 4 // 18446744073709551615
+    itob
+    // contracts/VoteTool.algo.ts:306-313
+    // op.itob(Global.currentApplicationId.id)
+    //   .concat(this.creator.value.bytes)
+    //   .concat(op.itob(this.mode.value))
+    //   .concat(op.itob(this.asset.value))
+    //   .concat(op.itob(this.startRound.value))
+    //   .concat(op.itob(this.endRound.value))
+    //   .concat(op.itob(STATUS_ACTIVE))
+    //   .concat(op.itob(NO_WINNER))
+    concat
+    // contracts/VoteTool.algo.ts:306-314
+    // op.itob(Global.currentApplicationId.id)
+    //   .concat(this.creator.value.bytes)
+    //   .concat(op.itob(this.mode.value))
+    //   .concat(op.itob(this.asset.value))
+    //   .concat(op.itob(this.startRound.value))
+    //   .concat(op.itob(this.endRound.value))
+    //   .concat(op.itob(STATUS_ACTIVE))
+    //   .concat(op.itob(NO_WINNER))
+    //   .concat(op.itob(0))
+    dig 1
+    concat
+    // contracts/VoteTool.algo.ts:306-315
+    // op.itob(Global.currentApplicationId.id)
+    //   .concat(this.creator.value.bytes)
+    //   .concat(op.itob(this.mode.value))
+    //   .concat(op.itob(this.asset.value))
+    //   .concat(op.itob(this.startRound.value))
+    //   .concat(op.itob(this.endRound.value))
+    //   .concat(op.itob(STATUS_ACTIVE))
+    //   .concat(op.itob(NO_WINNER))
+    //   .concat(op.itob(0))
+    //   .concat(op.itob(0)),
+    swap
+    concat
+    // contracts/VoteTool.algo.ts:303-316
+    // op.AppBox.put(
+    //   registry,
+    //   key,
+    //   op.itob(Global.currentApplicationId.id)
+    //     .concat(this.creator.value.bytes)
+    //     .concat(op.itob(this.mode.value))
+    //     .concat(op.itob(this.asset.value))
+    //     .concat(op.itob(this.startRound.value))
+    //     .concat(op.itob(this.endRound.value))
+    //     .concat(op.itob(STATUS_ACTIVE))
+    //     .concat(op.itob(NO_WINNER))
+    //     .concat(op.itob(0))
+    //     .concat(op.itob(0)),
+    // )
+    dig 3
+    cover 2
+    app_box_put
+    // contracts/VoteTool.algo.ts:317
+    // itxn.payment({ receiver: registry.address, amount: registry.address.minBalance - regBefore, fee: 0 }).submit()
+    itxn_begin
+    dig 1
+    app_params_get AppAddress
+    assert // application exists
+    uncover 2
+    app_params_get AppAddress
+    assert // application exists
+    acct_params_get AcctMinBalance
+    assert // account funded
+    uncover 2
+    -
+    itxn_field Amount
+    itxn_field Receiver
+    intc_1 // 1
+    itxn_field TypeEnum
+    intc_0 // 0
+    itxn_field Fee
+    itxn_submit
+    // contracts/VoteTool.algo.ts:319
+    // const app = Global.currentApplicationAddress
+    global CurrentApplicationAddress
+    dup
+    bury 3
+    // contracts/VoteTool.algo.ts:320
+    // if (app.balance > app.minBalance) {
+    dup
+    acct_params_get AcctBalance
+    assert // account funded
+    swap
+    acct_params_get AcctMinBalance
+    assert // account funded
+    >
+    bz init_after_if_else@17
+    // contracts/VoteTool.algo.ts:321
+    // itxn.payment({ receiver: this.creator.value, amount: app.balance - app.minBalance, fee: 0 }).submit()
+    itxn_begin
+    intc_0 // 0
+    // contracts/VoteTool.algo.ts:208
+    // creator = GlobalState<Account>({ key: 'creator' })
+    bytec 4 // "creator"
+    // contracts/VoteTool.algo.ts:321
+    // itxn.payment({ receiver: this.creator.value, amount: app.balance - app.minBalance, fee: 0 }).submit()
+    app_global_get_ex
+    assert // check GlobalState exists
+    dig 2
+    dup
+    acct_params_get AcctBalance
+    assert // account funded
+    swap
+    acct_params_get AcctMinBalance
+    assert // account funded
+    -
+    itxn_field Amount
+    itxn_field Receiver
+    intc_1 // 1
+    itxn_field TypeEnum
+    intc_0 // 0
+    itxn_field Fee
+    itxn_submit
+
+init_after_if_else@17:
+    // contracts/VoteTool.algo.ts:276
+    // init(title: string, description: string, options: VoteOption[], collection: CollectionRule): void {
+    intc_1 // 1
+    return
+
+
+// contracts/VoteTool.algo.ts::Vote.voteEscrow[routing]() -> void:
+voteEscrow:
+    // contracts/VoteTool.algo.ts:336
+    // voteEscrow(pay: gtxn.PaymentTxn, deposit: gtxn.AssetTransferTxn, option: uint64): void {
+    txn GroupIndex
+    intc_3 // 2
+    -
+    dup
+    gtxns TypeEnum
+    intc_1 // pay
+    ==
+    assert // transaction type is pay
+    txn GroupIndex
+    intc_1 // 1
+    -
+    dup
+    gtxns TypeEnum
+    pushint 4 // axfer
+    ==
+    assert // transaction type is axfer
+    txna ApplicationArgs 1
+    dup
+    len
+    intc_2 // 8
+    ==
+    assert // invalid number of bytes for arc4.uint64
+    btoi
+    // contracts/VoteTool.algo.ts:337
+    // this.assertVoting(MODE_ESCROW)
+    intc_0 // 0
+    callsub assertVoting
+    // contracts/VoteTool.algo.ts:338
+    // assert(deposit.sender === Txn.sender, 'deposit sender')
+    dig 1
+    gtxns Sender
+    txn Sender
+    ==
+    assert // deposit sender
+    // contracts/VoteTool.algo.ts:339
+    // assert(deposit.xferAsset === Asset(this.asset.value), 'wrong asset')
+    dig 1
+    gtxns XferAsset
+    intc_0 // 0
+    // contracts/VoteTool.algo.ts:210
+    // asset = GlobalState<uint64>({ key: 'asset' })
+    bytec_2 // "asset"
+    // contracts/VoteTool.algo.ts:339
+    // assert(deposit.xferAsset === Asset(this.asset.value), 'wrong asset')
+    app_global_get_ex
+    assert // check GlobalState exists
+    ==
+    assert // wrong asset
+    // contracts/VoteTool.algo.ts:340
+    // assert(deposit.assetReceiver === Global.currentApplicationAddress, 'deposit receiver')
+    dig 1
+    gtxns AssetReceiver
+    global CurrentApplicationAddress
+    ==
+    assert // deposit receiver
+    // contracts/VoteTool.algo.ts:341
+    // assert(deposit.assetCloseTo === Global.zeroAddress, 'no close-to')
+    dig 1
+    gtxns AssetCloseTo
+    global ZeroAddress
+    ==
+    assert // no close-to
+    // contracts/VoteTool.algo.ts:342
+    // assert(deposit.assetAmount > 0, 'empty deposit')
+    swap
+    gtxns AssetAmount
+    dup
+    assert // empty deposit
+    // contracts/VoteTool.algo.ts:343
+    // assert(deposit.assetAmount % this.amountPerVote.value === 0, 'deposit must be a whole number of votes')
+    intc_0 // 0
+    // contracts/VoteTool.algo.ts:211
+    // amountPerVote = GlobalState<uint64>({ key: 'apv' })
+    bytec 13 // "apv"
+    // contracts/VoteTool.algo.ts:343
+    // assert(deposit.assetAmount % this.amountPerVote.value === 0, 'deposit must be a whole number of votes')
+    app_global_get_ex
+    assert // check GlobalState exists
+    dig 1
+    swap
+    %
+    !
+    assert // deposit must be a whole number of votes
+    // contracts/VoteTool.algo.ts:345
+    // const before = Global.currentApplicationAddress.minBalance
+    global CurrentApplicationAddress
+    acct_params_get AcctMinBalance
+    assert // account funded
+    // contracts/VoteTool.algo.ts:346
+    // const old = this.ballotOf(Txn.sender)
+    txn Sender
+    callsub ballotOf
+    // contracts/VoteTool.algo.ts:347
+    // const amount: uint64 = old.amount + deposit.assetAmount
+    intc_2 // 8
+    extract_uint64
+    dig 2
+    +
+    // contracts/VoteTool.algo.ts:348
+    // this.applyBallot(Txn.sender, option, amount, amount / this.amountPerVote.value)
+    txn Sender
+    intc_0 // 0
+    // contracts/VoteTool.algo.ts:211
+    // amountPerVote = GlobalState<uint64>({ key: 'apv' })
+    bytec 13 // "apv"
+    // contracts/VoteTool.algo.ts:348
+    // this.applyBallot(Txn.sender, option, amount, amount / this.amountPerVote.value)
+    app_global_get_ex
+    assert // check GlobalState exists
+    dig 2
+    swap
+    /
+    swap
+    uncover 5
+    uncover 3
+    uncover 3
+    callsub applyBallot
+    // contracts/VoteTool.algo.ts:349
+    // this.totalEscrow.value += deposit.assetAmount
+    intc_0 // 0
+    // contracts/VoteTool.algo.ts:223
+    // totalEscrow = GlobalState<uint64>({ key: 'escrow' })
+    bytec 7 // "escrow"
+    // contracts/VoteTool.algo.ts:349
+    // this.totalEscrow.value += deposit.assetAmount
+    app_global_get_ex
+    assert // check GlobalState exists
+    uncover 2
+    +
+    // contracts/VoteTool.algo.ts:223
+    // totalEscrow = GlobalState<uint64>({ key: 'escrow' })
+    bytec 7 // "escrow"
+    // contracts/VoteTool.algo.ts:349
+    // this.totalEscrow.value += deposit.assetAmount
+    swap
+    app_global_put
+    // contracts/VoteTool.algo.ts:350
+    // this.settleMbr(pay, before)
+    callsub settleMbr
+    // contracts/VoteTool.algo.ts:336
+    // voteEscrow(pay: gtxn.PaymentTxn, deposit: gtxn.AssetTransferTxn, option: uint64): void {
+    intc_1 // 1
+    return
+
+
+// contracts/VoteTool.algo.ts::Vote.voteHeld[routing]() -> void:
+voteHeld:
+    // contracts/VoteTool.algo.ts:354
+    // voteHeld(pay: gtxn.PaymentTxn, option: uint64): void {
+    txn GroupIndex
+    intc_1 // 1
+    -
+    dup
+    gtxns TypeEnum
+    intc_1 // pay
+    ==
+    assert // transaction type is pay
+    txna ApplicationArgs 1
+    dup
+    len
+    intc_2 // 8
+    ==
+    assert // invalid number of bytes for arc4.uint64
+    btoi
+    // contracts/VoteTool.algo.ts:355
+    // this.assertVoting(MODE_HELD)
+    intc_1 // 1
+    callsub assertVoting
+    // contracts/VoteTool.algo.ts:356
+    // const [balance, optedIn] = op.AssetHolding.assetBalance(Txn.sender, this.asset.value)
+    txn Sender
+    intc_0 // 0
+    // contracts/VoteTool.algo.ts:210
+    // asset = GlobalState<uint64>({ key: 'asset' })
+    bytec_2 // "asset"
+    // contracts/VoteTool.algo.ts:356
+    // const [balance, optedIn] = op.AssetHolding.assetBalance(Txn.sender, this.asset.value)
+    app_global_get_ex
+    assert // check GlobalState exists
+    asset_holding_get AssetBalance
+    // contracts/VoteTool.algo.ts:357
+    // assert(optedIn, 'not opted in to the vote asset')
+    assert // not opted in to the vote asset
+    // contracts/VoteTool.algo.ts:358
+    // const weight: uint64 = balance / this.amountPerVote.value
+    intc_0 // 0
+    // contracts/VoteTool.algo.ts:211
+    // amountPerVote = GlobalState<uint64>({ key: 'apv' })
+    bytec 13 // "apv"
+    // contracts/VoteTool.algo.ts:358
+    // const weight: uint64 = balance / this.amountPerVote.value
+    app_global_get_ex
+    assert // check GlobalState exists
+    dig 1
+    swap
+    /
+    // contracts/VoteTool.algo.ts:359
+    // assert(weight > 0, 'balance below one vote')
+    dup
+    assert // balance below one vote
+    // contracts/VoteTool.algo.ts:361
+    // const before = Global.currentApplicationAddress.minBalance
+    global CurrentApplicationAddress
+    acct_params_get AcctMinBalance
+    assert // account funded
+    // contracts/VoteTool.algo.ts:362
+    // this.applyBallot(Txn.sender, option, balance, weight)
+    txn Sender
+    cover 4
+    cover 4
+    callsub applyBallot
+    // contracts/VoteTool.algo.ts:363
+    // this.settleMbr(pay, before)
+    callsub settleMbr
+    // contracts/VoteTool.algo.ts:354
+    // voteHeld(pay: gtxn.PaymentTxn, option: uint64): void {
+    intc_1 // 1
+    return
+
+
+// contracts/VoteTool.algo.ts::Vote.voteNft[routing]() -> void:
+voteNft:
+    intc_0 // 0
+    dup
+    pushbytes ""
+    dup
+    // contracts/VoteTool.algo.ts:367
+    // voteNft(pay: gtxn.PaymentTxn, option: uint64, assets: uint64[]): void {
+    txn GroupIndex
+    intc_1 // 1
+    -
+    dup
+    gtxns TypeEnum
+    intc_1 // pay
+    ==
+    assert // transaction type is pay
+    txna ApplicationArgs 1
+    dup
+    len
+    intc_2 // 8
+    ==
+    assert // invalid number of bytes for arc4.uint64
+    btoi
+    txna ApplicationArgs 2
+    dupn 2
+    intc_0 // 0
+    extract_uint16 // on error: invalid array length header
+    dup
+    cover 2
+    intc_2 // 8
+    *
+    intc_3 // 2
+    +
+    swap
+    len
+    ==
+    assert // invalid number of bytes for arc4.dynamic_array<uint64>
+    // contracts/VoteTool.algo.ts:368
+    // this.assertVoting(MODE_NFT)
+    intc_3 // 2
+    callsub assertVoting
+    // contracts/VoteTool.algo.ts:369
+    // const before = Global.currentApplicationAddress.minBalance
+    global CurrentApplicationAddress
+    acct_params_get AcctMinBalance
+    assert // account funded
+    // contracts/VoteTool.algo.ts:370
+    // let added: uint64 = 0
+    intc_0 // 0
+    // contracts/VoteTool.algo.ts:239
+    // collection = Box<CollectionRule>({ key: 'c' })
+    bytec 15 // "c"
+    // contracts/VoteTool.algo.ts:371
+    // const rule = clone(this.collection.value)
+    box_get
+    assert // Box must have value
+    intc_0 // 0
+    swap
+
+voteNft_for_header@2:
+    // contracts/VoteTool.algo.ts:372
+    // for (const id of assets) {
+    dig 1
+    dig 5
+    <
+    bz voteNft_after_for@5
+    dig 5
+    extract 2 0
+    dig 2
+    intc_2 // 8
+    *
+    extract_uint64
+    dup
+    cover 4
+    // contracts/VoteTool.algo.ts:572
+    // const [assetCreator] = op.AssetParams.assetCreator(id)
+    asset_params_get AssetCreator
+    pop
+    cover 4
+    // contracts/VoteTool.algo.ts:573
+    // let byCreator = false
+    intc_0 // 0
+    bury 12
+    // contracts/VoteTool.algo.ts:574
+    // for (let i: uint64 = 0; i < rule.creators.length; i += 1) {
+    intc_0 // 0
+    swap
+
+voteNft_while_top@11:
+    // contracts/VoteTool.algo.ts:574
+    // for (let i: uint64 = 0; i < rule.creators.length; i += 1) {
+    dupn 2
+    intc_0 // 0
+    extract_uint16
+    dig 1
+    intc_3 // 2
+    extract_uint16
+    dup
+    cover 6
+    substring3
+    dup
+    intc_0 // 0
+    extract_uint16 // on error: invalid array length header
+    dig 3
+    >
+    bz voteNft_after_while@15
+    uncover 4
+    pop
+    // contracts/VoteTool.algo.ts:574-575
+    // for (let i: uint64 = 0; i < rule.creators.length; i += 1) {
+    //   if (rule.creators[i] === assetCreator) byCreator = true
+    extract 2 0
+    dig 2
+    pushint 32
+    *
+    pushint 32
+    extract3 // on error: index access is out of bounds
+    // contracts/VoteTool.algo.ts:575
+    // if (rule.creators[i] === assetCreator) byCreator = true
+    dig 6
+    ==
+    bz voteNft_after_if_else@14
+    intc_1 // 1
+    bury 13
+
+voteNft_after_if_else@14:
+    // contracts/VoteTool.algo.ts:574
+    // for (let i: uint64 = 0; i < rule.creators.length; i += 1) {
+    swap
+    intc_1 // 1
+    +
+    swap
+    b voteNft_while_top@11
+
+voteNft_after_while@15:
+    pop
+    bury 1
+    uncover 5
+    pop
+    // contracts/VoteTool.algo.ts:577
+    // if (!byCreator) return false
+    dig 11
+    bnz voteNft_after_if_else@17
+    uncover 2
+    pop
+    intc_0 // 0
+
+voteNft_after_inlined_contracts/VoteTool.algo.ts::Vote.isPiece@24:
+    // contracts/VoteTool.algo.ts:373
+    // assert(this.isPiece(rule, id), 'not in collection')
+    assert // not in collection
+    // contracts/VoteTool.algo.ts:374
+    // const [held] = op.AssetHolding.assetBalance(Txn.sender, id)
+    txn Sender
+    uncover 4
+    dup
+    cover 2
+    asset_holding_get AssetBalance
+    pop
+    // contracts/VoteTool.algo.ts:375
+    // assert(held > 0, 'piece not held')
+    assert // piece not held
+    // contracts/VoteTool.algo.ts:376
+    // assert(!this.nfts(id).exists, 'piece already voted')
+    itob
+    // contracts/VoteTool.algo.ts:237
+    // nfts = BoxMap<uint64, Account>({ keyPrefix: 'n' })
+    bytec 24 // "n"
+    swap
+    concat
+    // contracts/VoteTool.algo.ts:376
+    // assert(!this.nfts(id).exists, 'piece already voted')
+    dup
+    box_len
+    bury 1
+    !
+    assert // piece already voted
+    // contracts/VoteTool.algo.ts:377
+    // this.nfts(id).value = Txn.sender
+    txn Sender
+    box_put
+    // contracts/VoteTool.algo.ts:378
+    // added += 1
+    uncover 2
+    intc_1 // 1
+    +
+    cover 2
+    swap
+    intc_1 // 1
+    +
+    swap
+    b voteNft_for_header@2
+
+voteNft_after_if_else@17:
+    // contracts/VoteTool.algo.ts:578
+    // if (rule.unitPrefix.length === 0) return true
+    dupn 2
+    len
+    swap
+    uncover 4
+    uncover 2
+    substring3
+    extract 2 0
+    dup
+    bury 14
+    len
+    dup
+    bury 11
+    bnz voteNft_after_if_else@19
+    intc_1 // 1
+    // contracts/VoteTool.algo.ts:373
+    // assert(this.isPiece(rule, id), 'not in collection')
+    b voteNft_after_inlined_contracts/VoteTool.algo.ts::Vote.isPiece@24
+
+voteNft_after_if_else@19:
+    // contracts/VoteTool.algo.ts:579
+    // const [unit] = op.AssetParams.assetUnitName(id)
+    dig 3
+    asset_params_get AssetUnitName
+    pop
+    dup
+    bury 13
+    // contracts/VoteTool.algo.ts:580
+    // return unit.length >= rule.unitPrefix.length && op.extract(unit, 0, rule.unitPrefix.length) === rule.unitPrefix
+    len
+    dig 10
+    >=
+    bz voteNft_bool_false@22
+    dig 11
+    intc_0 // 0
+    dig 11
+    extract3
+    dig 13
+    ==
+    bz voteNft_bool_false@22
+    intc_1 // 1
+    // contracts/VoteTool.algo.ts:373
+    // assert(this.isPiece(rule, id), 'not in collection')
+    b voteNft_after_inlined_contracts/VoteTool.algo.ts::Vote.isPiece@24
+
+voteNft_bool_false@22:
+    intc_0 // 0
+    // contracts/VoteTool.algo.ts:373
+    // assert(this.isPiece(rule, id), 'not in collection')
+    b voteNft_after_inlined_contracts/VoteTool.algo.ts::Vote.isPiece@24
+
+voteNft_after_for@5:
+    popn 2
+    // contracts/VoteTool.algo.ts:380
+    // const old = this.ballotOf(Txn.sender)
+    txn Sender
+    callsub ballotOf
+    // contracts/VoteTool.algo.ts:381
+    // assert(added > 0 || this.ballots(Txn.sender).exists, 'no pieces')
+    dig 1
+    bnz voteNft_bool_true@7
+    // contracts/VoteTool.algo.ts:235
+    // ballots = BoxMap<Account, Ballot>({ keyPrefix: 'b' })
+    bytec 12 // "b"
+    // contracts/VoteTool.algo.ts:381
+    // assert(added > 0 || this.ballots(Txn.sender).exists, 'no pieces')
+    txn Sender
+    // contracts/VoteTool.algo.ts:235
+    // ballots = BoxMap<Account, Ballot>({ keyPrefix: 'b' })
+    concat
+    // contracts/VoteTool.algo.ts:381
+    // assert(added > 0 || this.ballots(Txn.sender).exists, 'no pieces')
+    box_len
+    bury 1
+    bz voteNft_bool_false@8
+
+voteNft_bool_true@7:
+    intc_1 // 1
+
+voteNft_bool_merge@9:
+    // contracts/VoteTool.algo.ts:381
+    // assert(added > 0 || this.ballots(Txn.sender).exists, 'no pieces')
+    assert // no pieces
+    // contracts/VoteTool.algo.ts:382
+    // this.openNfts.value += added
+    intc_0 // 0
+    // contracts/VoteTool.algo.ts:226
+    // openNfts = GlobalState<uint64>({ key: 'open_nfts' })
+    bytec 8 // "open_nfts"
+    // contracts/VoteTool.algo.ts:382
+    // this.openNfts.value += added
+    app_global_get_ex
+    assert // check GlobalState exists
+    uncover 2
+    dup
+    cover 2
+    +
+    // contracts/VoteTool.algo.ts:226
+    // openNfts = GlobalState<uint64>({ key: 'open_nfts' })
+    bytec 8 // "open_nfts"
+    // contracts/VoteTool.algo.ts:382
+    // this.openNfts.value += added
+    swap
+    app_global_put
+    // contracts/VoteTool.algo.ts:383
+    // this.applyBallot(Txn.sender, option, old.amount + added, old.weight + added)
+    txn Sender
+    uncover 2
+    dup
+    intc_2 // 8
+    extract_uint64
+    dig 3
+    +
+    swap
+    pushint 16
+    extract_uint64
+    uncover 3
+    +
+    uncover 2
+    dig 6
+    uncover 3
+    uncover 3
+    callsub applyBallot
+    // contracts/VoteTool.algo.ts:384
+    // this.settleMbr(pay, before)
+    dig 4
+    dig 1
+    callsub settleMbr
+    // contracts/VoteTool.algo.ts:367
+    // voteNft(pay: gtxn.PaymentTxn, option: uint64, assets: uint64[]): void {
+    intc_1 // 1
+    return
+
+voteNft_bool_false@8:
+    intc_0 // 0
+    b voteNft_bool_merge@9
+
+
+// contracts/VoteTool.algo.ts::Vote.recount[routing]() -> void:
+recount:
+    intc_0 // 0
+    pushbytes ""
+    dup
+    // contracts/VoteTool.algo.ts:390
+    // recount(voter: Account): void {
+    txna ApplicationArgs 1
+    dup
+    len
+    pushint 32
+    ==
+    assert // invalid number of bytes for arc4.static_array<arc4.uint8, 32>
+    // contracts/VoteTool.algo.ts:391
+    // assert(this.mode.value === MODE_HELD, 'held mode only')
+    intc_0 // 0
+    // contracts/VoteTool.algo.ts:209
+    // mode = GlobalState<uint64>({ key: 'mode' })
+    bytec_1 // "mode"
+    // contracts/VoteTool.algo.ts:391
+    // assert(this.mode.value === MODE_HELD, 'held mode only')
+    app_global_get_ex
+    assert // check GlobalState exists
+    intc_1 // 1
+    ==
+    assert // held mode only
+    // contracts/VoteTool.algo.ts:392
+    // assert(this.status.value === STATUS_ACTIVE && Global.round <= this.endRound.value, 'vote over')
+    intc_0 // 0
+    // contracts/VoteTool.algo.ts:219
+    // status = GlobalState<uint64>({ key: 'status' })
+    bytec_0 // "status"
+    // contracts/VoteTool.algo.ts:392
+    // assert(this.status.value === STATUS_ACTIVE && Global.round <= this.endRound.value, 'vote over')
+    app_global_get_ex
+    assert // check GlobalState exists
+    bnz recount_bool_false@4
+    global Round
+    intc_0 // 0
+    // contracts/VoteTool.algo.ts:213
+    // endRound = GlobalState<uint64>({ key: 'end' })
+    bytec 5 // "end"
+    // contracts/VoteTool.algo.ts:392
+    // assert(this.status.value === STATUS_ACTIVE && Global.round <= this.endRound.value, 'vote over')
+    app_global_get_ex
+    assert // check GlobalState exists
+    <=
+    bz recount_bool_false@4
+    intc_1 // 1
+
+recount_bool_merge@5:
+    // contracts/VoteTool.algo.ts:392
+    // assert(this.status.value === STATUS_ACTIVE && Global.round <= this.endRound.value, 'vote over')
+    assert // vote over
+    // contracts/VoteTool.algo.ts:235
+    // ballots = BoxMap<Account, Ballot>({ keyPrefix: 'b' })
+    bytec 12 // "b"
+    dig 1
+    dup
+    cover 2
+    concat
+    // contracts/VoteTool.algo.ts:393
+    // assert(this.ballots(voter).exists, 'no ballot')
+    dup
+    box_len
+    bury 1
+    assert // no ballot
+    // contracts/VoteTool.algo.ts:394
+    // const b = clone(this.ballots(voter).value)
+    box_get
+    pop
+    dup
+    cover 2
+    bury 6
+    // contracts/VoteTool.algo.ts:395
+    // const [balance] = op.AssetHolding.assetBalance(voter, this.asset.value)
+    intc_0 // 0
+    // contracts/VoteTool.algo.ts:210
+    // asset = GlobalState<uint64>({ key: 'asset' })
+    bytec_2 // "asset"
+    // contracts/VoteTool.algo.ts:395
+    // const [balance] = op.AssetHolding.assetBalance(voter, this.asset.value)
+    app_global_get_ex
+    assert // check GlobalState exists
+    asset_holding_get AssetBalance
+    pop
+    dup
+    bury 5
+    // contracts/VoteTool.algo.ts:396
+    // const weight: uint64 = balance / this.amountPerVote.value
+    intc_0 // 0
+    // contracts/VoteTool.algo.ts:211
+    // amountPerVote = GlobalState<uint64>({ key: 'apv' })
+    bytec 13 // "apv"
+    // contracts/VoteTool.algo.ts:396
+    // const weight: uint64 = balance / this.amountPerVote.value
+    app_global_get_ex
+    assert // check GlobalState exists
+    /
+    dup
+    bury 4
+    // contracts/VoteTool.algo.ts:397
+    // if (weight < b.weight) {
+    swap
+    pushint 16
+    extract_uint64
+    <
+    bz recount_after_if_else@7
+    // contracts/VoteTool.algo.ts:398
+    // this.applyBallot(voter, b.option, balance, weight)
+    dig 3
+    intc_0 // 0
+    extract_uint64
+    dig 1
+    swap
+    dig 4
+    dig 4
+    callsub applyBallot
+
+recount_after_if_else@7:
+    // contracts/VoteTool.algo.ts:390
+    // recount(voter: Account): void {
+    intc_1 // 1
+    return
+
+recount_bool_false@4:
+    intc_0 // 0
+    b recount_bool_merge@5
+
+
+// contracts/VoteTool.algo.ts::Vote.recountNft[routing]() -> void:
+recountNft:
+    // contracts/VoteTool.algo.ts:403
+    // recountNft(assetId: uint64): void {
+    txna ApplicationArgs 1
+    dup
+    len
+    intc_2 // 8
+    ==
+    assert // invalid number of bytes for arc4.uint64
+    btoi
+    // contracts/VoteTool.algo.ts:404
+    // assert(this.mode.value === MODE_NFT, 'nft mode only')
+    intc_0 // 0
+    // contracts/VoteTool.algo.ts:209
+    // mode = GlobalState<uint64>({ key: 'mode' })
+    bytec_1 // "mode"
+    // contracts/VoteTool.algo.ts:404
+    // assert(this.mode.value === MODE_NFT, 'nft mode only')
+    app_global_get_ex
+    assert // check GlobalState exists
+    intc_3 // 2
+    ==
+    assert // nft mode only
+    // contracts/VoteTool.algo.ts:405
+    // assert(this.status.value === STATUS_ACTIVE && Global.round <= this.endRound.value, 'vote over')
+    intc_0 // 0
+    // contracts/VoteTool.algo.ts:219
+    // status = GlobalState<uint64>({ key: 'status' })
+    bytec_0 // "status"
+    // contracts/VoteTool.algo.ts:405
+    // assert(this.status.value === STATUS_ACTIVE && Global.round <= this.endRound.value, 'vote over')
+    app_global_get_ex
+    assert // check GlobalState exists
+    bnz recountNft_bool_false@4
+    global Round
+    intc_0 // 0
+    // contracts/VoteTool.algo.ts:213
+    // endRound = GlobalState<uint64>({ key: 'end' })
+    bytec 5 // "end"
+    // contracts/VoteTool.algo.ts:405
+    // assert(this.status.value === STATUS_ACTIVE && Global.round <= this.endRound.value, 'vote over')
+    app_global_get_ex
+    assert // check GlobalState exists
+    <=
+    bz recountNft_bool_false@4
+    intc_1 // 1
+
+recountNft_bool_merge@5:
+    // contracts/VoteTool.algo.ts:405
+    // assert(this.status.value === STATUS_ACTIVE && Global.round <= this.endRound.value, 'vote over')
+    assert // vote over
+    // contracts/VoteTool.algo.ts:406
+    // assert(this.nfts(assetId).exists, 'piece not voted')
+    dup
+    itob
+    // contracts/VoteTool.algo.ts:237
+    // nfts = BoxMap<uint64, Account>({ keyPrefix: 'n' })
+    bytec 24 // "n"
+    swap
+    concat
+    // contracts/VoteTool.algo.ts:406
+    // assert(this.nfts(assetId).exists, 'piece not voted')
+    dup
+    box_len
+    bury 1
+    assert // piece not voted
+    // contracts/VoteTool.algo.ts:407
+    // const voter = this.nfts(assetId).value
+    dup
+    box_get
+    pop
+    // contracts/VoteTool.algo.ts:408
+    // const [held] = op.AssetHolding.assetBalance(voter, assetId)
+    dup
+    uncover 3
+    asset_holding_get AssetBalance
+    pop
+    // contracts/VoteTool.algo.ts:409
+    // assert(held === 0, 'still held')
+    !
+    assert // still held
+    // contracts/VoteTool.algo.ts:411
+    // const before = Global.currentApplicationAddress.minBalance
+    global CurrentApplicationAddress
+    acct_params_get AcctMinBalance
+    assert // account funded
+    // contracts/VoteTool.algo.ts:412
+    // this.nfts(assetId).delete()
+    uncover 2
+    box_del
+    pop
+    // contracts/VoteTool.algo.ts:413
+    // this.openNfts.value -= 1
+    intc_0 // 0
+    // contracts/VoteTool.algo.ts:226
+    // openNfts = GlobalState<uint64>({ key: 'open_nfts' })
+    bytec 8 // "open_nfts"
+    // contracts/VoteTool.algo.ts:413
+    // this.openNfts.value -= 1
+    app_global_get_ex
+    assert // check GlobalState exists
+    intc_1 // 1
+    -
+    // contracts/VoteTool.algo.ts:226
+    // openNfts = GlobalState<uint64>({ key: 'open_nfts' })
+    bytec 8 // "open_nfts"
+    // contracts/VoteTool.algo.ts:413
+    // this.openNfts.value -= 1
+    swap
+    app_global_put
+    // contracts/VoteTool.algo.ts:235
+    // ballots = BoxMap<Account, Ballot>({ keyPrefix: 'b' })
+    bytec 12 // "b"
+    dig 2
+    concat
+    // contracts/VoteTool.algo.ts:414
+    // const b = clone(this.ballots(voter).value)
+    box_get
+    assert // Box must have value
+    // contracts/VoteTool.algo.ts:415
+    // this.applyBallot(voter, b.option, b.amount - 1, b.weight - 1)
+    dup
+    intc_0 // 0
+    extract_uint64
+    dig 1
+    intc_2 // 8
+    extract_uint64
+    intc_1 // 1
+    -
+    uncover 2
+    pushint 16
+    extract_uint64
+    intc_1 // 1
+    -
+    dig 4
+    cover 3
+    callsub applyBallot
+    // contracts/VoteTool.algo.ts:416
+    // this.refundMbr(voter, before)
+    callsub refundMbr
+    // contracts/VoteTool.algo.ts:403
+    // recountNft(assetId: uint64): void {
+    intc_1 // 1
+    return
+
+recountNft_bool_false@4:
+    intc_0 // 0
+    b recountNft_bool_merge@5
+
+
+// contracts/VoteTool.algo.ts::Vote.finalize[routing]() -> void:
+finalize:
+    pushbytes ""
+    // contracts/VoteTool.algo.ts:423
+    // assert(this.status.value === STATUS_ACTIVE, 'not active')
+    intc_0 // 0
+    // contracts/VoteTool.algo.ts:219
+    // status = GlobalState<uint64>({ key: 'status' })
+    bytec_0 // "status"
+    // contracts/VoteTool.algo.ts:423
+    // assert(this.status.value === STATUS_ACTIVE, 'not active')
+    app_global_get_ex
+    assert // check GlobalState exists
+    !
+    assert // not active
+    // contracts/VoteTool.algo.ts:424
+    // assert(Global.round > this.endRound.value, 'still running')
+    global Round
+    intc_0 // 0
+    // contracts/VoteTool.algo.ts:213
+    // endRound = GlobalState<uint64>({ key: 'end' })
+    bytec 5 // "end"
+    // contracts/VoteTool.algo.ts:424
+    // assert(Global.round > this.endRound.value, 'still running')
+    app_global_get_ex
+    assert // check GlobalState exists
+    >
+    assert // still running
+    // contracts/VoteTool.algo.ts:426
+    // let best: uint64 = NO_WINNER
+    intc 4 // 18446744073709551615
+    // contracts/VoteTool.algo.ts:427
+    // let bestWeight: uint64 = 0
+    intc_0 // 0
+    // contracts/VoteTool.algo.ts:428-429
+    // let tie = false
+    // for (let i: uint64 = 0; i < this.optionCount.value; i += 1) {
+    dupn 2
+
+finalize_while_top@2:
+    // contracts/VoteTool.algo.ts:429
+    // for (let i: uint64 = 0; i < this.optionCount.value; i += 1) {
+    intc_0 // 0
+    // contracts/VoteTool.algo.ts:218
+    // optionCount = GlobalState<uint64>({ key: 'options' })
+    bytec 10 // "options"
+    // contracts/VoteTool.algo.ts:429
+    // for (let i: uint64 = 0; i < this.optionCount.value; i += 1) {
+    app_global_get_ex
+    assert // check GlobalState exists
+    dig 1
+    >
+    bz finalize_after_while@10
+    // contracts/VoteTool.algo.ts:612
+    // return op.btoi(this.tally.extract(i * 8, 8))
+    dup
+    intc_2 // 8
+    *
+    // contracts/VoteTool.algo.ts:234
+    // tally = Box<bytes>({ key: 't' })
+    bytec_3 // "t"
+    // contracts/VoteTool.algo.ts:612
+    // return op.btoi(this.tally.extract(i * 8, 8))
+    swap
+    intc_2 // 8
+    box_extract
+    btoi
+    dup
+    bury 6
+    // contracts/VoteTool.algo.ts:431
+    // if (w > bestWeight) {
+    dig 3
+    >
+    bz finalize_else_body@5
+    // contracts/VoteTool.algo.ts:434
+    // tie = false
+    intc_0 // 0
+    bury 2
+    dup
+    bury 4
+    dig 4
+    bury 3
+
+finalize_after_if_else@9:
+    // contracts/VoteTool.algo.ts:429
+    // for (let i: uint64 = 0; i < this.optionCount.value; i += 1) {
+    intc_1 // 1
+    +
+    b finalize_while_top@2
+
+finalize_else_body@5:
+    // contracts/VoteTool.algo.ts:435
+    // } else if (w === bestWeight && w > 0) {
+    dig 4
+    dig 3
+    ==
+    bz finalize_after_if_else@9
+    dig 4
+    bz finalize_after_if_else@9
+    // contracts/VoteTool.algo.ts:436
+    // tie = true
+    intc_1 // 1
+    bury 2
+    b finalize_after_if_else@9
+
+finalize_after_while@10:
+    pop
+    // contracts/VoteTool.algo.ts:439
+    // if (tie) best = NO_WINNER
+    dup
+    bz finalize_after_if_else@12
+    intc 4 // 18446744073709551615
+    bury 3
+
+finalize_after_if_else@12:
+    // contracts/VoteTool.algo.ts:220
+    // winner = GlobalState<uint64>({ key: 'winner' })
+    bytec 21 // "winner"
+    // contracts/VoteTool.algo.ts:440
+    // this.winner.value = best
+    dig 3
+    app_global_put
+    // contracts/VoteTool.algo.ts:442
+    // if (this.mode.value === MODE_ESCROW) {
+    intc_0 // 0
+    // contracts/VoteTool.algo.ts:209
+    // mode = GlobalState<uint64>({ key: 'mode' })
+    bytec_1 // "mode"
+    // contracts/VoteTool.algo.ts:442
+    // if (this.mode.value === MODE_ESCROW) {
+    app_global_get_ex
+    assert // check GlobalState exists
+    bnz finalize_after_if_else@21
+    // contracts/VoteTool.algo.ts:443
+    // if (this.returnMode.value === RETURN_WINNER && best === NO_WINNER) {
+    intc_0 // 0
+    // contracts/VoteTool.algo.ts:214
+    // returnMode = GlobalState<uint64>({ key: 'return_mode' })
+    bytec 6 // "return_mode"
+    // contracts/VoteTool.algo.ts:443
+    // if (this.returnMode.value === RETURN_WINNER && best === NO_WINNER) {
+    app_global_get_ex
+    assert // check GlobalState exists
+    intc_3 // 2
+    ==
+    bz finalize_after_if_else@16
+    dig 2
+    intc 4 // 18446744073709551615
+    ==
+    bz finalize_after_if_else@16
+    // contracts/VoteTool.algo.ts:214
+    // returnMode = GlobalState<uint64>({ key: 'return_mode' })
+    bytec 6 // "return_mode"
+    // contracts/VoteTool.algo.ts:445
+    // this.returnMode.value = RETURN_SENDERS
+    intc_0 // 0
+    app_global_put
+
+finalize_after_if_else@16:
+    // contracts/VoteTool.algo.ts:447
+    // this.payoutPending.value = this.returnMode.value !== RETURN_SENDERS && this.totalEscrow.value > 0
+    intc_0 // 0
+    // contracts/VoteTool.algo.ts:214
+    // returnMode = GlobalState<uint64>({ key: 'return_mode' })
+    bytec 6 // "return_mode"
+    // contracts/VoteTool.algo.ts:447
+    // this.payoutPending.value = this.returnMode.value !== RETURN_SENDERS && this.totalEscrow.value > 0
+    app_global_get_ex
+    assert // check GlobalState exists
+    bz finalize_bool_false@19
+    intc_0 // 0
+    // contracts/VoteTool.algo.ts:223
+    // totalEscrow = GlobalState<uint64>({ key: 'escrow' })
+    bytec 7 // "escrow"
+    // contracts/VoteTool.algo.ts:447
+    // this.payoutPending.value = this.returnMode.value !== RETURN_SENDERS && this.totalEscrow.value > 0
+    app_global_get_ex
+    assert // check GlobalState exists
+    bz finalize_bool_false@19
+    intc_1 // 1
+
+finalize_bool_merge@20:
+    // contracts/VoteTool.algo.ts:227
+    // payoutPending = GlobalState<boolean>({ key: 'payout_pending' })
+    bytec 9 // "payout_pending"
+    // contracts/VoteTool.algo.ts:447
+    // this.payoutPending.value = this.returnMode.value !== RETURN_SENDERS && this.totalEscrow.value > 0
+    swap
+    app_global_put
+
+finalize_after_if_else@21:
+    // contracts/VoteTool.algo.ts:219
+    // status = GlobalState<uint64>({ key: 'status' })
+    bytec_0 // "status"
+    // contracts/VoteTool.algo.ts:449
+    // this.status.value = STATUS_FINALIZED
+    intc_1 // 1
+    app_global_put
+    // contracts/VoteTool.algo.ts:450
+    // this.patchRegistry(REC_STATUS, STATUS_FINALIZED)
+    pushint 72
+    intc_1 // 1
+    callsub patchRegistry
+    // contracts/VoteTool.algo.ts:451
+    // this.patchRegistry(REC_WINNER, best)
+    pushint 80
+    dig 3
+    callsub patchRegistry
+    // contracts/VoteTool.algo.ts:422
+    // finalize(): void {
+    intc_1 // 1
+    return
+
+finalize_bool_false@19:
+    intc_0 // 0
+    b finalize_bool_merge@20
+
+
+// contracts/VoteTool.algo.ts::Vote.payout[routing]() -> void:
+payout:
+    // contracts/VoteTool.algo.ts:456
+    // assert(this.payoutPending.value, 'no payout pending')
+    intc_0 // 0
+    // contracts/VoteTool.algo.ts:227
+    // payoutPending = GlobalState<boolean>({ key: 'payout_pending' })
+    bytec 9 // "payout_pending"
+    // contracts/VoteTool.algo.ts:456
+    // assert(this.payoutPending.value, 'no payout pending')
+    app_global_get_ex
+    assert // check GlobalState exists
+    assert // no payout pending
+    // contracts/VoteTool.algo.ts:458
+    // this.returnMode.value === RETURN_ADDRESS ? this.returnAddress.value : this.options(this.winner.value).value.recipient
+    intc_0 // 0
+    // contracts/VoteTool.algo.ts:214
+    // returnMode = GlobalState<uint64>({ key: 'return_mode' })
+    bytec 6 // "return_mode"
+    // contracts/VoteTool.algo.ts:458
+    // this.returnMode.value === RETURN_ADDRESS ? this.returnAddress.value : this.options(this.winner.value).value.recipient
+    app_global_get_ex
+    assert // check GlobalState exists
+    intc_1 // 1
+    ==
+    bz payout_ternary_false@3
+    intc_0 // 0
+    // contracts/VoteTool.algo.ts:215
+    // returnAddress = GlobalState<Account>({ key: 'return_addr' })
+    bytec 26 // "return_addr"
+    // contracts/VoteTool.algo.ts:458
+    // this.returnMode.value === RETURN_ADDRESS ? this.returnAddress.value : this.options(this.winner.value).value.recipient
+    app_global_get_ex
+    assert // check GlobalState exists
+
+payout_ternary_merge@4:
+    // contracts/VoteTool.algo.ts:459
+    // itxn.assetTransfer({ xferAsset: this.asset.value, assetReceiver: to, assetAmount: this.totalEscrow.value, fee: 0 }).submit()
+    itxn_begin
+    intc_0 // 0
+    // contracts/VoteTool.algo.ts:210
+    // asset = GlobalState<uint64>({ key: 'asset' })
+    bytec_2 // "asset"
+    // contracts/VoteTool.algo.ts:459
+    // itxn.assetTransfer({ xferAsset: this.asset.value, assetReceiver: to, assetAmount: this.totalEscrow.value, fee: 0 }).submit()
+    app_global_get_ex
+    assert // check GlobalState exists
+    intc_0 // 0
+    // contracts/VoteTool.algo.ts:223
+    // totalEscrow = GlobalState<uint64>({ key: 'escrow' })
+    bytec 7 // "escrow"
+    // contracts/VoteTool.algo.ts:459
+    // itxn.assetTransfer({ xferAsset: this.asset.value, assetReceiver: to, assetAmount: this.totalEscrow.value, fee: 0 }).submit()
+    app_global_get_ex
+    assert // check GlobalState exists
+    itxn_field AssetAmount
+    dig 1
+    itxn_field AssetReceiver
+    itxn_field XferAsset
+    pushint 4
+    itxn_field TypeEnum
+    intc_0 // 0
+    itxn_field Fee
+    itxn_submit
+    // contracts/VoteTool.algo.ts:223
+    // totalEscrow = GlobalState<uint64>({ key: 'escrow' })
+    bytec 7 // "escrow"
+    // contracts/VoteTool.algo.ts:460
+    // this.totalEscrow.value = 0
+    intc_0 // 0
+    app_global_put
+    // contracts/VoteTool.algo.ts:227
+    // payoutPending = GlobalState<boolean>({ key: 'payout_pending' })
+    bytec 9 // "payout_pending"
+    // contracts/VoteTool.algo.ts:461
+    // this.payoutPending.value = false
+    intc_0 // 0
+    app_global_put
+    // contracts/VoteTool.algo.ts:228
+    // paidTo = GlobalState<Account>({ key: 'paid_to' })
+    bytec 28 // "paid_to"
+    // contracts/VoteTool.algo.ts:462
+    // this.paidTo.value = to
+    swap
+    app_global_put
+    // contracts/VoteTool.algo.ts:455
+    // payout(): void {
+    intc_1 // 1
+    return
+
+payout_ternary_false@3:
+    // contracts/VoteTool.algo.ts:458
+    // this.returnMode.value === RETURN_ADDRESS ? this.returnAddress.value : this.options(this.winner.value).value.recipient
+    intc_0 // 0
+    // contracts/VoteTool.algo.ts:220
+    // winner = GlobalState<uint64>({ key: 'winner' })
+    bytec 21 // "winner"
+    // contracts/VoteTool.algo.ts:458
+    // this.returnMode.value === RETURN_ADDRESS ? this.returnAddress.value : this.options(this.winner.value).value.recipient
+    app_global_get_ex
+    assert // check GlobalState exists
+    itob
+    // contracts/VoteTool.algo.ts:232
+    // options = BoxMap<uint64, VoteOption>({ keyPrefix: 'o' })
+    bytec 23 // "o"
+    swap
+    concat
+    // contracts/VoteTool.algo.ts:458
+    // this.returnMode.value === RETURN_ADDRESS ? this.returnAddress.value : this.options(this.winner.value).value.recipient
+    pushints 4 32
+    box_extract // on error: index out of bounds
+    b payout_ternary_merge@4
+
+
+// contracts/VoteTool.algo.ts::Vote.fallbackToRefunds[routing]() -> void:
+fallbackToRefunds:
+    // contracts/VoteTool.algo.ts:467
+    // assert(this.payoutPending.value, 'no payout pending')
+    intc_0 // 0
+    // contracts/VoteTool.algo.ts:227
+    // payoutPending = GlobalState<boolean>({ key: 'payout_pending' })
+    bytec 9 // "payout_pending"
+    // contracts/VoteTool.algo.ts:467
+    // assert(this.payoutPending.value, 'no payout pending')
+    app_global_get_ex
+    assert // check GlobalState exists
+    assert // no payout pending
+    // contracts/VoteTool.algo.ts:468
+    // assert(Global.round > this.endRound.value + this.payoutGrace.value, 'grace period')
+    global Round
+    intc_0 // 0
+    // contracts/VoteTool.algo.ts:213
+    // endRound = GlobalState<uint64>({ key: 'end' })
+    bytec 5 // "end"
+    // contracts/VoteTool.algo.ts:468
+    // assert(Global.round > this.endRound.value + this.payoutGrace.value, 'grace period')
+    app_global_get_ex
+    assert // check GlobalState exists
+    intc_0 // 0
+    // contracts/VoteTool.algo.ts:229
+    // payoutGrace = GlobalState<uint64>({ key: 'grace' })
+    bytec 29 // "grace"
+    // contracts/VoteTool.algo.ts:468
+    // assert(Global.round > this.endRound.value + this.payoutGrace.value, 'grace period')
+    app_global_get_ex
+    assert // check GlobalState exists
+    +
+    >
+    assert // grace period
+    // contracts/VoteTool.algo.ts:214
+    // returnMode = GlobalState<uint64>({ key: 'return_mode' })
+    bytec 6 // "return_mode"
+    // contracts/VoteTool.algo.ts:469
+    // this.returnMode.value = RETURN_SENDERS
+    intc_0 // 0
+    app_global_put
+    // contracts/VoteTool.algo.ts:227
+    // payoutPending = GlobalState<boolean>({ key: 'payout_pending' })
+    bytec 9 // "payout_pending"
+    // contracts/VoteTool.algo.ts:470
+    // this.payoutPending.value = false
+    intc_0 // 0
+    app_global_put
+    // contracts/VoteTool.algo.ts:466
+    // fallbackToRefunds(): void {
+    intc_1 // 1
+    return
+
+
+// contracts/VoteTool.algo.ts::Vote.cancel[routing]() -> void:
+cancel:
+    // contracts/VoteTool.algo.ts:475
+    // assert(Txn.sender === this.creator.value, 'creator only')
+    txn Sender
+    intc_0 // 0
+    // contracts/VoteTool.algo.ts:208
+    // creator = GlobalState<Account>({ key: 'creator' })
+    bytec 4 // "creator"
+    // contracts/VoteTool.algo.ts:475
+    // assert(Txn.sender === this.creator.value, 'creator only')
+    app_global_get_ex
+    assert // check GlobalState exists
+    ==
+    assert // creator only
+    // contracts/VoteTool.algo.ts:476
+    // assert(this.status.value === STATUS_ACTIVE, 'not active')
+    intc_0 // 0
+    // contracts/VoteTool.algo.ts:219
+    // status = GlobalState<uint64>({ key: 'status' })
+    bytec_0 // "status"
+    // contracts/VoteTool.algo.ts:476
+    // assert(this.status.value === STATUS_ACTIVE, 'not active')
+    app_global_get_ex
+    assert // check GlobalState exists
+    !
+    assert // not active
+    // contracts/VoteTool.algo.ts:477
+    // assert(Global.round <= this.endRound.value, 'already ended')
+    global Round
+    intc_0 // 0
+    // contracts/VoteTool.algo.ts:213
+    // endRound = GlobalState<uint64>({ key: 'end' })
+    bytec 5 // "end"
+    // contracts/VoteTool.algo.ts:477
+    // assert(Global.round <= this.endRound.value, 'already ended')
+    app_global_get_ex
+    assert // check GlobalState exists
+    <=
+    assert // already ended
+    // contracts/VoteTool.algo.ts:219
+    // status = GlobalState<uint64>({ key: 'status' })
+    bytec_0 // "status"
+    // contracts/VoteTool.algo.ts:478
+    // this.status.value = STATUS_CANCELLED
+    intc_3 // 2
+    app_global_put
+    // contracts/VoteTool.algo.ts:214
+    // returnMode = GlobalState<uint64>({ key: 'return_mode' })
+    bytec 6 // "return_mode"
+    // contracts/VoteTool.algo.ts:479
+    // this.returnMode.value = RETURN_SENDERS
+    intc_0 // 0
+    app_global_put
+    // contracts/VoteTool.algo.ts:480
+    // this.patchRegistry(REC_STATUS, STATUS_CANCELLED)
+    pushint 72
+    intc_3 // 2
+    callsub patchRegistry
+    // contracts/VoteTool.algo.ts:474
+    // cancel(): void {
+    intc_1 // 1
+    return
+
+
+// contracts/VoteTool.algo.ts::Vote.release[routing]() -> void:
+release:
+    pushbytes ""
+    // contracts/VoteTool.algo.ts:487
+    // release(voter: Account): void {
+    txna ApplicationArgs 1
+    dupn 2
+    len
+    pushint 32
+    ==
+    assert // invalid number of bytes for arc4.static_array<arc4.uint8, 32>
+    // contracts/VoteTool.algo.ts:488
+    // this.assertEnded()
+    callsub assertEnded
+    // contracts/VoteTool.algo.ts:235
+    // ballots = BoxMap<Account, Ballot>({ keyPrefix: 'b' })
+    bytec 12 // "b"
+    swap
+    concat
+    // contracts/VoteTool.algo.ts:489
+    // assert(this.ballots(voter).exists, 'no ballot')
+    dup
+    box_len
+    bury 1
+    assert // no ballot
+    // contracts/VoteTool.algo.ts:490
+    // const b = clone(this.ballots(voter).value)
+    dup
+    box_get
+    pop
+    cover 2
+    // contracts/VoteTool.algo.ts:491
+    // const before = Global.currentApplicationAddress.minBalance
+    global CurrentApplicationAddress
+    acct_params_get AcctMinBalance
+    swap
+    cover 2
+    assert // account funded
+    // contracts/VoteTool.algo.ts:492
+    // this.ballots(voter).delete()
+    box_del
+    pop
+    // contracts/VoteTool.algo.ts:493
+    // this.openBallots.value -= 1
+    intc_0 // 0
+    // contracts/VoteTool.algo.ts:225
+    // openBallots = GlobalState<uint64>({ key: 'open_ballots' })
+    bytec 11 // "open_ballots"
+    // contracts/VoteTool.algo.ts:493
+    // this.openBallots.value -= 1
+    app_global_get_ex
+    assert // check GlobalState exists
+    intc_1 // 1
+    -
+    // contracts/VoteTool.algo.ts:225
+    // openBallots = GlobalState<uint64>({ key: 'open_ballots' })
+    bytec 11 // "open_ballots"
+    // contracts/VoteTool.algo.ts:493
+    // this.openBallots.value -= 1
+    swap
+    app_global_put
+    // contracts/VoteTool.algo.ts:494
+    // if (this.mode.value === MODE_ESCROW && this.returnMode.value === RETURN_SENDERS && b.amount > 0) {
+    intc_0 // 0
+    // contracts/VoteTool.algo.ts:209
+    // mode = GlobalState<uint64>({ key: 'mode' })
+    bytec_1 // "mode"
+    // contracts/VoteTool.algo.ts:494
+    // if (this.mode.value === MODE_ESCROW && this.returnMode.value === RETURN_SENDERS && b.amount > 0) {
+    app_global_get_ex
+    assert // check GlobalState exists
+    bnz release_after_if_else@6
+    intc_0 // 0
+    // contracts/VoteTool.algo.ts:214
+    // returnMode = GlobalState<uint64>({ key: 'return_mode' })
+    bytec 6 // "return_mode"
+    // contracts/VoteTool.algo.ts:494
+    // if (this.mode.value === MODE_ESCROW && this.returnMode.value === RETURN_SENDERS && b.amount > 0) {
+    app_global_get_ex
+    assert // check GlobalState exists
+    bnz release_after_if_else@6
+    dig 2
+    intc_2 // 8
+    extract_uint64
+    dup
+    bury 5
+    bz release_after_if_else@6
+    // contracts/VoteTool.algo.ts:495
+    // itxn.assetTransfer({ xferAsset: this.asset.value, assetReceiver: voter, assetAmount: b.amount, fee: 0 }).submit()
+    itxn_begin
+    intc_0 // 0
+    // contracts/VoteTool.algo.ts:210
+    // asset = GlobalState<uint64>({ key: 'asset' })
+    bytec_2 // "asset"
+    // contracts/VoteTool.algo.ts:495
+    // itxn.assetTransfer({ xferAsset: this.asset.value, assetReceiver: voter, assetAmount: b.amount, fee: 0 }).submit()
+    app_global_get_ex
+    assert // check GlobalState exists
+    dig 4
+    dup
+    cover 2
+    itxn_field AssetAmount
+    dig 3
+    itxn_field AssetReceiver
+    itxn_field XferAsset
+    pushint 4
+    itxn_field TypeEnum
+    intc_0 // 0
+    itxn_field Fee
+    itxn_submit
+    // contracts/VoteTool.algo.ts:496
+    // this.totalEscrow.value -= b.amount
+    intc_0 // 0
+    // contracts/VoteTool.algo.ts:223
+    // totalEscrow = GlobalState<uint64>({ key: 'escrow' })
+    bytec 7 // "escrow"
+    // contracts/VoteTool.algo.ts:496
+    // this.totalEscrow.value -= b.amount
+    app_global_get_ex
+    assert // check GlobalState exists
+    swap
+    -
+    // contracts/VoteTool.algo.ts:223
+    // totalEscrow = GlobalState<uint64>({ key: 'escrow' })
+    bytec 7 // "escrow"
+    // contracts/VoteTool.algo.ts:496
+    // this.totalEscrow.value -= b.amount
+    swap
+    app_global_put
+
+release_after_if_else@6:
+    // contracts/VoteTool.algo.ts:498
+    // this.refundMbr(voter, before)
+    callsub refundMbr
+    // contracts/VoteTool.algo.ts:487
+    // release(voter: Account): void {
+    intc_1 // 1
+    return
+
+
+// contracts/VoteTool.algo.ts::Vote.releaseNft[routing]() -> void:
+releaseNft:
+    // contracts/VoteTool.algo.ts:502
+    // releaseNft(assetId: uint64): void {
+    txna ApplicationArgs 1
+    dup
+    len
+    intc_2 // 8
+    ==
+    assert // invalid number of bytes for arc4.uint64
+    btoi
+    // contracts/VoteTool.algo.ts:503
+    // this.assertEnded()
+    callsub assertEnded
+    // contracts/VoteTool.algo.ts:504
+    // assert(this.nfts(assetId).exists, 'piece not voted')
+    itob
+    // contracts/VoteTool.algo.ts:237
+    // nfts = BoxMap<uint64, Account>({ keyPrefix: 'n' })
+    bytec 24 // "n"
+    swap
+    concat
+    // contracts/VoteTool.algo.ts:504
+    // assert(this.nfts(assetId).exists, 'piece not voted')
+    dup
+    box_len
+    bury 1
+    assert // piece not voted
+    // contracts/VoteTool.algo.ts:505
+    // const voter = this.nfts(assetId).value
+    dup
+    box_get
+    pop
+    swap
+    // contracts/VoteTool.algo.ts:506
+    // const before = Global.currentApplicationAddress.minBalance
+    global CurrentApplicationAddress
+    acct_params_get AcctMinBalance
+    assert // account funded
+    // contracts/VoteTool.algo.ts:507
+    // this.nfts(assetId).delete()
+    swap
+    box_del
+    pop
+    // contracts/VoteTool.algo.ts:508
+    // this.openNfts.value -= 1
+    intc_0 // 0
+    // contracts/VoteTool.algo.ts:226
+    // openNfts = GlobalState<uint64>({ key: 'open_nfts' })
+    bytec 8 // "open_nfts"
+    // contracts/VoteTool.algo.ts:508
+    // this.openNfts.value -= 1
+    app_global_get_ex
+    assert // check GlobalState exists
+    intc_1 // 1
+    -
+    // contracts/VoteTool.algo.ts:226
+    // openNfts = GlobalState<uint64>({ key: 'open_nfts' })
+    bytec 8 // "open_nfts"
+    // contracts/VoteTool.algo.ts:508
+    // this.openNfts.value -= 1
+    swap
+    app_global_put
+    // contracts/VoteTool.algo.ts:509
+    // this.refundMbr(voter, before)
+    callsub refundMbr
+    // contracts/VoteTool.algo.ts:502
+    // releaseNft(assetId: uint64): void {
+    intc_1 // 1
+    return
+
+
+// contracts/VoteTool.algo.ts::Vote.close[routing]() -> void:
+close:
+    // contracts/VoteTool.algo.ts:519
+    // assert(Global.callerApplicationId === this.factory.value, 'close through the factory')
+    global CallerApplicationID
+    intc_0 // 0
+    // contracts/VoteTool.algo.ts:205
+    // factory = GlobalState<uint64>({ key: 'factory' })
+    bytec 18 // "factory"
+    // contracts/VoteTool.algo.ts:519
+    // assert(Global.callerApplicationId === this.factory.value, 'close through the factory')
+    app_global_get_ex
+    assert // check GlobalState exists
+    ==
+    assert // close through the factory
+    // contracts/VoteTool.algo.ts:520
+    // this.assertEnded()
+    callsub assertEnded
+    // contracts/VoteTool.algo.ts:521
+    // assert(this.openBallots.value === 0 && this.openNfts.value === 0, 'release ballots first')
+    intc_0 // 0
+    // contracts/VoteTool.algo.ts:225
+    // openBallots = GlobalState<uint64>({ key: 'open_ballots' })
+    bytec 11 // "open_ballots"
+    // contracts/VoteTool.algo.ts:521
+    // assert(this.openBallots.value === 0 && this.openNfts.value === 0, 'release ballots first')
+    app_global_get_ex
+    assert // check GlobalState exists
+    bnz close_bool_false@4
+    intc_0 // 0
+    // contracts/VoteTool.algo.ts:226
+    // openNfts = GlobalState<uint64>({ key: 'open_nfts' })
+    bytec 8 // "open_nfts"
+    // contracts/VoteTool.algo.ts:521
+    // assert(this.openBallots.value === 0 && this.openNfts.value === 0, 'release ballots first')
+    app_global_get_ex
+    assert // check GlobalState exists
+    bnz close_bool_false@4
+    intc_1 // 1
+
+close_bool_merge@5:
+    // contracts/VoteTool.algo.ts:521
+    // assert(this.openBallots.value === 0 && this.openNfts.value === 0, 'release ballots first')
+    assert // release ballots first
+    // contracts/VoteTool.algo.ts:523
+    // if (this.mode.value === MODE_ESCROW) {
+    intc_0 // 0
+    // contracts/VoteTool.algo.ts:209
+    // mode = GlobalState<uint64>({ key: 'mode' })
+    bytec_1 // "mode"
+    // contracts/VoteTool.algo.ts:523
+    // if (this.mode.value === MODE_ESCROW) {
+    app_global_get_ex
+    assert // check GlobalState exists
+    bnz close_after_if_else@12
+    // contracts/VoteTool.algo.ts:524
+    // const asset = Asset(this.asset.value)
+    intc_0 // 0
+    // contracts/VoteTool.algo.ts:210
+    // asset = GlobalState<uint64>({ key: 'asset' })
+    bytec_2 // "asset"
+    // contracts/VoteTool.algo.ts:524
+    // const asset = Asset(this.asset.value)
+    app_global_get_ex
+    swap
+    dup
+    uncover 2
+    assert // check GlobalState exists
+    // contracts/VoteTool.algo.ts:525
+    // const app = Global.currentApplicationAddress
+    global CurrentApplicationAddress
+    // contracts/VoteTool.algo.ts:527
+    // const strays = asset.balance(app)
+    swap
+    asset_holding_get AssetBalance
+    assert // account opted into asset
+    // contracts/VoteTool.algo.ts:528
+    // const to: Account = strays > 0 && this.creator.value.isOptedIn(asset) ? this.creator.value : asset.creator
+    bz close_ternary_false@9
+    intc_0 // 0
+    // contracts/VoteTool.algo.ts:208
+    // creator = GlobalState<Account>({ key: 'creator' })
+    bytec 4 // "creator"
+    // contracts/VoteTool.algo.ts:528
+    // const to: Account = strays > 0 && this.creator.value.isOptedIn(asset) ? this.creator.value : asset.creator
+    app_global_get_ex
+    assert // check GlobalState exists
+    dig 1
+    asset_holding_get AssetBalance
+    bury 1
+    bz close_ternary_false@9
+    intc_0 // 0
+    // contracts/VoteTool.algo.ts:208
+    // creator = GlobalState<Account>({ key: 'creator' })
+    bytec 4 // "creator"
+    // contracts/VoteTool.algo.ts:528
+    // const to: Account = strays > 0 && this.creator.value.isOptedIn(asset) ? this.creator.value : asset.creator
+    app_global_get_ex
+    assert // check GlobalState exists
+
+close_ternary_merge@10:
+    // contracts/VoteTool.algo.ts:529
+    // itxn.assetTransfer({ xferAsset: asset, assetReceiver: to, assetCloseTo: to, assetAmount: 0, fee: 0 }).submit()
+    itxn_begin
+    intc_0 // 0
+    itxn_field AssetAmount
+    dup
+    itxn_field AssetCloseTo
+    itxn_field AssetReceiver
+    itxn_field XferAsset
+    pushint 4
+    itxn_field TypeEnum
+    intc_0 // 0
+    itxn_field Fee
+    itxn_submit
+
+close_after_if_else@12:
+    // contracts/VoteTool.algo.ts:231
+    // meta = Box<{ title: string; description: string }>({ key: 'm' })
+    bytec 22 // "m"
+    // contracts/VoteTool.algo.ts:531
+    // this.meta.delete()
+    box_del
+    pop
+    // contracts/VoteTool.algo.ts:239
+    // collection = Box<CollectionRule>({ key: 'c' })
+    bytec 15 // "c"
+    // contracts/VoteTool.algo.ts:532
+    // if (this.collection.exists) this.collection.delete()
+    box_len
+    bury 1
+    bz close_after_if_else@14
+    // contracts/VoteTool.algo.ts:239
+    // collection = Box<CollectionRule>({ key: 'c' })
+    bytec 15 // "c"
+    // contracts/VoteTool.algo.ts:532
+    // if (this.collection.exists) this.collection.delete()
+    box_del
+    pop
+
+close_after_if_else@14:
+    // contracts/VoteTool.algo.ts:234
+    // tally = Box<bytes>({ key: 't' })
+    bytec_3 // "t"
+    // contracts/VoteTool.algo.ts:533
+    // this.tally.delete()
+    box_del
+    pop
+    // contracts/VoteTool.algo.ts:534
+    // for (let i: uint64 = 0; i < this.optionCount.value; i += 1) {
+    intc_0 // 0
+
+close_while_top@15:
+    // contracts/VoteTool.algo.ts:534
+    // for (let i: uint64 = 0; i < this.optionCount.value; i += 1) {
+    intc_0 // 0
+    // contracts/VoteTool.algo.ts:218
+    // optionCount = GlobalState<uint64>({ key: 'options' })
+    bytec 10 // "options"
+    // contracts/VoteTool.algo.ts:534
+    // for (let i: uint64 = 0; i < this.optionCount.value; i += 1) {
+    app_global_get_ex
+    assert // check GlobalState exists
+    dig 1
+    >
+    bz close_after_while@17
+    // contracts/VoteTool.algo.ts:535
+    // this.options(i).delete()
+    dup
+    itob
+    // contracts/VoteTool.algo.ts:232
+    // options = BoxMap<uint64, VoteOption>({ keyPrefix: 'o' })
+    bytec 23 // "o"
+    swap
+    concat
+    // contracts/VoteTool.algo.ts:535
+    // this.options(i).delete()
+    box_del
+    pop
+    // contracts/VoteTool.algo.ts:534
+    // for (let i: uint64 = 0; i < this.optionCount.value; i += 1) {
+    intc_1 // 1
+    +
+    b close_while_top@15
+
+close_after_while@17:
+    // contracts/VoteTool.algo.ts:219
+    // status = GlobalState<uint64>({ key: 'status' })
+    bytec_0 // "status"
+    // contracts/VoteTool.algo.ts:537
+    // this.status.value = STATUS_CLOSED
+    pushint 3
+    app_global_put
+    // contracts/VoteTool.algo.ts:538
+    // this.patchRegistry(REC_STATUS, STATUS_CLOSED)
+    pushints 72 3
+    callsub patchRegistry
+    // contracts/VoteTool.algo.ts:539
+    // itxn.payment({ receiver: this.creator.value, closeRemainderTo: this.creator.value, amount: 0, fee: 0 }).submit()
+    itxn_begin
+    intc_0 // 0
+    // contracts/VoteTool.algo.ts:208
+    // creator = GlobalState<Account>({ key: 'creator' })
+    bytec 4 // "creator"
+    // contracts/VoteTool.algo.ts:539
+    // itxn.payment({ receiver: this.creator.value, closeRemainderTo: this.creator.value, amount: 0, fee: 0 }).submit()
+    app_global_get_ex
+    assert // check GlobalState exists
+    intc_0 // 0
+    itxn_field Amount
+    dup
+    itxn_field CloseRemainderTo
+    itxn_field Receiver
+    intc_1 // 1
+    itxn_field TypeEnum
+    intc_0 // 0
+    itxn_field Fee
+    itxn_submit
+    // contracts/VoteTool.algo.ts:517
+    // @abimethod({ allowActions: 'DeleteApplication' })
+    intc_1 // 1
+    return
+
+close_ternary_false@9:
+    // contracts/VoteTool.algo.ts:528
+    // const to: Account = strays > 0 && this.creator.value.isOptedIn(asset) ? this.creator.value : asset.creator
+    dup
+    asset_params_get AssetCreator
+    assert // asset exists
+    b close_ternary_merge@10
+
+close_bool_false@4:
+    intc_0 // 0
+    b close_bool_merge@5
+
+
+// contracts/VoteTool.algo.ts::Vote.getTallies[routing]() -> void:
+getTallies:
+    // contracts/VoteTool.algo.ts:549
+    // const out: uint64[] = []
+    pushbytes 0x0000
+    // contracts/VoteTool.algo.ts:550
+    // for (let i: uint64 = 0; i < this.optionCount.value; i += 1) {
+    intc_0 // 0
+
+getTallies_while_top@2:
+    // contracts/VoteTool.algo.ts:550
+    // for (let i: uint64 = 0; i < this.optionCount.value; i += 1) {
+    intc_0 // 0
+    // contracts/VoteTool.algo.ts:218
+    // optionCount = GlobalState<uint64>({ key: 'options' })
+    bytec 10 // "options"
+    // contracts/VoteTool.algo.ts:550
+    // for (let i: uint64 = 0; i < this.optionCount.value; i += 1) {
+    app_global_get_ex
+    assert // check GlobalState exists
+    dig 1
+    >
+    bz getTallies_after_while@4
+    // contracts/VoteTool.algo.ts:612
+    // return op.btoi(this.tally.extract(i * 8, 8))
+    dup
+    intc_2 // 8
+    *
+    // contracts/VoteTool.algo.ts:234
+    // tally = Box<bytes>({ key: 't' })
+    bytec_3 // "t"
+    // contracts/VoteTool.algo.ts:612
+    // return op.btoi(this.tally.extract(i * 8, 8))
+    swap
+    intc_2 // 8
+    box_extract
+    btoi
+    // contracts/VoteTool.algo.ts:551
+    // out.push(this.tallyOf(i))
+    itob
+    uncover 2
+    dup
+    intc_0 // 0
+    extract_uint16
+    // contracts/VoteTool.algo.ts:551
+    // out.push(this.tallyOf(i))
+    intc_1 // 1
+    +
+    itob
+    extract 6 0
+    replace2 0
+    swap
+    concat
+    swap
+    // contracts/VoteTool.algo.ts:550
+    // for (let i: uint64 = 0; i < this.optionCount.value; i += 1) {
+    intc_1 // 1
+    +
+    b getTallies_while_top@2
+
+getTallies_after_while@4:
+    pop
+    // contracts/VoteTool.algo.ts:547
+    // @abimethod({ readonly: true })
+    pushbytes 0x151f7c75
+    swap
+    concat
+    log
+    intc_1 // 1
+    return
+
+
+// contracts/VoteTool.algo.ts::Vote.assertVoting(mode: uint64) -> void:
+assertVoting:
+    // contracts/VoteTool.algo.ts:558
+    // private assertVoting(mode: uint64): void {
+    proto 1 0
+    // contracts/VoteTool.algo.ts:559
+    // assert(this.mode.value === mode, 'wrong vote method for this mode')
+    intc_0 // 0
+    // contracts/VoteTool.algo.ts:209
+    // mode = GlobalState<uint64>({ key: 'mode' })
+    bytec_1 // "mode"
+    // contracts/VoteTool.algo.ts:559
+    // assert(this.mode.value === mode, 'wrong vote method for this mode')
+    app_global_get_ex
+    assert // check GlobalState exists
+    frame_dig -1
+    ==
+    assert // wrong vote method for this mode
+    // contracts/VoteTool.algo.ts:560
+    // assert(this.status.value === STATUS_ACTIVE, 'vote closed')
+    intc_0 // 0
+    // contracts/VoteTool.algo.ts:219
+    // status = GlobalState<uint64>({ key: 'status' })
+    bytec_0 // "status"
+    // contracts/VoteTool.algo.ts:560
+    // assert(this.status.value === STATUS_ACTIVE, 'vote closed')
+    app_global_get_ex
+    assert // check GlobalState exists
+    !
+    assert // vote closed
+    // contracts/VoteTool.algo.ts:561
+    // assert(Global.round >= this.startRound.value, 'not started')
+    global Round
+    intc_0 // 0
+    // contracts/VoteTool.algo.ts:212
+    // startRound = GlobalState<uint64>({ key: 'start' })
+    bytec 16 // "start"
+    // contracts/VoteTool.algo.ts:561
+    // assert(Global.round >= this.startRound.value, 'not started')
+    app_global_get_ex
+    assert // check GlobalState exists
+    >=
+    assert // not started
+    // contracts/VoteTool.algo.ts:562
+    // assert(Global.round <= this.endRound.value, 'ended')
+    global Round
+    intc_0 // 0
+    // contracts/VoteTool.algo.ts:213
+    // endRound = GlobalState<uint64>({ key: 'end' })
+    bytec 5 // "end"
+    // contracts/VoteTool.algo.ts:562
+    // assert(Global.round <= this.endRound.value, 'ended')
+    app_global_get_ex
+    assert // check GlobalState exists
+    <=
+    assert // ended
+    // contracts/VoteTool.algo.ts:563
+    // if (this.gateApp.value !== 0) {
+    intc_0 // 0
+    // contracts/VoteTool.algo.ts:216
+    // gateApp = GlobalState<uint64>({ key: 'gate_app' })
+    bytec 20 // "gate_app"
+    // contracts/VoteTool.algo.ts:563
+    // if (this.gateApp.value !== 0) {
+    app_global_get_ex
+    assert // check GlobalState exists
+    bz assertVoting_after_if_else@2
+    // contracts/VoteTool.algo.ts:565
+    // const [, listed] = op.AppBox.length(Application(this.gateApp.value), this.gatePrefix.value.concat(Txn.sender.bytes))
+    intc_0 // 0
+    // contracts/VoteTool.algo.ts:216
+    // gateApp = GlobalState<uint64>({ key: 'gate_app' })
+    bytec 20 // "gate_app"
+    // contracts/VoteTool.algo.ts:565
+    // const [, listed] = op.AppBox.length(Application(this.gateApp.value), this.gatePrefix.value.concat(Txn.sender.bytes))
+    app_global_get_ex
+    assert // check GlobalState exists
+    intc_0 // 0
+    // contracts/VoteTool.algo.ts:217
+    // gatePrefix = GlobalState<bytes>({ key: 'gate_prefix' })
+    bytec 27 // "gate_prefix"
+    // contracts/VoteTool.algo.ts:565
+    // const [, listed] = op.AppBox.length(Application(this.gateApp.value), this.gatePrefix.value.concat(Txn.sender.bytes))
+    app_global_get_ex
+    assert // check GlobalState exists
+    txn Sender
+    concat
+    app_box_len
+    bury 1
+    // contracts/VoteTool.algo.ts:566
+    // assert(listed, 'not on the voter list')
+    assert // not on the voter list
+
+assertVoting_after_if_else@2:
+    retsub
+
+
+// contracts/VoteTool.algo.ts::Vote.assertEnded() -> void:
+assertEnded:
+    // contracts/VoteTool.algo.ts:584
+    // assert(this.status.value === STATUS_FINALIZED || this.status.value === STATUS_CANCELLED, 'not ended')
+    intc_0 // 0
+    // contracts/VoteTool.algo.ts:219
+    // status = GlobalState<uint64>({ key: 'status' })
+    bytec_0 // "status"
+    // contracts/VoteTool.algo.ts:584
+    // assert(this.status.value === STATUS_FINALIZED || this.status.value === STATUS_CANCELLED, 'not ended')
+    app_global_get_ex
+    assert // check GlobalState exists
+    intc_1 // 1
+    ==
+    bnz assertEnded_bool_true@2
+    intc_0 // 0
+    // contracts/VoteTool.algo.ts:219
+    // status = GlobalState<uint64>({ key: 'status' })
+    bytec_0 // "status"
+    // contracts/VoteTool.algo.ts:584
+    // assert(this.status.value === STATUS_FINALIZED || this.status.value === STATUS_CANCELLED, 'not ended')
+    app_global_get_ex
+    assert // check GlobalState exists
+    intc_3 // 2
+    ==
+    bz assertEnded_bool_false@3
+
+assertEnded_bool_true@2:
+    intc_1 // 1
+
+assertEnded_bool_merge@4:
+    // contracts/VoteTool.algo.ts:584
+    // assert(this.status.value === STATUS_FINALIZED || this.status.value === STATUS_CANCELLED, 'not ended')
+    assert // not ended
+    // contracts/VoteTool.algo.ts:585
+    // assert(!this.payoutPending.value, 'payout pending')
+    intc_0 // 0
+    // contracts/VoteTool.algo.ts:227
+    // payoutPending = GlobalState<boolean>({ key: 'payout_pending' })
+    bytec 9 // "payout_pending"
+    // contracts/VoteTool.algo.ts:585
+    // assert(!this.payoutPending.value, 'payout pending')
+    app_global_get_ex
+    assert // check GlobalState exists
+    !
+    assert // payout pending
+    retsub
+
+assertEnded_bool_false@3:
+    intc_0 // 0
+    b assertEnded_bool_merge@4
+
+
+// contracts/VoteTool.algo.ts::Vote.ballotOf(voter: bytes) -> bytes:
+ballotOf:
+    // contracts/VoteTool.algo.ts:588
+    // private ballotOf(voter: Account): Ballot {
+    proto 1 1
+    // contracts/VoteTool.algo.ts:235
+    // ballots = BoxMap<Account, Ballot>({ keyPrefix: 'b' })
+    bytec 12 // "b"
+    frame_dig -1
+    concat
+    dup
+    // contracts/VoteTool.algo.ts:589
+    // if (this.ballots(voter).exists) return clone(this.ballots(voter).value)
+    box_len
+    bury 1
+    bz ballotOf_after_if_else@2
+    box_get
+    assert // Box must have value
+    retsub
+
+ballotOf_after_if_else@2:
+    // contracts/VoteTool.algo.ts:590
+    // return { option: 0, amount: 0, weight: 0 }
+    pushbytes 0x000000000000000000000000000000000000000000000000
+    swap
+    retsub
+
+
+// contracts/VoteTool.algo.ts::Vote.applyBallot(voter: bytes, option: uint64, amount: uint64, weight: uint64) -> void:
+applyBallot:
+    // contracts/VoteTool.algo.ts:594
+    // private applyBallot(voter: Account, option: uint64, amount: uint64, weight: uint64): void {
+    proto 4 0
+    // contracts/VoteTool.algo.ts:595
+    // assert(option < this.optionCount.value, 'bad option')
+    intc_0 // 0
+    // contracts/VoteTool.algo.ts:218
+    // optionCount = GlobalState<uint64>({ key: 'options' })
+    bytec 10 // "options"
+    // contracts/VoteTool.algo.ts:595
+    // assert(option < this.optionCount.value, 'bad option')
+    app_global_get_ex
+    assert // check GlobalState exists
+    frame_dig -3
+    >
+    assert // bad option
+    // contracts/VoteTool.algo.ts:235
+    // ballots = BoxMap<Account, Ballot>({ keyPrefix: 'b' })
+    bytec 12 // "b"
+    frame_dig -4
+    concat
+    dup
+    // contracts/VoteTool.algo.ts:596
+    // if (this.ballots(voter).exists) {
+    box_len
+    bury 1
+    bz applyBallot_else_body@2
+    // contracts/VoteTool.algo.ts:597
+    // const old = clone(this.ballots(voter).value)
+    dup
+    box_get
+    assert // Box must have value
+    // contracts/VoteTool.algo.ts:598
+    // this.setTally(old.option, this.tallyOf(old.option) - old.weight)
+    dup
+    intc_0 // 0
+    extract_uint64
+    // contracts/VoteTool.algo.ts:612
+    // return op.btoi(this.tally.extract(i * 8, 8))
+    intc_2 // 8
+    *
+    // contracts/VoteTool.algo.ts:234
+    // tally = Box<bytes>({ key: 't' })
+    bytec_3 // "t"
+    // contracts/VoteTool.algo.ts:612
+    // return op.btoi(this.tally.extract(i * 8, 8))
+    dig 1
+    intc_2 // 8
+    box_extract
+    btoi
+    // contracts/VoteTool.algo.ts:598
+    // this.setTally(old.option, this.tallyOf(old.option) - old.weight)
+    uncover 2
+    pushint 16
+    extract_uint64
+    swap
+    dig 1
+    -
+    // contracts/VoteTool.algo.ts:616
+    // this.tally.replace(i * 8, op.itob(v))
+    itob
+    // contracts/VoteTool.algo.ts:234
+    // tally = Box<bytes>({ key: 't' })
+    bytec_3 // "t"
+    // contracts/VoteTool.algo.ts:616
+    // this.tally.replace(i * 8, op.itob(v))
+    uncover 3
+    uncover 2
+    box_replace
+    // contracts/VoteTool.algo.ts:599
+    // this.totalWeight.value -= old.weight
+    intc_0 // 0
+    // contracts/VoteTool.algo.ts:221
+    // totalWeight = GlobalState<uint64>({ key: 'total_weight' })
+    bytec 14 // "total_weight"
+    // contracts/VoteTool.algo.ts:599
+    // this.totalWeight.value -= old.weight
+    app_global_get_ex
+    assert // check GlobalState exists
+    swap
+    -
+    // contracts/VoteTool.algo.ts:221
+    // totalWeight = GlobalState<uint64>({ key: 'total_weight' })
+    bytec 14 // "total_weight"
+    // contracts/VoteTool.algo.ts:599
+    // this.totalWeight.value -= old.weight
+    swap
+    app_global_put
+
+applyBallot_after_if_else@3:
+    // contracts/VoteTool.algo.ts:604
+    // this.ballots(voter).value = { option: option, amount: amount, weight: weight }
+    frame_dig -3
+    itob
+    frame_dig -2
+    itob
+    concat
+    frame_dig -1
+    itob
+    concat
+    box_put
+    // contracts/VoteTool.algo.ts:612
+    // return op.btoi(this.tally.extract(i * 8, 8))
+    frame_dig -3
+    intc_2 // 8
+    *
+    // contracts/VoteTool.algo.ts:234
+    // tally = Box<bytes>({ key: 't' })
+    bytec_3 // "t"
+    // contracts/VoteTool.algo.ts:612
+    // return op.btoi(this.tally.extract(i * 8, 8))
+    dig 1
+    intc_2 // 8
+    box_extract
+    btoi
+    // contracts/VoteTool.algo.ts:605
+    // this.setTally(option, this.tallyOf(option) + weight)
+    frame_dig -1
+    +
+    // contracts/VoteTool.algo.ts:616
+    // this.tally.replace(i * 8, op.itob(v))
+    itob
+    // contracts/VoteTool.algo.ts:234
+    // tally = Box<bytes>({ key: 't' })
+    bytec_3 // "t"
+    // contracts/VoteTool.algo.ts:616
+    // this.tally.replace(i * 8, op.itob(v))
+    cover 2
+    box_replace
+    // contracts/VoteTool.algo.ts:606
+    // this.totalWeight.value += weight
+    intc_0 // 0
+    // contracts/VoteTool.algo.ts:221
+    // totalWeight = GlobalState<uint64>({ key: 'total_weight' })
+    bytec 14 // "total_weight"
+    // contracts/VoteTool.algo.ts:606
+    // this.totalWeight.value += weight
+    app_global_get_ex
+    assert // check GlobalState exists
+    frame_dig -1
+    +
+    // contracts/VoteTool.algo.ts:221
+    // totalWeight = GlobalState<uint64>({ key: 'total_weight' })
+    bytec 14 // "total_weight"
+    // contracts/VoteTool.algo.ts:606
+    // this.totalWeight.value += weight
+    dig 1
+    app_global_put
+    // contracts/VoteTool.algo.ts:607
+    // this.patchRegistry(REC_WEIGHT, this.totalWeight.value)
+    pushint 88
+    swap
+    callsub patchRegistry
+    // contracts/VoteTool.algo.ts:608
+    // this.patchRegistry(REC_WEIGHT + 8, this.voters.value)
+    intc_0 // 0
+    // contracts/VoteTool.algo.ts:224
+    // voters = GlobalState<uint64>({ key: 'voters' })
+    bytec 17 // "voters"
+    // contracts/VoteTool.algo.ts:608
+    // this.patchRegistry(REC_WEIGHT + 8, this.voters.value)
+    app_global_get_ex
+    assert // check GlobalState exists
+    pushint 96
+    swap
+    callsub patchRegistry
+    retsub
+
+applyBallot_else_body@2:
+    // contracts/VoteTool.algo.ts:601
+    // this.voters.value += 1
+    intc_0 // 0
+    // contracts/VoteTool.algo.ts:224
+    // voters = GlobalState<uint64>({ key: 'voters' })
+    bytec 17 // "voters"
+    // contracts/VoteTool.algo.ts:601
+    // this.voters.value += 1
+    app_global_get_ex
+    assert // check GlobalState exists
+    intc_1 // 1
+    +
+    // contracts/VoteTool.algo.ts:224
+    // voters = GlobalState<uint64>({ key: 'voters' })
+    bytec 17 // "voters"
+    // contracts/VoteTool.algo.ts:601
+    // this.voters.value += 1
+    swap
+    app_global_put
+    // contracts/VoteTool.algo.ts:602
+    // this.openBallots.value += 1
+    intc_0 // 0
+    // contracts/VoteTool.algo.ts:225
+    // openBallots = GlobalState<uint64>({ key: 'open_ballots' })
+    bytec 11 // "open_ballots"
+    // contracts/VoteTool.algo.ts:602
+    // this.openBallots.value += 1
+    app_global_get_ex
+    assert // check GlobalState exists
+    intc_1 // 1
+    +
+    // contracts/VoteTool.algo.ts:225
+    // openBallots = GlobalState<uint64>({ key: 'open_ballots' })
+    bytec 11 // "open_ballots"
+    // contracts/VoteTool.algo.ts:602
+    // this.openBallots.value += 1
+    swap
+    app_global_put
+    b applyBallot_after_if_else@3
+
+
+// contracts/VoteTool.algo.ts::Vote.registryKey() -> bytes:
+registryKey:
+    // contracts/VoteTool.algo.ts:620
+    // return Bytes('v').concat(op.itob(this.voteNo.value))
+    intc_0 // 0
+    // contracts/VoteTool.algo.ts:207
+    // voteNo = GlobalState<uint64>({ key: 'vote_no' })
+    bytec 25 // "vote_no"
+    // contracts/VoteTool.algo.ts:620
+    // return Bytes('v').concat(op.itob(this.voteNo.value))
+    app_global_get_ex
+    assert // check GlobalState exists
+    itob
+    pushbytes "v"
+    swap
+    concat
+    retsub
+
+
+// contracts/VoteTool.algo.ts::Vote.patchRegistry(offset: uint64, value: uint64) -> void:
+patchRegistry:
+    // contracts/VoteTool.algo.ts:624
+    // private patchRegistry(offset: uint64, value: uint64): void {
+    proto 2 0
+    // contracts/VoteTool.algo.ts:625
+    // op.AppBox.replace(Application(this.registry.value), this.registryKey(), offset, op.itob(value))
+    intc_0 // 0
+    // contracts/VoteTool.algo.ts:206
+    // registry = GlobalState<uint64>({ key: 'registry' })
+    bytec 19 // "registry"
+    // contracts/VoteTool.algo.ts:625
+    // op.AppBox.replace(Application(this.registry.value), this.registryKey(), offset, op.itob(value))
+    app_global_get_ex
+    assert // check GlobalState exists
+    callsub registryKey
+    frame_dig -1
+    itob
+    cover 2
+    frame_dig -2
+    uncover 3
+    app_box_replace
+    retsub
+
+
+// contracts/VoteTool.algo.ts::Vote.settleMbr(pay: uint64, before: uint64) -> void:
+settleMbr:
+    // contracts/VoteTool.algo.ts:629
+    // private settleMbr(pay: gtxn.PaymentTxn, before: uint64): void {
+    proto 2 0
+    pushbytes ""
+    dup
+    // contracts/VoteTool.algo.ts:630
+    // assert(pay.sender === Txn.sender, 'pay sender')
+    frame_dig -2
+    gtxns Sender
+    txn Sender
+    ==
+    assert // pay sender
+    // contracts/VoteTool.algo.ts:631
+    // assert(pay.receiver === Global.currentApplicationAddress, 'pay receiver')
+    frame_dig -2
+    gtxns Receiver
+    global CurrentApplicationAddress
+    ==
+    assert // pay receiver
+    // contracts/VoteTool.algo.ts:632
+    // const after = Global.currentApplicationAddress.minBalance
+    global CurrentApplicationAddress
+    acct_params_get AcctMinBalance
+    swap
+    dup
+    uncover 2
+    assert // account funded
+    // contracts/VoteTool.algo.ts:633
+    // const cost: uint64 = after > before ? after - before : 0
+    frame_dig -1
+    >
+    bz settleMbr_ternary_false@2
+    frame_dig -1
+    -
+    frame_bury 0
+
+settleMbr_ternary_merge@3:
+    // contracts/VoteTool.algo.ts:634
+    // assert(pay.amount >= cost, 'MBR not covered')
+    frame_dig -2
+    gtxns Amount
+    dup
+    frame_bury 1
+    dup
+    frame_dig 0
+    dup
+    cover 3
+    >=
+    assert // MBR not covered
+    // contracts/VoteTool.algo.ts:635
+    // if (pay.amount > cost) {
+    <
+    bz settleMbr_after_if_else@6
+    // contracts/VoteTool.algo.ts:636
+    // itxn.payment({ receiver: Txn.sender, amount: pay.amount - cost, fee: 0 }).submit()
+    itxn_begin
+    txn Sender
+    frame_dig 1
+    frame_dig 0
+    -
+    itxn_field Amount
+    itxn_field Receiver
+    intc_1 // 1
+    itxn_field TypeEnum
+    intc_0 // 0
+    itxn_field Fee
+    itxn_submit
+
+settleMbr_after_if_else@6:
+    retsub
+
+settleMbr_ternary_false@2:
+    pop
+    // contracts/VoteTool.algo.ts:633
+    // const cost: uint64 = after > before ? after - before : 0
+    intc_0 // 0
+    frame_bury 0
+    b settleMbr_ternary_merge@3
+
+
+// contracts/VoteTool.algo.ts::Vote.refundMbr(to: bytes, before: uint64) -> void:
+refundMbr:
+    // contracts/VoteTool.algo.ts:640
+    // private refundMbr(to: Account, before: uint64): void {
+    proto 2 0
+    // contracts/VoteTool.algo.ts:641
+    // const freed: uint64 = before - Global.currentApplicationAddress.minBalance
+    global CurrentApplicationAddress
+    acct_params_get AcctMinBalance
+    assert // account funded
+    frame_dig -1
+    swap
+    -
+    dup
+    // contracts/VoteTool.algo.ts:642
+    // if (freed > 0) {
+    bz refundMbr_after_if_else@3
+    // contracts/VoteTool.algo.ts:643
+    // itxn.payment({ receiver: to, amount: freed, fee: 0 }).submit()
+    itxn_begin
+    frame_dig 0
+    itxn_field Amount
+    frame_dig -2
+    itxn_field Receiver
+    intc_1 // 1
+    itxn_field TypeEnum
+    intc_0 // 0
+    itxn_field Fee
+    itxn_submit
+
+refundMbr_after_if_else@3:
+    retsub

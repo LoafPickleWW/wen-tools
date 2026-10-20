@@ -1,0 +1,47 @@
+#pragma version 13
+#pragma typetrack false
+#pragma autosalt false
+
+// @algorandfoundation/algorand-typescript/arc4/index.d.ts::Contract.approvalProgram() -> uint64:
+main:
+    // contracts/VoteTool.algo.ts:123-124
+    // @contract({ avmVersion: 13 })
+    // export class VoteRegistry extends Contract {
+    pushbytes 0xb8447b36 // method "createApplication()void"
+    txna ApplicationArgs 0
+    match main_createApplication_route@2
+    err
+
+main_createApplication_route@2:
+    // contracts/VoteTool.algo.ts:127
+    // @abimethod({ onCreate: 'require' })
+    txn OnCompletion
+    !
+    txn ApplicationID
+    !
+    &&
+    assert
+    b createApplication
+
+
+// contracts/VoteTool.algo.ts::VoteRegistry.createApplication[routing]() -> void:
+createApplication:
+    // contracts/VoteTool.algo.ts:125
+    // factory = GlobalState<uint64>({ key: 'factory' })
+    pushbytes "factory"
+    // contracts/VoteTool.algo.ts:129
+    // this.factory.value = Global.callerApplicationId
+    global CallerApplicationID
+    app_global_put
+    // contracts/VoteTool.algo.ts:131
+    // op.AppParamsSet.appFamilyBoxAccess(true)
+    pushint 1
+    app_params_set AppFamilyBoxAccess
+    // contracts/VoteTool.algo.ts:133
+    // op.AppParamsSet.appForeignBoxReads(true)
+    pushint 1
+    app_params_set AppForeignBoxReads
+    // contracts/VoteTool.algo.ts:127
+    // @abimethod({ onCreate: 'require' })
+    pushint 1
+    return

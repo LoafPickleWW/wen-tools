@@ -161,3 +161,17 @@ check that events come from the factory app ID; anyone can deploy a contract tha
 same event signatures.
 
 Status values: `0` setup, `1` live, `2` paused, `3` released.
+
+---
+
+# On-Chain Vote Tool — Smart Contracts
+
+`VoteTool.algo.ts` is written in Algorand TypeScript (puya-ts) for AVM v13 (go-algorand v5): it uses
+cross-app box access (`app_params_set`, `app_box_*`), so it does not build with TEALScript.
+Full design, box layout and test plan: [docs/VOTE_TOOL_SPEC.md](../docs/VOTE_TOOL_SPEC.md).
+
+```bash
+pnpm build:vote-contracts                                                   # compile + update src/utils/voteTemplates.ts
+npx tsx --env-file=contracts/.env contracts/deploy-vote-tool.ts             # testnet (VOTE_DEPLOYER_MNEMONIC)
+npx tsx --env-file=contracts/.env contracts/test/vote-tool.testnet.ts       # end-to-end, real balances
+```
