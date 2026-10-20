@@ -31,7 +31,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const raw = await client.get(`wenpad:collection:${appId}`);
       await client.disconnect();
       if (!raw) return res.status(404).json({ error: "Collection not found" });
-      return res.status(200).json(JSON.parse(raw));
+      return res.status(200).json(JSON.parse(raw.toString()));
     } catch (err: any) {
       try {
         await client.disconnect();

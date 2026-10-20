@@ -164,7 +164,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       for (const key of keys) {
         const data = await client.get(key);
         if (data) {
-          drops.push(JSON.parse(data));
+          drops.push(JSON.parse(data.toString()));
           await client.del(key); // SELF DESTRUCT
         }
       }
