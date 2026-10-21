@@ -5,6 +5,7 @@ import { TOOLS } from "../constants";
 import CarouselComponent from "./CarouselComponent";
 import { ToolSearch } from "./ToolSearch";
 import { trackEvent } from "../utils";
+import { searchTools } from "../utils/toolSearch";
 
 const SUITES = [
   {
@@ -166,7 +167,7 @@ const FEATURED_TOOL_LABELS = [
   "Creator Suite",
   "Distribution Suite",
   "Bulk Asset Manager",
-  "Agent Marketplace",
+  "PQ Tx Printer",
 ];
 
 export function SelectToolComponent() {
@@ -178,17 +179,9 @@ export function SelectToolComponent() {
     return TOOLS.filter(t => FEATURED_TOOL_LABELS.includes(t.label));
   }, []);
 
-  const filteredTools = useMemo(() => {
-    const tools = TOOLS.filter(t => !t.hideFromLanding);
-    if (!searchQuery) return tools;
-
-    const query = searchQuery.toLowerCase();
-    return tools.filter(
-      (t) =>
-        t.label.toLowerCase().includes(query) ||
-        t.description.toLowerCase().includes(query)
-    );
-  }, [searchQuery]);
+  // Search covers tools hidden from the landing grid too (e.g. Simple Mint),
+  // so "mint an nft" finds the minter rather than nothing.
+  const filteredTools = useMemo(() => searchTools(TOOLS, searchQuery), [searchQuery]);
 
   // Suites live on "/" as ?suite=, so the route-level ScrollToTop never fires.
   // Opening a suite starts at the top; leaving one returns to the suite list.

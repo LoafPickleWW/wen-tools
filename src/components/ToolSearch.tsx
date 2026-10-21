@@ -42,7 +42,7 @@ export function ToolSearch({ query, setQuery }: ToolSearchProps) {
           type="text"
           aria-label="Search tools"
           className="h-12 w-full bg-transparent px-3 font-mono text-sm text-white placeholder-slate-600 caret-primary-orange outline-none"
-          placeholder={"search — try “airdrop”"}
+          placeholder={"search — try “mint an nft”"}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={(e) => {

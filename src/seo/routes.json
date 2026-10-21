@@ -184,6 +184,10 @@
     "title": "Shuffle: Random NFT Mints on Algorand | wen.tools",
     "description": "Mint random NFTs from live Algorand collections or launch your own non-custodial random-mint sale."
   },
+  "/vote": {
+    "title": "On-Chain Vote: Token & NFT Voting on Algorand | wen.tools",
+    "description": "Create an on-chain vote with any Algorand token or NFT collection. Hard votes or read-only holder votes, live results, and every token returnable."
+  },
   "/xgov": {
     "title": "xGov Proposal Voting Tracker | wen.tools",
     "description": "Track Algorand xGov governance proposals and vote on them in bulk."
