@@ -60,10 +60,33 @@ const SOLANA_BASELINE = {
 /** New program signatures classified per request (each needs a getTransaction call). */
 const SOLANA_MAX_CLASSIFY = 15;
 
+// Starknet: Falcon-512 account contracts. Signature checks live in the account contract,
+// so accounts are found by scanning each block's state diff for contracts deployed with
+// (or upgraded to) a Falcon account class. An account's nonce is the number of
+// transactions it has sent (deploy + invokes), each validated by its Falcon verifier.
+const STARKNET_RPC = "https://api.cartridge.gg/x/starknet/mainnet";
+/** Falcon account classes found by the backfill (ABI references Falcon / pq_accounts). */
+const STARKNET_FALCON_CLASSES = new Set<string>(
+  ["0x4916072375da17b9c6b318c5f68006a68f0ae573fce4346ad002933d4f9c0cd"].map(normalizeFelt),
+);
+/** Backfill snapshot: every Falcon account deployed up to and including `block`. */
+const STARKNET_BASELINE = {
+  block: 16_725_000,
+  accounts: ["0xbae840ed469a094e3888e5ea7115839847a591eafad4c80c3035327857b132"],
+};
+/** State updates fetched per request (× 50 blocks); Starknet adds ~14 blocks per 30 s. */
+const STARKNET_MAX_BATCHES = 4;
+const STARKNET_BATCH_BLOCKS = 50;
+
+function normalizeFelt(hex: string): string {
+  return "0x" + BigInt(hex).toString(16);
+}
+
 interface State {
   qrl: { height: number; pqTxs: number };
   algo: { round: number; pqTxs: number };
   sol?: { until: string; pqTxs: number };
+  stark?: { block: number; accounts: string[]; pqTxs: number };
   updatedAt: number;
 }
 
@@ -221,6 +244,56 @@ function jsonRpc(url: string, method: string, params: unknown[]) {
   });
 }
 
+/** Several JSON-RPC calls in one HTTP request; results in call order. */
+async function jsonRpcBatch(url: string, calls: [string, unknown[]][]): Promise<any[]> {
+  if (!calls.length) return [];
+  const res = await fetchJson(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(calls.map(([method, params], id) => ({ jsonrpc: "2.0", id, method, params }))),
+  });
+  if (!Array.isArray(res)) throw new Error("batch RPC not supported");
+  const byId = new Map(res.map((r: any) => [r.id, r]));
+  return calls.map(([method], id) => {
+    const r = byId.get(id);
+    if (!r || r.error) throw new Error(`${method}: ${r?.error?.message ?? "missing result"}`);
+    return r.result;
+  });
+}
+
+async function advanceStarknet(stark: NonNullable<State["stark"]>): Promise<void> {
+  const tip = Number(await jsonRpc(STARKNET_RPC, "starknet_blockNumber", []));
+  const known = new Set(stark.accounts.map(normalizeFelt));
+
+  // Discover new Falcon accounts block by block; each batch commits on its own.
+  for (let b = 0; b < STARKNET_MAX_BATCHES && stark.block < tip && timeLeft() > 1_500; b++) {
+    const from = stark.block + 1;
+    const to = Math.min(tip, from + STARKNET_BATCH_BLOCKS - 1);
+    const blocks = Array.from({ length: to - from + 1 }, (_, i) => from + i);
+    const updates = await jsonRpcBatch(
+      STARKNET_RPC,
+      blocks.map((n) => ["starknet_getStateUpdate", [{ block_number: n }]]),
+    );
+    for (const u of updates) {
+      const diff = u?.state_diff ?? {};
+      for (const c of [...(diff.deployed_contracts ?? []), ...(diff.replaced_classes ?? [])]) {
+        const address = normalizeFelt(c.address ?? c.contract_address);
+        if (STARKNET_FALCON_CLASSES.has(normalizeFelt(c.class_hash)) && !known.has(address)) {
+          known.add(address);
+          stark.accounts.push(address);
+        }
+      }
+    }
+    stark.block = to;
+  }
+
+  const nonces = await jsonRpcBatch(
+    STARKNET_RPC,
+    stark.accounts.map((a) => ["starknet_getNonce", ["latest", a]]),
+  );
+  stark.pqTxs = nonces.reduce((n: number, hex: string) => n + Number(BigInt(hex)), 0);
+}
+
 async function advanceSolana(sol: NonNullable<State["sol"]>): Promise<void> {
   // Newest first; everything after our cursor.
   const sigs: { signature: string; err: unknown }[] = await jsonRpc(SOLANA_RPC, "getSignaturesForAddress", [
@@ -302,6 +375,9 @@ async function loadState(client: Redis | null): Promise<State> {
   if (s.qrl.height < QRL_BASELINE.height) s.qrl = { ...QRL_BASELINE };
   if (s.algo.round < ALGO_BASELINE.round) s.algo = { ...ALGO_BASELINE };
   s.sol ??= { ...SOLANA_BASELINE };
+  if (!s.stark || s.stark.block < STARKNET_BASELINE.block) {
+    s.stark = { block: STARKNET_BASELINE.block, accounts: [...STARKNET_BASELINE.accounts], pqTxs: 0 };
+  }
   return s;
 }
 
@@ -316,6 +392,7 @@ async function getState(): Promise<State> {
         advanceQrl(s.qrl).catch((e) => console.error("QRL advance failed", e)),
         advanceAlgo(s.algo).catch((e) => console.error("Algorand advance failed", e)),
         advanceSolana(s.sol!).catch((e) => console.error("Solana advance failed", e)),
+        advanceStarknet(s.stark!).catch((e) => console.error("Starknet advance failed", e)),
       ]);
       s.updatedAt = Date.now();
       if (client) {
@@ -375,6 +452,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           pqTxs: state.sol!.pqTxs,
           note: "Successful calls to Blueshift's WinterWallet program (winter5vMw…CQCa).",
           source: `https://solscan.io/account/${WINTERWALLET_PROGRAM}`,
+        },
+        {
+          id: "starknet",
+          name: "Starknet",
+          scheme: "Falcon-512",
+          since: "2026-07-22",
+          status: "live",
+          pqTxs: state.stark!.pqTxs,
+          cursor: state.stark!.block,
+          cursorLabel: "block",
+          note: `Transactions sent by Falcon-512 account contracts (${state.stark!.accounts.length} found by scanning every block's deployments since July).`,
+          source: "https://github.com/OpenZeppelin/cairo-pq-verifiers",
         },
         {
           id: "bitcoin",

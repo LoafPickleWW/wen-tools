@@ -150,7 +150,8 @@ export interface CouponHolder {
 export async function getTopHolders(
   network: PrinterNetwork,
   deployment: CouponDeployment,
-  limit = 10,
+  /** Omit for every holder, ranked. */
+  limit?: number,
 ): Promise<CouponHolder[]> {
   const indexer = new algosdk.Indexer("", `https://${network}-idx.algonode.cloud`, "");
   const exclude = algosdk.getApplicationAddress(deployment.appId).toString();
@@ -166,5 +167,6 @@ export async function getTopHolders(
     }
     next = res.balances?.length ? res.nextToken : undefined;
   } while (next);
-  return holders.sort((a, b) => b.amount - a.amount).slice(0, limit);
+  holders.sort((a, b) => b.amount - a.amount);
+  return limit === undefined ? holders : holders.slice(0, limit);
 }
