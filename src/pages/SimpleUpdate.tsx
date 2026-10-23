@@ -243,8 +243,9 @@ export function SimpleUpdate() {
         ...formData,
         name: assetData.params!["name"],
         unitName: assetData.params!.unitName,
-        totalSupply: assetData.params!["total"],
-        decimals: assetData.params!["decimals"],
+        // algosdk v3 returns total as bigint, which can't be JSON-serialized into localStorage
+        totalSupply: assetData.params!["total"].toString(),
+        decimals: Number(assetData.params!["decimals"]),
         freeze: assetData.params!["freeze"],
         clawback: assetData.params!["clawback"],
         format: assetFormat,

@@ -29,15 +29,16 @@ const QRL_SLACK = 5;
 // a fresh instance restarts here, so keep these recent.
 // QRL: non-coinbase txns in blocks 1..height (genesis allocations in block 0 excluded);
 // full backfill to 4,380,664 = 1,968,668, advanced by the live counter since.
-const QRL_BASELINE = { height: 4_380_985, pqTxs: 1_968_700 };
-// Algorand: native pqsig txns since v42 activation (round 64,318,659), recounted independently.
-const ALGO_BASELINE = { round: 66_018_837, pqTxs: 1_796_849 };
+const QRL_BASELINE = { height: 4_391_155, pqTxs: 1_969_452 };
+// Algorand: native pqsig txns since v42 activation (round 64,318,659). Independently
+// recounted at 66,018,837 (1,796,849), advanced by the verified live counter since.
+const ALGO_BASELINE = { round: 66_237_955, pqTxs: 3_271_530 };
 
 /** Per-request work budgets, to stay well within the function timeout. */
 const QRL_MAX_CHUNKS = 5; // × 90 blocks
 const ALGO_MAX_PAGES = 12; // × 1000 txns
 /** Round span per indexer query; the pqsig filter needs a bounded range to stay fast. */
-const ALGO_MAX_WINDOW = 20_000;
+const ALGO_MAX_WINDOW = 5_000;
 const REFRESH_MS = 30_000;
 /**
  * Hard wall-clock budget for catching up. Vercel kills the function at 10s, and a
@@ -65,14 +66,45 @@ const SOLANA_MAX_CLASSIFY = 15;
 // (or upgraded to) a Falcon account class. An account's nonce is the number of
 // transactions it has sent (deploy + invokes), each validated by its Falcon verifier.
 const STARKNET_RPC = "https://api.cartridge.gg/x/starknet/mainnet";
-/** Falcon account classes found by the backfill (ABI references Falcon / pq_accounts). */
+/**
+ * Falcon-512 *account* classes found by scanning every deployment since 2026-07-01 and
+ * checking each class's ABI (verifier-only and pool contracts excluded).
+ */
 const STARKNET_FALCON_CLASSES = new Set<string>(
-  ["0x4916072375da17b9c6b318c5f68006a68f0ae573fce4346ad002933d4f9c0cd"].map(normalizeFelt),
+  [
+    "0x37aa162d80f39ec8db3396695459924d2e38e2e50922ffe3664158aad6192b9", // OpenZeppelin Falcon512ShakeAccount
+    "0x4916072375da17b9c6b318c5f68006a68f0ae573fce4346ad002933d4f9c0cd", // OpenZeppelin Falcon512ShakeDirectAccount
+    "0x37c7626b50ba517835c9556b53bce57cb6633704bb702f8c2f13a44cf151d5", // falcon_account::FalconAccount
+    "0x71cb7d75ee7ae3441bef6ba9924a16a2739a63d069c7b8e72ea7ef789804536", // card_account_pq::FalconCardAccount
+    "0x5cb43a69613df29680ca55bf89df4352051185dc1848033523117b33b57c357", // falcon512_account::Falcon512Account
+    "0x474590555aa5f1bd048e900091dc49cc2d1391e474726ab34286258c9fff811", // falcon512_account::Falcon512Account
+  ].map(normalizeFelt),
 );
 /** Backfill snapshot: every Falcon account deployed up to and including `block`. */
 const STARKNET_BASELINE = {
-  block: 16_725_000,
-  accounts: ["0xbae840ed469a094e3888e5ea7115839847a591eafad4c80c3035327857b132"],
+  block: 16_781_518,
+  accounts: [
+    "0x5a7b1f5e3ddf5e4c1a80ce0dd1a1dc14762cb2ffb2181433ab1e49d02c8b5de",
+    "0x6109c682b36e28cf7ac61a43110f9e0c4706a50fafd23251ee094e83ff27b25",
+    "0xbae840ed469a094e3888e5ea7115839847a591eafad4c80c3035327857b132",
+    "0x545858ba12aa9633f454fe9834e4c40942ba0facd9ba17c3943399f37f61ea2",
+    "0x150c359e87fddc78e73e51309a6c73d9a80356552fe535d5c096b2e699a8f04",
+    "0x560fede1168a47a89e658ca6f7c786b5a164bd461f92ed45b6181b6676eaaea",
+    "0x7f80929b0da7e6eb1e9bf4aabb5a571f63d3eb2831400728486cfabb9758873",
+    "0x72c61328a6e14c5754f0944077957aa4de49ebb8b399943e8774e264e9d355b",
+    "0x4797cda1c7e902a6e916d842d992ea652af5fd5b5e562745e83a545d76035b6",
+    "0x3e09d3ffd4af3aa4d0cc265bdb8b75b3039ab7a90da27210194d35a4291540e",
+    "0x6f7daa1c87db56eba01a6f32410e64cb4e598096779b9f5a6856368386f7c66",
+    "0x39c9fdd4c82ba1a65cacb70571f49fce762f55fce9b25b07b4af1e28f457c57",
+    "0x581a0a7b657c3d7c2504fcf29dba3a690016f86d42288b1e7699dbaa84ec524",
+    "0x472c09bf246c1c586920cc982fe2d09858559ab68b00932c29afa239fe59f67",
+    "0x630ecbe2754715b1be3f00aa9f3d4b8e7b9b4cadf58c869f30b7e35eb2e91d5",
+    "0x47bf2c67194eedfe591a3fa3d16055f360d0c10258c43f82a684e88c8f3c36f",
+    "0x77d621f424d90c3740602d659094488a6fd696a65fcbe4fcf9f24afc22dcb2a",
+    "0x242c285d921a3858cae8921a0a2209a9fe75f87edb11d0a47a371eba4f11363",
+    "0x6f0ca2198acd41f9cb6309077d2c34896e2c6d23dd1c71c1042b87c01282aa5",
+    "0x4c85c2b84315a7dd96b0e9e24edbd816d0078dfd7c06a7b83ee664bc1fd12a0",
+  ].map(normalizeFelt),
 };
 /** State updates fetched per request (× 50 blocks); Starknet adds ~14 blocks per 30 s. */
 const STARKNET_MAX_BATCHES = 4;
@@ -457,7 +489,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           id: "starknet",
           name: "Starknet",
           scheme: "Falcon-512",
-          since: "2026-07-22",
+          since: "2026-07-21",
           status: "live",
           pqTxs: state.stark!.pqTxs,
           cursor: state.stark!.block,
