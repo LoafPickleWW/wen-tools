@@ -80,6 +80,8 @@ const STARKNET_FALCON_CLASSES = new Set<string>(
     "0x474590555aa5f1bd048e900091dc49cc2d1391e474726ab34286258c9fff811", // falcon512_account::Falcon512Account
   ].map(normalizeFelt),
 );
+/** Bump whenever STARKNET_FALCON_CLASSES or STARKNET_BASELINE changes, so saved scans restart. */
+const STARKNET_STATE_VERSION = 2;
 /** Backfill snapshot: every Falcon account deployed up to and including `block`. */
 const STARKNET_BASELINE = {
   block: 16_781_518,
@@ -118,7 +120,7 @@ interface State {
   qrl: { height: number; pqTxs: number };
   algo: { round: number; pqTxs: number };
   sol?: { until: string; pqTxs: number };
-  stark?: { block: number; accounts: string[]; pqTxs: number };
+  stark?: { v?: number; block: number; accounts: string[]; pqTxs: number };
   updatedAt: number;
 }
 
@@ -407,8 +409,15 @@ async function loadState(client: Redis | null): Promise<State> {
   if (s.qrl.height < QRL_BASELINE.height) s.qrl = { ...QRL_BASELINE };
   if (s.algo.round < ALGO_BASELINE.round) s.algo = { ...ALGO_BASELINE };
   s.sol ??= { ...SOLANA_BASELINE };
-  if (!s.stark || s.stark.block < STARKNET_BASELINE.block) {
-    s.stark = { block: STARKNET_BASELINE.block, accounts: [...STARKNET_BASELINE.accounts], pqTxs: 0 };
+  // Saved progress is only valid for the class list it was scanned with: a run that
+  // didn't know a Falcon class can't have found its accounts. Restart from the snapshot.
+  if (!s.stark || s.stark.v !== STARKNET_STATE_VERSION || s.stark.block < STARKNET_BASELINE.block) {
+    s.stark = {
+      v: STARKNET_STATE_VERSION,
+      block: STARKNET_BASELINE.block,
+      accounts: [...STARKNET_BASELINE.accounts],
+      pqTxs: 0,
+    };
   }
   return s;
 }
