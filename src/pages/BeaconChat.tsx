@@ -355,13 +355,13 @@ export function BeaconChat() {
       amount: 0,
       note: new TextEncoder().encode(BEACON_DOMAIN_NOTE),
       suggestedParams: {
-        genesisHash: BEACON_GENESIS_HASH_MAINNET,
+        genesisHash: algosdk.base64ToBytes(BEACON_GENESIS_HASH_MAINNET),
         genesisID: "mainnet-v1.0",
-        firstRound: 10,
-        lastRound: 20,
+        firstValid: 10,
+        lastValid: 20,
         fee: 0,
         flatFee: true,
-      } as any,
+      },
     });
 
     const signed = await signTransactions([algosdk.encodeUnsignedTransaction(authTxn)]);

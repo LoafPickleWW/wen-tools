@@ -135,13 +135,13 @@ export function BeaconDropTool() {
       amount: 0,
       note: new TextEncoder().encode("BEACON/1:derive-encryption-key"),
       suggestedParams: {
-        genesisHash: "wGHE2Pwdvd7S12BL5FaOP20EGYesN73ktiC1qzkkit8=", // mainnet
+        genesisHash: algosdk.base64ToBytes("wGHE2Pwdvd7S12BL5FaOP20EGYesN73ktiC1qzkkit8="), // mainnet
         genesisID: "mainnet-v1.0",
-        firstRound: 10,
-        lastRound: 20,
+        firstValid: 10,
+        lastValid: 20,
         fee: 0,
         flatFee: true,
-      } as any
+      }
     });
 
     const encodedDomainTxn = algosdk.encodeUnsignedTransaction(domainTxn);
