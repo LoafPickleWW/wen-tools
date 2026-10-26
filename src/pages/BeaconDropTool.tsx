@@ -140,6 +140,7 @@ export function BeaconDropTool() {
         firstValid: 10,
         lastValid: 20,
         fee: 0,
+        minFee: 1000, // required by the type; not encoded, so the signed bytes (and derived key) are unchanged
         flatFee: true,
       }
     });
