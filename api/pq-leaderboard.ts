@@ -67,7 +67,7 @@ const SOLANA_MAX_CLASSIFY = 15;
 // transactions it has sent (deploy + invokes), each validated by its Falcon verifier.
 const STARKNET_RPC = "https://api.cartridge.gg/x/starknet/mainnet";
 /**
- * Falcon-512 *account* classes found by scanning every deployment since 2026-07-01 and
+ * Post-quantum *account* classes (Falcon-512, Falcon-1024, ML-DSA-87) found by scanning every deployment since 2026-07-01 and
  * checking each class's ABI (verifier-only and pool contracts excluded).
  */
 const STARKNET_FALCON_CLASSES = new Set<string>(
@@ -78,13 +78,18 @@ const STARKNET_FALCON_CLASSES = new Set<string>(
     "0x71cb7d75ee7ae3441bef6ba9924a16a2739a63d069c7b8e72ea7ef789804536", // card_account_pq::FalconCardAccount
     "0x5cb43a69613df29680ca55bf89df4352051185dc1848033523117b33b57c357", // falcon512_account::Falcon512Account
     "0x474590555aa5f1bd048e900091dc49cc2d1391e474726ab34286258c9fff811", // falcon512_account::Falcon512Account
+    "0x403cc8b0b037cc148dd5fa1f7a5e330ed1b8114c1f4ed135c725349668c9dbc", // OpenZeppelin Falcon1024Account
+    "0x60d49228e20fc282b57c631089b1e6f6bd52a1624110606e4326670a9055d43", // OpenZeppelin MlDsa87Account
+    "0x20c67219ffffbe9d9e7c105b2e4aad8f51e3ec173b682618ca3e5b709eb3ee2", // OpenZeppelin MlDsa87Account
   ].map(normalizeFelt),
 );
 /** Bump whenever STARKNET_FALCON_CLASSES or STARKNET_BASELINE changes, so saved scans restart. */
-const STARKNET_STATE_VERSION = 2;
+const STARKNET_STATE_VERSION = 3;
 /** Backfill snapshot: every Falcon account deployed up to and including `block`. */
 const STARKNET_BASELINE = {
-  block: 16_781_518,
+  block: 16_994_954,
+  // Sum of the accounts' nonces at the snapshot (shown until the first live recount).
+  pqTxs: 35,
   accounts: [
     "0x5a7b1f5e3ddf5e4c1a80ce0dd1a1dc14762cb2ffb2181433ab1e49d02c8b5de",
     "0x6109c682b36e28cf7ac61a43110f9e0c4706a50fafd23251ee094e83ff27b25",
@@ -106,11 +111,18 @@ const STARKNET_BASELINE = {
     "0x242c285d921a3858cae8921a0a2209a9fe75f87edb11d0a47a371eba4f11363",
     "0x6f0ca2198acd41f9cb6309077d2c34896e2c6d23dd1c71c1042b87c01282aa5",
     "0x4c85c2b84315a7dd96b0e9e24edbd816d0078dfd7c06a7b83ee664bc1fd12a0",
+    "0x6cac3637f37a18f6e0737a4e95d6cbdf123fa5e75ee83012a4f0b0900c8e227",
+    "0x5dc773fb36cd9c5dfa2d28c4f12d95be3a1bdd48de4f2bab6d7d31b17d6dcfa",
+    "0x2521b75dce2f5826ff760474c7d6f1d76d82eb9542d170d8212175ff91340d6",
   ].map(normalizeFelt),
 };
-/** State updates fetched per request (× 50 blocks); Starknet adds ~14 blocks per 30 s. */
-const STARKNET_MAX_BATCHES = 4;
+/**
+ * Catch-up budget per refresh: up to ROUNDS × PARALLEL batches of 50 blocks (≤ 3,000 blocks),
+ * bounded by the time budget. Starknet adds ~14 blocks per 30 s, so this clears a backlog fast.
+ */
 const STARKNET_BATCH_BLOCKS = 50;
+const STARKNET_PARALLEL = 5;
+const STARKNET_MAX_ROUNDS = 12;
 
 function normalizeFelt(hex: string): string {
   return "0x" + BigInt(hex).toString(16);
@@ -299,27 +311,45 @@ async function advanceStarknet(stark: NonNullable<State["stark"]>): Promise<void
   const tip = Number(await jsonRpc(STARKNET_RPC, "starknet_blockNumber", []));
   const known = new Set(stark.accounts.map(normalizeFelt));
 
-  // Discover new Falcon accounts block by block; each batch commits on its own.
-  for (let b = 0; b < STARKNET_MAX_BATCHES && stark.block < tip && timeLeft() > 1_500; b++) {
-    const from = stark.block + 1;
-    const to = Math.min(tip, from + STARKNET_BATCH_BLOCKS - 1);
-    const blocks = Array.from({ length: to - from + 1 }, (_, i) => from + i);
-    const updates = await jsonRpcBatch(
-      STARKNET_RPC,
-      blocks.map((n) => ["starknet_getStateUpdate", [{ block_number: n }]]),
+  // Discover new Falcon accounts: fetch a round of batches in parallel, then commit
+  // them in block order up to the first failure, so progress is never skipped.
+  // Stop early enough to leave time for the nonce sum below.
+  for (let round = 0; round < STARKNET_MAX_ROUNDS && stark.block < tip && timeLeft() > 2_500; round++) {
+    const ranges: [number, number][] = [];
+    for (let from = stark.block + 1; from <= tip && ranges.length < STARKNET_PARALLEL; from += STARKNET_BATCH_BLOCKS) {
+      ranges.push([from, Math.min(tip, from + STARKNET_BATCH_BLOCKS - 1)]);
+    }
+    const results = await Promise.all(
+      ranges.map(([from, to]) =>
+        jsonRpcBatch(
+          STARKNET_RPC,
+          Array.from({ length: to - from + 1 }, (_, i) => ["starknet_getStateUpdate", [{ block_number: from + i }]]),
+        ).catch(() => null),
+      ),
     );
-    for (const u of updates) {
-      const diff = u?.state_diff ?? {};
-      for (const c of [...(diff.deployed_contracts ?? []), ...(diff.replaced_classes ?? [])]) {
-        const address = normalizeFelt(c.address ?? c.contract_address);
-        if (STARKNET_FALCON_CLASSES.has(normalizeFelt(c.class_hash)) && !known.has(address)) {
-          known.add(address);
-          stark.accounts.push(address);
+    for (let i = 0; i < ranges.length; i++) {
+      const updates = results[i];
+      if (!updates) return finishStarknet(stark); // keep what's committed; retry next refresh
+      for (const u of updates) {
+        const diff = u?.state_diff ?? {};
+        for (const c of [...(diff.deployed_contracts ?? []), ...(diff.replaced_classes ?? [])]) {
+          const address = normalizeFelt(c.address ?? c.contract_address);
+          if (STARKNET_FALCON_CLASSES.has(normalizeFelt(c.class_hash)) && !known.has(address)) {
+            known.add(address);
+            stark.accounts.push(address);
+          }
         }
       }
+      stark.block = ranges[i][1];
     }
-    stark.block = to;
   }
+  return finishStarknet(stark);
+}
+
+/** Total transactions = sum of the tracked accounts' nonces. */
+async function finishStarknet(stark: NonNullable<State["stark"]>): Promise<void> {
+  // Out of time: keep the last total rather than fail; the next refresh recounts.
+  if (timeLeft() < 800) return;
 
   const nonces = await jsonRpcBatch(
     STARKNET_RPC,
@@ -416,7 +446,7 @@ async function loadState(client: Redis | null): Promise<State> {
       v: STARKNET_STATE_VERSION,
       block: STARKNET_BASELINE.block,
       accounts: [...STARKNET_BASELINE.accounts],
-      pqTxs: 0,
+      pqTxs: STARKNET_BASELINE.pqTxs,
     };
   }
   return s;
@@ -497,13 +527,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         {
           id: "starknet",
           name: "Starknet",
-          scheme: "Falcon-512",
+          scheme: "Falcon / ML-DSA",
           since: "2026-07-21",
           status: "live",
           pqTxs: state.stark!.pqTxs,
           cursor: state.stark!.block,
           cursorLabel: "block",
-          note: `Transactions sent by Falcon-512 account contracts (${state.stark!.accounts.length} found by scanning every block's deployments since July).`,
+          note: `Transactions sent by post-quantum account contracts: Falcon-512, Falcon-1024 and ML-DSA-87 (${state.stark!.accounts.length} found by scanning every block's deployments since July).`,
           source: "https://github.com/OpenZeppelin/cairo-pq-verifiers",
         },
         {
