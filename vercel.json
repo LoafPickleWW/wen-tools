@@ -52,7 +52,31 @@
       "destination": "/api/keeper?job=vote"
     },
     {
-      "source": "/(.*)",
+      "source": "/shuffle/:appId",
+      "destination": "/"
+    },
+    {
+      "source": "/vote/:appId",
+      "destination": "/"
+    },
+    {
+      "source": "/wen-pad/sales",
+      "destination": "/"
+    },
+    {
+      "source": "/wen-pad/sales/:appId",
+      "destination": "/"
+    },
+    {
+      "source": "/wallet/account/:account",
+      "destination": "/"
+    },
+    {
+      "source": "/wallet/asset/:assetId",
+      "destination": "/"
+    },
+    {
+      "source": "/creator-suite/:toolId",
       "destination": "/"
     }
   ],

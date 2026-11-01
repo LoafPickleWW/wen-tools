@@ -6,6 +6,7 @@ import {
 import { pera } from "@txnlab/use-wallet-pera";
 import { defly } from "@txnlab/use-wallet-defly";
 import { lute } from "@galaxypay/use-wallet-lute";
+import { Suspense, lazy } from "react";
 import { Navigate, Route, Routes, BrowserRouter as Router, useParams } from "react-router-dom";
 
 /** Old Shuffle URLs (/wen-pad/sales/:appId) keep working */
@@ -23,46 +24,47 @@ import { PageShell } from "./components/cypher/PageShell";
 import { AtomicBackground } from "./components/quantum/AtomicBackground";
 import { Header } from "./components/Header";
 import { Footer } from "./components/Footer";
-import { DistributionSuite } from "./pages/DistributionSuite";
-import { BatchOptin } from "./pages/BatchOptin";
-import { BatchOptout } from "./pages/BatchOptout";
-import { BatchUpdate } from "./pages/BatchUpdate";
-import { HoldingsAuditor } from "./pages/HoldingsAuditor";
-import { BatchDelete } from "./pages/BatchDelete";
-import { SimpleMint } from "./pages/SimpleMint";
-import { SimpleUpdate } from "./pages/SimpleUpdate";
-import { BatchMint } from "./pages/BatchMint";
-import { BlukClaimTool } from "./pages/BulkClaimTool";
 import ScrollToTop from "./components/ScrollToTop";
 import { Analytics } from "@vercel/analytics/react";
-import { ARC62ManagerTool } from "./pages/ARC62ManagerTool";
-import { WenPad } from './pages/WenPad';
-import { WenPadSales } from './pages/WenPadSales';
-import { VoteTool } from './pages/VoteTool';
-import { XGov } from './pages/XGov';
-import { Jukebox } from './pages/Jukebox';
-import { P2PChat } from './pages/P2PChat';
-import { BeaconChat } from './pages/BeaconChat';
-import PostQuantum from './pages/PostQuantum';
-import PQTxPrinter from './pages/PQTxPrinter';
-import { BeaconDropTool } from './pages/BeaconDropTool';
-import WenDeployTool from './pages/WenDeployTool';
-import AnchorSetupTool from './pages/AnchorSetupTool';
-import VanityAddressTool from './pages/VanityAddressTool';
-import { Encyclopedia } from './pages/Encyclopedia';
-import WenSwapTool from './pages/WenSwapTool';
-import { TermsOfUse } from "./pages/TermsOfUse";
-import { PrivacyPolicy } from "./pages/PrivacyPolicy";
 import { NotFound } from "./pages/NotFound";
-import AgentMarketplace from './pages/AgentMarketplace';
-import { BulkAssetManager } from "./pages/BulkAssetManager";
-import { MintingSuite } from "./pages/MintingSuite";
-import { WenWallet } from "./pages/WenWallet";
-import WalletAssetDetail from "./pages/WalletAssetDetail";
-import { ClusterMap } from "./pages/ClusterMap";
-import { StablecoinStudio } from "./pages/StablecoinStudio";
 
 
+// Pages load on demand so a first visit only downloads the route it lands on
+const DistributionSuite = lazy(() => import("./pages/DistributionSuite").then((m) => ({ default: m.DistributionSuite })));
+const BatchOptin = lazy(() => import("./pages/BatchOptin").then((m) => ({ default: m.BatchOptin })));
+const BatchOptout = lazy(() => import("./pages/BatchOptout").then((m) => ({ default: m.BatchOptout })));
+const BatchUpdate = lazy(() => import("./pages/BatchUpdate").then((m) => ({ default: m.BatchUpdate })));
+const HoldingsAuditor = lazy(() => import("./pages/HoldingsAuditor").then((m) => ({ default: m.HoldingsAuditor })));
+const BatchDelete = lazy(() => import("./pages/BatchDelete").then((m) => ({ default: m.BatchDelete })));
+const SimpleMint = lazy(() => import("./pages/SimpleMint").then((m) => ({ default: m.SimpleMint })));
+const SimpleUpdate = lazy(() => import("./pages/SimpleUpdate").then((m) => ({ default: m.SimpleUpdate })));
+const BatchMint = lazy(() => import("./pages/BatchMint").then((m) => ({ default: m.BatchMint })));
+const BlukClaimTool = lazy(() => import("./pages/BulkClaimTool").then((m) => ({ default: m.BlukClaimTool })));
+const ARC62ManagerTool = lazy(() => import("./pages/ARC62ManagerTool").then((m) => ({ default: m.ARC62ManagerTool })));
+const WenPad = lazy(() => import("./pages/WenPad").then((m) => ({ default: m.WenPad })));
+const WenPadSales = lazy(() => import("./pages/WenPadSales").then((m) => ({ default: m.WenPadSales })));
+const VoteTool = lazy(() => import("./pages/VoteTool").then((m) => ({ default: m.VoteTool })));
+const XGov = lazy(() => import("./pages/XGov").then((m) => ({ default: m.XGov })));
+const Jukebox = lazy(() => import("./pages/Jukebox").then((m) => ({ default: m.Jukebox })));
+const P2PChat = lazy(() => import("./pages/P2PChat").then((m) => ({ default: m.P2PChat })));
+const BeaconChat = lazy(() => import("./pages/BeaconChat").then((m) => ({ default: m.BeaconChat })));
+const PostQuantum = lazy(() => import("./pages/PostQuantum"));
+const PQTxPrinter = lazy(() => import("./pages/PQTxPrinter"));
+const BeaconDropTool = lazy(() => import("./pages/BeaconDropTool").then((m) => ({ default: m.BeaconDropTool })));
+const WenDeployTool = lazy(() => import("./pages/WenDeployTool"));
+const AnchorSetupTool = lazy(() => import("./pages/AnchorSetupTool"));
+const VanityAddressTool = lazy(() => import("./pages/VanityAddressTool"));
+const Encyclopedia = lazy(() => import("./pages/Encyclopedia").then((m) => ({ default: m.Encyclopedia })));
+const WenSwapTool = lazy(() => import("./pages/WenSwapTool"));
+const TermsOfUse = lazy(() => import("./pages/TermsOfUse").then((m) => ({ default: m.TermsOfUse })));
+const PrivacyPolicy = lazy(() => import("./pages/PrivacyPolicy").then((m) => ({ default: m.PrivacyPolicy })));
+const AgentMarketplace = lazy(() => import("./pages/AgentMarketplace"));
+const BulkAssetManager = lazy(() => import("./pages/BulkAssetManager").then((m) => ({ default: m.BulkAssetManager })));
+const MintingSuite = lazy(() => import("./pages/MintingSuite").then((m) => ({ default: m.MintingSuite })));
+const WenWallet = lazy(() => import("./pages/WenWallet").then((m) => ({ default: m.WenWallet })));
+const WalletAssetDetail = lazy(() => import("./pages/WalletAssetDetail"));
+const ClusterMap = lazy(() => import("./pages/ClusterMap").then((m) => ({ default: m.ClusterMap })));
+const StablecoinStudio = lazy(() => import("./pages/StablecoinStudio").then((m) => ({ default: m.StablecoinStudio })));
 
 const walletManager = new WalletManager({
   wallets: [pera(), defly(), lute({ siteName: "wen.tools" })],
@@ -117,6 +119,7 @@ function App() {
           <ScrollToTop />
           <Header />
           <PageShell>
+          <Suspense fallback={null}>
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/distribution-suite" element={<DistributionSuite />} />
@@ -221,6 +224,7 @@ function App() {
             <Route path="/cluster-map" element={<ClusterMap />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
+          </Suspense>
           </PageShell>
           <Footer />
         </Router>
