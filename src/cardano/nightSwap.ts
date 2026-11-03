@@ -20,6 +20,14 @@ export interface SwapEstimate {
   routes: SwapRoute[];
   /** ADA the DEX's batcher takes for executing the order, on top of the amount paid */
   batcherFeeAda: number;
+  /** DexHunter's own fee in ADA (0 on every quote seen so far) */
+  dexhunterFeeAda: number;
+  /**
+   * `partner_fee` from the quote, in ADA: this site's fee share. Observed as 0.5% of the amount
+   * with a minimum (2 ADA to 50 ADA, 5 ADA from 100 to 500). It is not part of `total_fee` or
+   * deducted from the NIGHT output, so it is assumed to be paid in ADA on top.
+   */
+  partnerFeeAda: number;
   /** ADA held with the order; Cardano DEX orders carry a minimum-ADA deposit */
   depositAda: number;
   /** Worst price impact across the routes, in percent */
@@ -32,6 +40,20 @@ export const SLIPPAGE_OPTIONS = [0.5, 1, 2, 5];
 export const HIGH_SLIPPAGE = 2;
 /** Price impact in percent above which the UI warns. */
 export const HIGH_PRICE_IMPACT = 1;
+
+/** Fees that are spent for good, as a share of the amount swapped. The order deposit is excluded: it is held, not spent. */
+export function feeSharePct(amountAda: number, e: SwapEstimate): number {
+  if (!(amountAda > 0)) return 0;
+  return ((e.batcherFeeAda + e.dexhunterFeeAda + e.partnerFeeAda) / amountAda) * 100;
+}
+
+/** Everything that leaves the wallet in ADA: the swap amount, all fees, and the order deposit. */
+export function totalAdaOut(amountAda: number, e: SwapEstimate): number {
+  return amountAda + e.batcherFeeAda + e.dexhunterFeeAda + e.partnerFeeAda + e.depositAda;
+}
+
+/** Fee share above which the UI warns that the swap is poor value. */
+export const HIGH_FEE_SHARE = 3;
 
 async function callProxy(step: string, body: Record<string, unknown>, fetcher: Fetcher): Promise<unknown> {
   const res = await fetcher("/api/dexhunter", {
@@ -79,6 +101,8 @@ export async function estimateSwap(
     minimum: Math.min(a, b),
     routes,
     batcherFeeAda: optional(data.batcher_fee),
+    dexhunterFeeAda: optional(data.dexhunter_fee),
+    partnerFeeAda: optional(data.partner_fee),
     depositAda: optional(data.deposits),
     priceImpactPct: Math.max(0, ...splits.map((r) => optional(r.price_impact))),
   };

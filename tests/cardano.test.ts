@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { bech32Decode, bech32Encode, bytesToHex, convertBits, hexToBytes } from "../src/cardano/bech32";
 import { addressHexToBech32, connectCip30, discoverCip30Wallets } from "../src/cardano/cip30";
-import { estimateSwap, executeSwap, fetchSwapInfo } from "../src/cardano/nightSwap";
+import { HIGH_FEE_SHARE, estimateSwap, executeSwap, feeSharePct, fetchSwapInfo, totalAdaOut } from "../src/cardano/nightSwap";
 
 describe("bech32", () => {
   it("decodes and re-encodes the BIP-173 test vector", () => {
@@ -83,6 +83,8 @@ describe("estimateSwap", () => {
         total_output_without_slippage: 44.635377,
         possible_routes: {},
         batcher_fee: 0.69,
+        dexhunter_fee: 0,
+        partner_fee: 2,
         deposits: 2,
       }),
     );
@@ -92,9 +94,16 @@ describe("estimateSwap", () => {
       minimum: 44.189023,
       routes: [{ dex: "CSWAP", amountIn: 10 }],
       batcherFeeAda: 0.69,
+      dexhunterFeeAda: 0,
+      partnerFeeAda: 2,
       depositAda: 2,
       priceImpactPct: 0.0094,
     });
+  });
+
+  it("treats absent fee fields as zero rather than failing", async () => {
+    const r = await estimateSwap({ amountAda: 1, slippage: 1 }, () => json({ total_output: 1, total_output_without_slippage: 1 }));
+    expect([r.batcherFeeAda, r.dexhunterFeeAda, r.partnerFeeAda, r.depositAda]).toEqual([0, 0, 0, 0]);
   });
 
   it("takes the worst price impact across split routes and tolerates missing fee fields", async () => {
@@ -120,6 +129,29 @@ describe("estimateSwap", () => {
   it("surfaces the server's error message and rejects malformed quotes", async () => {
     await expect(estimateSwap({ amountAda: 1, slippage: 1 }, () => json({ error: "Swapping isn't set up" }, 503))).rejects.toThrow(/isn't set up/);
     await expect(estimateSwap({ amountAda: 1, slippage: 1 }, () => json({ total_output: "abc" }))).rejects.toThrow(/Unexpected quote/);
+  });
+});
+
+describe("fee totals", () => {
+  const base = { expected: 0, minimum: 0, routes: [], priceImpactPct: 0, dexhunterFeeAda: 0 };
+
+  it("10 ADA swap (live quote): fees are 26.9% of the amount and 14.69 ADA leaves the wallet", () => {
+    const e = { ...base, batcherFeeAda: 0.69, partnerFeeAda: 2, depositAda: 2 };
+    expect(feeSharePct(10, e)).toBeCloseTo(26.9, 5);
+    expect(totalAdaOut(10, e)).toBeCloseTo(14.69, 5);
+  });
+
+  it("1,000 ADA swap (live quote): fees are 0.7% and the deposit is not counted as a fee", () => {
+    const e = { ...base, batcherFeeAda: 2, partnerFeeAda: 5, depositAda: 2 };
+    expect(feeSharePct(1000, e)).toBeCloseTo(0.7, 5);
+    expect(totalAdaOut(1000, e)).toBeCloseTo(1009, 5);
+    expect(feeSharePct(1000, e)).toBeLessThan(HIGH_FEE_SHARE);
+  });
+
+  it("includes DexHunter's own fee when present and never divides by zero", () => {
+    const e = { ...base, batcherFeeAda: 1, partnerFeeAda: 1, dexhunterFeeAda: 3, depositAda: 0 };
+    expect(totalAdaOut(100, e)).toBe(105);
+    expect(feeSharePct(0, e)).toBe(0);
   });
 });
 

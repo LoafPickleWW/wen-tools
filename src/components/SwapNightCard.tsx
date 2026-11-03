@@ -10,7 +10,10 @@ import {
   SwapInfo,
   estimateSwap,
   executeSwap,
+  feeSharePct,
   fetchSwapInfo,
+  totalAdaOut,
+  HIGH_FEE_SHARE,
 } from "../cardano/nightSwap";
 
 /** Mirrors the server's bounds in api/_lib/dexhunterGuard.ts. */
@@ -23,6 +26,15 @@ const fmt = (n: number) => n.toLocaleString(undefined, { maximumFractionDigits: 
 const shortId = (id: string) => (id.length > 24 ? `${id.slice(0, 10)}…${id.slice(-10)}` : id);
 
 type Phase = "idle" | "building" | "signing" | "done";
+
+function FeeRow({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="flex justify-between">
+      <dt>{label}</dt>
+      <dd className="font-mono">{fmt(value)} ADA</dd>
+    </div>
+  );
+}
 
 /**
  * Buys NIGHT with ADA on Cardano through DexHunter's swap API (via our /api/dexhunter proxy).
@@ -206,12 +218,28 @@ export function SwapNightCard() {
             Minimum at {slippage}% slippage: {fmt(quote.minimum)} NIGHT
             {quote.routes.length > 0 && <> · via {quote.routes.map((r) => r.dex).join(", ")}</>}
           </div>
-          <div className="mt-2 border-t border-white/[0.07] pt-2 text-slate-500">
-            On top of the {fmt(ada)} ADA: <b className="text-slate-300">{fmt(quote.batcherFeeAda)} ADA</b> batcher
-            fee and a <b className="text-slate-300">{fmt(quote.depositAda)} ADA</b> order deposit. Price impact{" "}
-            {fmt(quote.priceImpactPct)}%.
-          </div>
+          <dl className="mt-2 space-y-0.5 border-t border-white/[0.07] pt-2 text-slate-500">
+            <FeeRow label="Swap amount" value={ada} />
+            <FeeRow label="DEX batcher fee" value={quote.batcherFeeAda} />
+            {quote.dexhunterFeeAda > 0 && <FeeRow label="DexHunter fee" value={quote.dexhunterFeeAda} />}
+            <FeeRow label="wen.tools fee" value={quote.partnerFeeAda} />
+            <FeeRow label="Order deposit (held with the order)" value={quote.depositAda} />
+            <div className="flex justify-between border-t border-white/[0.07] pt-1 font-semibold text-slate-200">
+              <dt>Total ADA out of your wallet</dt>
+              <dd className="font-mono">{fmt(totalAdaOut(ada, quote))} ADA</dd>
+            </div>
+            <div className="flex justify-between">
+              <dt>Price impact</dt>
+              <dd className="font-mono">{fmt(quote.priceImpactPct)}%</dd>
+            </div>
+          </dl>
         </div>
+      )}
+      {quote && feeSharePct(ada, quote) > HIGH_FEE_SHARE && (
+        <p className="text-amber-400">
+          Fees are {fmt(Number(feeSharePct(ada, quote).toFixed(1)))}% of this swap, not counting the deposit. Larger
+          swaps cost proportionally less.
+        </p>
       )}
       {quote && quote.priceImpactPct > HIGH_PRICE_IMPACT && (
         <p className="text-amber-400">
