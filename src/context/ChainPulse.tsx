@@ -47,7 +47,8 @@ export function ChainPulseProvider({ children }: { children: ReactNode }) {
       setBlocks((prev) => [block, ...prev.filter((b) => b.round !== round)].slice(0, KEEP));
       try {
         const res: any = await algodClient.getBlockHash(round).do();
-        const hash = res?.blockHash ?? res?.["block-hash"];
+        // algosdk v3 names this field `blockhash`; older shapes used blockHash / block-hash
+        const hash = res?.blockhash ?? res?.blockHash ?? res?.["block-hash"];
         if (!cancelled && hash) {
           setBlocks((prev) => prev.map((b) => (b.round === round ? { ...b, hash } : b)));
         }

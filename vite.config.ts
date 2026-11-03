@@ -8,6 +8,27 @@ function testAgentPlugin(): Plugin {
     configureServer(server) {
       server.middlewares.use(async (req, res, next) => {
         const url = req.url || '';
+        if (url.startsWith('/api/dexhunter')) {
+          // Server-only keys: load them from .env for the handler, never into the client bundle.
+          const env = loadEnv(server.config.mode, process.cwd(), '');
+          for (const key of ['DEXHUNTER_PARTNER_ID', 'NIGHT_TOKEN_ID']) {
+            if (env[key] && !process.env[key]) process.env[key] = env[key];
+          }
+          const chunks: Buffer[] = [];
+          for await (const chunk of req) chunks.push(chunk as Buffer);
+          const raw = Buffer.concat(chunks).toString();
+          const shim: any = res;
+          (req as any).body = raw;
+          shim.status = (code: number) => { res.statusCode = code; return shim; };
+          shim.json = (body: unknown) => {
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify(body));
+            return shim;
+          };
+          const { default: handler } = await server.ssrLoadModule('/api/dexhunter.ts');
+          await handler(req, shim);
+          return;
+        }
         if (url.startsWith('/api/pq-leaderboard')) {
           // Run the Vercel function in dev with a minimal VercelResponse shim.
           const { default: handler } = await server.ssrLoadModule('/api/pq-leaderboard.ts');

@@ -18,6 +18,15 @@ Once you have your credentials, add them to your **Vercel Project Settings > Env
 
 The application will automatically detect these and enable the relay service for peers behind strict firewalls. If these variables are missing, the chat will still work over local networks using Google's public STUN servers.
 
+## 🌙 Midnight: Get NIGHT swap (optional)
+
+The Midnight wallet page can swap ADA for cNIGHT on Cardano through DexHunter's partner API. It stays off until two **server-side** variables are set (Vercel project settings, or `.env` for local dev). Do not prefix them with `VITE_`; the key must never reach the browser.
+
+1. `DEXHUNTER_PARTNER_ID`: your partner key from [app.dexhunter.io/partners](https://app.dexhunter.io/partners). It is sent only from `api/dexhunter.ts` as the `X-Partner-Id` header.
+2. `NIGHT_TOKEN_ID`: the Cardano asset id (policy id followed by the hex asset name) of the official cNIGHT. There is no default: copy it from Midnight's docs or confirm it on a block explorer. The proxy forces every swap to buy this asset, so a client cannot choose another token.
+
+With either missing, the card shows an "Open DexHunter" link instead.
+
 ## 🚀 Getting Started
 
 ### Prerequisites

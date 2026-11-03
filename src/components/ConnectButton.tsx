@@ -16,6 +16,8 @@ import { IoPlanet, IoShieldCheckmark, IoRefresh } from "react-icons/io5";
 import { toast } from "react-toastify";
 import { usePQTheme } from "../context/PQThemeContext";
 import { ThemeSwatches } from "./quantum/ThemeSwatches";
+import { useChain } from "../context/ChainContext";
+import { MidnightWalletList } from "./MidnightWalletList";
 
 export default function ConnectButton({
   inmain = false
@@ -24,6 +26,7 @@ export default function ConnectButton({
   inmain?: boolean
 }) {
   const { activeAddress, activeWallet, algodClient, wallets } = useWallet();
+  const { setActiveChain, midnightConnected } = useChain();
   const {
     isPQAccount,
     isScanning,
@@ -97,6 +100,7 @@ export default function ConnectButton({
     handleClose();
     try {
       await wallets.find((w) => w.id === "pera")?.connect();
+      setActiveChain("algorand");
       toast.success("Connected!");
     } catch {
       toast.error("Failed to connect!");
@@ -107,6 +111,7 @@ export default function ConnectButton({
     handleClose();
     try {
       await wallets.find((w) => w.id === "defly")?.connect();
+      setActiveChain("algorand");
       toast.success("Connected!");
     } catch {
       toast.error("Failed to connect!");
@@ -117,6 +122,7 @@ export default function ConnectButton({
     handleClose();
     try {
       await wallets.find((w) => w.id === "lute")?.connect();
+      setActiveChain("algorand");
       toast.success("Connected!");
     } catch {
       toast.error("Failed to connect!");
@@ -245,9 +251,9 @@ export default function ConnectButton({
         }}
       >
         {!activeAddress ? (
-          <div className="flex flex-col gap-1 w-[200px] p-2.5 bg-asset-detail-bg/95 border border-white/10 rounded-2xl text-white shadow-2xl backdrop-blur-2xl">
+          <div className="flex flex-col gap-1 w-[220px] p-2.5 bg-asset-detail-bg/95 border border-white/10 rounded-2xl text-white shadow-2xl backdrop-blur-2xl">
             <div className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400 border-b border-white/[0.07] mb-1">
-              Select Wallet
+              Algorand
             </div>
             <button
               className="flex items-center gap-3 w-full px-3 py-2.5 rounded-xl hover:bg-orange-500/10 hover:border-orange-500/30 border border-transparent transition-all text-left text-xs font-bold text-slate-200 hover:text-orange-400 group"
@@ -276,6 +282,7 @@ export default function ConnectButton({
               </div>
               <span>Lute Wallet</span>
             </button>
+            <MidnightWalletList onPicked={handleClose} />
           </div>
         ) : (
           /* Seamless Unified Quantum Wallet Control Panel */
@@ -464,7 +471,18 @@ export default function ConnectButton({
             )}
 
             {/* 4. Disconnect Action Button */}
-            <div className="pt-2 border-t border-white/[0.07]">
+            <div className="pt-2 border-t border-white/[0.07] space-y-2">
+              {midnightConnected && (
+                <button
+                  onClick={() => {
+                    handleClose();
+                    setActiveChain("midnight");
+                  }}
+                  className="w-full py-2 px-3 rounded-xl bg-slate-800/60 hover:bg-slate-700/70 border border-white/10 text-slate-200 text-xs font-semibold transition"
+                >
+                  Switch to Midnight
+                </button>
+              )}
               <button
                 onClick={disconnect}
                 className="w-full py-2 px-3 rounded-xl bg-red-950/40 hover:bg-red-900/60 border border-red-800/50 text-red-300 hover:text-white text-xs font-semibold transition-all duration-200 shadow-sm flex items-center justify-center gap-2"

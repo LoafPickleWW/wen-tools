@@ -3,6 +3,8 @@ import ConnectButton from "./ConnectButton";
 import SelectNetworkComponent from "./SelectNetworkComponent";
 import DonationDialog from "./DonationDialog";
 import { Wordmark } from "./Wordmark";
+import MidnightAccountButton from "./MidnightAccountButton";
+import { useChain } from "../context/ChainContext";
 
 const NAV = [
   { label: "Wallet", to: "/wallet" },
@@ -12,6 +14,7 @@ const NAV = [
 ];
 
 export function Header() {
+  const { activeChain, midnightConnected } = useChain();
   return (
     <header className="wentools-header sticky top-0 z-40 border-b border-white/[0.07] bg-primary-black/70 backdrop-blur-xl backdrop-saturate-150 transition-colors duration-500">
       <div className="mx-auto flex h-16 w-full max-w-7xl items-center gap-2 px-3 sm:gap-3 sm:px-4">
@@ -44,7 +47,11 @@ export function Header() {
         <div className="ml-auto flex items-center gap-1.5 sm:gap-2">
           <SelectNetworkComponent />
           <DonationDialog />
-          <ConnectButton />
+          {activeChain === "midnight" && midnightConnected ? (
+            <MidnightAccountButton />
+          ) : (
+            <ConnectButton />
+          )}
         </div>
       </div>
     </header>

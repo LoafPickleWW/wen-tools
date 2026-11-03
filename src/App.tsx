@@ -19,6 +19,10 @@ import Home from "./views/home";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.min.css";
 import { PQThemeProvider } from "./context/PQThemeContext";
+import { ChainProvider } from "./context/ChainContext";
+import { MidnightProvider } from "./midnight/MidnightContext";
+import { ChainGuard } from "./components/ChainGuard";
+import { MidnightScene } from "./components/MidnightScene";
 import { ChainPulseProvider } from "./context/ChainPulse";
 import { PageShell } from "./components/cypher/PageShell";
 import { AtomicBackground } from "./components/quantum/AtomicBackground";
@@ -98,10 +102,13 @@ axios.interceptors.response.use(
 function App() {
   return (
     <WalletProvider manager={walletManager}>
+      <MidnightProvider>
+      <ChainProvider>
       <PQThemeProvider>
       <ChainPulseProvider>
         <div className="wt-app bg-primary-black flex flex-col min-h-screen font-sans relative transition-colors duration-500">
           <AtomicBackground />
+          <MidnightScene />
           <div className="wt-grain" aria-hidden="true" />
           <ToastContainer
             pauseOnFocusLoss={false}
@@ -120,6 +127,7 @@ function App() {
           <Header />
           <PageShell>
           <Suspense fallback={null}>
+          <ChainGuard>
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/distribution-suite" element={<DistributionSuite />} />
@@ -224,6 +232,7 @@ function App() {
             <Route path="/cluster-map" element={<ClusterMap />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
+          </ChainGuard>
           </Suspense>
           </PageShell>
           <Footer />
@@ -232,6 +241,8 @@ function App() {
       <Analytics />
       </ChainPulseProvider>
       </PQThemeProvider>
+      </ChainProvider>
+      </MidnightProvider>
     </WalletProvider>
   );
 }
