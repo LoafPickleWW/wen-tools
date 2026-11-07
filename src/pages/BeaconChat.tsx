@@ -24,6 +24,7 @@ import {
   extractSignatureBytes,
 } from "../utils/deadDropCrypto";
 import { getAccountByAddress } from "../db/falconDb";
+import { signBeaconDomainTxn } from "../utils/beaconDomainSign";
 import { sendFalconTransactions, deriveBeaconKeyFromFalconAccount } from "../utils/falcon";
 import { getNfdDomain } from "../utils";
 
@@ -349,28 +350,12 @@ export function BeaconChat() {
     if (!signTransactions) throw new Error("Wallet not connected");
 
     // 2. Standard, Rekeyed, or Native Consensus v42 PQSIG account
-    const authTxn = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
-      sender: activeAddress,
-      receiver: activeAddress,
-      amount: 0,
-      note: new TextEncoder().encode(BEACON_DOMAIN_NOTE),
-      suggestedParams: {
-        genesisHash: algosdk.base64ToBytes(BEACON_GENESIS_HASH_MAINNET),
-        genesisID: "mainnet-v1.0",
-        firstValid: 10,
-        lastValid: 20,
-        fee: 0,
-        minFee: 1000, // required by the type; not encoded, so the signed bytes (and derived key) are unchanged
-        flatFee: true,
-      },
-    });
-
-    const signed = await signTransactions([algosdk.encodeUnsignedTransaction(authTxn)]);
-    if (!signed?.[0]) throw new Error("Cancelled");
-
-    const decoded = algosdk.decodeSignedTransaction(signed[0]);
-    const sig = extractSignatureBytes(decoded);
-    if (!sig) throw new Error("No signature found");
+    const sig = await signBeaconDomainTxn(
+      activeAddress,
+      signTransactions,
+      BEACON_DOMAIN_NOTE,
+      BEACON_GENESIS_HASH_MAINNET
+    );
 
     const keypair = deriveKeyFromSignature(sig);
     beaconKeypairRef.current = keypair;
